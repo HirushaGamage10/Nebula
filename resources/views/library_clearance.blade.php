@@ -102,7 +102,7 @@
                                                         <span class="badge bg-danger">Rejected</span>
                                                     @endif
                                                 </td>
-                                                <td>{{ $request->processed_at->format('d/m/Y H:i') }}</td>
+                                                <td>{{ $request->approved_at ? $request->approved_at->format('d/m/Y H:i') : 'N/A' }}</td>
                                                 <td>{{ $request->remarks ?: 'No remarks' }}</td>
                                             </tr>
                                         @endforeach
@@ -137,6 +137,11 @@
                     <label for="remarks" class="form-label">Remarks (Optional)</label>
                     <textarea class="form-control" id="remarks" rows="3" placeholder="Enter any remarks..."></textarea>
                 </div>
+                <div class="mb-3">
+                    <label for="clearance_slip" class="form-label">Clearance Slip (Optional)</label>
+                    <input type="file" class="form-control" id="clearance_slip" name="clearance_slip" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                    <small class="text-muted">Accepted formats: PDF, JPG, PNG, DOC, DOCX (Max size: 5MB)</small>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -167,6 +172,7 @@ $(document).ready(function() {
         $('#approvalModalTitle').text('Approve Clearance');
         $('#approvalModalText').text(`Are you sure you want to approve library clearance for ${studentName}?`);
         $('#remarks').val('');
+        $('#clearance_slip').val(''); // Clear file input
         $('#confirmApproval').removeClass('btn-danger').addClass('btn-success');
         $('#approvalModal').modal('show');
     });
@@ -180,6 +186,7 @@ $(document).ready(function() {
         $('#approvalModalTitle').text('Reject Clearance');
         $('#approvalModalText').text(`Are you sure you want to reject library clearance for ${studentName}?`);
         $('#remarks').val('');
+        $('#clearance_slip').val(''); // Clear file input
         $('#confirmApproval').removeClass('btn-success').addClass('btn-danger');
         $('#approvalModal').modal('show');
     });
@@ -192,14 +199,24 @@ $(document).ready(function() {
             ? '{{ route("library.approve.clearance") }}'
             : '{{ route("library.reject.clearance") }}';
 
+        // Create FormData to handle file upload
+        const formData = new FormData();
+        formData.append('request_id', currentRequestId);
+        formData.append('remarks', $('#remarks').val());
+        formData.append('_token', '{{ csrf_token() }}');
+        
+        // Add file if selected
+        const fileInput = document.getElementById('clearance_slip');
+        if (fileInput.files.length > 0) {
+            formData.append('clearance_slip', fileInput.files[0]);
+        }
+
         $.ajax({
             url: url,
             method: 'POST',
-            data: {
-                request_id: currentRequestId,
-                remarks: $('#remarks').val(),
-                _token: '{{ csrf_token() }}'
-            },
+            data: formData,
+            processData: false,
+            contentType: false,
             success: function(response) {
                 if (response.success) {
                     showToast(response.message, 'success');

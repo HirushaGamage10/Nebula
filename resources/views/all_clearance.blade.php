@@ -400,7 +400,6 @@
 </div>
             </div>
             <!-- Toast for success -->
-            <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
         </div>
     </div>
 </div>
@@ -476,10 +475,20 @@ $(document).ready(function() {
     });
     // Send button logic
     $(document).on('click', '.send-clearance-btn', function() {
-        const type = $(this).data('type');
+        const button = $(this);
+        const type = button.data('type');
         const location = $('#locationDropdown').val();
         const courseId = $('#courseDropdown').val();
         const intakeId = $('#intakeDropdown').val();
+        
+        // Prevent multiple clicks
+        if (button.hasClass('loading')) {
+            return;
+        }
+        
+        // Add loading state
+        button.addClass('loading').prop('disabled', true).text('Sending...');
+        
         // AJAX to backend to send notification (to be implemented)
         $.ajax({
             url: '{{ route('clearance.sendRequest') }}',
@@ -496,15 +505,31 @@ $(document).ready(function() {
             },
             error: function() {
                 showToast('Failed to send clearance request.', 'danger');
+            },
+            complete: function() {
+                // Reset button state
+                button.removeClass('loading').prop('disabled', false).text('Send');
             }
         });
     });
     // Show toast
     function showToast(message, type) {
+        // Remove any existing toasts first
+        $('.toast').remove();
+        
         const toast = `<div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true"><div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div></div>`;
         $('.toast-container').append(toast);
-        $('.toast').toast('show');
-        $('.toast').on('hidden.bs.toast', function() { $(this).remove(); });
+        
+        // Show the toast and auto-remove after it's hidden
+        const toastElement = $('.toast').last();
+        toastElement.toast({
+            delay: 3000,
+            autohide: true
+        });
+        toastElement.toast('show');
+        toastElement.on('hidden.bs.toast', function() { 
+            $(this).remove(); 
+        });
     }
     // Load student list for other users
     function loadStudentList() {
