@@ -25,6 +25,7 @@ class Intake extends Model
         'course_fee',
         'start_date',
         'end_date',
+        'course_registration_id_pattern',
         'created_at',
         'updated_at'
     ];

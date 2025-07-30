@@ -94,8 +94,8 @@ class ExamResultController extends Controller
                 'module_id' => 'required|exists:modules,module_id',
                 'results' => 'required|array|min:1',
                 'results.*.student_id' => 'required|exists:students,student_id',
-                'results.*.marks' => 'required|integer|min:0|max:100',
-                'results.*.grade' => 'required|string|max:5',
+                'results.*.marks' => 'nullable|integer|min:0|max:100',
+                'results.*.grade' => 'nullable|string|max:5',
             ]);
 
             foreach ($validatedData['results'] as $result) {
@@ -106,8 +106,8 @@ class ExamResultController extends Controller
                     'intake_id' => $validatedData['intake_id'],
                     'location' => $validatedData['location'],
                     'semester' => $validatedData['semester'],
-                    'marks' => $result['marks'],
-                    'grade' => $result['grade'],
+                    'marks' => $result['marks'] ?? null,
+                    'grade' => $result['grade'] ?? null,
                 ]);
             }
 
@@ -215,10 +215,15 @@ class ExamResultController extends Controller
             return response()->json(['error' => 'Invalid course or intake.'], 404);
         }
 
-        $semesters = \App\Models\Semester::where('course_id', $request->course_id)
-            ->where('intake_id', $request->intake_id)
-            ->whereIn('status', ['active', 'upcoming'])
-            ->get(['id as semester_id', 'name as semester_name']);
+        // Get semesters that have modules assigned for this course and intake
+        $semesters = \App\Models\Semester::join('semester_module', 'semesters.id', '=', 'semester_module.semester_id')
+            ->where('semesters.course_id', $request->course_id)
+            ->where('semesters.intake_id', $request->intake_id)
+            ->whereIn('semesters.status', ['active', 'upcoming'])
+            ->select('semesters.id as semester_id', 'semesters.name as semester_name')
+            ->distinct()
+            ->get();
+
         return response()->json(['semesters' => $semesters]);
     }
 

@@ -39,8 +39,7 @@ class IntakeCreationController extends Controller
                 'course_fee' => 'required|numeric|min:0',
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after_or_equal:start_date',
-                'course_registration_id_start' => 'nullable|string',
-                'course_registration_id_pattern' => 'nullable|string',
+                'course_registration_id_pattern' => 'required|string|regex:/^.*\d+$/',
             ]);
 
             $intake = Intake::create($validatedData);

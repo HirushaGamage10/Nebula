@@ -61,4 +61,30 @@ class SpecialApprovalController extends Controller
             });
         return response()->json(['success' => true, 'students' => $students]);
     }
+
+    // Download special approval document
+    public function downloadDocument($filename)
+    {
+        // Validate filename to prevent directory traversal
+        if (!preg_match('/^[a-zA-Z0-9._-]+$/', $filename)) {
+            abort(404, 'Invalid filename');
+        }
+
+        $filePath = 'special_approvals/' . $filename;
+        
+        // Check if file exists
+        if (!Storage::disk('public')->exists($filePath)) {
+            abort(404, 'Document not found');
+        }
+
+        // Get file info
+        $file = Storage::disk('public')->get($filePath);
+        $mimeType = Storage::disk('public')->mimeType($filePath);
+        
+        // Return file as response
+        return response($file, 200, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . $filename . '"'
+        ]);
+    }
 } 
