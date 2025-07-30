@@ -400,4 +400,39 @@ class ExamResultController extends Controller
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+    /**
+     * Auto-calculate grades from marks for existing exam results.
+     */
+    public function autoCalculateGrades(Request $request)
+    {
+        try {
+            $validatedData = $request->validate([
+                'course_id' => 'required|exists:courses,course_id',
+                'intake_id' => 'required|exists:intakes,intake_id',
+                'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
+                'semester' => 'required',
+                'module_id' => 'required|exists:modules,module_id',
+            ]);
+
+            $updatedCount = ExamResult::autoCalculateGrades(
+                $validatedData['course_id'],
+                $validatedData['module_id'],
+                $validatedData['intake_id']
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully auto-calculated grades for {$updatedCount} exam result(s).",
+                'updated_count' => $updatedCount
+            ], Response::HTTP_OK);
+
+        } catch (\Exception $e) {
+            \Log::error('Error auto-calculating grades: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while auto-calculating grades.'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 }

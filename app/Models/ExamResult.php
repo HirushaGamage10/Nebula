@@ -207,9 +207,66 @@ class ExamResult extends Model
         }
         
         $total = $query->count();
-        $passed = $query->whereIn('grade', ['A', 'B', 'C', 'D'])->count();
+        
+        // Count students who passed based on grades OR marks
+        $passed = $query->where(function($q) {
+            $q->whereIn('grade', ['A', 'B', 'C', 'D'])
+              ->orWhere(function($subQ) {
+                  $subQ->whereNull('grade')
+                       ->orWhere('grade', '')
+                       ->where('marks', '>=', 50); // 50% passing threshold
+              });
+        })->count();
         
         return $total > 0 ? round(($passed / $total) * 100, 2) : 0;
+    }
+
+    // New method to calculate grade from marks
+    public static function calculateGradeFromMarks($marks)
+    {
+        if ($marks === null || $marks === '') {
+            return null;
+        }
+        
+        $marksNum = (int) $marks;
+        
+        if ($marksNum >= 80) return 'A';
+        if ($marksNum >= 70) return 'B';
+        if ($marksNum >= 60) return 'C';
+        if ($marksNum >= 50) return 'D';
+        return 'F';
+    }
+
+    // Method to auto-calculate grades for results with marks but no grades
+    public static function autoCalculateGrades($courseId, $moduleId = null, $intakeId = null)
+    {
+        $query = self::where('course_id', $courseId)
+                     ->whereNotNull('marks')
+                     ->where(function($q) {
+                         $q->whereNull('grade')
+                           ->orWhere('grade', '');
+                     });
+        
+        if ($moduleId) {
+            $query->where('module_id', $moduleId);
+        }
+        
+        if ($intakeId) {
+            $query->where('intake_id', $intakeId);
+        }
+        
+        $results = $query->get();
+        $updatedCount = 0;
+        
+        foreach ($results as $result) {
+            $grade = self::calculateGradeFromMarks($result->marks);
+            if ($grade) {
+                $result->update(['grade' => $grade]);
+                $updatedCount++;
+            }
+        }
+        
+        return $updatedCount;
     }
 
     public static function getGradeDistribution($courseId, $moduleId = null, $intakeId = null)

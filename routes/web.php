@@ -316,6 +316,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/get-semesters', [ExamResultController::class, 'getSemesters'])->name('get.semesters');
         Route::post('/get-students-for-exam-result', [ExamResultController::class, 'getStudentsForExamResult'])->name('get.students.for.exam.result');
         Route::post('/get-existing-exam-results', [ExamResultController::class, 'getExistingExamResults'])->name('get.existing.exam.results');
+        Route::post('/auto-calculate-grades', [ExamResultController::class, 'autoCalculateGrades'])->name('auto.calculate.grades');
     });
 
     // Repeat Students Management - DGM, Program Administrator (level 01), Program Administrator (level 02), Bursar, Marketing Manager, Developer
