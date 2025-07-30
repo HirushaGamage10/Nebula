@@ -1,7 +1,6 @@
-@extends('inc.app')
-@section('title', 'NEBULA | Special Approval List')
+<?php $__env->startSection('title', 'NEBULA | Special Approval List'); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
 <style>
 /* Success Message Styles */
 .success-message {
@@ -259,7 +258,7 @@
     </div>
 </div>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 // Success and Error Message Functions
 function showSuccessMessage(message) {
@@ -382,7 +381,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         fetch('/register-eligible-student', {
             method: 'POST',
-            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            headers: { 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' },
             body: formData
         })
         .then(response => response.json())
@@ -562,7 +561,7 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
             }
         })
         .then(response => response.json())
@@ -603,7 +602,7 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
             },
             body: JSON.stringify({
                 registration_id: registrationId,
@@ -638,5 +637,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStudentRegistrationData();
 });
 </script>
-@endpush
-@endsection 
+<?php $__env->stopPush(); ?>
+<?php $__env->stopSection(); ?> 
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\Github\Nebula-Project\Code\resources\views/Special_approval_list.blade.php ENDPATH**/ ?>

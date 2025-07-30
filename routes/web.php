@@ -507,6 +507,8 @@ Route::post('/get-payment-plan-details', [App\Http\Controllers\IntakeCreationCon
 Route::post('/get-intake-fees', [App\Http\Controllers\PaymentPlanController::class, 'getIntakeFees'])->name('get.intake.fees');
 
 Route::post('/special-approval-register', [SpecialApprovalController::class, 'register']);
+// Special approval document download route
+Route::get('/special-approval-document/{filename}', [SpecialApprovalController::class, 'downloadDocument'])->name('special.approval.document.download');
 // Removed duplicate route - using EligibilityCheckingAndRegistrationController@getSpecialApprovalList instead
 
 // Payment Clearance - Bursar and Developer only

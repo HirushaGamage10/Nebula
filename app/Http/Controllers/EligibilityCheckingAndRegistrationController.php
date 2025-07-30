@@ -255,10 +255,26 @@ public function search(Request $request)
             // Get document URL if available
             $documentUrl = null;
             if ($reg->special_approval_pdf) {
-                $documentUrl = Storage::disk('public')->url($reg->special_approval_pdf);
-                // Ensure the URL has the correct protocol and domain
-                if (!str_starts_with($documentUrl, 'http')) {
-                    $documentUrl = request()->getScheme() . '://' . request()->getHttpHost() . '/storage/' . $reg->special_approval_pdf;
+                // Check if file exists first
+                if (Storage::disk('public')->exists($reg->special_approval_pdf)) {
+                    $documentUrl = Storage::disk('public')->url($reg->special_approval_pdf);
+                    // Ensure the URL has the correct protocol and domain
+                    if (!str_starts_with($documentUrl, 'http')) {
+                        $documentUrl = request()->getScheme() . '://' . request()->getHttpHost() . '/storage/' . $reg->special_approval_pdf;
+                    }
+                    
+                    // Log for debugging
+                    \Log::info('Document URL generated', [
+                        'student_id' => $reg->student->student_id,
+                        'file_path' => $reg->special_approval_pdf,
+                        'file_exists' => Storage::disk('public')->exists($reg->special_approval_pdf),
+                        'generated_url' => $documentUrl
+                    ]);
+                } else {
+                    \Log::warning('Special approval document not found', [
+                        'student_id' => $reg->student->student_id,
+                        'file_path' => $reg->special_approval_pdf
+                    ]);
                 }
             }
             
@@ -488,24 +504,56 @@ public function search(Request $request)
         if (!$pattern) {
             return response()->json(['success' => false, 'message' => 'No pattern set for this intake.']);
         }
+        
         // Extract prefix and numeric part from pattern
         if (preg_match('/^(.*?)(\d+)$/', $pattern, $matches)) {
             $prefix = $matches[1];
             $numberLength = strlen($matches[2]);
+            $startNumber = (int)$matches[2];
         } else {
-            return response()->json(['success' => false, 'message' => 'Invalid pattern format.']);
+            return response()->json(['success' => false, 'message' => 'Invalid pattern format. Pattern must end with numbers (e.g., 001, 01, 1).']);
         }
-        // Find the latest registration ID for this intake that matches the prefix
+        
+        // Find the latest registration ID for this specific intake that matches the prefix
+        // Exclude empty or null course_registration_id values
         $latest = \App\Models\CourseRegistration::where('intake_id', $intake->intake_id)
             ->where('course_registration_id', 'like', $prefix . '%')
+            ->whereNotNull('course_registration_id')
+            ->where('course_registration_id', '!=', '')
             ->orderByDesc('course_registration_id')
             ->first();
+            
+        // Log for debugging
+        \Log::info('Looking for existing registrations', [
+            'intake_id' => $intake->intake_id,
+            'pattern' => $pattern,
+            'prefix' => $prefix,
+            'latest_registration' => $latest ? $latest->course_registration_id : 'none',
+            'total_registrations_for_intake' => \App\Models\CourseRegistration::where('intake_id', $intake->intake_id)->count()
+        ]);
+            
         if ($latest && preg_match('/^(.*?)(\d+)$/', $latest->course_registration_id, $latestMatches)) {
+            // If we have existing registrations, increment the number
             $nextNumber = str_pad(((int)$latestMatches[2]) + 1, $numberLength, '0', STR_PAD_LEFT);
         } else {
-            $nextNumber = $matches[2];
+            // If no existing registrations, use the start number from pattern
+            $nextNumber = str_pad($startNumber, $numberLength, '0', STR_PAD_LEFT);
         }
+        
         $nextId = $prefix . $nextNumber;
+        
+        // Log for debugging
+        \Log::info('Generated course registration ID', [
+            'intake_id' => $intake_id,
+            'pattern' => $pattern,
+            'prefix' => $prefix,
+            'number_length' => $numberLength,
+            'start_number' => $startNumber,
+            'next_number' => $nextNumber,
+            'next_id' => $nextId,
+            'latest_registration' => $latest ? $latest->course_registration_id : 'none'
+        ]);
+        
         return response()->json(['success' => true, 'next_id' => $nextId]);
     }
 

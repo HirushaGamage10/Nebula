@@ -1,8 +1,6 @@
-@extends('inc.app')
-
-@section('title', 'NEBULA | Eligibility & Registration')
+<?php $__env->startSection('title', 'NEBULA | Eligibility & Registration'); ?>
  
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -193,7 +191,7 @@
     </div>
 </div>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const nicInput = document.getElementById('nic');
@@ -344,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (nic && courseId) {
             fetch('/get-eligible-students-by-nic', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+                headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
                 body: JSON.stringify({ nic: nic, course_id: courseId })
             })
             .then(response => response.json())
@@ -352,7 +350,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Fetch and display student details
                 fetch('/get-student-exam-details-by-nic-course', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+                    headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
                     body: JSON.stringify({ nic: nic, course_id: courseId })
                 })
                 .then(response => response.json())
@@ -483,7 +481,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         fetch('/register-eligible-student', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify({ nic: nic, course_id: courseId })
         })
         .then(response => response.json())
@@ -514,7 +512,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     document.getElementById('registerAnotherCourseBtn').addEventListener('click', function() {
-        window.location.href = '{{ route('course.registration') }}';
+        window.location.href = '<?php echo e(route('course.registration')); ?>';
     });
     document.getElementById('specialApprovalBtn').addEventListener('click', function() {
         const nic = document.getElementById('studentNICInput').value;
@@ -646,7 +644,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('/test-special-approval', {
             method: 'POST',
             headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
             },
             body: JSON.stringify({test: 'data'})
         })
@@ -666,11 +664,11 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Submitting...';
 
-        console.log('CSRF Token:', '{{ csrf_token() }}');
+        console.log('CSRF Token:', '<?php echo e(csrf_token()); ?>');
         fetch('/send-special-approval-request', {
             method: 'POST',
             headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
                 // Don't set Content-Type for FormData - browser will set it automatically
             },
             body: formData
@@ -759,7 +757,7 @@ window.showToast = function(message, type = 'success') {
     toast.show();
 };
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
 
 <!-- Toast Container -->
 <div aria-live="polite" aria-atomic="true" class="position-fixed top-0 end-0 p-3" style="z-index: 9999">
@@ -818,4 +816,6 @@ window.showToast = function(message, type = 'success') {
     </div>
 </div>
 
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\Github\Nebula-Project\Code\resources\views/eligibility_registration.blade.php ENDPATH**/ ?>

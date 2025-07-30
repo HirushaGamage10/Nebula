@@ -1,15 +1,13 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | Intake Creation'); ?>
 
-@section('title', 'NEBULA | Intake Creation')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
       <div class="container-fluid">
     <div class="card">
         <div class="card-body">
             <h2 class="text-center mb-4">Create New Intake</h2>
             <hr>
             <form id="intakeForm">
-    @csrf
+    <?php echo csrf_field(); ?>
 <div class="mb-3 row mx-3">
                     <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
@@ -26,9 +24,9 @@
                     <div class="col-sm-10">
                         <select class="form-select" id="course_name" name="course_name" required>
                             <option selected disabled value="">Choose a course...</option>
-                            @foreach($courses as $course)
-                                <option value="{{ $course }}">{{ $course }}</option>
-                            @endforeach
+                            <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($course); ?>"><?php echo e($course); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>
                   </div>
                 </div>
@@ -115,19 +113,12 @@
                 </div>
                 </div>
                 <div class="mb-3 row mx-3">
-    <label for="course_registration_id_pattern" class="col-sm-2 col-form-label">
-        Course Registration ID Pattern <span class="text-danger">*</span>
+    <label for="course_registration_id_start" class="col-sm-2 col-form-label">
+        Course Registration ID Start <span class="text-danger">*</span>
     </label>
     <div class="col-sm-10">
-        <input type="text" class="form-control" id="course_registration_id_pattern" name="course_registration_id_pattern" placeholder="e.g., 2025/SE/HND/001" required>
-        <small class="text-muted">
-            <strong>Pattern Format:</strong> Use any format you want, ending with numbers (e.g., 001, 01, 1).<br>
-            <strong>Examples:</strong><br>
-            • <code>2025/HND/SE/001</code> → 2025/HND/SE/001, 2025/HND/SE/002, 2025/HND/SE/003...<br>
-            • <code>NEBULA/2025/001</code> → NEBULA/2025/001, NEBULA/2025/002, NEBULA/2025/003...<br>
-            • <code>REG/2025/01</code> → REG/2025/01, REG/2025/02, REG/2025/03...<br>
-            • <code>STUDENT/001</code> → STUDENT/001, STUDENT/002, STUDENT/003...
-        </small>
+        <input type="text" class="form-control" id="course_registration_id_start" name="course_registration_id_start" placeholder="e.g., 2025/SE/HND/001" required>
+        <small class="text-muted">This will be the starting registration number for students in this intake.</small>
     </div>
 </div>
                 <div class="d-grid mt-3">
@@ -153,39 +144,35 @@
                             <th style="position: sticky; top: 0; background: #fff;">Start Date</th>
                             <th style="position: sticky; top: 0; background: #fff;">End Date</th>
                             <th style="position: sticky; top: 0; background: #fff;">Capacity</th>
-                            <th style="position: sticky; top: 0; background: #fff;">Registration Pattern</th>
                             <th style="position: sticky; top: 0; background: #fff;">Status</th>
                         </tr>
                     </thead>
                     <tbody id="intake-table-body">
-                        @forelse($intakes as $intake)
-                        <tr id="intake-row-{{$intake->intake_id}}">
-                            <td style="width: 180px; max-width: 180px; word-break: break-word;">{{ $intake->course_name }}</td>
-                            <td>{{ $intake->batch }}</td>
-                            <td>{{ $intake->location }}</td>
-                            <td>{{ $intake->intake_mode }}</td>
-                            <td>{{ $intake->intake_type }}</td>
-                            <td>{{ $intake->start_date ? $intake->start_date->format('Y-m-d') : '' }}</td>
-                            <td>{{ $intake->end_date ? $intake->end_date->format('Y-m-d') : '' }}</td>
-                            <td>{{ $intake->registrations->count() }} / {{ $intake->batch_size }}</td>
+                        <?php $__empty_1 = true; $__currentLoopData = $intakes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $intake): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <tr id="intake-row-<?php echo e($intake->intake_id); ?>">
+                            <td style="width: 180px; max-width: 180px; word-break: break-word;"><?php echo e($intake->course_name); ?></td>
+                            <td><?php echo e($intake->batch); ?></td>
+                            <td><?php echo e($intake->location); ?></td>
+                            <td><?php echo e($intake->intake_mode); ?></td>
+                            <td><?php echo e($intake->intake_type); ?></td>
+                            <td><?php echo e($intake->start_date ? $intake->start_date->format('Y-m-d') : ''); ?></td>
+                            <td><?php echo e($intake->end_date ? $intake->end_date->format('Y-m-d') : ''); ?></td>
+                            <td><?php echo e($intake->registrations->count()); ?> / <?php echo e($intake->batch_size); ?></td>
                             <td>
-                                <code>{{ $intake->course_registration_id_pattern ?? 'Not set' }}</code>
-                            </td>
-                            <td>
-                                @if($intake->isPast())
+                                <?php if($intake->isPast()): ?>
                                     <span class="badge bg-danger">Finished</span>
-                                @elseif($intake->isCurrent())
+                                <?php elseif($intake->isCurrent()): ?>
                                     <span class="badge bg-success">Ongoing</span>
-                                @else
+                                <?php else: ?>
                                     <span class="badge bg-warning">Upcoming</span>
-                                @endif
+                                <?php endif; ?>
                             </td>
                         </tr>
-                        @empty
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <tr>
-                            <td colspan="10" class="text-center">No intakes found.</td>
+                            <td colspan="9" class="text-center">No intakes found.</td>
                         </tr>
-                        @endforelse
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -194,9 +181,9 @@
       </div>
 
 <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
     <script>
 $(document).ready(function() {
     $('#intakeForm').on('submit', function(e) {
@@ -204,7 +191,7 @@ $(document).ready(function() {
         const formData = new FormData(this);
 
         $.ajax({
-            url: '{{ route("intake.store") }}',
+            url: '<?php echo e(route("intake.store")); ?>',
             type: 'POST',
             data: formData,
             processData: false,
@@ -225,14 +212,13 @@ $(document).ready(function() {
                             <td>${formatDate(intake.start_date)}</td>
                             <td>${formatDate(intake.end_date)}</td>
                             <td>${intake.registrations_count ?? 0} / ${intake.batch_size}</td>
-                            <td><code>${intake.course_registration_id_pattern || 'Not set'}</code></td>
                             <td>
                                 ${intake.isPast ? '<span class="badge bg-danger">Finished</span>' : (intake.isCurrent ? '<span class="badge bg-success">Ongoing</span>' : '<span class="badge bg-warning">Upcoming</span>')}
                             </td>
                         </tr>
                     `;
 
-                    if ($('#intake-table-body').find('td[colspan="10"]').length) {
+                    if ($('#intake-table-body').find('td[colspan="9"]').length) {
                         $('#intake-table-body').html(newRow);
                     } else {
                         $('#intake-table-body').prepend(newRow);
@@ -362,7 +348,7 @@ $(document).ready(function() {
     $('#course_name, #location, #intake_type').on('change', autofillPaymentPlan);
 });
     </script>
-@endpush
+<?php $__env->stopPush(); ?>
 
 <style>
     .existing-intakes-card {
@@ -380,3 +366,5 @@ $(document).ready(function() {
         font-size: 0.95rem !important;
     }
 </style>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\Github\Nebula-Project\Code\resources\views/intake_creation.blade.php ENDPATH**/ ?>
