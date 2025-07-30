@@ -129,7 +129,7 @@
                 </nav>
             </header>
             <!--  Header End -->
-            <div class="container-fluid flex-grow-1">
+            <div id="main-content" class="container-fluid flex-grow-1">
                 <?php echo $__env->yieldContent('content'); ?>
             </div>
             <div class="footer-wrapper mt-auto">
@@ -153,7 +153,36 @@
             </div>
         </div>
     </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const links = document.querySelectorAll('.sidebar-link');
 
+            links.forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const url = this.getAttribute('href');
+
+                    fetch(url)
+                        .then(response => response.text())
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            const newContent = doc.querySelector('#main-content').innerHTML;
+                            document.querySelector('#main-content').innerHTML = newContent;
+                            window.history.pushState({}, '', url);
+                        })
+                        .catch(error => {
+                            console.error('Error loading content:', error);
+                        });
+                });
+            });
+
+            // Handle browser back/forward button navigation
+            window.onpopstate = function () {
+                location.reload(); // Reload full page on back/forward
+            };
+        });
+    </script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             // Get the current time

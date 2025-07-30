@@ -215,13 +215,11 @@ class ExamResultController extends Controller
             return response()->json(['error' => 'Invalid course or intake.'], 404);
         }
 
-        // Get semesters that have modules assigned for this course and intake
-        $semesters = \App\Models\Semester::join('semester_module', 'semesters.id', '=', 'semester_module.semester_id')
-            ->where('semesters.course_id', $request->course_id)
-            ->where('semesters.intake_id', $request->intake_id)
-            ->whereIn('semesters.status', ['active', 'upcoming'])
-            ->select('semesters.id as semester_id', 'semesters.name as semester_name')
-            ->distinct()
+        // Get semesters that have been created for this course and intake
+        $semesters = \App\Models\Semester::where('course_id', $request->course_id)
+            ->where('intake_id', $request->intake_id)
+            ->whereIn('status', ['active', 'upcoming'])
+            ->select('id', 'name')
             ->get();
 
         return response()->json(['semesters' => $semesters]);
@@ -334,6 +332,7 @@ class ExamResultController extends Controller
                     'student_name' => $result->student->full_name,
                     'marks' => $result->marks,
                     'grade' => $result->grade,
+                    'remarks' => $result->remarks,
                     'created_at' => $result->created_at->format('Y-m-d H:i:s'),
                     'updated_at' => $result->updated_at->format('Y-m-d H:i:s'),
                 ];
@@ -362,6 +361,7 @@ class ExamResultController extends Controller
                 'results.*.id' => 'required|exists:exam_results,id',
                 'results.*.marks' => 'required|integer|min:0|max:100',
                 'results.*.grade' => 'required|string|max:5',
+                'results.*.remarks' => 'nullable|string|max:255',
             ]);
 
             $updatedCount = 0;
@@ -371,6 +371,7 @@ class ExamResultController extends Controller
                     $examResult->update([
                         'marks' => $result['marks'],
                         'grade' => $result['grade'],
+                        'remarks' => $result['remarks'] ?? null,
                     ]);
                     $updatedCount++;
                 }
