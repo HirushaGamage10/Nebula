@@ -129,6 +129,7 @@
                                 <th>Student Name</th>
                                 <th>Marks</th>
                                 <th>Grade</th>
+                                <th>Remarks</th>
                                 <th>Last Updated</th>
                             </tr>
                         </thead>
@@ -299,12 +300,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const resultId = row.getAttribute('data-result-id');
             const marksInput = row.querySelector('input[name="marks"]');
             const gradeInput = row.querySelector('input[name="grade"]');
+            const remarksInput = row.querySelector('input[name="remarks"]');
             
             if (resultId && marksInput && gradeInput) {
                 updatedResults.push({
                     id: parseInt(resultId),
                     marks: parseInt(marksInput.value) || 0,
-                    grade: gradeInput.value.trim()
+                    grade: gradeInput.value.trim(),
+                    remarks: remarksInput ? remarksInput.value.trim() : ''
                 });
             }
         });
@@ -361,6 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${result.student_name}</td>
                 <td><input type="number" class="form-control" name="marks" min="0" max="100" value="${result.marks || ''}" onchange="updateResultMark(${index}, this.value)"></td>
                 <td><input type="text" class="form-control" name="grade" maxlength="5" value="${result.grade || ''}" onchange="updateResultGrade(${index}, this.value)"></td>
+                <td><input type="text" class="form-control" name="remarks" maxlength="255" value="${result.remarks || ''}" onchange="updateResultRemarks(${index}, this.value)" placeholder="Enter remarks"></td>
                 <td>${result.updated_at}</td>
             </tr>`;
             resultsTableBody.insertAdjacentHTML('beforeend', row);
@@ -451,7 +455,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('updateAllBtnSection').style.display = '';
                 statisticsCards.style.display = '';
             } else {
-                resultsTableBody.innerHTML = '<tr><td colspan="5" class="text-center">No exam results found for these filters.</td></tr>';
+                resultsTableBody.innerHTML = '<tr><td colspan="6" class="text-center">No exam results found for these filters.</td></tr>';
                 document.getElementById('resultsTableSection').style.display = '';
                 document.getElementById('updateAllBtnSection').style.display = 'none';
                 statisticsCards.style.display = 'none';
@@ -599,6 +603,12 @@ document.addEventListener('DOMContentLoaded', function() {
     window.updateResultGrade = function(index, value) {
         if (results[index]) {
             results[index].grade = value;
+        }
+    }
+    
+    window.updateResultRemarks = function(index, value) {
+        if (results[index]) {
+            results[index].remarks = value;
         }
     }
 
