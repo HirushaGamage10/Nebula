@@ -23,6 +23,8 @@ class Intake extends Model
         'franchise_payment',
         'franchise_payment_currency',
         'course_fee',
+        'sscl_tax',
+        'bank_charges',
         'start_date',
         'end_date',
         'course_registration_id_pattern',
@@ -33,6 +35,8 @@ class Intake extends Model
     protected $casts = [
         'intake_id' => 'int',
         'batch_size' => 'int',
+        'sscl_tax' => 'decimal:2',
+        'bank_charges' => 'decimal:2',
         'start_date' => 'date',
         'end_date' => 'date',
     ];

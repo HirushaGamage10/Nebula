@@ -17,44 +17,55 @@ class PaymentPlanController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'location' => 'required|string',
-            'course' => 'required|exists:courses,course_id',
-            'intake' => 'required|exists:intakes,intake_id',
-            'registrationFee' => 'required|numeric|min:0',
-            'localFee' => 'required|numeric|min:0',
-            'internationalFee' => 'required|numeric|min:0',
-            'currency' => 'required|string',
-            'ssclTax' => 'required|numeric|min:0',
-            'bankCharges' => 'nullable|numeric|min:0',
-            'applyDiscount' => 'required|string',
-            'fullPaymentDiscount' => 'nullable|numeric|min:0',
-            'installmentPlan' => 'nullable|string',
-            'installments' => 'nullable', // Will be handled as JSON
-        ]);
+        try {
+            $validated = $request->validate([
+                'location' => 'required|string',
+                'course' => 'required|exists:courses,course_id',
+                'intake' => 'required|exists:intakes,intake_id',
+                'registrationFee' => 'required|numeric|min:0',
+                'localFee' => 'required|numeric|min:0',
+                'internationalFee' => 'required|numeric|min:0',
+                'currency' => 'required|string',
+                'ssclTax' => 'required|numeric|min:0',
+                'bankCharges' => 'nullable|numeric|min:0',
+                'applyDiscount' => 'required|string',
+                'fullPaymentDiscount' => 'nullable|numeric|min:0',
+                'installmentPlan' => 'nullable|string',
+                'installments' => 'nullable', // Will be handled as JSON
+            ]);
 
-        $installments = $request->input('installments');
-        if (is_string($installments)) {
-            $installments = json_decode($installments, true);
+            $installments = $request->input('installments');
+            if (is_string($installments)) {
+                $installments = json_decode($installments, true);
+            }
+
+            $plan = PaymentPlan::create([
+                'location' => $validated['location'],
+                'course_id' => $validated['course'],
+                'intake_id' => $validated['intake'],
+                'registration_fee' => $validated['registrationFee'],
+                'local_fee' => $validated['localFee'],
+                'international_fee' => $validated['internationalFee'],
+                'international_currency' => $validated['currency'],
+                'sscl_tax' => $validated['ssclTax'],
+                'bank_charges' => $validated['bankCharges'] ?? null,
+                'apply_discount' => $validated['applyDiscount'] === 'yes',
+                'discount' => $validated['fullPaymentDiscount'] ?? null,
+                'installment_plan' => $request->input('franchisePayment') === 'yes',
+                'installments' => $installments ? json_encode($installments) : null,
+            ]);
+
+            return redirect()->back()->with('success', 'Payment plan created successfully!');
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()
+                ->withErrors($e->errors())
+                ->withInput();
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'An error occurred while creating the payment plan. Please try again.')
+                ->withInput();
         }
-
-        $plan = PaymentPlan::create([
-            'location' => $validated['location'],
-            'course_id' => $validated['course'],
-            'intake_id' => $validated['intake'],
-            'registration_fee' => $validated['registrationFee'],
-            'local_fee' => $validated['localFee'],
-            'international_fee' => $validated['internationalFee'],
-            'international_currency' => $validated['currency'],
-            'sscl_tax' => $validated['ssclTax'],
-            'bank_charges' => $validated['bankCharges'] ?? null,
-            'apply_discount' => $validated['applyDiscount'] === 'yes',
-            'discount' => $validated['fullPaymentDiscount'] ?? null,
-            'installment_plan' => $request->input('franchisePayment') === 'yes',
-            'installments' => $installments ? json_encode($installments) : null,
-        ]);
-
-        return redirect()->back()->with('success', 'Payment plan created successfully!');
     }
 
     /**
@@ -88,6 +99,8 @@ class PaymentPlanController extends Controller
             'course_fee' => $intake->course_fee,
             'franchise_payment' => $intake->franchise_payment,
             'franchise_payment_currency' => $intake->franchise_payment_currency ?? 'LKR',
+            'sscl_tax' => $intake->sscl_tax ?? 0.00,
+            'bank_charges' => $intake->bank_charges ?? 0.00,
         ]);
     }
 } 

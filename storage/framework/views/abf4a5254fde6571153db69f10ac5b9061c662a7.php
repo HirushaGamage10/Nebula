@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Timetable Management')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Timetable Management'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -108,8 +108,8 @@
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
-                                    <form id="degreeTimetableForm" method="POST" action="{{ route('timetable.store') }}">
-                                        @csrf
+                                    <form id="degreeTimetableForm" method="POST" action="<?php echo e(route('timetable.store')); ?>">
+                                        <?php echo csrf_field(); ?>
                                         <input type="hidden" name="course_type" value="degree">
                                         <table class="table table-bordered text-center align-middle" style="min-width: 900px;">
                                             <thead class="table-light">
@@ -215,8 +215,8 @@
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
-                                    <form id="certificateTimetableForm" method="POST" action="{{ route('timetable.store') }}">
-                                        @csrf
+                                    <form id="certificateTimetableForm" method="POST" action="<?php echo e(route('timetable.store')); ?>">
+                                        <?php echo csrf_field(); ?>
                                         <input type="hidden" name="course_type" value="certificate">
                                         <table class="table table-bordered text-center align-middle" style="min-width: 900px;">
                                             <thead class="table-light">
@@ -255,7 +255,7 @@
     </div>
 </div>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Degree Program Elements
@@ -1169,11 +1169,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 daySelects.forEach((select, dayIndex) => {
                     const dayName = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][dayIndex];
                     if (select.value) {
-                        // Get the module name (text) instead of the module ID (value)
-                        const selectedOption = select.options[select.selectedIndex];
-                        if (selectedOption) {
-                            rowData[dayName] = selectedOption.text;
-                        }
+                        rowData[dayName] = select.value;
                     }
                 });
                 
@@ -1191,7 +1187,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
 
 <style>
 .lds-ring { display: inline-block; position: relative; width: 80px; height: 80px; }
@@ -1216,4 +1212,5 @@ input[type="date"].is-loading {
     color: #856404;
 }
 </style>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/timetable.blade.php ENDPATH**/ ?>

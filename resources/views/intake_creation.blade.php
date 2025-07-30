@@ -103,6 +103,21 @@
                     </div>
                 </div>
                 <div class="mb-3 row mx-3">
+                    <label for="sscl_tax" class="col-sm-2 col-form-label">SSCL Tax Percentage <span class="text-danger">*</span></label>
+                    <div class="col-sm-10">
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="sscl_tax" name="sscl_tax" placeholder="e.g., 15.00" step="0.01" min="0" max="100" required>
+                            <span class="input-group-text">%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3 row mx-3">
+                    <label for="bank_charges" class="col-sm-2 col-form-label">Bank Charges (LKR)</label>
+                    <div class="col-sm-10">
+                        <input type="number" class="form-control" id="bank_charges" name="bank_charges" placeholder="e.g., 500.00" step="0.01" min="0">
+                    </div>
+                </div>
+                <div class="mb-3 row mx-3">
                     <label for="start_date" class="col-sm-2 col-form-label">Start Date <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
                         <input type="date" class="form-control" id="start_date" name="start_date" required>
