@@ -17,6 +17,7 @@ class ClearanceRequest extends Model
         'student_id',
         'status',
         'remarks',
+        'clearance_slip',
         'approved_by',
         'approved_at',
         'requested_at'
@@ -106,21 +107,27 @@ class ClearanceRequest extends Model
         return $this->status === self::STATUS_REJECTED;
     }
 
-    public function approve($approverId, $remarks = null)
+    public function approve($approverId, $remarks = null, $clearanceSlip = null)
     {
         $this->status = self::STATUS_APPROVED;
         $this->approved_by = $approverId;
         $this->approved_at = now();
         $this->remarks = $remarks;
+        if ($clearanceSlip) {
+            $this->clearance_slip = $clearanceSlip;
+        }
         $this->save();
     }
 
-    public function reject($approverId, $remarks = null)
+    public function reject($approverId, $remarks = null, $clearanceSlip = null)
     {
         $this->status = self::STATUS_REJECTED;
         $this->approved_by = $approverId;
         $this->approved_at = now();
         $this->remarks = $remarks;
+        if ($clearanceSlip) {
+            $this->clearance_slip = $clearanceSlip;
+        }
         $this->save();
     }
 

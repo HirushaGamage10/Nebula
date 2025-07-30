@@ -120,6 +120,7 @@ class HostelClearanceController extends Controller
         $request->validate([
             'request_id' => 'required|exists:clearance_requests,id',
             'remarks' => 'nullable|string|max:500',
+            'clearance_slip' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120', // 5MB max
         ]);
 
         try {
@@ -132,7 +133,15 @@ class HostelClearanceController extends Controller
                 ], 400);
             }
 
-            $clearanceRequest->approve(auth()->id(), $request->remarks);
+            // Handle file upload if provided
+            $filePath = null;
+            if ($request->hasFile('clearance_slip')) {
+                $file = $request->file('clearance_slip');
+                $fileName = 'hostel_clearance_' . $clearanceRequest->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $filePath = $file->storeAs('clearance_slips', $fileName, 'public');
+            }
+
+            $clearanceRequest->approve(auth()->id(), $request->remarks, $filePath);
 
             return response()->json([
                 'success' => true,
@@ -154,6 +163,7 @@ class HostelClearanceController extends Controller
         $request->validate([
             'request_id' => 'required|exists:clearance_requests,id',
             'remarks' => 'nullable|string|max:500',
+            'clearance_slip' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120', // 5MB max
         ]);
 
         try {
@@ -166,7 +176,15 @@ class HostelClearanceController extends Controller
                 ], 400);
             }
 
-            $clearanceRequest->reject(auth()->id(), $request->remarks);
+            // Handle file upload if provided
+            $filePath = null;
+            if ($request->hasFile('clearance_slip')) {
+                $file = $request->file('clearance_slip');
+                $fileName = 'hostel_clearance_' . $clearanceRequest->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $filePath = $file->storeAs('clearance_slips', $fileName, 'public');
+            }
+
+            $clearanceRequest->reject(auth()->id(), $request->remarks, $filePath);
 
             return response()->json([
                 'success' => true,
