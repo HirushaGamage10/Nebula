@@ -156,7 +156,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ Route::currentRouteName() == 'uh.index.page' ? 'active' : '' }}" href="{{ route('uh.index.page') }}">
                         <span><i class="ti ti-list-numbers"></i></span>
-                        <span class="hide-menu">UH Index Numbers</span>
+                        <span class="hide-menu">External Institute IDs</span>
                     </a>
                 </li>
             @endif

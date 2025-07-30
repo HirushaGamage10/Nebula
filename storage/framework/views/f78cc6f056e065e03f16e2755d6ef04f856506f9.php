@@ -1,40 +1,15 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Payment Plan')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Payment Plan'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-    
-    @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-    
-    @if($errors->any())
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <ul class="mb-0">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-    
     <div class="card">
         <div class="card-body">
             <h2 class="text-center mb-4">Payment Plan Management</h2>
             <hr>
-            <form id="paymentPlanForm" method="POST" action="{{ route('payment.plan.store') }}">
-                @csrf
+            <form id="paymentPlanForm" method="POST" action="<?php echo e(route('payment.plan.store')); ?>">
+                <?php echo csrf_field(); ?>
                 <div class="mb-3 row mx-3">
                     <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
@@ -51,11 +26,11 @@
                     <div class="col-sm-10">
                         <select class="form-select" id="course" name="course" required>
                             <option selected disabled value="">Select Course...</option>
-                            @if(isset($courses))
-                                @foreach($courses as $course)
-                                    <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
-                                @endforeach
-                            @endif
+                            <?php if(isset($courses)): ?>
+                                <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                            <?php endif; ?>
                         </select>
                     </div>
                 </div>
@@ -298,12 +273,12 @@ $('#course, #location').on('change', function() {
     if($('#course').val() && $('#location').val()) {
         // AJAX to get intakes for course/location
         $.ajax({
-            url: '{{ route("module.management.getIntakes") }}',
+            url: '<?php echo e(route("module.management.getIntakes")); ?>',
             method: 'POST',
             data: {
                 course_id: $('#course').val(),
                 location: $('#location').val(),
-                _token: '{{ csrf_token() }}'
+                _token: '<?php echo e(csrf_token()); ?>'
             },
             success: function(response) {
                 if(response.success) {
@@ -376,4 +351,5 @@ $('#paymentPlanForm').on('submit', function(e) {
   this.submit();
 });
 </script>
-@endsection 
+<?php $__env->stopSection(); ?> 
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/payment_plan.blade.php ENDPATH**/ ?>

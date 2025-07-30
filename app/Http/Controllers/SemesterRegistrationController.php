@@ -159,14 +159,42 @@ class SemesterRegistrationController extends Controller
         $courseId = $request->input('course_id');
         $location = $request->input('location');
         $now = now();
-        $intakes = \App\Models\Intake::where('course_name', function($q) use ($courseId) {
+        
+        \Log::info('getOngoingIntakes called with:', [
+            'course_id' => $courseId,
+            'location' => $location,
+            'current_date' => $now
+        ]);
+        
+        // First, get intakes that are currently active (within date range)
+        $activeIntakes = \App\Models\Intake::where('course_name', function($q) use ($courseId) {
                 $q->select('course_name')->from('courses')->where('course_id', $courseId)->limit(1);
             })
             ->where('location', $location)
             ->where('start_date', '<=', $now)
             ->where('end_date', '>=', $now)
             ->get(['intake_id', 'batch']);
-        return response()->json(['success' => true, 'intakes' => $intakes]);
+            
+        \Log::info('Active intakes found:', ['count' => $activeIntakes->count(), 'intakes' => $activeIntakes->toArray()]);
+            
+        // Also get intakes that have semesters created for them
+        $intakesWithSemesters = \App\Models\Intake::where('course_name', function($q) use ($courseId) {
+                $q->select('course_name')->from('courses')->where('course_id', $courseId)->limit(1);
+            })
+            ->where('location', $location)
+            ->whereIn('intake_id', function($q) use ($courseId) {
+                $q->select('intake_id')->from('semesters')->where('course_id', $courseId);
+            })
+            ->get(['intake_id', 'batch']);
+            
+        \Log::info('Intakes with semesters found:', ['count' => $intakesWithSemesters->count(), 'intakes' => $intakesWithSemesters->toArray()]);
+            
+        // Merge and deduplicate the results
+        $allIntakes = $activeIntakes->merge($intakesWithSemesters)->unique('intake_id');
+        
+        \Log::info('Final intakes returned:', ['count' => $allIntakes->count(), 'intakes' => $allIntakes->toArray()]);
+        
+        return response()->json(['success' => true, 'intakes' => $allIntakes]);
     }
 
     // 3. Get open semesters for a course/intake/location
@@ -174,17 +202,24 @@ class SemesterRegistrationController extends Controller
         $courseId = $request->input('course_id');
         $intakeId = $request->input('intake_id');
         
+        \Log::info('getOpenSemesters called with:', [
+            'course_id' => $courseId,
+            'intake_id' => $intakeId
+        ]);
+        
         // Get all semesters for this course and intake
         $semesters = \App\Models\Semester::where('course_id', $courseId)
             ->where('intake_id', $intakeId)
-            ->get(['id as semester_id', 'name as semester_name', 'status'])
+            ->get(['id', 'name', 'status'])
             ->map(function($semester) {
                 return [
-                    'semester_id' => $semester->semester_id,
-                    'semester_name' => $semester->semester_name,
+                    'semester_id' => $semester->id,
+                    'semester_name' => $semester->name,
                     'status' => $semester->status
                 ];
             });
+            
+        \Log::info('Found semesters:', ['count' => $semesters->count(), 'semesters' => $semesters->toArray()]);
             
         return response()->json(['success' => true, 'semesters' => $semesters]);
     }

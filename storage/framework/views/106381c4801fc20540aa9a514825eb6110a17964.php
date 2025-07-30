@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $courseType }} Timetable</title>
+    <title><?php echo e($courseType); ?> Timetable</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -155,48 +155,48 @@
 <body>
     <div class="header">
         <div class="logo">NEBULA INSTITUTE OF TECHNOLOGY</div>
-        <div class="title">{{ $courseType }} Timetable</div>
-        <div class="subtitle">Academic Year {{ date('Y') }}</div>
+        <div class="title"><?php echo e($courseType); ?> Timetable</div>
+        <div class="subtitle">Academic Year <?php echo e(date('Y')); ?></div>
     </div>
 
     <div class="info-section">
         <div class="info-grid">
             <div class="info-row">
                 <div class="info-label">Course:</div>
-                <div class="info-value">{{ $courseName }}</div>
+                <div class="info-value"><?php echo e($courseName); ?></div>
             </div>
             <div class="info-row">
                 <div class="info-label">Location:</div>
-                <div class="info-value">{{ $location }}</div>
+                <div class="info-value"><?php echo e($location); ?></div>
             </div>
             <div class="info-row">
                 <div class="info-label">Intake:</div>
-                <div class="info-value">{{ $intake }}</div>
+                <div class="info-value"><?php echo e($intake); ?></div>
             </div>
-            @if(isset($semesterName))
+            <?php if(isset($semesterName)): ?>
             <div class="info-row">
                 <div class="info-label">Semester:</div>
-                <div class="info-value">{{ $semesterName }} ({{ $semesterStatus }})</div>
+                <div class="info-value"><?php echo e($semesterName); ?> (<?php echo e($semesterStatus); ?>)</div>
             </div>
-            @endif
+            <?php endif; ?>
             <div class="info-row">
                 <div class="info-label">Period:</div>
-                <div class="info-value">{{ date('d/m/Y', strtotime($startDate)) }} - {{ date('d/m/Y', strtotime($endDate)) }}</div>
+                <div class="info-value"><?php echo e(date('d/m/Y', strtotime($startDate))); ?> - <?php echo e(date('d/m/Y', strtotime($endDate))); ?></div>
             </div>
             <div class="info-row">
                 <div class="info-label">Generated:</div>
-                <div class="info-value">{{ $generatedAt }}</div>
+                <div class="info-value"><?php echo e($generatedAt); ?></div>
             </div>
         </div>
     </div>
 
     <div class="timetable-section">
         <div class="timetable-title">
-            @if(isset($weekNumber))
-                Week {{ $weekNumber }} Timetable
-            @else
+            <?php if(isset($weekNumber)): ?>
+                Week <?php echo e($weekNumber); ?> Timetable
+            <?php else: ?>
                 Weekly Timetable
-            @endif
+            <?php endif; ?>
         </div>
         
         <table class="timetable-grid">
@@ -205,63 +205,63 @@
                     <th style="width: 15%;">Time</th>
                     <th style="width: 12%;">
                         Monday<br>
-                        @if(isset($weekStartDate))
-                            <small style="font-size: 10px; color: #666;">{{ \Carbon\Carbon::parse($weekStartDate)->format('d M') }}</small>
-                        @endif
+                        <?php if(isset($weekStartDate)): ?>
+                            <small style="font-size: 10px; color: #666;"><?php echo e(\Carbon\Carbon::parse($weekStartDate)->format('d M')); ?></small>
+                        <?php endif; ?>
                     </th>
                     <th style="width: 12%;">
                         Tuesday<br>
-                        @if(isset($weekStartDate))
-                            <small style="font-size: 10px; color: #666;">{{ \Carbon\Carbon::parse($weekStartDate)->addDay()->format('d M') }}</small>
-                        @endif
+                        <?php if(isset($weekStartDate)): ?>
+                            <small style="font-size: 10px; color: #666;"><?php echo e(\Carbon\Carbon::parse($weekStartDate)->addDay()->format('d M')); ?></small>
+                        <?php endif; ?>
                     </th>
                     <th style="width: 12%;">
                         Wednesday<br>
-                        @if(isset($weekStartDate))
-                            <small style="font-size: 10px; color: #666;">{{ \Carbon\Carbon::parse($weekStartDate)->addDays(2)->format('d M') }}</small>
-                        @endif
+                        <?php if(isset($weekStartDate)): ?>
+                            <small style="font-size: 10px; color: #666;"><?php echo e(\Carbon\Carbon::parse($weekStartDate)->addDays(2)->format('d M')); ?></small>
+                        <?php endif; ?>
                     </th>
                     <th style="width: 12%;">
                         Thursday<br>
-                        @if(isset($weekStartDate))
-                            <small style="font-size: 10px; color: #666;">{{ \Carbon\Carbon::parse($weekStartDate)->addDays(3)->format('d M') }}</small>
-                        @endif
+                        <?php if(isset($weekStartDate)): ?>
+                            <small style="font-size: 10px; color: #666;"><?php echo e(\Carbon\Carbon::parse($weekStartDate)->addDays(3)->format('d M')); ?></small>
+                        <?php endif; ?>
                     </th>
                     <th style="width: 12%;">
                         Friday<br>
-                        @if(isset($weekStartDate))
-                            <small style="font-size: 10px; color: #666;">{{ \Carbon\Carbon::parse($weekStartDate)->addDays(4)->format('d M') }}</small>
-                        @endif
+                        <?php if(isset($weekStartDate)): ?>
+                            <small style="font-size: 10px; color: #666;"><?php echo e(\Carbon\Carbon::parse($weekStartDate)->addDays(4)->format('d M')); ?></small>
+                        <?php endif; ?>
                     </th>
                     <th style="width: 12%;">
                         Saturday<br>
-                        @if(isset($weekStartDate))
-                            <small style="font-size: 10px; color: #666;">{{ \Carbon\Carbon::parse($weekStartDate)->addDays(5)->format('d M') }}</small>
-                        @endif
+                        <?php if(isset($weekStartDate)): ?>
+                            <small style="font-size: 10px; color: #666;"><?php echo e(\Carbon\Carbon::parse($weekStartDate)->addDays(5)->format('d M')); ?></small>
+                        <?php endif; ?>
                     </th>
                     <th style="width: 12%;">
                         Sunday<br>
-                        @if(isset($weekStartDate))
-                            <small style="font-size: 10px; color: #666;">{{ \Carbon\Carbon::parse($weekStartDate)->addDays(6)->format('d M') }}</small>
-                        @endif
+                        <?php if(isset($weekStartDate)): ?>
+                            <small style="font-size: 10px; color: #666;"><?php echo e(\Carbon\Carbon::parse($weekStartDate)->addDays(6)->format('d M')); ?></small>
+                        <?php endif; ?>
                     </th>
                 </tr>
             </thead>
             <tbody>
-                @if(isset($timetableData) && is_array($timetableData) && count($timetableData) > 0)
-                    @foreach($timetableData as $row)
+                <?php if(isset($timetableData) && is_array($timetableData) && count($timetableData) > 0): ?>
+                    <?php $__currentLoopData = $timetableData; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $row): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                         <tr>
-                            <td class="time-slot">{{ $row['time'] }}</td>
-                            <td class="module-cell">{{ $row['monday'] ? $row['monday'] : '-' }}</td>
-                            <td class="module-cell">{{ $row['tuesday'] ? $row['tuesday'] : '-' }}</td>
-                            <td class="module-cell">{{ $row['wednesday'] ? $row['wednesday'] : '-' }}</td>
-                            <td class="module-cell">{{ $row['thursday'] ? $row['thursday'] : '-' }}</td>
-                            <td class="module-cell">{{ $row['friday'] ? $row['friday'] : '-' }}</td>
-                            <td class="module-cell">{{ $row['saturday'] ? $row['saturday'] : '-' }}</td>
-                            <td class="module-cell">{{ $row['sunday'] ? $row['sunday'] : '-' }}</td>
+                            <td class="time-slot"><?php echo e($row['time']); ?></td>
+                            <td class="module-cell"><?php echo e($row['monday'] ? $row['monday'] : '-'); ?></td>
+                            <td class="module-cell"><?php echo e($row['tuesday'] ? $row['tuesday'] : '-'); ?></td>
+                            <td class="module-cell"><?php echo e($row['wednesday'] ? $row['wednesday'] : '-'); ?></td>
+                            <td class="module-cell"><?php echo e($row['thursday'] ? $row['thursday'] : '-'); ?></td>
+                            <td class="module-cell"><?php echo e($row['friday'] ? $row['friday'] : '-'); ?></td>
+                            <td class="module-cell"><?php echo e($row['saturday'] ? $row['saturday'] : '-'); ?></td>
+                            <td class="module-cell"><?php echo e($row['sunday'] ? $row['sunday'] : '-'); ?></td>
                         </tr>
-                    @endforeach
-                @else
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                <?php else: ?>
                     <!-- No timetable data available -->
                     <tr>
                         <td colspan="8" style="text-align: center; padding: 40px; color: #666; font-style: italic;">
@@ -276,25 +276,26 @@
                             </small>
                         </td>
                     </tr>
-                @endif
+                <?php endif; ?>
             </tbody>
         </table>
     </div>
 
-    @if(isset($modules) && count($modules) > 0)
+    <?php if(isset($modules) && count($modules) > 0): ?>
     <div class="modules-list">
         <div class="modules-title">Registered Modules for This Semester</div>
-        @foreach($modules as $module)
+        <?php $__currentLoopData = $modules; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $module): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
         <div class="module-item">
-            <span class="module-code">{{ $module['code'] }}</span> - {{ $module['name'] }}
+            <span class="module-code"><?php echo e($module['code']); ?></span> - <?php echo e($module['name']); ?>
+
         </div>
-        @endforeach
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
     </div>
-    @endif
+    <?php endif; ?>
 
     <div class="footer">
-        <p>This timetable was generated on {{ $generatedAt }} by NEBULA Institute of Technology</p>
+        <p>This timetable was generated on <?php echo e($generatedAt); ?> by NEBULA Institute of Technology</p>
         <p>For any queries, please contact the academic office</p>
     </div>
 </body>
-</html> 
+</html> <?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/pdf/timetable.blade.php ENDPATH**/ ?>

@@ -22,7 +22,195 @@ class TimetableController extends Controller
 
     public function store(Request $request)
     {
-        // Your code to save the timetable data
+        try {
+            $validatedData = $request->validate([
+                'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
+                'course_id' => 'required|exists:courses,course_id',
+                'intake_id' => 'required|exists:intakes,intake_id',
+                'semester' => 'required|string',
+                'timetable_data' => 'required|array',
+                'timetable_data.*.time' => 'required|string',
+                'timetable_data.*.monday' => 'nullable|string',
+                'timetable_data.*.tuesday' => 'nullable|string',
+                'timetable_data.*.wednesday' => 'nullable|string',
+                'timetable_data.*.thursday' => 'nullable|string',
+                'timetable_data.*.friday' => 'nullable|string',
+                'timetable_data.*.saturday' => 'nullable|string',
+                'timetable_data.*.sunday' => 'nullable|string',
+            ]);
+
+            // Delete existing timetable entries for this combination
+            \DB::table('timetable')->where([
+                'location' => $validatedData['location'],
+                'course_id' => $validatedData['course_id'],
+                'intake_id' => $validatedData['intake_id'],
+                'semester' => $validatedData['semester']
+            ])->delete();
+
+            // Insert new timetable entries
+            $timetableEntries = [];
+            $weekStartDate = $request->input('week_start_date');
+            
+            foreach ($validatedData['timetable_data'] as $row) {
+                $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                $startDate = $weekStartDate ? Carbon::parse($weekStartDate) : Carbon::now()->startOfWeek();
+                
+                foreach ($days as $index => $day) {
+                    if (!empty($row[$day])) {
+                        $date = $startDate->copy()->addDays($index);
+                        
+                        $timetableEntries[] = [
+                            'location' => $validatedData['location'],
+                            'course_id' => $validatedData['course_id'],
+                            'intake_id' => $validatedData['intake_id'],
+                            'semester' => $validatedData['semester'],
+                            'module_id' => $this->getModuleIdByName($row[$day]),
+                            'date' => $date->format('Y-m-d'),
+                            'time' => $row['time'],
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    }
+                }
+            }
+
+            if (!empty($timetableEntries)) {
+                \DB::table('timetable')->insert($timetableEntries);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Timetable saved successfully!'
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Error saving timetable: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while saving the timetable.'
+            ], 500);
+        }
+    }
+
+    // Helper method to get module ID by name
+    private function getModuleIdByName($moduleName)
+    {
+        if (empty($moduleName)) {
+            return null;
+        }
+        
+        // Try to find module by name
+        $module = \App\Models\Module::where('module_name', $moduleName)->first();
+        if ($module) {
+            return $module->module_id;
+        }
+        
+        // If not found by name, try to extract module code from the name
+        if (preg_match('/\(([^)]+)\)/', $moduleName, $matches)) {
+            $moduleCode = $matches[1];
+            $module = \App\Models\Module::where('module_code', $moduleCode)->first();
+            if ($module) {
+                return $module->module_id;
+            }
+        }
+        
+        return null;
+    }
+
+    // Helper method to get module name by ID
+    private function getModuleNameById($moduleId)
+    {
+        if (empty($moduleId)) {
+            return '';
+        }
+        
+        // If it's already a module name (contains parentheses), return as is
+        if (strpos($moduleId, '(') !== false) {
+            return $moduleId;
+        }
+        
+        // If it's numeric, treat as module ID
+        if (is_numeric($moduleId)) {
+            $module = \App\Models\Module::find($moduleId);
+            if ($module) {
+                return $module->module_name . ' (' . $module->module_code . ')';
+            }
+        }
+        
+        // If it's a module name without code, try to find the module
+        $module = \App\Models\Module::where('module_name', $moduleId)->first();
+        if ($module) {
+            return $module->module_name . ' (' . $module->module_code . ')';
+        }
+        
+        return $moduleId; // Return as is if no match found
+    }
+
+    // Method to get existing timetable data
+    public function getExistingTimetable(Request $request)
+    {
+        try {
+            $validatedData = $request->validate([
+                'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
+                'course_id' => 'required|exists:courses,course_id',
+                'intake_id' => 'required|exists:intakes,intake_id',
+                'semester' => 'required|string',
+            ]);
+
+            $timetableData = \DB::table('timetable')
+                ->join('modules', 'timetable.module_id', '=', 'modules.module_id')
+                ->where([
+                    'timetable.location' => $validatedData['location'],
+                    'timetable.course_id' => $validatedData['course_id'],
+                    'timetable.intake_id' => $validatedData['intake_id'],
+                    'timetable.semester' => $validatedData['semester']
+                ])
+                ->select('timetable.time', 'timetable.date', 'modules.module_name', 'modules.module_code')
+                ->orderBy('timetable.date')
+                ->orderBy('timetable.time')
+                ->get();
+
+            // Group by time slots
+            $groupedData = [];
+            foreach ($timetableData as $entry) {
+                $time = $entry->time;
+                $dayOfWeek = strtolower(Carbon::parse($entry->date)->format('l'));
+                $moduleName = $entry->module_name . ' (' . $entry->module_code . ')';
+                
+                if (!isset($groupedData[$time])) {
+                    $groupedData[$time] = [
+                        'time' => $time,
+                        'monday' => '',
+                        'tuesday' => '',
+                        'wednesday' => '',
+                        'thursday' => '',
+                        'friday' => '',
+                        'saturday' => '',
+                        'sunday' => ''
+                    ];
+                }
+                
+                $groupedData[$time][$dayOfWeek] = $moduleName;
+            }
+
+            return response()->json([
+                'success' => true,
+                'timetable_data' => array_values($groupedData)
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error retrieving timetable data: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while retrieving timetable data.'
+            ], 500);
+        }
     }
 
     public function getIntakesForCourseAndLocation($courseId, $location)
@@ -261,6 +449,25 @@ class TimetableController extends Controller
                         ];
                     });
                 }
+            }
+
+            // Convert timetable data to show module names instead of IDs
+            if ($parsedTimetableData) {
+                $convertedTimetableData = [];
+                foreach ($parsedTimetableData as $row) {
+                    $convertedRow = [
+                        'time' => $row['time'],
+                        'monday' => $this->getModuleNameById($row['monday']),
+                        'tuesday' => $this->getModuleNameById($row['tuesday']),
+                        'wednesday' => $this->getModuleNameById($row['wednesday']),
+                        'thursday' => $this->getModuleNameById($row['thursday']),
+                        'friday' => $this->getModuleNameById($row['friday']),
+                        'saturday' => $this->getModuleNameById($row['saturday']),
+                        'sunday' => $this->getModuleNameById($row['sunday'])
+                    ];
+                    $convertedTimetableData[] = $convertedRow;
+                }
+                $data['timetableData'] = $convertedTimetableData;
             }
 
             // Generate PDF
