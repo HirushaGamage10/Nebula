@@ -49,18 +49,54 @@ class LatePaymentController extends Controller
                 return response()->json(['success' => false, 'message' => 'Student is not registered for this course.'], Response::HTTP_NOT_FOUND);
             }
 
-            // Get payment plan
-            $paymentPlan = StudentPaymentPlan::where('student_id', $student->student_id)
+            // Get student-specific payment plan first, then fallback to general payment plan
+            $studentPaymentPlan = StudentPaymentPlan::where('student_id', $student->student_id)
                 ->where('course_id', $request->course_id)
                 ->with(['installments'])
                 ->first();
 
-            if (!$paymentPlan) {
+            $paymentPlan = null;
+            $installments = collect();
+
+            if ($studentPaymentPlan) {
+                // Use student-specific payment plan
+                $paymentPlan = $studentPaymentPlan;
+                $installments = $studentPaymentPlan->installments;
+            } else {
+                // Fallback to general payment plan
+                $generalPaymentPlan = \App\Models\PaymentPlan::where('course_id', $registration->course_id)
+                    ->where('intake_id', $registration->intake_id)
+                    ->first();
+
+                if ($generalPaymentPlan && $generalPaymentPlan->installments) {
+                    $installmentsData = $generalPaymentPlan->installments;
+                    if (is_string($installmentsData)) {
+                        $installmentsData = json_decode($installmentsData, true);
+                    }
+
+                    if (is_array($installmentsData)) {
+                        // Convert general payment plan installments to the format expected
+                        $installments = collect($installmentsData)->map(function ($installment, $index) {
+                            return (object) [
+                                'installment_number' => $installment['installment_number'] ?? ($index + 1),
+                                'due_date' => $installment['due_date'] ?? now()->addDays(30 * ($index + 1))->toDateString(),
+                                'amount' => $installment['local_amount'] ?? 0,
+                                'status' => 'pending'
+                            ];
+                        });
+                    }
+                }
+            }
+
+            if (!$paymentPlan && $installments->isEmpty()) {
                 return response()->json(['success' => false, 'message' => 'No payment plan found for this student and course.'], Response::HTTP_NOT_FOUND);
             }
 
             // Calculate course fee (local course fee)
-            $courseFee = $registration->intake->course_fee ?? $registration->course->course_fee ?? 0;
+            $courseFee = $registration->intake->registration_fee ?? 0;
+            if ($installments->isNotEmpty()) {
+                $courseFee += $installments->sum('amount');
+            }
 
             $studentData = [
                 'student_id' => $registration->student->student_id,
@@ -76,7 +112,7 @@ class LatePaymentController extends Controller
             ];
 
             // Get installments with late payment status
-            $installments = $paymentPlan->installments->map(function ($installment) {
+            $processedInstallments = $installments->map(function ($installment) {
                 $dueDate = \Carbon\Carbon::parse($installment->due_date);
                 $isLate = $dueDate->isPast() && $installment->status !== 'paid';
                 $daysLate = $isLate ? $dueDate->diffInDays(now()) : 0;
@@ -97,11 +133,11 @@ class LatePaymentController extends Controller
                 'success' => true,
                 'student' => $studentData,
                 'payment_plan' => [
-                    'plan_id' => $paymentPlan->id,
-                    'plan_type' => $paymentPlan->payment_plan_type,
-                    'total_amount' => $paymentPlan->total_amount,
-                    'final_amount' => $paymentPlan->final_amount,
-                    'installments' => $installments,
+                    'plan_id' => $paymentPlan ? $paymentPlan->id : null,
+                    'plan_type' => $paymentPlan ? $paymentPlan->payment_plan_type : 'general',
+                    'total_amount' => $paymentPlan ? $paymentPlan->total_amount : $courseFee,
+                    'final_amount' => $paymentPlan ? $paymentPlan->final_amount : $courseFee,
+                    'installments' => $processedInstallments,
                 ]
             ]);
 

@@ -557,7 +557,7 @@ Route::post('/payment/get-installments', [PaymentController::class, 'getPaymentP
 Route::post('/payment/get-payment-details', [PaymentController::class, 'getPaymentDetails'])->name('payment.get.payment.details');
 Route::post('/payment/save-plans', [PaymentController::class, 'savePaymentPlans'])->name('payment.save.plans');
 Route::post('/payment/generate-slip', [PaymentController::class, 'generatePaymentSlip'])->name('payment.generate.slip');
-Route::post('/payment/upload-paid-slip', [PaymentController::class, 'uploadPaidSlip'])->name('payment.upload.paid.slip');
+Route::post('/payment/download-slip-pdf', [PaymentController::class, 'downloadPaymentSlipPDF'])->name('payment.download.slip.pdf');
 Route::post('/payment/save-record', [PaymentController::class, 'savePaymentRecord'])->name('payment.save.record');
 Route::post('/payment/get-records', [PaymentController::class, 'getPaymentRecords'])->name('payment.get.records');
 Route::post('/payment/update-record', [PaymentController::class, 'updatePaymentRecord'])->name('payment.update.record');

@@ -323,6 +323,12 @@
                                 </div>
                                 <div class="card-body">
                                     <form id="createPaymentPlanForm">
+                                        <!-- Student Data Status Indicator -->
+                                        <div id="student-data-status" class="alert alert-warning mb-3" style="display: none;">
+                                            <i class="ti ti-alert-circle me-2"></i>
+                                            <strong>No Student Data Loaded:</strong> Please load student details first before creating a payment plan.
+                                        </div>
+                                        
                                         <div class="row mb-3">
                                             <div class="col-md-6">
                                                 <label class="form-label fw-bold">Student Information</label>
@@ -484,8 +490,6 @@
                                         <option value="course_fee">Course Fee</option>
                                         <option value="franchise_fee">Franchise Fee</option>
                                         <option value="registration_fee">Registration Fee</option>
-                                        <option value="library_fee">Library Fee</option>
-                                        <option value="hostel_fee">Hostel Fee</option>
                                     </select>
                                 </div>
                             </div>
@@ -548,9 +552,6 @@
                                         </button>
                                         <button type="button" class="btn btn-info me-2" onclick="downloadPaymentSlip()">
                                             <i class="ti ti-download me-2"></i>Download PDF
-                                        </button>
-                                        <button type="button" class="btn btn-warning" onclick="savePaymentRecord()">
-                                            <i class="ti ti-device-floppy me-2"></i>Save Record
                                         </button>
                                     </div>
                                 </div>
@@ -756,8 +757,11 @@
                                         </div>
                                     </div>
                                     <div class="text-center mt-3">
-                                        <button type="button" class="btn btn-primary" onclick="uploadPaidSlip()">
+                                        <button type="button" class="btn btn-primary me-2" onclick="uploadPaidSlip()">
                                             <i class="ti ti-upload me-2"></i>Upload Paid Slip
+                                        </button>
+                                        <button type="button" class="btn btn-success" onclick="savePaymentRecordFromUpdate()">
+                                            <i class="ti ti-device-floppy me-2"></i>Save Payment Record
                                         </button>
                                     </div>
                                 </div>
@@ -1244,6 +1248,12 @@ function populatePaymentPlanForm(studentData) {
     // Store student data for later use
     window.currentStudentData = studentData;
     
+    // Hide the warning message since student data is now loaded
+    const statusIndicator = document.getElementById('student-data-status');
+    if (statusIndicator) {
+        statusIndicator.style.display = 'none';
+    }
+    
     // Calculate initial final amount
     calculateFinalAmount();
 }
@@ -1296,13 +1306,51 @@ function displayInstallments(installments) {
         return;
     }
     
-    // Get SLT loan settings from the form
+    // Get current form settings
+    const discountSelects = document.querySelectorAll('.discount-select');
     const sltLoanApplied = document.getElementById('slt-loan-applied').value;
     const sltLoanAmount = parseFloat(document.getElementById('slt-loan-amount').value) || 0;
     
-    installments.forEach(installment => {
-        let finalAmount = parseFloat(installment.final_amount);
+    // Calculate total discounts
+    let totalDiscountAmount = 0;
+    let totalDiscountPercentage = 0;
+    
+    discountSelects.forEach(select => {
+        if (select.value) {
+            const selectedOption = select.options[select.selectedIndex];
+            const discountType = selectedOption.dataset.type;
+            const discountValue = parseFloat(selectedOption.dataset.value);
+            
+            if (discountType === 'percentage') {
+                totalDiscountPercentage += discountValue;
+            } else if (discountType === 'amount') {
+                totalDiscountAmount += discountValue;
+            }
+        }
+    });
+    
+    // Calculate total local fee for percentage discount
+    const totalLocalFee = installments.reduce((sum, installment) => sum + parseFloat(installment.amount), 0);
+    
+    installments.forEach((installment, index) => {
+        let finalAmount = parseFloat(installment.amount);
+        let discountText = '-';
         let sltLoanText = '-';
+        let discountAmount = 0;
+        
+        // Apply percentage discount to the last installment
+        if (index === installments.length - 1 && totalDiscountPercentage > 0) {
+            discountAmount = (totalLocalFee * totalDiscountPercentage) / 100;
+            finalAmount -= discountAmount;
+            discountText = `LKR ${discountAmount.toLocaleString()}`;
+        }
+        
+        // Apply fixed amount discount to the last installment
+        if (index === installments.length - 1 && totalDiscountAmount > 0) {
+            discountAmount = totalDiscountAmount;
+            finalAmount -= discountAmount;
+            discountText = `LKR ${discountAmount.toLocaleString()}`;
+        }
         
         // Apply SLT loan to every installment
         if (sltLoanApplied === 'yes' && sltLoanAmount > 0) {
@@ -1316,7 +1364,7 @@ function displayInstallments(installments) {
                 <td>${installment.installment_number}</td>
                 <td>${new Date(installment.due_date).toLocaleDateString()}</td>
                 <td>LKR ${parseFloat(installment.amount).toLocaleString()}</td>
-                <td>${installment.discount || '-'}</td>
+                <td>${discountText}</td>
                 <td>${sltLoanText}</td>
                 <td>LKR ${Math.max(0, finalAmount).toLocaleString()}</td>
                 <td>
@@ -1498,27 +1546,29 @@ function createPaymentPlan() {
         sltLoanAmount
     });
     
-    if (!planType) {
-        showWarningMessage('Please fill in all required fields.');
+    // Check if student data exists
+    if (!window.currentStudentData || !window.currentStudentData.student_nic) {
+        showErrorMessage('Please load student details first before creating a payment plan.');
         return;
     }
     
-    if (!window.currentStudentData) {
-        showErrorMessage('No student data available. Please load student details first.');
+    // Validate required fields
+    if (!planType) {
+        showErrorMessage('Please select a payment plan type.');
         return;
     }
     
     showSpinner(true);
     
-    // Collect all selected discounts
+    // Collect selected discounts
     const selectedDiscounts = [];
     discountSelects.forEach(select => {
         if (select.value) {
             const selectedOption = select.options[select.selectedIndex];
             selectedDiscounts.push({
-                discount_id: select.value,
+                discount_id: parseInt(select.value),
                 discount_type: selectedOption.dataset.type,
-                discount_value: selectedOption.dataset.value
+                discount_value: parseFloat(selectedOption.dataset.value)
             });
         }
     });
@@ -1605,6 +1655,12 @@ function resetPaymentPlanForm() {
     const firstDiscountSelect = discountsContainer.querySelector('.discount-select');
     if (firstDiscountSelect) {
         firstDiscountSelect.value = '';
+    }
+    
+    // Show the warning message since student data is cleared
+    const statusIndicator = document.getElementById('student-data-status');
+    if (statusIndicator) {
+        statusIndicator.style.display = 'block';
     }
     
     window.currentStudentData = null;
@@ -1733,7 +1789,14 @@ function generatePaymentSlip() {
             document.getElementById('slip-course-display').textContent = data.slip_data.course_name;
             document.getElementById('slip-intake-display').textContent = data.slip_data.intake;
             document.getElementById('slip-payment-type-display').textContent = data.slip_data.payment_type_display || data.slip_data.payment_type;
-            document.getElementById('slip-amount-display').textContent = 'LKR ' + parseFloat(data.slip_data.amount).toLocaleString();
+            
+            // Use correct currency for amount display
+            let currency = 'LKR';
+            if (data.slip_data.payment_type === 'franchise_fee' && data.slip_data.franchise_fee_currency) {
+                currency = data.slip_data.franchise_fee_currency;
+            }
+            document.getElementById('slip-amount-display').textContent = currency + ' ' + parseFloat(data.slip_data.amount).toLocaleString();
+            
             document.getElementById('slip-installment-display').textContent = selectedPaymentData.installment_number || '-';
             document.getElementById('slip-due-date-display').textContent = selectedPaymentData.due_date ? new Date(selectedPaymentData.due_date).toLocaleDateString() : '-';
             document.getElementById('slip-date-display').textContent = data.slip_data.payment_date;
@@ -1776,13 +1839,27 @@ function printPaymentSlip() {
     document.getElementById('print-payment-type').textContent = slipData.payment_type_display || slipData.payment_type;
     document.getElementById('print-installment').textContent = slipData.installment_number || 'N/A';
     document.getElementById('print-due-date').textContent = slipData.due_date ? new Date(slipData.due_date).toLocaleDateString() : 'N/A';
-    document.getElementById('print-amount').textContent = 'LKR ' + parseFloat(slipData.amount).toLocaleString();
+    
+    // Use correct currency for amount display
+    let currency = 'LKR';
+    if (slipData.payment_type === 'franchise_fee' && slipData.franchise_fee_currency) {
+        currency = slipData.franchise_fee_currency;
+    }
+    document.getElementById('print-amount').textContent = currency + ' ' + parseFloat(slipData.amount).toLocaleString();
+    
     document.getElementById('print-receipt-no').textContent = slipData.receipt_no;
     document.getElementById('print-valid-until').textContent = slipData.valid_until ? new Date(slipData.valid_until).toLocaleDateString() : 'N/A';
     
     // Populate fee breakdown
     document.getElementById('print-course-fee').textContent = parseFloat(slipData.course_fee || 0).toLocaleString() + '.00';
-    document.getElementById('print-franchise-fee').textContent = parseFloat(slipData.franchise_fee || 0).toLocaleString() + '.00';
+    
+    // Use correct currency for franchise fee
+    let franchiseCurrency = 'LKR';
+    if (slipData.franchise_fee_currency) {
+        franchiseCurrency = slipData.franchise_fee_currency;
+    }
+    document.getElementById('print-franchise-fee').textContent = franchiseCurrency + ' ' + parseFloat(slipData.franchise_fee || 0).toLocaleString() + '.00';
+    
     document.getElementById('print-registration-fee').textContent = parseFloat(slipData.registration_fee || 0).toLocaleString() + '.00';
     document.getElementById('print-total-amount').textContent = parseFloat(slipData.amount).toLocaleString() + '.00';
 
@@ -1806,16 +1883,51 @@ function printPaymentSlip() {
 
 // Download payment slip
 function downloadPaymentSlip() {
-    showToast('Info', 'Download functionality will be implemented soon.', 'bg-info');
+    if (!window.currentSlipData) {
+        showErrorMessage('No slip data available for download.');
+        return;
+    }
+
+    showSpinner(true);
+
+    // Create a form to submit the receipt number
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/payment/download-slip-pdf';
+    form.target = '_blank';
+
+    // Add CSRF token
+    const csrfToken = document.createElement('input');
+    csrfToken.type = 'hidden';
+    csrfToken.name = '_token';
+    csrfToken.value = '<?php echo e(csrf_token()); ?>';
+    form.appendChild(csrfToken);
+
+    // Add receipt number
+    const receiptInput = document.createElement('input');
+    receiptInput.type = 'hidden';
+    receiptInput.name = 'receipt_no';
+    receiptInput.value = window.currentSlipData.receipt_no;
+    form.appendChild(receiptInput);
+
+    // Append form to body, submit, and remove
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+
+    showSpinner(false);
+    showSuccessMessage('PDF download started!');
 }
 
 // Save payment record
 function savePaymentRecord() {
-    showSpinner(true);
-    setTimeout(() => {
-        showToast('Success', 'Payment record saved successfully.', 'bg-success');
-        showSpinner(false);
-    }, 1000);
+    if (!window.currentSlipData) {
+        showErrorMessage('No slip data available for saving.');
+        return;
+    }
+
+    // Show the payment details modal instead of using prompt
+    showPaymentDetailsModal();
 }
 
 // Load payment records
@@ -2124,6 +2236,12 @@ function viewPaymentDetails(index) {
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
+    // Show warning message initially since no student data is loaded
+    const statusIndicator = document.getElementById('student-data-status');
+    if (statusIndicator) {
+        statusIndicator.style.display = 'block';
+    }
+    
     // Add event listener for NIC field to filter courses
     const studentNicField = document.getElementById('plan-student-nic');
     if (studentNicField) {
@@ -2179,7 +2297,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add event listener for SLT loan amount
     const sltLoanAmountField = document.getElementById('slt-loan-amount');
     if (sltLoanAmountField) {
-        sltLoanAmountField.addEventListener('input', calculateFinalAmount);
+        sltLoanAmountField.addEventListener('input', function() {
+            calculateFinalAmount();
+            if (window.currentStudentData) {
+                calculateAndDisplayInstallments();
+            }
+        });
     }
     
     // Add event listener for course selection
@@ -2278,7 +2401,10 @@ function loadPaymentDetails() {
     const studentId = document.getElementById('slip-student-id').value;
     const paymentType = document.getElementById('slip-payment-type').value;
     
+    console.log('Loading payment details for:', { studentId, paymentType });
+    
     if (!studentId || !paymentType) {
+        console.log('Missing student ID or payment type');
         document.getElementById('paymentDetailsSection').style.display = 'none';
         return;
     }
@@ -2293,8 +2419,15 @@ function loadPaymentDetails() {
             payment_type: paymentType
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
+        console.log('Payment details response:', data);
         if (data.success) {
             window.paymentDetailsData = data.payment_details; // Store globally
             displayPaymentDetails(data.payment_details);
@@ -2304,7 +2437,8 @@ function loadPaymentDetails() {
             document.getElementById('paymentDetailsSection').style.display = 'none';
         }
     })
-    .catch(() => {
+    .catch((error) => {
+        console.error('Error loading payment details:', error);
         showErrorMessage('An error occurred while loading payment details.');
         document.getElementById('paymentDetailsSection').style.display = 'none';
     })
@@ -2317,6 +2451,9 @@ function displayPaymentDetails(paymentDetails) {
     tbody.innerHTML = '';
     
     paymentDetails.forEach((payment, index) => {
+        // Use the currency from the payment data, default to LKR if not provided
+        const currency = payment.currency || 'LKR';
+        
         const row = `
             <tr>
                 <td>
@@ -2324,7 +2461,7 @@ function displayPaymentDetails(paymentDetails) {
                 </td>
                 <td>${payment.installment_number || '-'}</td>
                 <td>${payment.due_date ? new Date(payment.due_date).toLocaleDateString() : '-'}</td>
-                <td>LKR ${parseFloat(payment.amount).toLocaleString()}</td>
+                <td>${currency} ${parseFloat(payment.amount).toLocaleString()}</td>
                 <td>${payment.paid_date ? new Date(payment.paid_date).toLocaleDateString() : '-'}</td>
                 <td>
                     <span class="badge bg-${getPaymentStatusBadgeColor(payment.status)}">
@@ -2419,6 +2556,176 @@ function uploadPaidSlip() {
     })
     .catch(() => {
         showErrorMessage('An error occurred while uploading the paid slip.');
+    })
+    .finally(() => showSpinner(false));
+}
+
+// Payment Details Modal
+function showPaymentDetailsModal() {
+    // Create modal HTML
+    const modalHTML = `
+        <div class="modal fade" id="paymentDetailsModal" tabindex="-1" aria-labelledby="paymentDetailsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title" id="paymentDetailsModalLabel">
+                            <i class="ti ti-credit-card me-2"></i>Payment Details
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="ti ti-info-circle me-2"></i>
+                            <strong>Payment Information:</strong> Please provide the payment method and any additional remarks for this payment record.
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="modal-payment-method" class="form-label fw-bold">
+                                Payment Method <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="modal-payment-method" required>
+                                <option value="" selected disabled>Select Payment Method</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Card">Card Payment</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="Online">Online Payment</option>
+                                <option value="Mobile Money">Mobile Money</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="modal-remarks" class="form-label fw-bold">
+                                Remarks <span class="text-muted">(Optional)</span>
+                            </label>
+                            <textarea class="form-control" id="modal-remarks" rows="3" 
+                                placeholder="Enter any additional remarks or notes about this payment..."></textarea>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="ti ti-alert-triangle me-2"></i>
+                            <strong>Note:</strong> This will save the payment record to the database. Make sure all information is correct before proceeding.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="ti ti-x me-2"></i>Cancel
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="confirmSavePaymentRecord()">
+                            <i class="ti ti-device-floppy me-2"></i>Save Payment Record
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('paymentDetailsModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('paymentDetailsModal'));
+    modal.show();
+}
+
+// Confirm save payment record
+function confirmSavePaymentRecord() {
+    const paymentMethod = document.getElementById('modal-payment-method').value;
+    const remarks = document.getElementById('modal-remarks').value;
+    
+    if (!paymentMethod) {
+        showErrorMessage('Please select a payment method.');
+        return;
+    }
+    
+    // Hide modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('paymentDetailsModal'));
+    modal.hide();
+    
+    showSpinner(true);
+
+    fetch('/payment/save-record', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
+        body: JSON.stringify({
+            receipt_no: window.currentSlipData.receipt_no,
+            payment_method: paymentMethod,
+            payment_date: window.currentSlipData.payment_date,
+            remarks: remarks
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccessMessage('Payment record saved successfully! 🎉');
+            // Optionally hide the slip preview after saving
+            document.getElementById('slipPreviewSection').style.display = 'none';
+            // Clear the current slip data
+            window.currentSlipData = null;
+        } else {
+            showErrorMessage(data.message || 'Failed to save payment record.');
+        }
+    })
+    .catch((error) => {
+        console.error('Error saving payment record:', error);
+        showErrorMessage('An error occurred while saving payment record.');
+    })
+    .finally(() => showSpinner(false));
+}
+
+// Save payment record from Update Records tab
+function savePaymentRecordFromUpdate() {
+    const receiptNo = document.getElementById('upload-receipt-no').value;
+    const paymentMethod = document.getElementById('upload-payment-method').value;
+    const paymentDate = document.getElementById('upload-payment-date').value;
+    const remarks = document.getElementById('upload-remarks').value;
+
+    if (!receiptNo || !paymentMethod || !paymentDate) {
+        showErrorMessage('Please fill in all required fields (Receipt Number, Payment Method, and Payment Date).');
+        return;
+    }
+
+    showSpinner(true);
+
+    fetch('/payment/save-record', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
+        body: JSON.stringify({
+            receipt_no: receiptNo,
+            payment_method: paymentMethod,
+            payment_date: paymentDate,
+            remarks: remarks
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccessMessage('Payment record saved successfully! 🎉');
+            
+            // Clear form fields
+            document.getElementById('upload-receipt-no').value = '';
+            document.getElementById('upload-payment-method').value = '';
+            document.getElementById('upload-payment-date').value = '';
+            document.getElementById('upload-remarks').value = '';
+            document.getElementById('upload-paid-slip').value = '';
+            
+            // Reload payment records if they are currently displayed
+            if (document.getElementById('paymentRecordsSection').style.display !== 'none') {
+                loadPaymentRecords();
+            }
+        } else {
+            showErrorMessage(data.message || 'Failed to save payment record.');
+        }
+    })
+    .catch((error) => {
+        console.error('Error saving payment record:', error);
+        showErrorMessage('An error occurred while saving payment record.');
     })
     .finally(() => showSpinner(false));
 }

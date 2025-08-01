@@ -132,7 +132,7 @@
                                     @if($registration->student)
                                         <tr>
                                             <td style="text-align: center;">{{ $index + 1 }}</td>
-                                            <td style="text-align: center;">{{ $registration->id }}</td>
+                                            <td style="text-align: center;">{{ $registration->course_registration_id }}</td>
                                             <td>{{ $registration->student->name_with_initials }}</td>
                                         </tr>
                                     @endif

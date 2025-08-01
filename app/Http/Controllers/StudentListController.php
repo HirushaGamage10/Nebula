@@ -38,7 +38,7 @@ class StudentListController extends Controller
             ->map(function($reg) {
                 if ($reg->student) {
                     return [
-                        'course_registration_id' => $reg->id,
+                        'course_registration_id' => $reg->course_registration_id,
                         'registration_number' => $reg->student->registration_id ?? $reg->student->student_id,
                         'name_with_initials' => $reg->student->name_with_initials,
                     ];
