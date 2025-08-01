@@ -4,6 +4,17 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\StudentHostelClearance;
+use App\Models\StudentPaymentClearance;
+use App\Models\StudentLibraryClearance;
+use App\Models\StudentProjectClearance;
+use App\Models\StudentOtherInformation;
+use App\Models\StudentExam;
+use App\Models\ParentGuardian;
+use App\Models\CourseRegistration;
+use App\Models\Attendance;
+use App\Models\ExamResult;
+use App\Models\PaymentDetail;
 
 class Student extends Model
 {

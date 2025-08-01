@@ -377,7 +377,6 @@ class StudentProfileController extends Controller
         }
     }
 
-    // API: Get student details by NIC (for AJAX search)
     public function getStudentDetailsByNic(Request $request)
     {
         $nic = $request->query('nic');
@@ -388,9 +387,9 @@ class StudentProfileController extends Controller
         if (!$student) {
             return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
         }
-        // Attach parent relationship for consistency with other methods
         $student->parent = $student->parentGuardian;
-        Log::info('Student profile parent (NIC search):', ['parent' => $student->parent]);
+        // Fetch all exams for this student
+        $student->exams = \App\Models\StudentExam::where('student_id', $student->student_id)->get();
         return response()->json(['success' => true, 'student' => $student]);
     }
     // Other methods (academic details, attendance, clearance, certificates, etc.) remain unchanged
