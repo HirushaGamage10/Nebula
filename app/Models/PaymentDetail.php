@@ -14,35 +14,26 @@ class PaymentDetail extends Model
 
     protected $fillable = [
         'student_id',
-        'course_id',
-        'registration_id',
+        'course_registration_id',
+        'amount',
         'payment_method',
-        'payment_amount',
-        'payment_date',
-        'payment_reference',
-        'payment_status',
-        'payment_type',
-        'cheque_number',
-        'bank_name',
-        'account_number',
         'transaction_id',
-        'receipt_number',
         'remarks',
         'paid_slip_path',
         'installment_number',
         'due_date',
+        'status',
         'created_at',
         'updated_at'
     ];
 
     protected $casts = [
-        'payment_id' => 'int',
+        'id' => 'int',
         'student_id' => 'int',
-        'course_id' => 'int',
-        'registration_id' => 'int',
-        'payment_amount' => 'decimal:2',
-        'payment_date' => 'date',
-        'payment_status' => 'boolean',
+        'course_registration_id' => 'int',
+        'amount' => 'decimal:2',
+        'installment_number' => 'int',
+        'due_date' => 'date',
     ];
 
     // Relationships
@@ -51,14 +42,14 @@ class PaymentDetail extends Model
         return $this->belongsTo(Student::class, 'student_id', 'student_id');
     }
 
-    public function course()
-    {
-        return $this->belongsTo(Course::class, 'course_id', 'course_id');
-    }
-
     public function registration()
     {
-        return $this->belongsTo(CourseRegistration::class, 'registration_id', 'id');
+        return $this->belongsTo(CourseRegistration::class, 'course_registration_id', 'id');
+    }
+
+    public function course()
+    {
+        return $this->hasOneThrough(Course::class, CourseRegistration::class, 'id', 'course_id', 'course_registration_id', 'course_id');
     }
 
     public function paymentMethod()
@@ -94,7 +85,9 @@ class PaymentDetail extends Model
 
     public function scopeByCourse($query, $courseId)
     {
-        return $query->where('course_id', $courseId);
+        return $query->whereHas('registration', function($q) use ($courseId) {
+            $q->where('course_id', $courseId);
+        });
     }
 
     public function scopeCash($query)
@@ -120,7 +113,7 @@ class PaymentDetail extends Model
     // Accessors
     public function getPaymentStatusTextAttribute()
     {
-        return $this->payment_status ? 'Successful' : 'Failed';
+        return $this->status === 'paid' ? 'Successful' : 'Failed';
     }
 
     public function getPaymentMethodTextAttribute()
@@ -138,32 +131,32 @@ class PaymentDetail extends Model
 
     public function getFormattedAmountAttribute()
     {
-        return 'Rs. ' . number_format($this->payment_amount, 2);
+        return 'Rs. ' . number_format($this->amount, 2);
     }
 
     public function getFormattedDateAttribute()
     {
-        return $this->payment_date ? $this->payment_date->format('d/m/Y') : 'N/A';
+        return $this->created_at ? $this->created_at->format('d/m/Y') : 'N/A';
     }
 
     // Methods
     public function isSuccessful()
     {
-        return $this->payment_status;
+        return $this->status === 'paid';
     }
 
     public function getPaymentReference()
     {
-        return $this->payment_reference ?: $this->receipt_number ?: $this->transaction_id;
+        return $this->transaction_id;
     }
 
     public function updatePaymentStatus($status)
     {
-        $this->payment_status = $status;
+        $this->status = $status;
         $this->save();
         
         // Update registration payment status if this is a registration payment
-        if ($this->registration_id) {
+        if ($this->course_registration_id) {
             $this->registration->updatePaymentStatus();
         }
     }

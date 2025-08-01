@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('location');
             $table->string('course_type');
             $table->unsignedBigInteger('course_id');
+            $table->unsignedBigInteger('intake_id');
             $table->decimal('registration_fee', 12, 2);
             $table->decimal('local_fee', 12, 2);
             $table->decimal('international_fee', 12, 2);
