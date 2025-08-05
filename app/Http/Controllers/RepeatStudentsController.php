@@ -43,7 +43,11 @@ class RepeatStudentsController extends Controller
 
             if ($course) {
                 $years = range(1, (int)$course->duration); 
-                $semesters = range(1, $course->no_of_semesters);
+                // Get actual created semesters for this course
+                $semesters = \App\Models\Semester::where('course_id', $courseID)
+                    ->whereIn('status', ['active', 'upcoming'])
+                    ->select('id', 'name')
+                    ->get();
 
                 return response()->json([
                     'modules' => $course->modules,
@@ -191,6 +195,7 @@ class RepeatStudentsController extends Controller
                 'results.*.student_id' => 'required|exists:students,student_id',
                 'results.*.marks' => 'required|integer|min:0|max:100',
                 'results.*.grade' => 'required|string|max:5',
+                'results.*.remarks' => 'nullable|string|max:255',
             ]);
 
             foreach ($validatedData['results'] as $result) {
@@ -207,6 +212,7 @@ class RepeatStudentsController extends Controller
                     [
                         'marks' => $result['marks'],
                         'grade' => $result['grade'],
+                        'remarks' => $result['remarks'] ?? null,
                     ]
                 );
             }
@@ -296,13 +302,31 @@ class RepeatStudentsController extends Controller
     /**
      * Get semesters.
      */
-    public function getSemesters()
+    public function getSemesters(Request $request)
     {
         try {
-            $semesters = range(1, 6); // Assuming max 6 semesters
+            $request->validate([
+                'course_id' => 'required|integer|exists:courses,course_id',
+                'intake_id' => 'required|integer|exists:intakes,intake_id',
+            ]);
+
+            $course = \App\Models\Course::find($request->course_id);
+            $intake = \App\Models\Intake::find($request->intake_id);
+
+            if (!$course || !$intake) {
+                return response()->json(['error' => 'Invalid course or intake.'], 404);
+            }
+
+            // Get only semesters that have been created for this course and intake
+            $semesters = \App\Models\Semester::where('course_id', $request->course_id)
+                ->where('intake_id', $request->intake_id)
+                ->whereIn('status', ['active', 'upcoming'])
+                ->select('id', 'name')
+                ->get();
+
             return response()->json(['success' => true, 'semesters' => $semesters]);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'An error occurred.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 } 

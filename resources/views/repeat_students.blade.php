@@ -472,13 +472,21 @@ document.addEventListener('DOMContentLoaded', function() {
             fetchIntakesForCourseAndLocation(courseSelect.value, this.value, 'exam-intake');
         }
     });
+
+    document.getElementById('exam-intake').addEventListener('change', function() {
+        const courseSelect = document.getElementById('exam-course');
+        if (this.value && courseSelect.value) {
+            fetchSemestersForCourse(courseSelect.value, 'exam-semester');
+        }
+    });
     
     document.getElementById('exam-course').addEventListener('change', function() {
         const locationSelect = document.getElementById('exam-location');
         if (this.value && locationSelect.value) {
             fetchIntakesForCourseAndLocation(this.value, locationSelect.value, 'exam-intake');
             fetchModulesForCourse(this.value, 'exam-module');
-            fetchSemestersForCourse(this.value, 'exam-semester');
+            // Reset semester dropdown
+            document.getElementById('exam-semester').innerHTML = '<option selected disabled value="">Select a Semester</option>';
         }
     });
 
@@ -572,14 +580,14 @@ function fetchModulesForCourse(courseId, moduleSelectId) {
 // Fetch semesters for course
 function fetchSemestersForCourse(courseId, semesterSelectId) {
     showSpinner(true);
-    fetch('/repeat-students/get-semesters')
+    fetch(`/repeat-students/get-semesters?course_id=${encodeURIComponent(courseId)}&intake_id=${encodeURIComponent(document.getElementById('exam-intake').value)}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 const semesterSelect = document.getElementById(semesterSelectId);
                 semesterSelect.innerHTML = '<option selected disabled value="">Select a Semester</option>';
                 data.semesters.forEach(semester => {
-                    semesterSelect.innerHTML += `<option value="${semester}">Semester ${semester}</option>`;
+                    semesterSelect.innerHTML += `<option value="${semester.id}">${semester.name}</option>`;
                 });
             }
         })

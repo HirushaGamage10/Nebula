@@ -737,7 +737,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function fetchSemesters(courseId, intakeId, targetSelect) {
         showSpinner(true);
-        fetch(`/get-semesters?course_id=${encodeURIComponent(courseId)}&intake_id=${encodeURIComponent(intakeId)}`)
+        fetch(`/timetable/get-semesters?course_id=${encodeURIComponent(courseId)}&intake_id=${encodeURIComponent(intakeId)}`)
             .then(response => response.json())
             .then(data => {
                 if (data.semesters && data.semesters.length > 0) {
