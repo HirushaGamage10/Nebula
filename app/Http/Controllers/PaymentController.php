@@ -658,80 +658,48 @@ class PaymentController extends Controller
      * Generate payment slip for pending payments.
      */
     public function generatePaymentSlip(Request $request)
-    {
-        try {
-            $request->validate([
-                'student_id' => 'required|string',
-                'payment_type' => 'required|string',
-                'amount' => 'required|numeric|min:0',
-                'installment_number' => 'nullable|integer',
-                'due_date' => 'nullable|date',
-                'conversion_rate' => 'nullable|numeric|min:0',
-                'currency_from' => 'nullable|string',
-                'remarks' => 'nullable|string',
-            ]);
+{
+    try {
+        $request->validate([
+            'student_id' => 'required|string',
+            'payment_type' => 'required|string',
+            'amount' => 'required|numeric|min:0',
+            'installment_number' => 'nullable|integer',
+            'due_date' => 'nullable|date',
+            'conversion_rate' => 'nullable|numeric|min:0',
+            'currency_from' => 'nullable|string',
+            'remarks' => 'nullable|string',
+        ]);
 
-            // Find student by ID/NIC
-            $student = Student::where('student_id', $request->student_id)
-                ->orWhere('id_value', $request->student_id)
-                ->first();
-            
-            if (!$student) {
-                return response()->json(['success' => false, 'message' => 'Student not found.'], Response::HTTP_NOT_FOUND);
-            }
+        // Find student
+        $student = Student::where('student_id', $request->student_id)
+            ->orWhere('id_value', $request->student_id)
+            ->first();
 
-            // Get course registration for this student
-            $registration = CourseRegistration::where('student_id', $student->student_id)
-                ->with(['course', 'intake'])
-                ->first();
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+        }
 
-            if (!$registration) {
-                return response()->json(['success' => false, 'message' => 'Student is not registered for any course.'], Response::HTTP_NOT_FOUND);
-            }
+        // Get registration
+        $registration = CourseRegistration::where('student_id', $student->student_id)
+            ->with(['course', 'intake'])
+            ->first();
 
-            // Generate unique receipt number
-            $receiptNo = 'RCP' . date('Ymd') . str_pad(PaymentDetail::count() + 1, 4, '0', STR_PAD_LEFT);
+        if (!$registration) {
+            return response()->json(['success' => false, 'message' => 'Student is not registered for any course.'], 404);
+        }
 
-            // Get student-specific payment plan for final amounts after discounts
-            $studentPaymentPlan = \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
-                ->where('course_id', $registration->course_id)
-                ->with(['installments', 'discounts'])
-                ->first();
+        // ✅ Check for existing payment record with same student_id, course_registration_id, and installment_number
+        $existingPayment = PaymentDetail::where('student_id', $student->student_id)
+            ->where('course_registration_id', $registration->id)
+            ->where('installment_number', $request->installment_number)
+            ->where('status', 'pending') // Optional: only return if still unpaid
+            ->first();
 
-            // Calculate fees from student payment plan or fallback to general plan
-            $courseFee = 0;
-            $franchiseFee = 0;
-            $registrationFee = $registration->intake->registration_fee ?? 0;
-
-            if ($studentPaymentPlan) {
-                // Use final amounts from student payment plan (after discounts and loans)
-                foreach ($studentPaymentPlan->installments as $installment) {
-                    $courseFee += $installment->amount; // Final amount after discounts
-                }
-            } else {
-                // Fallback to general payment plan
-                $paymentPlan = PaymentPlan::where('course_id', $registration->course_id)
-                    ->where('intake_id', $registration->intake_id)
-                    ->first();
-                
-                if ($paymentPlan && $paymentPlan->installments) {
-                    $installmentsData = $paymentPlan->installments;
-                    if (is_string($installmentsData)) {
-                        $installmentsData = json_decode($installmentsData, true);
-                    }
-                    
-                    if (is_array($installmentsData)) {
-                        foreach ($installmentsData as $installment) {
-                            $courseFee += $installment['local_amount'] ?? 0;
-                            $franchiseFee += $installment['international_amount'] ?? 0;
-                        }
-                    }
-                }
-            }
-
-            // Create slip data with comprehensive information
-            $slipData = [
-                'receipt_no' => $receiptNo,
+        if ($existingPayment) {
+            // Build slipData from existing record
+            $existingSlipData = [
+                'receipt_no' => $existingPayment->transaction_id,
                 'student_id' => $student->student_id,
                 'student_name' => $student->full_name,
                 'student_nic' => $student->id_value,
@@ -741,39 +709,99 @@ class PaymentController extends Controller
                 'intake_id' => $registration->intake->intake_id ?? null,
                 'payment_type' => $request->payment_type,
                 'payment_type_display' => $this->getPaymentTypeDisplay($request->payment_type),
-                'amount' => $request->amount,
-                'installment_number' => $request->installment_number,
-                'due_date' => $request->due_date,
-                'payment_date' => now()->toDateString(),
-                'payment_method' => 'Cash', // Default, can be changed later
-                'remarks' => $request->remarks,
-                'status' => 'pending',
+                'amount' => $existingPayment->amount,
+                'installment_number' => $existingPayment->installment_number,
+                'due_date' => $existingPayment->due_date,
+                'payment_date' => $existingPayment->created_at->toDateString(),
+                'payment_method' => $existingPayment->payment_method ?? 'Cash',
+                'remarks' => $existingPayment->remarks,
+                'status' => $existingPayment->status,
                 'location' => $registration->location ?? 'N/A',
                 'registration_date' => $registration->registration_date,
-                'course_fee' => $courseFee,
-                'franchise_fee' => $franchiseFee,
+                'course_fee' => 0, // optional
+                'franchise_fee' => 0, // optional
                 'franchise_fee_currency' => $registration->intake->franchise_payment_currency ?? 'LKR',
-                'registration_fee' => $registrationFee,
+                'registration_fee' => $registration->intake->registration_fee ?? 0,
                 'conversion_rate' => $request->conversion_rate,
                 'currency_from' => $request->currency_from,
-                'lkr_amount' => $request->conversion_rate ? ($request->amount * $request->conversion_rate) : null,
-                'generated_at' => now()->toDateTimeString(),
-                'valid_until' => now()->addDays(7)->toDateString(), // Slip valid for 7 days
+                'lkr_amount' => $request->conversion_rate ? ($existingPayment->amount * $request->conversion_rate) : null,
+                'generated_at' => $existingPayment->created_at->toDateTimeString(),
+                'valid_until' => now()->addDays(7)->toDateString(),
             ];
-
-            // Store the generated slip in session for later retrieval
-            session(['generated_slip_' . $receiptNo => $slipData]);
 
             return response()->json([
                 'success' => true,
-                'slip_data' => $slipData,
-                'message' => 'Payment slip generated successfully. Please print and collect payment.'
+                'slip_data' => $existingSlipData,
+                'message' => 'Existing payment slip found.'
             ]);
-
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
+
+        // ➕ Generate new receipt number
+        $today = date('Ymd');
+        $latest = PaymentDetail::where('transaction_id', 'like', "RCP{$today}%")
+            ->orderBy('transaction_id', 'desc')
+            ->first();
+
+        $lastNumber = $latest ? (int) substr($latest->transaction_id, -4) : 0;
+        $nextNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
+        $receiptNo = 'RCP' . $today . $nextNumber;
+
+        // ➕ Insert into DB
+        $payment = PaymentDetail::create([
+            'student_id' => $student->student_id,
+            'course_registration_id' => $registration->id,
+            'amount' => $request->amount,
+            'payment_method' => 'Cash',
+            'transaction_id' => $receiptNo,
+            'status' => 'pending',
+            'remarks' => $request->remarks,
+            'installment_number' => $request->installment_number,
+            'due_date' => $request->due_date,
+        ]);
+
+        // 📦 Create slipData for return
+        $slipData = [
+            'receipt_no' => $receiptNo,
+            'student_id' => $student->student_id,
+            'student_name' => $student->full_name,
+            'student_nic' => $student->id_value,
+            'course_name' => $registration->course->course_name ?? 'N/A',
+            'course_code' => $registration->course->course_code ?? 'N/A',
+            'intake' => $registration->intake->batch ?? 'N/A',
+            'intake_id' => $registration->intake->intake_id ?? null,
+            'payment_type' => $request->payment_type,
+            'payment_type_display' => $this->getPaymentTypeDisplay($request->payment_type),
+            'amount' => $request->amount,
+            'installment_number' => $request->installment_number,
+            'due_date' => $request->due_date,
+            'payment_date' => now()->toDateString(),
+            'payment_method' => 'Cash',
+            'remarks' => $request->remarks,
+            'status' => 'pending',
+            'location' => $registration->location ?? 'N/A',
+            'registration_date' => $registration->registration_date,
+            'course_fee' => 0,
+            'franchise_fee' => 0,
+            'franchise_fee_currency' => $registration->intake->franchise_payment_currency ?? 'LKR',
+            'registration_fee' => $registration->intake->registration_fee ?? 0,
+            'conversion_rate' => $request->conversion_rate,
+            'currency_from' => $request->currency_from,
+            'lkr_amount' => $request->conversion_rate ? ($request->amount * $request->conversion_rate) : null,
+            'generated_at' => now()->toDateTimeString(),
+            'valid_until' => now()->addDays(7)->toDateString(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'slip_data' => $slipData,
+            'message' => 'New payment slip generated.'
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], 500);
     }
+}
+
 
     /**
      * Get payment type display name.
@@ -834,68 +862,61 @@ class PaymentController extends Controller
      * Save payment record after payment is made.
      */
     public function savePaymentRecord(Request $request)
-    {
-        try {
-            $request->validate([
-                'receipt_no' => 'required|string',
-                'payment_method' => 'required|string',
-                'payment_date' => 'required|date',
-                'remarks' => 'nullable|string',
-            ]);
+{
+    try {
+        $request->validate([
+            'receipt_no' => 'required|string',
+            'payment_method' => 'required|string',
+            'payment_date' => 'required|date',
+            'remarks' => 'nullable|string',
+        ]);
 
-            // Retrieve the generated slip data
-            $slipData = session('generated_slip_' . $request->receipt_no);
-            
-            if (!$slipData) {
-                return response()->json(['success' => false, 'message' => 'Payment slip not found or expired.'], Response::HTTP_NOT_FOUND);
-            }
+        // ✅ Find the existing payment record by receipt number
+        $paymentDetail = PaymentDetail::where('transaction_id', $request->receipt_no)->first();
 
-            // Find student
-            $student = Student::where('student_id', $slipData['student_id'])->first();
-            if (!$student) {
-                return response()->json(['success' => false, 'message' => 'Student not found.'], Response::HTTP_NOT_FOUND);
-            }
-
-            // Get course registration
-            $registration = CourseRegistration::where('student_id', $student->student_id)
-                ->where('course_id', $slipData['course_id'] ?? 1) // Default course ID if not set
-                ->first();
-
-            if (!$registration) {
-                return response()->json(['success' => false, 'message' => 'Course registration not found.'], Response::HTTP_NOT_FOUND);
-            }
-
-            // Create payment record
-            $paymentDetail = PaymentDetail::create([
-                'student_id' => $student->student_id,
-                'course_registration_id' => $registration->id,
-                'amount' => $slipData['amount'],
-                'payment_method' => $request->payment_method,
-                'transaction_id' => $request->receipt_no,
-                'status' => 'paid', // Mark as paid
-                'remarks' => $request->remarks ?? $slipData['remarks'],
-                'installment_number' => $slipData['installment_number'],
-                'due_date' => $slipData['due_date'],
-            ]);
-
-            // Update installment status if this is part of a payment plan
-            if ($slipData['installment_number']) {
-                $this->updateInstallmentStatus($student->student_id, $registration->course_id, $slipData['installment_number']);
-            }
-
-            // Clear the slip from session
-            session()->forget('generated_slip_' . $request->receipt_no);
-
+        if (!$paymentDetail) {
             return response()->json([
-                'success' => true, 
-                'message' => 'Payment record saved successfully.',
-                'payment_id' => $paymentDetail->id
-            ], Response::HTTP_OK);
-
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+                'success' => false,
+                'message' => 'Payment record not found for this receipt number.'
+            ], Response::HTTP_NOT_FOUND);
         }
+
+        // ✅ Update the payment record
+        $paymentDetail->update([
+            'payment_method' => $request->payment_method,
+            'status' => 'paid',
+            'remarks' => $request->remarks ?? $paymentDetail->remarks,
+            'paid_date' => $request->payment_date,
+        ]);
+
+        // ✅ Also update installment status if applicable
+        if ($paymentDetail->installment_number) {
+            $registration = CourseRegistration::find($paymentDetail->course_registration_id);
+            if ($registration) {
+                $this->updateInstallmentStatus(
+                    $paymentDetail->student_id,
+                    $registration->course_id,
+                    $paymentDetail->installment_number
+                );
+            }
+        }
+
+        // ✅ Clear the slip from session (optional)
+        session()->forget('generated_slip_' . $request->receipt_no);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment record updated successfully.',
+            'payment_id' => $paymentDetail->id
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred: ' . $e->getMessage()
+        ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
+}
 
     /**
      * Update installment status when payment is made.

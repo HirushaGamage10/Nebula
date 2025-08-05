@@ -566,10 +566,12 @@ Route::get('/payment/get-discounts', [PaymentController::class, 'getDiscounts'])
 Route::post('/payment/get-installments', [PaymentController::class, 'getPaymentPlanInstallments'])->name('payment.get.installments');
 Route::post('/payment/get-payment-details', [PaymentController::class, 'getPaymentDetails'])->name('payment.get.payment.details');
 Route::post('/payment/save-plans', [PaymentController::class, 'savePaymentPlans'])->name('payment.save.plans');
+//Slip Gen
 Route::post('/payment/generate-slip', [PaymentController::class, 'generatePaymentSlip'])->name('payment.generate.slip');
 Route::post('/payment/download-slip-pdf', [PaymentController::class, 'downloadPaymentSlipPDF'])->name('payment.download.slip.pdf');
 Route::post('/payment/save-record', [PaymentController::class, 'savePaymentRecord'])->name('payment.save.record');
 Route::post('/payment/get-records', [PaymentController::class, 'getPaymentRecords'])->name('payment.get.records');
+//Update the Payment
 Route::post('/payment/update-record', [PaymentController::class, 'updatePaymentRecord'])->name('payment.update.record');
 Route::post('/payment/delete-record', [PaymentController::class, 'deletePaymentRecord'])->name('payment.delete.record');
 Route::post('/payment/get-summary', [PaymentController::class, 'getPaymentSummary'])->name('payment.get.summary');
