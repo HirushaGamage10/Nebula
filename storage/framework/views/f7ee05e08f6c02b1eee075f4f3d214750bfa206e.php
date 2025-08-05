@@ -608,6 +608,7 @@
                           <th>Status</th>
                           <th>Approved Date</th>
                           <th>Remarks</th>
+                          <th>Uploaded Document</th>
                         </tr>
                       </thead>
                       <tbody id="clearanceTableBody">
@@ -1056,8 +1057,7 @@ function showErrorMessage(message) {
 
   // Exam Results Tab Logic
   function getStudentId() {
-    // Try to get from hidden field or JS context
-    return $('#studentIdHidden').val() || (window.student && window.student.student_id);
+    return $('#studentIdHidden').val();
   }
 
   function fetchRegisteredCourses() {
@@ -1121,7 +1121,7 @@ function showErrorMessage(message) {
     });
   }
 
-  // Populate courses on tab show
+  // When Exams tab is shown, fetch courses
   $('a[data-bs-toggle="tab"][href="#exams"]').on('shown.bs.tab', function () {
     fetchRegisteredCourses();
     $('#examSemesterSelect').empty().append('<option value="">Select a semester</option>').prop('disabled', true);
@@ -1150,8 +1150,13 @@ function showErrorMessage(message) {
       $('#examResultsTableWrapper').hide();
     }
   });
+  
 
   // Attendance Tab Logic
+  function getStudentId() {
+    return $('#studentIdHidden').val();
+  }
+
   function fetchAttendanceCourses() {
     const studentId = getStudentId();
     if (!studentId) return;
@@ -1400,8 +1405,10 @@ function showErrorMessage(message) {
     }
   });
 
+
+  // Clearance Tab Logic
   function fetchStudentClearances() {
-    const studentId = getStudentId();
+    const studentId = $('#studentIdHidden').val();
     if (!studentId) return;
     $.ajax({
       url: '/api/student/' + studentId + '/clearances',
@@ -1409,17 +1416,28 @@ function showErrorMessage(message) {
       success: function (res) {
         const $tbody = $('#clearanceTableBody');
         $tbody.empty();
-        if (res.success && res.clearances) {
-          Object.values(res.clearances).forEach(info => {
+        if (res.success && res.clearances && res.clearances.length) {
+          res.clearances.forEach(info => {
             $tbody.append(`<tr>
               <td>${info.label}</td>
               <td>${info.status ? '<span class="badge bg-success">Approved</span>' : '<span class="badge bg-warning text-dark">Pending</span>'}</td>
               <td>${info.approved_date ? info.approved_date : 'N/A'}</td>
               <td>${info.remarks ? info.remarks : '-'}</td>
+              <td>
+                <a href="/storage/${info.clearance_slip || ''}" target="_blank" class="btn btn-outline-primary btn-sm"
+                  ${info.clearance_slip ? '' : 'disabled'}>
+                  <i class="ti ti-download"></i> Download
+                </a>
+                ${!info.clearance_slip ? '<span class="text-muted ms-2">No Document</span>' : ''}
+              </td>
             </tr>`);
           });
+          // If no uploaded documents, show message
+          if ($tbody.children().length === 0) {
+            $tbody.append('<tr><td colspan="5" class="text-center">No uploaded clearance documents found.</td></tr>');
+          }
         } else {
-          $tbody.append('<tr><td colspan="4" class="text-center">No clearance data found.</td></tr>');
+          $tbody.append('<tr><td colspan="5" class="text-center">No clearance data found.</td></tr>');
         }
       }
     });
@@ -1460,7 +1478,7 @@ function showErrorMessage(message) {
     fetchStudentHistory();
   });
 
-  $('#nicSearchForm').on('submit', function(e) {
+ $('#nicSearchForm').on('submit', function(e) {
     e.preventDefault();
     const nic = $('#nicInput').val().trim();
     if (!nic) return;
@@ -1469,21 +1487,18 @@ function showErrorMessage(message) {
       method: 'GET',
       data: { nic: nic },
       success: function(res) {
-        console.log('Student details response:', res);
         if (res.success && res.student) {
-          // Populate all profile fields/tabs with res.student data
           populateStudentProfile(res.student);
           $('#studentIdHidden').val(res.student.student_id);
           $('#profileSection').show();
-          // Always show Personal Info tab first
           $('#personal-tab').tab('show');
+          fetchRegisteredCourses();
         } else {
           $('#profileSection').hide();
           alert('Student not found!');
         }
       },
-      error: function(xhr, status, error) {
-        console.error('Error fetching student details:', error);
+      error: function() {
         $('#profileSection').hide();
         alert('Error fetching student details.');
       }

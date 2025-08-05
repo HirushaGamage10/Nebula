@@ -39,6 +39,7 @@ class StudentListController extends Controller
                 if ($reg->student) {
                     return [
                         'course_registration_id' => $reg->course_registration_id,
+                        'student_id' => $reg->student->student_id,
                         'registration_number' => $reg->student->registration_id ?? $reg->student->student_id,
                         'name_with_initials' => $reg->student->name_with_initials,
                     ];

@@ -254,54 +254,113 @@ class ExamResultController extends Controller
             'module_id' => 'required|integer|exists:modules,module_id',
         ]);
 
-        // Check if exam results already exist for this module
-        $existingResults = ExamResult::where('course_id', $request->course_id)
-            ->where('intake_id', $request->intake_id)
-            ->where('location', $request->location)
-            ->where('semester', $request->semester)
-            ->where('module_id', $request->module_id)
+        $courseId = $request->course_id;
+        $intakeId = $request->intake_id;
+        $location = $request->location;
+        $semesterId = $request->semester;
+        $moduleId = $request->module_id;
+
+        // Get the semester to determine if it's core or elective
+        $semester = \App\Models\Semester::find($semesterId);
+        if (!$semester) {
+            return response()->json(['error' => 'Semester not found.'], 404);
+        }
+
+        // Check if this is a core module (assigned to semester) or elective module
+        $isCoreModule = \DB::table('semester_module')
+            ->where('semester_id', $semesterId)
+            ->where('module_id', $moduleId)
             ->exists();
 
-        $students = CourseRegistration::where('course_id', $request->course_id)
-            ->where('intake_id', $request->intake_id)
-            ->where('location', $request->location)
-            ->where(function($query) {
-                $query->where('status', 'Registered')
-                      ->orWhere('approval_status', 'Approved by DGM');
-            })
-            ->with('student')
-            ->get()
-            ->map(function($reg) use ($request, $existingResults) {
-                $studentData = [
-                    'registration_id' => $reg->course_registration_id ?? $reg->id,
-                    'student_id' => $reg->student->student_id,
-                    'name' => $reg->student->full_name,
-                ];
+        // Check if exam results already exist for this module
+        $existingResults = ExamResult::where('course_id', $courseId)
+            ->where('intake_id', $intakeId)
+            ->where('location', $location)
+            ->where('semester', $semester->name)
+            ->where('module_id', $moduleId)
+            ->exists();
 
-                // If results exist, fetch the existing marks and grade
-                if ($existingResults) {
-                    $existingResult = ExamResult::where('course_id', $request->course_id)
-                        ->where('intake_id', $request->intake_id)
-                        ->where('location', $request->location)
-                        ->where('semester', $request->semester)
-                        ->where('module_id', $request->module_id)
-                        ->where('student_id', $reg->student->student_id)
-                        ->first();
+        if ($isCoreModule) {
+            // For core modules: Get students registered for the semester
+            $students = \App\Models\SemesterRegistration::where('semester_id', $semesterId)
+                ->where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('status', 'registered')
+                ->with('student')
+                ->get()
+                ->map(function($reg) use ($request, $existingResults, $semester) {
+                    $studentData = [
+                        'registration_id' => $reg->student->registration_id ?? $reg->student->student_id,
+                        'student_id' => $reg->student->student_id,
+                        'name' => $reg->student->full_name,
+                    ];
 
-                    if ($existingResult) {
-                        $studentData['marks'] = $existingResult->marks;
-                        $studentData['grade'] = $existingResult->grade;
+                    // If results exist, fetch the existing marks and grade
+                    if ($existingResults) {
+                        $existingResult = ExamResult::where('course_id', $request->course_id)
+                            ->where('intake_id', $request->intake_id)
+                            ->where('location', $request->location)
+                            ->where('semester', $semester->name)
+                            ->where('module_id', $request->module_id)
+                            ->where('student_id', $reg->student->student_id)
+                            ->first();
+
+                        if ($existingResult) {
+                            $studentData['marks'] = $existingResult->marks;
+                            $studentData['grade'] = $existingResult->grade;
+                        } else {
+                            $studentData['marks'] = '';
+                            $studentData['grade'] = '';
+                        }
                     } else {
                         $studentData['marks'] = '';
                         $studentData['grade'] = '';
                     }
-                } else {
-                    $studentData['marks'] = '';
-                    $studentData['grade'] = '';
-                }
 
-                return $studentData;
-            });
+                    return $studentData;
+                });
+        } else {
+            // For elective modules: Get students registered for the specific module
+            $students = \App\Models\ModuleManagement::where('module_id', $moduleId)
+                ->where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('semester', $semester->name)
+                ->with('student')
+                ->get()
+                ->map(function($reg) use ($request, $existingResults, $semester) {
+                    $studentData = [
+                        'registration_id' => $reg->student->registration_id ?? $reg->student->student_id,
+                        'student_id' => $reg->student->student_id,
+                        'name' => $reg->student->full_name,
+                    ];
+
+                    // If results exist, fetch the existing marks and grade
+                    if ($existingResults) {
+                        $existingResult = ExamResult::where('course_id', $request->course_id)
+                            ->where('intake_id', $request->intake_id)
+                            ->where('location', $request->location)
+                            ->where('semester', $semester->name)
+                            ->where('module_id', $request->module_id)
+                            ->where('student_id', $reg->student->student_id)
+                            ->first();
+
+                        if ($existingResult) {
+                            $studentData['marks'] = $existingResult->marks;
+                            $studentData['grade'] = $existingResult->grade;
+                        } else {
+                            $studentData['marks'] = '';
+                            $studentData['grade'] = '';
+                        }
+                    } else {
+                        $studentData['marks'] = '';
+                        $studentData['grade'] = '';
+                    }
+
+                    return $studentData;
+                });
+        }
 
         return response()->json([
             'success' => true,

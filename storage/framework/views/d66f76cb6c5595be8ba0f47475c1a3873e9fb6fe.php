@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Student List')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Student List'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -20,9 +20,9 @@
                     <div class="col-sm-10">
                         <select class="form-select" id="location" name="location">
                             <option value="" selected disabled>Select a Location</option>
-                            @foreach($locations as $location)
-                                <option value="{{ $location }}">Nebula Institute of Technology - {{ $location }}</option>
-                            @endforeach
+                            <?php $__currentLoopData = $locations; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $location): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($location); ?>">Nebula Institute of Technology - <?php echo e($location); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>
                     </div>
                 </div>
@@ -77,7 +77,7 @@
     </div>
 </div>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const locationSelect = document.getElementById('location');
@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
             },
             body: JSON.stringify({
                 location: location,
@@ -256,7 +256,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const csrf = document.createElement('input');
             csrf.type = 'hidden';
             csrf.name = '_token';
-            csrf.value = '{{ csrf_token() }}';
+            csrf.value = '<?php echo e(csrf_token()); ?>';
             form.appendChild(csrf);
             // Filters
             const locInput = document.createElement('input');
@@ -291,5 +291,7 @@ document.addEventListener('DOMContentLoaded', function() {
     @keyframes lds-ring { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     #spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 9999; }
 </style>
-@endpush
-@endsection
+<?php $__env->stopPush(); ?>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/student_list.blade.php ENDPATH**/ ?>

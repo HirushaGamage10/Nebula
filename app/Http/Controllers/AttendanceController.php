@@ -102,25 +102,23 @@ class AttendanceController extends Controller
         ]);
 
         $courseId = $request->input('course_id');
-        $semester = $request->input('semester');
+        $semesterId = $request->input('semester');
 
-        // Get modules from semester_module table for the specific semester
-        $modules = \DB::table('modules')
-            ->join('semester_module', 'modules.module_id', '=', 'semester_module.module_id')
-            ->join('semesters', 'semester_module.semester_id', '=', 'semesters.id')
-            ->where('semesters.course_id', $courseId)
-            ->where('semesters.name', $semester)
-            ->select('modules.module_id', 'modules.module_name')
-            ->distinct()
-            ->get();
-            
-        // If no modules are assigned to this semester, return all modules
-        if ($modules->isEmpty()) {
-            $modules = \DB::table('modules')
-                ->select('module_id', 'module_name')
-                ->orderBy('module_name')
-                ->get();
+        // Get the semester by ID
+        $semester = \App\Models\Semester::where('course_id', $courseId)
+            ->where('intake_id', $request->input('intake_id'))
+            ->where('id', $semesterId)
+            ->first();
+
+        if (!$semester) {
+            return response()->json(['error' => 'Semester not found.'], 404);
         }
+
+        // Filter modules by semester using the semester_module table
+        $modules = \App\Models\Module::join('semester_module', 'modules.module_id', '=', 'semester_module.module_id')
+            ->where('semester_module.semester_id', $semester->id)
+            ->select('modules.module_id', 'modules.module_name')
+            ->get();
 
         return response()->json(['modules' => $modules]);
     }
@@ -135,23 +133,57 @@ class AttendanceController extends Controller
             'module_id' => 'required|exists:modules,module_id',
         ]);
 
-        // Fetch students registered for the course, intake, location, and semester
-        $students = CourseRegistration::where('course_id', $request->course_id)
-            ->where('intake_id', $request->intake_id)
-            ->where('location', $request->location)
-            ->where(function($query) {
-                $query->where('status', 'Registered')
-                      ->orWhere('approval_status', 'Approved by DGM');
-            })
-            ->with('student')
-            ->get()
-            ->map(function($reg) {
-                return [
-                    'registration_number' => $reg->student->registration_id ?? $reg->student->student_id,
-                    'student_id' => $reg->student->student_id,
-                    'name_with_initials' => $reg->student->name_with_initials,
-                ];
-            });
+        $courseId = $request->course_id;
+        $intakeId = $request->intake_id;
+        $location = $request->location;
+        $semesterId = $request->semester;
+        $moduleId = $request->module_id;
+
+        // Get the semester to determine if it's core or elective
+        $semester = \App\Models\Semester::find($semesterId);
+        if (!$semester) {
+            return response()->json(['error' => 'Semester not found.'], 404);
+        }
+
+        // Check if this is a core module (assigned to semester) or elective module
+        $isCoreModule = \DB::table('semester_module')
+            ->where('semester_id', $semesterId)
+            ->where('module_id', $moduleId)
+            ->exists();
+
+        if ($isCoreModule) {
+            // For core modules: Get students registered for the semester
+            $students = \App\Models\SemesterRegistration::where('semester_id', $semesterId)
+                ->where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('status', 'registered')
+                ->with('student')
+                ->get()
+                ->map(function($reg) {
+                    return [
+                        'registration_number' => $reg->student->registration_id ?? $reg->student->student_id,
+                        'student_id' => $reg->student->student_id,
+                        'name_with_initials' => $reg->student->name_with_initials,
+                    ];
+                });
+        } else {
+            // For elective modules: Get students registered for the specific module
+            $students = \App\Models\ModuleManagement::where('module_id', $moduleId)
+                ->where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('semester', $semester->name)
+                ->with('student')
+                ->get()
+                ->map(function($reg) {
+                    return [
+                        'registration_number' => $reg->student->registration_id ?? $reg->student->student_id,
+                        'student_id' => $reg->student->student_id,
+                        'name_with_initials' => $reg->student->name_with_initials,
+                    ];
+                });
+        }
 
         return response()->json([
             'success' => true,
@@ -271,31 +303,62 @@ class AttendanceController extends Controller
             'module_id' => 'required|exists:modules,module_id',
         ]);
 
-        // Get all students registered for this course/intake/location
-        $registrations = \App\Models\CourseRegistration::where('course_id', $request->course_id)
-            ->where('intake_id', $request->intake_id)
-            ->where('location', $request->location)
-            ->with('student')
-            ->get();
+        $courseId = $request->course_id;
+        $intakeId = $request->intake_id;
+        $location = $request->location;
+        $semesterId = $request->semester;
+        $moduleId = $request->module_id;
+
+        // Get the semester to determine if it's core or elective
+        $semester = \App\Models\Semester::find($semesterId);
+        if (!$semester) {
+            return response()->json(['error' => 'Semester not found.'], 404);
+        }
+
+        // Check if this is a core module (assigned to semester) or elective module
+        $isCoreModule = \DB::table('semester_module')
+            ->where('semester_id', $semesterId)
+            ->where('module_id', $moduleId)
+            ->exists();
 
         // Get all attendance sessions for this filter (by module)
-        $attendanceSessions = \App\Models\Attendance::where('course_id', $request->course_id)
-            ->where('intake_id', $request->intake_id)
-            ->where('location', $request->location)
-            ->where('semester', $request->semester)
-            ->where('module_id', $request->module_id)
+        $attendanceSessions = \App\Models\Attendance::where('course_id', $courseId)
+            ->where('intake_id', $intakeId)
+            ->where('location', $location)
+            ->where('semester', $semester->name)
+            ->where('module_id', $moduleId)
             ->select('date')
             ->distinct()
             ->get();
         $totalSessions = $attendanceSessions->count();
 
+        if ($isCoreModule) {
+            // For core modules: Get students registered for the semester
+            $registrations = \App\Models\SemesterRegistration::where('semester_id', $semesterId)
+                ->where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('status', 'registered')
+                ->with('student')
+                ->get();
+        } else {
+            // For elective modules: Get students registered for the specific module
+            $registrations = \App\Models\ModuleManagement::where('module_id', $moduleId)
+                ->where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('semester', $semester->name)
+                ->with('student')
+                ->get();
+        }
+
         $attendanceData = [];
         foreach ($registrations as $reg) {
-            $attendedSessions = \App\Models\Attendance::where('course_id', $request->course_id)
-                ->where('intake_id', $request->intake_id)
-                ->where('location', $request->location)
-                ->where('semester', $request->semester)
-                ->where('module_id', $request->module_id)
+            $attendedSessions = \App\Models\Attendance::where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('semester', $semester->name)
+                ->where('module_id', $moduleId)
                 ->where('student_id', $reg->student_id)
                 ->where('status', true)
                 ->count();
