@@ -1,8 +1,6 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | Student Profile'); ?>
 
-@section('title', 'NEBULA | Student Profile')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <style>
 /* Success Message Styles */
 .success-message {
@@ -65,12 +63,12 @@
   <div class="row justify-content-center mt-4">
     <div class="col-md-11">
       <div class="p-4 rounded shadow w-100 bg-white">
-        @if (session('success'))
-          <div class="alert alert-success">{{ session('success') }}</div>
-        @endif
-        @if (session('error'))
-          <div class="alert alert-danger">{{ session('error') }}</div>
-        @endif
+        <?php if(session('success')): ?>
+          <div class="alert alert-success"><?php echo e(session('success')); ?></div>
+        <?php endif; ?>
+        <?php if(session('error')): ?>
+          <div class="alert alert-danger"><?php echo e(session('error')); ?></div>
+        <?php endif; ?>
         <h2 class="text-center mb-4">Student Profile</h2>
         <hr style="margin-bottom: 30px;">
         <!-- NIC Search Field (styled like previous search bar) -->
@@ -126,7 +124,7 @@
                     <div class="mb-3 mt-5 text-center position-relative">
                       <div class="d-flex justify-content-end">
                         <div class="rounded-circle overflow-hidden mx-auto mb-3 position-relative" style="width: 150px; height: 150px; border: 2px solid #ccc;">
-                          <img src="{{asset('images/profile/user-1.jpg') }}" alt="User" width="150" height="150" class="rounded-circle">
+                          <img src="<?php echo e(asset('images/profile/user-1.jpg')); ?>" alt="User" width="150" height="150" class="rounded-circle">
                         </div>
                       </div>
                       <input type="file" class="form-control visually-hidden" id="profilePicture" accept="image/*">
@@ -138,97 +136,97 @@
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="studentTitle" class="col-sm-3 col-form-label fw-bold">Title</label>
                       <div class="col-sm-9">
-                        <input type="text" class="form-control" id="studentTitle" placeholder="Title" value="{{ $student->title ?? '' }}" readonly>
+                        <input type="text" class="form-control" id="studentTitle" placeholder="Title" value="<?php echo e($student->title ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="studentName" class="col-sm-3 col-form-label fw-bold">Name</label>
                       <div class="col-sm-9">
-                        <input type="text" class="form-control" id="studentName" placeholder="Student name" value="{{ $student->full_name ?? '' }}" readonly>
+                        <input type="text" class="form-control" id="studentName" placeholder="Student name" value="<?php echo e($student->full_name ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="studentNIC" class="col-sm-3 col-form-label fw-bold">NIC</label>
                       <div class="col-sm-9">
-                        <input type="text" class="form-control" id="studentNIC" placeholder="NIC" value="{{ $student->id_value ?? '' }}" readonly>
+                        <input type="text" class="form-control" id="studentNIC" placeholder="NIC" value="<?php echo e($student->id_value ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="studentIndexNo" class="col-sm-3 col-form-label fw-bold">Index Number</label>
                       <div class="col-sm-9">
-                        <input type="text" class="form-control" id="studentIndexNo" placeholder="Index Number" value="{{ $student->registration_id ?? '' }}" readonly>
+                        <input type="text" class="form-control" id="studentIndexNo" placeholder="Index Number" value="<?php echo e($student->registration_id ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="studentInstitute" class="col-sm-3 col-form-label fw-bold">Institute</label>
                       <div class="col-sm-9">
-                        <input type="text" class="form-control" id="studentInstitute" placeholder="Institute" value="{{ $student->institute_location ?? '' }}" readonly>
+                        <input type="text" class="form-control" id="studentInstitute" placeholder="Institute" value="<?php echo e($student->institute_location ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="studentDOB" class="col-sm-3 col-form-label fw-bold">Date of Birth</label>
                       <div class="col-sm-9">
-                        <input type="text" class="form-control" id="studentDOB" placeholder="Date of Birth" value="{{ $student->birthday ?? '' }}" readonly>
+                        <input type="text" class="form-control" id="studentDOB" placeholder="Date of Birth" value="<?php echo e($student->birthday ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                     <label for="studentGender" class="col-sm-3 col-form-label fw-bold">Gender</label>
                       <div class="col-sm-9">
-                        <input type="text" class="form-control" id="studentGender" placeholder="Gender" value="{{ $student->gender ?? '' }}" readonly>
+                        <input type="text" class="form-control" id="studentGender" placeholder="Gender" value="<?php echo e($student->gender ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="studentEmail" class="col-sm-3 col-form-label fw-bold">Email</label>
                       <div class="col-sm-9">
-                        <input type="email" class="form-control" id="studentEmail" placeholder="Email" value="{{ $student->email ?? '' }}" readonly>
+                        <input type="email" class="form-control" id="studentEmail" placeholder="Email" value="<?php echo e($student->email ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="studentMobile" class="col-sm-3 col-form-label fw-bold">Mobile Phone No</label>
                       <div class="col-sm-9">
-                        <input type="tel" class="form-control" id="studentMobile" placeholder="Mobile Phone No" value="{{ $student->mobile_phone ?? '' }}" readonly>
+                        <input type="tel" class="form-control" id="studentMobile" placeholder="Mobile Phone No" value="<?php echo e($student->mobile_phone ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                     <label for="studentHomePhone" class="col-sm-3 col-form-label fw-bold">Home Phone No</label>
                       <div class="col-sm-9">
-                        <input type="tel" class="form-control" id="studentHomePhone" placeholder="Home Phone No" value="{{ $student->home_phone ?? '' }}" readonly>
+                        <input type="tel" class="form-control" id="studentHomePhone" placeholder="Home Phone No" value="<?php echo e($student->home_phone ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                     <label for="studentEmergencyContact" class="col-sm-3 col-form-label fw-bold">Emergency Contact Number</label>
                       <div class="col-sm-9">
-                        <input type="text" class="form-control bg-danger text-white" id="studentEmergencyContact" placeholder="Emergency Contact Number" value="{{ $student->emergency_contact_number ?? '' }}" readonly>
+                        <input type="text" class="form-control bg-danger text-white" id="studentEmergencyContact" placeholder="Emergency Contact Number" value="<?php echo e($student->emergency_contact_number ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="studentAddress" class="col-sm-3 col-form-label fw-bold">Address</label>
                       <div class="col-sm-9">
-                        <textarea class="form-control" id="studentAddress" rows="2" placeholder="Address" readonly>{{ $student->address ?? '' }}</textarea>
+                        <textarea class="form-control" id="studentAddress" rows="2" placeholder="Address" readonly><?php echo e($student->address ?? ''); ?></textarea>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                     <label for="studentFoundation" class="col-sm-3 col-form-label fw-bold">Foundation Program</label>
                       <div class="col-sm-9">
-                        <input type="text" class="form-control" id="studentFoundation" placeholder="Foundation Program" value="{{ $student->foundation_program ?? '' }}" readonly>
+                        <input type="text" class="form-control" id="studentFoundation" placeholder="Foundation Program" value="<?php echo e($student->foundation_program ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                     <label for="studentSpecialNeeds" class="col-sm-3 col-form-label fw-bold">Special Needs</label>
                       <div class="col-sm-9">
-                        <textarea class="form-control" id="studentSpecialNeeds" rows="2" placeholder="Special Needs" readonly>{{ $student->special_needs ?? '' }}</textarea>
+                        <textarea class="form-control" id="studentSpecialNeeds" rows="2" placeholder="Special Needs" readonly><?php echo e($student->special_needs ?? ''); ?></textarea>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                     <label for="studentExtraCurricular" class="col-sm-3 col-form-label fw-bold">Extra Curricular Activities</label>
                       <div class="col-sm-9">
-                        <textarea class="form-control" id="studentExtraCurricular" rows="2" placeholder="Extra Curricular Activities" readonly>{{ $student->extracurricular_activities ?? '' }}</textarea>
+                        <textarea class="form-control" id="studentExtraCurricular" rows="2" placeholder="Extra Curricular Activities" readonly><?php echo e($student->extracurricular_activities ?? ''); ?></textarea>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="studentFuturePotentials" class="col-sm-3 col-form-label fw-bold">Future Potentials</label>
                       <div class="col-sm-9">
-                        <textarea class="form-control" id="studentFuturePotentials" rows="2" placeholder="Future Potentials" readonly>{{ $student->future_potentials ?? '' }}</textarea>
+                        <textarea class="form-control" id="studentFuturePotentials" rows="2" placeholder="Future Potentials" readonly><?php echo e($student->future_potentials ?? ''); ?></textarea>
                       </div>
                     </div>                  
                     <!-- Edit Personal Info Button -->
@@ -244,37 +242,37 @@
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="parentName" class="col-sm-3 col-form-label fw-bold">Name</label>
                       <div class="col-sm-9">
-                        <input type="text" class="form-control" id="parentName" placeholder="Parent/Guardian Name" value="{{ $student->parent->guardian_name ?? '' }}" readonly>
+                        <input type="text" class="form-control" id="parentName" placeholder="Parent/Guardian Name" value="<?php echo e($student->parent->guardian_name ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="parentProfession" class="col-sm-3 col-form-label fw-bold">Profession</label>
                       <div class="col-sm-9">
-                        <input type="text" class="form-control" id="parentProfession" placeholder="Profession" value="{{ $student->parent->guardian_profession ?? '' }}" readonly>
+                        <input type="text" class="form-control" id="parentProfession" placeholder="Profession" value="<?php echo e($student->parent->guardian_profession ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="parentContactNo" class="col-sm-3 col-form-label fw-bold">Contact Number</label>
                       <div class="col-sm-9">
-                        <input type="tel" class="form-control" id="parentContactNo" placeholder="Contact Number" value="{{ $student->parent->guardian_contact_number ?? '' }}" readonly>
+                        <input type="tel" class="form-control" id="parentContactNo" placeholder="Contact Number" value="<?php echo e($student->parent->guardian_contact_number ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="parentEmail" class="col-sm-3 col-form-label fw-bold">Email</label>
                       <div class="col-sm-9">
-                        <input type="email" class="form-control" id="parentEmail" placeholder="Email" value="{{ $student->parent->guardian_email ?? '' }}" readonly>
+                        <input type="email" class="form-control" id="parentEmail" placeholder="Email" value="<?php echo e($student->parent->guardian_email ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="parentAddress" class="col-sm-3 col-form-label fw-bold">Address</label>
                       <div class="col-sm-9">
-                        <textarea class="form-control" id="parentAddress" rows="2" placeholder="Address" readonly>{{ $student->parent->guardian_address ?? '' }}</textarea>
+                        <textarea class="form-control" id="parentAddress" rows="2" placeholder="Address" readonly><?php echo e($student->parent->guardian_address ?? ''); ?></textarea>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="parentEmergencyContact" class="col-sm-3 col-form-label fw-bold">Emergency Contact Number</label>
                       <div class="col-sm-9">
-                        <input type="text" class="form-control bg-danger text-white" id="parentEmergencyContact" placeholder="Emergency Contact Number" value="{{ $student->parent->emergency_contact_number ?? '' }}" readonly>
+                        <input type="text" class="form-control bg-danger text-white" id="parentEmergencyContact" placeholder="Emergency Contact Number" value="<?php echo e($student->parent->emergency_contact_number ?? ''); ?>" readonly>
                       </div>
                     </div>
                     <!-- Edit Parent/Guardian Info Button -->
@@ -287,7 +285,7 @@
 
                   <!-- Academic Tab Content -->
                   <div class="tab-pane fade" id="academic">
-                    @php
+                    <?php
                         $ol_pending = true;
                         $al_pending = true;
                         $ol_exam = null;
@@ -309,13 +307,13 @@
                                 }
                             }
                         }
-                    @endphp
+                    ?>
 
-                    @if ($ol_pending)
+                    <?php if($ol_pending): ?>
                         <div class="alert alert-warning mb-3">
                             <strong>Pending Results:</strong> The student's O/L exam results are still pending.
                         </div>
-                    @else
+                    <?php else: ?>
                         <div id="olExamSection">
                             <h5 class="mt-4 mb-3 fw-bold">O/L Exam Details</h5>
                             <div class="mb-3 row align-items-center mx-3">
@@ -323,7 +321,7 @@
                                 <div class="col-sm-9">
                                     <input type="text" class="form-control" id="olIndexNo"
                                         placeholder="O/L Index No"
-                                        value="{{ $ol_exam->ol_index_no ?? '' }}" readonly>
+                                        value="<?php echo e($ol_exam->ol_index_no ?? ''); ?>" readonly>
                                 </div>
                             </div>
                             <div class="mb-3 row align-items-center mx-3">
@@ -331,7 +329,7 @@
                                 <div class="col-sm-9">
                                     <input type="text" class="form-control" id="olExamType"
                                         placeholder="O/L Exam Type"
-                                        value="{{ $ol_exam->ol_exam_type ?? '' }}" readonly>
+                                        value="<?php echo e($ol_exam->ol_exam_type ?? ''); ?>" readonly>
                                 </div>
                             </div>
                             <div class="mb-3 row align-items-center mx-3">
@@ -339,7 +337,7 @@
                                 <div class="col-sm-9">
                                     <input type="text" class="form-control" id="olExamYear"
                                         placeholder="O/L Exam Year"
-                                        value="{{ $ol_exam->ol_exam_year ?? '' }}" readonly>
+                                        value="<?php echo e($ol_exam->ol_exam_year ?? ''); ?>" readonly>
                                 </div>
                             </div>
                             <div class="mb-3 row align-items-center mx-3">
@@ -353,12 +351,12 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach (json_decode($ol_exam->ol_exam_subjects, true) ?? [] as $subject)
+                                            <?php $__currentLoopData = json_decode($ol_exam->ol_exam_subjects, true) ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $subject): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                 <tr>
-                                                    <td>{{ $subject['subject'] ?? '' }}</td>
-                                                    <td>{{ $subject['result'] ?? '' }}</td>
+                                                    <td><?php echo e($subject['subject'] ?? ''); ?></td>
+                                                    <td><?php echo e($subject['result'] ?? ''); ?></td>
                                                 </tr>
-                                            @endforeach
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                         </tbody>
                                     </table>
                                 </div>
@@ -366,22 +364,22 @@
                             <div class="mb-3 row align-items-center mx-3">
                                 <label class="col-sm-3 col-form-label fw-bold">O/L Certificate</label>
                                 <div class="col-sm-9">
-                                    @if (!empty($ol_exam->ol_certificate))
-                                        <a href="{{ asset('storage/certificates/' . $ol_exam->ol_certificate) }}"
+                                    <?php if(!empty($ol_exam->ol_certificate)): ?>
+                                        <a href="<?php echo e(asset('storage/certificates/' . $ol_exam->ol_certificate)); ?>"
                                             target="_blank">View Certificate</a>
-                                    @else
+                                    <?php else: ?>
                                         <span class="text-muted">Not uploaded</span>
-                                    @endif
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
-                    @endif
+                    <?php endif; ?>
 
-                    @if ($al_pending)
+                    <?php if($al_pending): ?>
                         <div class="alert alert-warning mb-3">
                             <strong>Pending Results:</strong> The student's A/L exam results are still pending.
                         </div>
-                    @else
+                    <?php else: ?>
                         <div id="alExamSection">
                             <hr>
                             <h5 class="mt-4 mb-3 fw-bold">A/L Exam Details</h5>
@@ -390,7 +388,7 @@
                                 <div class="col-sm-9">
                                     <input type="text" class="form-control" id="alIndexNo"
                                         placeholder="A/L Index No"
-                                        value="{{ $al_exam->al_index_no ?? '' }}" readonly>
+                                        value="<?php echo e($al_exam->al_index_no ?? ''); ?>" readonly>
                                 </div>
                             </div>
                             <div class="mb-3 row align-items-center mx-3">
@@ -398,7 +396,7 @@
                                 <div class="col-sm-9">
                                     <input type="text" class="form-control" id="alExamType"
                                         placeholder="A/L Exam Type"
-                                        value="{{ $al_exam->al_exam_type ?? '' }}" readonly>
+                                        value="<?php echo e($al_exam->al_exam_type ?? ''); ?>" readonly>
                                 </div>
                             </div>
                             <div class="mb-3 row align-items-center mx-3">
@@ -406,14 +404,14 @@
                                 <div class="col-sm-9">
                                     <input type="text" class="form-control" id="alExamYear"
                                         placeholder="A/L Exam Year"
-                                        value="{{ $al_exam->al_exam_year ?? '' }}" readonly>
+                                        value="<?php echo e($al_exam->al_exam_year ?? ''); ?>" readonly>
                                 </div>
                             </div>
                             <div class="mb-3 row align-items-center mx-3">
                                 <label for="alStream" class="col-sm-3 col-form-label fw-bold">A/L Stream</label>
                                 <div class="col-sm-9">
                                     <input type="text" class="form-control" id="alStream"
-                                        placeholder="A/L Stream" value="{{ $al_exam->al_stream ?? '' }}"
+                                        placeholder="A/L Stream" value="<?php echo e($al_exam->al_stream ?? ''); ?>"
                                         readonly>
                                 </div>
                             </div>
@@ -428,12 +426,12 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach (json_decode($al_exam->al_exam_subjects, true) ?? [] as $subject)
+                                            <?php $__currentLoopData = json_decode($al_exam->al_exam_subjects, true) ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $subject): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                 <tr>
-                                                    <td>{{ $subject['subject'] ?? '' }}</td>
-                                                    <td>{{ $subject['result'] ?? '' }}</td>
+                                                    <td><?php echo e($subject['subject'] ?? ''); ?></td>
+                                                    <td><?php echo e($subject['result'] ?? ''); ?></td>
                                                 </tr>
-                                            @endforeach
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                         </tbody>
                                     </table>
                                 </div>
@@ -441,16 +439,16 @@
                             <div class="mb-3 row align-items-center mx-3">
                                 <label class="col-sm-3 col-form-label fw-bold">A/L Certificate</label>
                                 <div class="col-sm-9">
-                                    @if (!empty($al_exam->al_certificate))
-                                        <a href="{{ asset('storage/certificates/' . $al_exam->al_certificate) }}"
+                                    <?php if(!empty($al_exam->al_certificate)): ?>
+                                        <a href="<?php echo e(asset('storage/certificates/' . $al_exam->al_certificate)); ?>"
                                             target="_blank">View Certificate</a>
-                                    @else
+                                    <?php else: ?>
                                         <span class="text-muted">Not uploaded</span>
-                                    @endif
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
-                    @endif
+                    <?php endif; ?>
                 </div>
 
                   <!-- Exams Tab Content -->
@@ -623,21 +621,21 @@
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="olCertificate" class="col-sm-3 col-form-label fw-bold">O/L Certificate</label>
                       <div class="col-sm-9">
-                        @if(!empty($student->exams[0]->ol_certificate))
-                          <a href="{{ asset('storage/certificates/' . $student->exams[0]->ol_certificate) }}" target="_blank">View Certificate</a>
-                        @else
+                        <?php if(!empty($student->exams[0]->ol_certificate)): ?>
+                          <a href="<?php echo e(asset('storage/certificates/' . $student->exams[0]->ol_certificate)); ?>" target="_blank">View Certificate</a>
+                        <?php else: ?>
                           <span class="text-muted">Not uploaded</span>
-                        @endif
+                        <?php endif; ?>
                       </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="alCertificate" class="col-sm-3 col-form-label fw-bold">A/L Certificate</label>
                       <div class="col-sm-9">
-                        @if(!empty($student->exams[1]->al_certificate))
-                          <a href="{{ asset('storage/certificates/' . $student->exams[1]->al_certificate) }}" target="_blank">View Certificate</a>
-                        @else
+                        <?php if(!empty($student->exams[1]->al_certificate)): ?>
+                          <a href="<?php echo e(asset('storage/certificates/' . $student->exams[1]->al_certificate)); ?>" target="_blank">View Certificate</a>
+                        <?php else: ?>
                           <span class="text-muted">Not uploaded</span>
-                        @endif
+                        <?php endif; ?>
                       </div>
                     </div>
                   </div>
@@ -736,10 +734,10 @@ function showErrorMessage(message) {
     });
 
     // Show profile section if $student is set on page load
-    @if(isset($student))
-      populateStudentProfile(@json($student));
+    <?php if(isset($student)): ?>
+      populateStudentProfile(<?php echo json_encode($student, 15, 512) ?>);
       $('#profileSection').show();
-    @endif
+    <?php endif; ?>
 
     function populateStudentProfile(student) {
     $('#academic').empty();
@@ -964,12 +962,12 @@ function showErrorMessage(message) {
       special_needs: $('#studentSpecialNeeds').val(),
       extracurricular_activities: $('#studentExtraCurricular').val(),
       future_potentials: $('#studentFuturePotentials').val(),
-      _token: '{{ csrf_token() }}'
+      _token: '<?php echo e(csrf_token()); ?>'
     };
 
     // Send update request
                       $.ajax({
-      url: "{{ route('student.update.personal.info') }}",
+      url: "<?php echo e(route('student.update.personal.info')); ?>",
       type: "POST",
       data: formData,
                         success: function(response) {
@@ -1028,12 +1026,12 @@ function showErrorMessage(message) {
       guardian_email: $('#parentEmail').val(),
       guardian_address: $('#parentAddress').val(),
       emergency_contact_number: $('#parentEmergencyContact').val(),
-      _token: '{{ csrf_token() }}'
+      _token: '<?php echo e(csrf_token()); ?>'
     };
 
     // Send update request
         $.ajax({
-      url: "{{ route('student.update.parent.info') }}",
+      url: "<?php echo e(route('student.update.parent.info')); ?>",
           type: "POST",
           data: formData,
       success: function(response) {
@@ -1512,4 +1510,5 @@ function showErrorMessage(message) {
   });
 });
   </script>
-  @endsection
+  <?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Users/inazawaelectronics/Documents/SLT/Nebula/resources/views/student_profile.blade.php ENDPATH**/ ?>
