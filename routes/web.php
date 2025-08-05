@@ -375,7 +375,16 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/api/student/{studentId}/course/{courseId}/intake/{intake}/payment-details', [StudentProfileController::class, 'getPaymentDetails'])->name('student.payment.details');
         Route::get('/api/student/{studentId}/course/{courseId}/intake/{intake}/payment-history', [StudentProfileController::class, 'getPaymentHistory'])->name('student.payment.history');
         Route::get('/api/student/{studentId}/course/{courseId}/intake/{intake}/payment-schedule', [StudentProfileController::class, 'getPaymentSchedule'])->name('student.payment.schedule');
+
+        Route::get('/api/student/{studentId}/courses', [StudentProfileController::class, 'getRegisteredCourses']);
+        Route::get('/api/student/{studentId}/course/{courseId}/semesters', [StudentProfileController::class, 'getSemesters']);
+        Route::get('/api/student/{studentId}/course/{courseId}/semester/{semester}/results', [StudentProfileController::class, 'getModuleResults']);
+
+        Route::get('/api/student/{studentId}/course/{courseId}/semester/{semester}/attendance', [StudentProfileController::class, 'getAttendance']);
+
+        Route::get('/api/student/{studentId}/clearances', [StudentProfileController::class, 'getStudentClearances']);
     });
+
     
 
     
@@ -519,6 +528,7 @@ Route::middleware(['auth', 'role:Bursar,Developer'])->group(function () {
     Route::post('/payment/approve-clearance', [App\Http\Controllers\PaymentClearanceController::class, 'approveClearance'])->name('payment.approve.clearance');
     Route::post('/payment/reject-clearance', [App\Http\Controllers\PaymentClearanceController::class, 'rejectClearance'])->name('payment.reject.clearance');
 });
+
 
 // API: Get course registration history for a student
 Route::get('/api/student/{studentId}/history', [App\Http\Controllers\StudentProfileController::class, 'getCourseRegistrationHistory']);

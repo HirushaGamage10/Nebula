@@ -393,4 +393,92 @@ class StudentProfileController extends Controller
         return response()->json(['success' => true, 'student' => $student]);
     }
     // Other methods (academic details, attendance, clearance, certificates, etc.) remain unchanged
+
+
+
+
+    //show exam results 
+    public function getRegisteredCourses($studentId)
+    {
+        $courses = \App\Models\Course::whereIn('course_id',
+            \App\Models\CourseRegistration::where('student_id', $studentId)->pluck('course_id')
+        )->get(['course_id', 'course_name']);
+        return response()->json(['success' => true, 'courses' => $courses]);
+    }
+
+    public function getSemesters($studentId, $courseId)
+    {
+        $semesters = \App\Models\ExamResult::where('student_id', $studentId)
+            ->where('course_id', $courseId)
+            ->pluck('semester')
+            ->unique()
+            ->sort()
+            ->values();
+        return response()->json(['success' => true, 'semesters' => $semesters]);
+    }
+
+    public function getModuleResults($studentId, $courseId, $semester)
+    {
+        $results = \App\Models\ExamResult::where('student_id', $studentId)
+            ->where('course_id', $courseId)
+            ->where('semester', $semester)
+            ->with('module')
+            ->get()
+            ->map(function($r) {
+                return [
+                    'module_name' => $r->module->module_name ?? 'N/A',
+                    'marks' => $r->marks,
+                    'grade' => $r->grade,
+                ];
+            });
+        return response()->json(['success' => true, 'results' => $results]);
+    }
+
+
+     // API: Get attendance records for a specific student, course, and semester
+    public function getAttendance($studentId, $courseId, $semester)
+    {
+        $attendance = \App\Models\Attendance::where('student_id', $studentId)
+            ->where('course_id', $courseId)
+            ->where('semester', $semester)
+            ->with('module')
+            ->get()
+            ->groupBy('module_id')
+            ->map(function($records, $moduleId) {
+                $moduleName = $records->first()->module->module_name ?? 'N/A';
+                $totalDays = $records->count();
+                $presentDays = $records->where('status', true)->count();
+                $absentDays = $records->where('status', false)->count();
+                $attendancePercent = $totalDays > 0 ? round(($presentDays / $totalDays) * 100, 2) : 0;
+                return [
+                    'module_name' => $moduleName,
+                    'total_days' => $totalDays,
+                    'present_days' => $presentDays,
+                    'absent_days' => $absentDays,
+                    'attendance_percent' => $attendancePercent
+                ];
+            })->values();
+
+        return response()->json(['success' => true, 'attendance' => $attendance]);
+    }
+
+    public function getStudentClearances($studentId)
+    {
+        $clearances = \App\Models\ClearanceRequest::where('student_id', $studentId)
+            ->get()
+            ->map(function($c) {
+                return [
+                    'label' => $c->getClearanceTypeTextAttribute(),
+                    'status' => $c->status === \App\Models\ClearanceRequest::STATUS_APPROVED,
+                    'approved_date' => $c->approved_at ? $c->approved_at->format('d/m/Y') : null,
+                    'remarks' => $c->remarks,
+                    'clearance_slip' => $c->clearance_slip,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'clearances' => $clearances
+        ]);
+    }
 }
