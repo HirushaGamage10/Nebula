@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Slip - {{ $slipData['receipt_no'] }}</title>
+    <title>Payment Slip - <?php echo e($slipData['receipt_no']); ?></title>
     <style>
         @page {
             size: A4;
@@ -201,7 +201,7 @@
     <div class="slip-container">
         <!-- Header -->
         <div class="header">
-            <div class="form-number">160-C02/{{ $slipData['receipt_no'] }}</div>
+            <div class="form-number">160-C02/<?php echo e($slipData['receipt_no']); ?></div>
             <div class="logo">S</div>
             <div class="company-name">Sri Lanka Telecom PLC.</div>
             <div class="receipt-label">(1) Receipt</div>
@@ -214,67 +214,67 @@
                 <div class="left-section">
                     <div class="field-group">
                         <div class="field-label">(2) Serial No.</div>
-                        <div class="field-value">{{ $slipData['receipt_no'] }}</div>
+                        <div class="field-value"><?php echo e($slipData['receipt_no']); ?></div>
                     </div>
                     
                     <div class="field-group">
                         <div class="field-label">(3) Name</div>
-                        <div class="field-value">{{ $slipData['student_name'] }}</div>
+                        <div class="field-value"><?php echo e($slipData['student_name']); ?></div>
                     </div>
                     
                     <div class="field-group">
                         <div class="field-label">(4) Customer No.</div>
-                        <div class="field-value">{{ $slipData['student_id'] }}</div>
+                        <div class="field-value"><?php echo e($slipData['student_id']); ?></div>
                     </div>
                     
                     <div class="field-group">
                         <div class="field-label">(5) Place</div>
-                        <div class="field-value">{{ $slipData['location'] ?? 'NEBULA Institute' }}</div>
+                        <div class="field-value"><?php echo e($slipData['location'] ?? 'NEBULA Institute'); ?></div>
                     </div>
                     
                     <!-- Payment Acknowledgment Section -->
                     <div class="payment-section">
                         <div class="payment-text">Received with thanks a sum of Rs.</div>
-                        <div class="amount-box">{{ number_format($slipData['amount'], 2) }}</div>
+                        <div class="amount-box"><?php echo e(number_format($slipData['amount'], 2)); ?></div>
                         <div class="settlement-text">being settlement of the following.</div>
                         
                         <div class="field-group">
                             <div class="field-label">(7) Account No./Invoice No.</div>
-                            <div class="field-value">{{ $slipData['student_id'] }}/{{ $slipData['receipt_no'] }}</div>
+                            <div class="field-value"><?php echo e($slipData['student_id']); ?>/<?php echo e($slipData['receipt_no']); ?></div>
                         </div>
                         
                         <!-- Itemized List -->
                         <div class="itemized-list">
                             <div class="list-item">
                                 <div class="item-number">1.</div>
-                                <div class="item-line">{{ $slipData['payment_type_display'] }} - {{ $slipData['course_name'] }}</div>
+                                <div class="item-line"><?php echo e($slipData['payment_type_display']); ?> - <?php echo e($slipData['course_name']); ?></div>
                             </div>
                             <div class="list-item">
                                 <div class="item-number">2.</div>
-                                <div class="item-line">Installment {{ $slipData['installment_number'] ?? '1' }}</div>
+                                <div class="item-line">Installment <?php echo e($slipData['installment_number'] ?? '1'); ?></div>
                             </div>
                             <div class="list-item">
                                 <div class="item-number">3.</div>
-                                <div class="item-line">Due Date: {{ $slipData['due_date'] ? date('d/m/Y', strtotime($slipData['due_date'])) : 'N/A' }}</div>
+                                <div class="item-line">Due Date: <?php echo e($slipData['due_date'] ? date('d/m/Y', strtotime($slipData['due_date'])) : 'N/A'); ?></div>
                             </div>
                             <div class="list-item">
                                 <div class="item-number">4.</div>
-                                <div class="item-line">Course: {{ $slipData['course_name'] }}</div>
+                                <div class="item-line">Course: <?php echo e($slipData['course_name']); ?></div>
                             </div>
                             <div class="list-item">
                                 <div class="item-number">5.</div>
-                                <div class="item-line">Intake: {{ $slipData['intake'] }}</div>
+                                <div class="item-line">Intake: <?php echo e($slipData['intake']); ?></div>
                             </div>
                         </div>
                         
                         <div class="field-group">
                             <div class="field-label">(11) Payment Mode</div>
-                            <div class="field-value">{{ $slipData['payment_method'] ?? 'Cash' }}</div>
+                            <div class="field-value"><?php echo e($slipData['payment_method'] ?? 'Cash'); ?></div>
                         </div>
                         
                         <div class="field-group">
                             <div class="field-label">(12) Bank</div>
-                            <div class="field-value">{{ $slipData['bank_name'] ?? 'N/A' }}</div>
+                            <div class="field-value"><?php echo e($slipData['bank_name'] ?? 'N/A'); ?></div>
                         </div>
                     </div>
                 </div>
@@ -283,34 +283,34 @@
                 <div class="right-section">
                     <div class="field-group">
                         <div class="field-label">(6) Date</div>
-                        <div class="field-value">{{ date('d/m/Y', strtotime($slipData['payment_date'])) }}</div>
+                        <div class="field-value"><?php echo e(date('d/m/Y', strtotime($slipData['payment_date']))); ?></div>
                     </div>
                     
                     <div class="field-group">
                         <div class="field-label">(8) Description</div>
-                        <div class="field-value">{{ $slipData['payment_type_display'] }}</div>
+                        <div class="field-value"><?php echo e($slipData['payment_type_display']); ?></div>
                     </div>
                     
                     <div class="field-group">
                         <div class="field-label">(9) Amount (Rs.Cts)</div>
-                        <div class="field-value">{{ number_format($slipData['amount'], 2) }}</div>
+                        <div class="field-value"><?php echo e(number_format($slipData['amount'], 2)); ?></div>
                     </div>
                     
                     <!-- Total Section -->
                     <div class="right-amount-section">
                         <div class="field-label">(10) Total</div>
-                        <div class="total-box">{{ number_format($slipData['amount'], 2) }}</div>
+                        <div class="total-box"><?php echo e(number_format($slipData['amount'], 2)); ?></div>
                     </div>
                     
                     <div class="bottom-fields">
                         <div class="field-group">
                             <div class="field-label">(13) No</div>
-                            <div class="field-value">{{ $slipData['receipt_no'] }}</div>
+                            <div class="field-value"><?php echo e($slipData['receipt_no']); ?></div>
                         </div>
                         
                         <div class="field-group">
                             <div class="field-label">(14) Branch</div>
-                            <div class="field-value">{{ $slipData['location'] ?? 'NEBULA Institute' }}</div>
+                            <div class="field-value"><?php echo e($slipData['location'] ?? 'NEBULA Institute'); ?></div>
                         </div>
                         
                         <div style="margin: 8px 0; font-size: 7px; font-style: italic;">
@@ -337,4 +337,4 @@
         </div>
     </div>
 </body>
-</html>
+</html><?php /**PATH E:\JOB\Projects\Nebula\resources\views/pdf/payment_slip.blade.php ENDPATH**/ ?>

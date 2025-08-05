@@ -10,7 +10,9 @@ class PaymentDetail extends Model
     use HasFactory;
 
     protected $table = 'payment_details';
-    protected $primaryKey = 'payment_id';
+
+    
+
 
     protected $fillable = [
         'student_id',
