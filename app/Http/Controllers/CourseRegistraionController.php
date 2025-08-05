@@ -507,8 +507,20 @@ class CourseRegistraionController extends Controller
     public function getSemestersByYear(Request $request)
     {
         $year = $request->query('year');
-        // Example: Return semesters for the given year
-        $semesters = ['Semester 1', 'Semester 2']; // Replace with your logic
+        $courseId = $request->query('course_id');
+        $intakeId = $request->query('intake_id');
+        
+        if (!$courseId || !$intakeId) {
+            return response()->json(['semesters' => []]);
+        }
+        
+        // Get actual created semesters for this course and intake
+        $semesters = \App\Models\Semester::where('course_id', $courseId)
+            ->where('intake_id', $intakeId)
+            ->whereIn('status', ['active', 'upcoming'])
+            ->select('id', 'name')
+            ->get();
+            
         return response()->json(['semesters' => $semesters]);
     }
 

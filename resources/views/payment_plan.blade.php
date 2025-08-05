@@ -164,22 +164,48 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="table-container">
-                                <table class="table bg-white rounded border mt-4 table-bordered">
-                                    <thead>
-                                        <tr class="bg-warning text-black">
-                                            <th scope="col">No.</th>
-                                            <th scope="col">Due Date</th>
-                                            <th scope="col">Local (Rs.)</th>
-                                            <th scope="col" id="internationalHeader">International</th>
-                                            <th scope="col">Apply Tax</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="installmentsTableBody">
-                                        <!-- Rows will be added here dynamically -->
-                                    </tbody>
-                                </table>
-                            </div>
+                                                         <div class="table-container">
+                                 <table class="table bg-white rounded border mt-4 table-bordered">
+                                     <thead>
+                                         <tr class="bg-warning text-black">
+                                             <th scope="col">No.</th>
+                                             <th scope="col">Due Date</th>
+                                             <th scope="col">Local (Rs.)</th>
+                                             <th scope="col" id="internationalHeader">International</th>
+                                             <th scope="col">Apply Tax</th>
+                                         </tr>
+                                     </thead>
+                                     <tbody id="installmentsTableBody">
+                                         <!-- Rows will be added here dynamically -->
+                                     </tbody>
+                                     <tfoot>
+                                         <tr class="bg-light">
+                                             <td colspan="2" class="fw-bold">Total:</td>
+                                             <td id="totalLocalAmount" class="fw-bold">Rs. 0.00</td>
+                                             <td id="totalInternationalAmount" class="fw-bold">0.00</td>
+                                             <td></td>
+                                         </tr>
+                                         <tr class="bg-light">
+                                             <td colspan="2" class="fw-bold">Required:</td>
+                                             <td id="requiredLocalAmount" class="fw-bold">Rs. 0.00</td>
+                                             <td id="requiredInternationalAmount" class="fw-bold">0.00</td>
+                                             <td></td>
+                                         </tr>
+                                         <tr id="validationRow" style="display: none;">
+                                             <td colspan="5" class="text-center">
+                                                 <div id="validationMessage" class="alert" style="margin-bottom: 0;"></div>
+                                             </td>
+                                         </tr>
+                                         <tr id="autoCompleteRow" style="display: none;">
+                                             <td colspan="5" class="text-center">
+                                                 <button type="button" class="btn btn-sm btn-outline-primary" onclick="autoCompleteRemaining()">
+                                                     <i class="fas fa-magic"></i> Auto-complete remaining amounts
+                                                 </button>
+                                             </td>
+                                         </tr>
+                                     </tfoot>
+                                 </table>
+                             </div>
                         </div>
                     </div>
                 </div>
@@ -222,12 +248,154 @@ function addRows() {
     row.innerHTML = `
               <td>${i}</td>
               <td><input type="date" class="form-control" id="dueDate${i}" name="dueDate${i}"></td>
-              <td><input type="number" class="form-control" id="localAmount${i}" name="localAmount${i}" placeholder="0" oninput="validateInput(this)"></td>
-              <td><input type="number" class="form-control" id="internationalAmount${i}" name="internationalAmount${i}" placeholder="0" oninput="validateInput(this)"></td>
+              <td><input type="number" class="form-control" id="localAmount${i}" name="localAmount${i}" placeholder="0" oninput="validateInput(this); calculateTotals();"></td>
+              <td><input type="number" class="form-control" id="internationalAmount${i}" name="internationalAmount${i}" placeholder="0" oninput="validateInput(this); calculateTotals();"></td>
               <td><input type="checkbox" id="applyTax${i}" name="applyTax${i}"></td>
           `;
     tableBody.appendChild(row);
   }
+  calculateTotals();
+}
+
+function calculateTotals() {
+  let totalLocal = 0;
+  let totalInternational = 0;
+  
+  const localInputs = document.querySelectorAll('input[id^="localAmount"]');
+  const internationalInputs = document.querySelectorAll('input[id^="internationalAmount"]');
+  
+  localInputs.forEach(input => {
+    totalLocal += parseFloat(input.value || 0);
+  });
+  
+  internationalInputs.forEach(input => {
+    totalInternational += parseFloat(input.value || 0);
+  });
+  
+  // Update total display
+  document.getElementById('totalLocalAmount').textContent = `Rs. ${totalLocal.toFixed(2)}`;
+  document.getElementById('totalInternationalAmount').textContent = totalInternational.toFixed(2);
+  
+  // Update required amounts
+  const localFee = parseFloat(document.getElementById('localFee').value || 0);
+  const internationalFee = parseFloat(document.getElementById('internationalFee').value || 0);
+  
+  document.getElementById('requiredLocalAmount').textContent = `Rs. ${localFee.toFixed(2)}`;
+  document.getElementById('requiredInternationalAmount').textContent = internationalFee.toFixed(2);
+  
+  // Show validation message
+  validateInstallmentTotals(totalLocal, totalInternational, localFee, internationalFee);
+}
+
+function validateInstallmentTotals(totalLocal, totalInternational, requiredLocal, requiredInternational) {
+  const validationRow = document.getElementById('validationRow');
+  const validationMessage = document.getElementById('validationMessage');
+  const autoCompleteRow = document.getElementById('autoCompleteRow');
+  
+  const localMatch = Math.abs(totalLocal - requiredLocal) <= 0.01;
+  const internationalMatch = Math.abs(totalInternational - requiredInternational) <= 0.01;
+  
+  if (localMatch && internationalMatch) {
+    validationRow.style.display = 'none';
+    autoCompleteRow.style.display = 'none';
+  } else {
+    validationRow.style.display = 'table-row';
+    let message = '';
+    let alertClass = 'alert-warning';
+    
+    if (!localMatch) {
+      const localDiff = requiredLocal - totalLocal;
+      message += `Local amounts mismatch: Total (Rs. ${totalLocal.toFixed(2)}) vs Required (Rs. ${requiredLocal.toFixed(2)})<br>`;
+      if (localDiff > 0) {
+        message += `<small class="text-info">Remaining: Rs. ${localDiff.toFixed(2)}</small><br>`;
+      } else {
+        message += `<small class="text-danger">Excess: Rs. ${Math.abs(localDiff).toFixed(2)}</small><br>`;
+      }
+    }
+    if (!internationalMatch) {
+      const internationalDiff = requiredInternational - totalInternational;
+      message += `International amounts mismatch: Total (${totalInternational.toFixed(2)}) vs Required (${requiredInternational.toFixed(2)})<br>`;
+      if (internationalDiff > 0) {
+        message += `<small class="text-info">Remaining: ${internationalDiff.toFixed(2)}</small>`;
+      } else {
+        message += `<small class="text-danger">Excess: ${Math.abs(internationalDiff).toFixed(2)}</small>`;
+      }
+    }
+    
+    validationMessage.innerHTML = message;
+    validationMessage.className = `alert ${alertClass}`;
+    
+    // Show auto-complete button if there are remaining amounts
+    const localDiff = requiredLocal - totalLocal;
+    const internationalDiff = requiredInternational - totalInternational;
+    if ((localDiff > 0 && localDiff < requiredLocal * 0.1) || (internationalDiff > 0 && internationalDiff < requiredInternational * 0.1)) {
+      autoCompleteRow.style.display = 'table-row';
+    } else {
+      autoCompleteRow.style.display = 'none';
+    }
+  }
+}
+
+function autoCompleteRemaining() {
+  const localFee = parseFloat(document.getElementById('localFee').value || 0);
+  const internationalFee = parseFloat(document.getElementById('internationalFee').value || 0);
+  
+  let totalLocal = 0;
+  let totalInternational = 0;
+  
+  const localInputs = document.querySelectorAll('input[id^="localAmount"]');
+  const internationalInputs = document.querySelectorAll('input[id^="internationalAmount"]');
+  
+  localInputs.forEach(input => {
+    totalLocal += parseFloat(input.value || 0);
+  });
+  
+  internationalInputs.forEach(input => {
+    totalInternational += parseFloat(input.value || 0);
+  });
+  
+  const localDiff = localFee - totalLocal;
+  const internationalDiff = internationalFee - totalInternational;
+  
+  // Find the last non-empty installment and add the remaining amounts
+  let lastLocalInput = null;
+  let lastInternationalInput = null;
+  
+  for (let i = localInputs.length - 1; i >= 0; i--) {
+    if (parseFloat(localInputs[i].value || 0) > 0) {
+      lastLocalInput = localInputs[i];
+      break;
+    }
+  }
+  
+  for (let i = internationalInputs.length - 1; i >= 0; i--) {
+    if (parseFloat(internationalInputs[i].value || 0) > 0) {
+      lastInternationalInput = internationalInputs[i];
+      break;
+    }
+  }
+  
+  // If no installment has amounts, use the first one
+  if (!lastLocalInput && localInputs.length > 0) {
+    lastLocalInput = localInputs[0];
+  }
+  if (!lastInternationalInput && internationalInputs.length > 0) {
+    lastInternationalInput = internationalInputs[0];
+  }
+  
+  // Add remaining amounts
+  if (lastLocalInput && localDiff > 0) {
+    const currentValue = parseFloat(lastLocalInput.value || 0);
+    lastLocalInput.value = (currentValue + localDiff).toFixed(2);
+  }
+  
+  if (lastInternationalInput && internationalDiff > 0) {
+    const currentValue = parseFloat(lastInternationalInput.value || 0);
+    lastInternationalInput.value = (currentValue + internationalDiff).toFixed(2);
+  }
+  
+  // Recalculate totals
+  calculateTotals();
 }
 
 function toggleDiscountField() {
@@ -279,6 +447,9 @@ function autofillFromIntake() {
         // Populate SSCL tax and bank charges from intakes table
         $('#ssclTax').val(response.sscl_tax);
         $('#bankCharges').val(response.bank_charges);
+        
+        // Recalculate totals after updating fees
+        calculateTotals();
       } else {
         showAutofillToast(response.message || 'No intake data found for autofill.');
       }
@@ -364,6 +535,42 @@ $('#paymentPlanForm').on('submit', function(e) {
       }
     }
   });
+  
+  // Validate installment amounts if installment plan is enabled
+  if ($('#franchisePaymentYes').is(':checked') && installments.length > 0) {
+    const localFee = parseFloat($('#localFee').val() || '0');
+    const internationalFee = parseFloat($('#internationalFee').val() || '0');
+    
+    let totalLocalAmount = 0;
+    let totalInternationalAmount = 0;
+    
+    installments.forEach(function(installment) {
+      totalLocalAmount += parseFloat(installment.local_amount || 0);
+      totalInternationalAmount += parseFloat(installment.international_amount || 0);
+    });
+    
+    const errors = [];
+    
+    // Check if local amounts sum equals local course fee
+    if (Math.abs(totalLocalAmount - localFee) > 0.01) {
+      errors.push(`The sum of local installment amounts (Rs. ${totalLocalAmount.toFixed(2)}) must equal the local course fee (Rs. ${localFee.toFixed(2)}).`);
+    }
+    
+    // Check if international amounts sum equals franchise payment amount
+    if (Math.abs(totalInternationalAmount - internationalFee) > 0.01) {
+      errors.push(`The sum of international installment amounts (${totalInternationalAmount.toFixed(2)}) must equal the franchise payment amount (${internationalFee.toFixed(2)}).`);
+    }
+    
+    if (errors.length > 0) {
+      // Show validation errors
+      let errorMessage = 'Please correct the following errors:\n';
+      errors.forEach(function(error) {
+        errorMessage += '• ' + error + '\n';
+      });
+      alert(errorMessage);
+      return false;
+    }
+  }
   
   // Add installments data to form
   const installmentsInput = document.createElement('input');

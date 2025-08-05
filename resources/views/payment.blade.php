@@ -479,13 +479,26 @@
                             <div class="row mb-3 align-items-center">
                                 <label class="col-sm-2 col-form-label fw-bold">Student ID <span class="text-danger">*</span></label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" id="slip-student-id" placeholder="Enter Student ID / NIC" required>
+                                    <input type="text" class="form-control" id="slip-student-id" placeholder="Enter Student ID / NIC" required onchange="checkStudentAndCourse()">
+                                </div>
+                            </div>
+                            <div class="row mb-3 align-items-center">
+                                <label class="col-sm-2 col-form-label fw-bold">Course <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select" id="slip-course" required onchange="loadIntakesForCourse()">
+                                        <option value="" selected disabled>Select Course</option>
+                                        @if(isset($courses))
+                                            @foreach($courses as $course)
+                                                <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
+                                            @endforeach
+                                        @endif
+                                    </select>
                                 </div>
                             </div>
                             <div class="row mb-3 align-items-center">
                                 <label class="col-sm-2 col-form-label fw-bold">Payment Type <span class="text-danger">*</span></label>
                                 <div class="col-sm-10">
-                                    <select class="form-select" id="slip-payment-type" required onchange="loadPaymentDetails()">
+                                    <select class="form-select" id="slip-payment-type" required onchange="loadPaymentDetails()" disabled>
                                         <option value="" selected disabled>Select Payment Type</option>
                                         <option value="course_fee">Course Fee</option>
                                         <option value="franchise_fee">Franchise Fee</option>
@@ -493,11 +506,36 @@
                                     </select>
                                 </div>
                             </div>
+                            <div class="row mb-3 align-items-center" id="currencyConversionRow" style="display: none;">
+                                <label class="col-sm-2 col-form-label fw-bold">Currency Conversion Rate <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <div class="input-group">
+                                        <span class="input-group-text">1</span>
+                                        <select class="form-select" id="currency-from" style="max-width: 80px;" onchange="updateConversionLabel()">
+                                            <option value="USD">USD</option>
+                                            <option value="EUR">EUR</option>
+                                            <option value="GBP">GBP</option>
+                                        </select>
+                                        <span class="input-group-text">=</span>
+                                        <input type="number" class="form-control" id="currency-conversion-rate" placeholder="Enter conversion rate (e.g., 320)" step="0.01" min="0" value="320" oninput="recalculateLKRAmounts()">
+                                        <span class="input-group-text">LKR</span>
+                                    </div>
+                                    <small class="form-text text-muted">Enter the current exchange rate to convert franchise fees to LKR</small>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Payment Details Table -->
                         <div class="mt-4" id="paymentDetailsSection" style="display:none;">
                             <h4 class="text-center mb-3">Payment Details</h4>
+                            <div id="conversionRateWarning" class="alert alert-warning" style="display: none;">
+                                <i class="ti ti-alert-triangle me-2"></i>
+                                <strong>Note:</strong> Please enter a currency conversion rate above to see LKR amounts for franchise fee payments.
+                            </div>
+                            <div id="conversionRateInfo" class="alert alert-info" style="display: none;">
+                                <i class="ti ti-info-circle me-2"></i>
+                                <strong>Conversion Rate:</strong> <span id="currentConversionRate">320</span> LKR per <span id="currentCurrency">USD</span>
+                            </div>
                             <div class="table-responsive">
                                 <table class="table table-bordered table-hover" id="paymentDetailsTable">
                                     <thead class="table-light">
@@ -505,7 +543,8 @@
                                             <th>Select</th>
                                             <th>Installment #</th>
                                             <th>Due Date</th>
-                                            <th>Amount</th>
+                                            <th id="amountHeader">Amount</th>
+                                            <th id="lkrAmountHeader" style="display: none;">Amount (LKR)</th>
                                             <th>Paid Date</th>
                                             <th>Status</th>
                                             <th>Receipt No</th>
@@ -1765,6 +1804,18 @@ function generatePaymentSlip() {
     
     showSpinner(true);
     
+    // Get conversion rate for franchise fees
+    let conversionRate = null;
+    let currencyFrom = null;
+    if (paymentType === 'franchise_fee') {
+        conversionRate = parseFloat(document.getElementById('currency-conversion-rate').value);
+        currencyFrom = document.getElementById('currency-from').value;
+        if (!conversionRate || conversionRate <= 0) {
+            showErrorMessage('Please enter a valid currency conversion rate.');
+            return;
+        }
+    }
+    
     fetch('/payment/generate-slip', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
@@ -1774,6 +1825,8 @@ function generatePaymentSlip() {
             amount: selectedPaymentData.amount,
             installment_number: selectedPaymentData.installment_number,
             due_date: selectedPaymentData.due_date,
+            conversion_rate: conversionRate,
+            currency_from: currencyFrom,
             remarks: ''
         })
     })
@@ -1792,10 +1845,18 @@ function generatePaymentSlip() {
             
             // Use correct currency for amount display
             let currency = 'LKR';
+            let amountDisplay = '';
             if (data.slip_data.payment_type === 'franchise_fee' && data.slip_data.franchise_fee_currency) {
                 currency = data.slip_data.franchise_fee_currency;
+                const originalAmount = parseFloat(data.slip_data.amount);
+                const conversionRate = parseFloat(document.getElementById('currency-conversion-rate').value);
+                const currencyFrom = document.getElementById('currency-from').value;
+                const lkrAmount = originalAmount * conversionRate;
+                amountDisplay = `${currency} ${originalAmount.toLocaleString()} (LKR ${lkrAmount.toLocaleString()})`;
+            } else {
+                amountDisplay = currency + ' ' + parseFloat(data.slip_data.amount).toLocaleString();
             }
-            document.getElementById('slip-amount-display').textContent = currency + ' ' + parseFloat(data.slip_data.amount).toLocaleString();
+            document.getElementById('slip-amount-display').textContent = amountDisplay;
             
             document.getElementById('slip-installment-display').textContent = selectedPaymentData.installment_number || '-';
             document.getElementById('slip-due-date-display').textContent = selectedPaymentData.due_date ? new Date(selectedPaymentData.due_date).toLocaleDateString() : '-';
@@ -2396,18 +2457,69 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// Load intakes for selected course
+function loadIntakesForCourse() {
+    const courseId = document.getElementById('slip-course').value;
+    const studentId = document.getElementById('slip-student-id').value;
+    
+    const paymentTypeSelect = document.getElementById('slip-payment-type');
+    
+    if (!courseId || !studentId) {
+        console.log('Missing course ID or student ID');
+        paymentTypeSelect.disabled = true;
+        paymentTypeSelect.value = '';
+        return;
+    }
+    
+    console.log('Loading intakes for course:', courseId, 'and student:', studentId);
+    
+    // Enable payment type selection when both student ID and course are selected
+    paymentTypeSelect.disabled = false;
+}
+
+// Check if both student ID and course are selected
+function checkStudentAndCourse() {
+    const courseId = document.getElementById('slip-course').value;
+    const studentId = document.getElementById('slip-student-id').value;
+    
+    const paymentTypeSelect = document.getElementById('slip-payment-type');
+    
+    if (!courseId || !studentId) {
+        paymentTypeSelect.disabled = true;
+        paymentTypeSelect.value = '';
+    } else {
+        paymentTypeSelect.disabled = false;
+    }
+}
+
 // Load payment details when payment type is selected
 function loadPaymentDetails() {
     const studentId = document.getElementById('slip-student-id').value;
+    const courseId = document.getElementById('slip-course').value;
     const paymentType = document.getElementById('slip-payment-type').value;
     
-    console.log('Loading payment details for:', { studentId, paymentType });
+    console.log('Loading payment details for:', { studentId, courseId, paymentType });
     
-    if (!studentId || !paymentType) {
-        console.log('Missing student ID or payment type');
+    // Show/hide currency conversion rate field based on payment type
+    const currencyConversionRow = document.getElementById('currencyConversionRow');
+    const lkrAmountHeader = document.getElementById('lkrAmountHeader');
+    
+    if (paymentType === 'franchise_fee') {
+        currencyConversionRow.style.display = 'flex';
+        lkrAmountHeader.style.display = 'table-cell';
+    } else {
+        currencyConversionRow.style.display = 'none';
+        lkrAmountHeader.style.display = 'none';
+    }
+    
+    if (!studentId || !courseId || !paymentType) {
+        console.log('Missing student ID, course ID, or payment type');
         document.getElementById('paymentDetailsSection').style.display = 'none';
         return;
     }
+    
+    // Note: Currency conversion rate validation will be done when generating the slip
+    // This allows the table to load first for better user experience
     
     showSpinner(true);
     
@@ -2416,6 +2528,7 @@ function loadPaymentDetails() {
         headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
         body: JSON.stringify({
             student_id: studentId,
+            course_id: courseId,
             payment_type: paymentType
         })
     })
@@ -2450,9 +2563,42 @@ function displayPaymentDetails(paymentDetails) {
     const tbody = document.getElementById('paymentDetailsTableBody');
     tbody.innerHTML = '';
     
+    const paymentType = document.getElementById('slip-payment-type').value;
+    const conversionRate = paymentType === 'franchise_fee' ? parseFloat(document.getElementById('currency-conversion-rate').value || 0) : 0;
+    
+    // Show/hide conversion rate warning and info
+    const warningDiv = document.getElementById('conversionRateWarning');
+    const infoDiv = document.getElementById('conversionRateInfo');
+    
+    if (paymentType === 'franchise_fee') {
+        if (conversionRate <= 0) {
+            warningDiv.style.display = 'block';
+            infoDiv.style.display = 'none';
+        } else {
+            warningDiv.style.display = 'none';
+            infoDiv.style.display = 'block';
+            // Update the info display
+            document.getElementById('currentConversionRate').textContent = conversionRate;
+            document.getElementById('currentCurrency').textContent = document.getElementById('currency-from').value;
+        }
+    } else {
+        warningDiv.style.display = 'none';
+        infoDiv.style.display = 'none';
+    }
+    
     paymentDetails.forEach((payment, index) => {
         // Use the currency from the payment data, default to LKR if not provided
         const currency = payment.currency || 'LKR';
+        const amount = parseFloat(payment.amount);
+        
+        // Calculate LKR amount for franchise fees
+        let lkrAmount = '';
+        if (paymentType === 'franchise_fee' && conversionRate > 0) {
+            const currencyFrom = document.getElementById('currency-from').value;
+            lkrAmount = `LKR ${(amount * conversionRate).toLocaleString()}`;
+        } else if (paymentType === 'franchise_fee' && conversionRate <= 0) {
+            lkrAmount = 'Enter conversion rate';
+        }
         
         const row = `
             <tr>
@@ -2461,7 +2607,8 @@ function displayPaymentDetails(paymentDetails) {
                 </td>
                 <td>${payment.installment_number || '-'}</td>
                 <td>${payment.due_date ? new Date(payment.due_date).toLocaleDateString() : '-'}</td>
-                <td>${currency} ${parseFloat(payment.amount).toLocaleString()}</td>
+                <td>${currency} ${amount.toLocaleString()}</td>
+                ${paymentType === 'franchise_fee' ? `<td>${lkrAmount}</td>` : ''}
                 <td>${payment.paid_date ? new Date(payment.paid_date).toLocaleDateString() : '-'}</td>
                 <td>
                     <span class="badge bg-${getPaymentStatusBadgeColor(payment.status)}">
@@ -2485,6 +2632,71 @@ function enableGenerateButton() {
     } else {
         generateBtn.disabled = true;
     }
+}
+
+// Update conversion label when currency changes
+function updateConversionLabel() {
+    const currencyFrom = document.getElementById('currency-from').value;
+    // Trigger recalculation when currency changes
+    recalculateLKRAmounts();
+}
+
+// Recalculate LKR amounts when conversion rate changes
+function recalculateLKRAmounts() {
+    const paymentType = document.getElementById('slip-payment-type').value;
+    const conversionRate = parseFloat(document.getElementById('currency-conversion-rate').value || 0);
+    
+    // Update the warning and info messages
+    const warningDiv = document.getElementById('conversionRateWarning');
+    const infoDiv = document.getElementById('conversionRateInfo');
+    
+    if (paymentType === 'franchise_fee') {
+        if (conversionRate <= 0) {
+            warningDiv.style.display = 'block';
+            infoDiv.style.display = 'none';
+        } else {
+            warningDiv.style.display = 'none';
+            infoDiv.style.display = 'block';
+            // Update the info display
+            document.getElementById('currentConversionRate').textContent = conversionRate;
+            document.getElementById('currentCurrency').textContent = document.getElementById('currency-from').value;
+        }
+    } else {
+        warningDiv.style.display = 'none';
+        infoDiv.style.display = 'none';
+    }
+    
+    // Only recalculate if we have payment data and it's franchise fee
+    if (paymentType === 'franchise_fee' && window.paymentDetailsData) {
+        // Update only the LKR amounts in the existing table rows
+        updateLKRAmountsInTable(conversionRate);
+    }
+}
+
+// Update LKR amounts in the existing table without recreating the entire table
+function updateLKRAmountsInTable(conversionRate) {
+    const tbody = document.getElementById('paymentDetailsTableBody');
+    const rows = tbody.querySelectorAll('tr');
+    
+    rows.forEach((row, index) => {
+        const lkrCell = row.querySelector('td:nth-child(5)'); // LKR amount column
+        if (lkrCell && window.paymentDetailsData[index]) {
+            const amount = parseFloat(window.paymentDetailsData[index].amount);
+            if (conversionRate > 0) {
+                // Add a brief highlight effect to show the update
+                lkrCell.style.backgroundColor = '#fff3cd';
+                lkrCell.textContent = `LKR ${(amount * conversionRate).toLocaleString()}`;
+                
+                // Remove highlight after a short delay
+                setTimeout(() => {
+                    lkrCell.style.backgroundColor = '';
+                }, 300);
+            } else {
+                lkrCell.textContent = 'Enter conversion rate';
+                lkrCell.style.backgroundColor = '';
+            }
+        }
+    });
 }
 
 // Get badge color for payment status

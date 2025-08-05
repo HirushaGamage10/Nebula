@@ -254,13 +254,18 @@ class SemesterRegistrationController extends Controller
         if (!$course || !$course->no_of_semesters) {
             return response()->json(['success' => false, 'semesters' => [], 'message' => 'Course not found or no semesters defined.']);
         }
-        $semesters = [];
-        for ($i = 1; $i <= $course->no_of_semesters; $i++) {
-            $semesters[] = [
-                'semester_id' => $i,
-                'semester_name' => 'Semester ' . $i
-            ];
-        }
-        return response()->json(['success' => true, 'semesters' => $semesters]);
+        
+        // Get only the semesters that have been actually created for this course
+        $createdSemesters = \App\Models\Semester::where('course_id', $courseId)
+            ->select('id', 'name')
+            ->get()
+            ->map(function($semester) {
+                return [
+                    'semester_id' => $semester->id,
+                    'semester_name' => 'Semester ' . $semester->name
+                ];
+            });
+            
+        return response()->json(['success' => true, 'semesters' => $createdSemesters]);
     }
 } 

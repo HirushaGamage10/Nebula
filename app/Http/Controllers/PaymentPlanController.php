@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Course;
 use App\Models\PaymentPlan;
+use App\Models\Intake;
 
 class PaymentPlanController extends Controller
 {
@@ -39,6 +40,11 @@ class PaymentPlanController extends Controller
                 $installments = json_decode($installments, true);
             }
 
+            // Validate installment amounts if installment plan is enabled
+            if ($request->input('franchisePayment') === 'yes' && $installments) {
+                $this->validateInstallmentAmounts($installments, $validated['localFee'], $validated['internationalFee']);
+            }
+
             $plan = PaymentPlan::create([
                 'location' => $validated['location'],
                 'course_id' => $validated['course'],
@@ -65,6 +71,40 @@ class PaymentPlanController extends Controller
             return redirect()->back()
                 ->with('error', 'An error occurred while creating the payment plan. Please try again.')
                 ->withInput();
+        }
+    }
+
+    /**
+     * Validate that the sum of installment amounts matches the course fees
+     */
+    private function validateInstallmentAmounts($installments, $localFee, $internationalFee)
+    {
+        $totalLocalAmount = 0;
+        $totalInternationalAmount = 0;
+
+        foreach ($installments as $installment) {
+            $totalLocalAmount += floatval($installment['local_amount'] ?? 0);
+            $totalInternationalAmount += floatval($installment['international_amount'] ?? 0);
+        }
+
+        $errors = [];
+
+        // Check if local amounts sum equals local course fee
+        if (abs($totalLocalAmount - $localFee) > 0.01) { // Using small tolerance for floating point comparison
+            $errors[] = "The sum of local installment amounts (Rs. " . number_format($totalLocalAmount, 2) . ") must equal the local course fee (Rs. " . number_format($localFee, 2) . "). Difference: Rs. " . number_format(abs($totalLocalAmount - $localFee), 2);
+        }
+
+        // Check if international amounts sum equals franchise payment amount
+        if (abs($totalInternationalAmount - $internationalFee) > 0.01) { // Using small tolerance for floating point comparison
+            $errors[] = "The sum of international installment amounts (" . number_format($totalInternationalAmount, 2) . ") must equal the franchise payment amount (" . number_format($internationalFee, 2) . "). Difference: " . number_format(abs($totalInternationalAmount - $internationalFee), 2);
+        }
+
+        if (!empty($errors)) {
+            // Create a custom validation exception with detailed messages
+            $validator = validator([], []);
+            $validator->errors()->add('installments', $errors);
+            
+            throw new \Illuminate\Validation\ValidationException($validator);
         }
     }
 

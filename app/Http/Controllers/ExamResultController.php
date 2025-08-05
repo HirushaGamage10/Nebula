@@ -45,8 +45,11 @@ class ExamResultController extends Controller
                 // The range of years will be from 1 up to the course duration.
                 $years = range(1, (int)$course->duration); 
                 
-                // The range of semesters will be from 1 up to the total number of semesters.
-                $semesters = range(1, $course->no_of_semesters);
+                // Get actual created semesters for this course
+                $semesters = \App\Models\Semester::where('course_id', $courseID)
+                    ->whereIn('status', ['active', 'upcoming'])
+                    ->select('id', 'name')
+                    ->get();
 
                 return response()->json([
                     'modules' => $course->modules,
@@ -96,6 +99,7 @@ class ExamResultController extends Controller
                 'results.*.student_id' => 'required|exists:students,student_id',
                 'results.*.marks' => 'nullable|integer|min:0|max:100',
                 'results.*.grade' => 'nullable|string|max:5',
+                'results.*.remarks' => 'nullable|string|max:255',
             ]);
 
             foreach ($validatedData['results'] as $result) {
@@ -108,6 +112,7 @@ class ExamResultController extends Controller
                     'semester' => $validatedData['semester'],
                     'marks' => $result['marks'] ?? null,
                     'grade' => $result['grade'] ?? null,
+                    'remarks' => $result['remarks'] ?? null,
                 ]);
             }
 
@@ -157,13 +162,20 @@ class ExamResultController extends Controller
         ]);
 
         $courseId = $request->input('course_id');
-        $semesterName = $request->input('semester');
+        $semesterId = $request->input('semester');
 
-        // Get the semester ID from the semester name
+        // Get the semester by ID
         $semester = \App\Models\Semester::where('course_id', $courseId)
             ->where('intake_id', $request->input('intake_id'))
-            ->where('name', $semesterName)
+            ->where('id', $semesterId)
             ->first();
+
+        \Log::info('getFilteredModules called with:', [
+            'course_id' => $courseId,
+            'intake_id' => $request->input('intake_id'),
+            'semester_id' => $semesterId,
+            'semester_found' => $semester ? 'yes' : 'no'
+        ]);
 
         if (!$semester) {
             return response()->json(['error' => 'Semester not found.'], 404);
@@ -222,6 +234,13 @@ class ExamResultController extends Controller
             ->select('id', 'name')
             ->get();
 
+        \Log::info('ExamResultController getSemesters called with:', [
+            'course_id' => $request->course_id,
+            'intake_id' => $request->intake_id,
+            'semesters_found' => $semesters->count(),
+            'semesters_data' => $semesters->toArray()
+        ]);
+        
         return response()->json(['semesters' => $semesters]);
     }
 

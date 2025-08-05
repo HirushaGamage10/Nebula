@@ -384,7 +384,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     Route::post('/timetable', [TimetableController::class, 'store'])->name('timetable.store');
     Route::get('/get-intakes/{courseId}/{location}', [App\Http\Controllers\TimetableController::class, 'getIntakesForCourseAndLocation']);
     Route::get('/get-courses-by-location', [TimetableController::class, 'getCoursesByLocation'])->name('timetable.courses.by.location');
-    Route::get('/get-semesters', [TimetableController::class, 'getSemesters'])->name('timetable.semesters');
+    Route::get('/timetable/get-semesters', [TimetableController::class, 'getSemesters'])->name('timetable.semesters');
     Route::get('/get-weeks', [TimetableController::class, 'getWeeks'])->name('timetable.weeks');
     Route::get('/get-modules-by-semester', [TimetableController::class, 'getModulesBySemester'])->name('timetable.modules.by.semester');
     Route::post('/get-existing-timetable', [TimetableController::class, 'getExistingTimetable'])->name('timetable.get.existing');

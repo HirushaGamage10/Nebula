@@ -592,7 +592,72 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
+
+        // Add event listener for update all results button
+        const updateAllBtn = document.getElementById('updateAllBtn');
+        if (updateAllBtn) {
+            updateAllBtn.addEventListener('click', handleUpdateAll);
+        }
     });
+
+    function handleUpdateAll() {
+        const filterData = getFilterData();
+        if (!filterData || results.length === 0) {
+            showToast('Warning', 'Please select all filters and ensure results are loaded.', 'bg-warning');
+            return;
+        }
+
+        // Collect all updated results
+        const updatedResults = [];
+        const rows = resultsTableBody.querySelectorAll('tr');
+        rows.forEach(row => {
+            const resultId = row.getAttribute('data-result-id');
+            const marksInput = row.querySelector('input[name="marks"]');
+            const gradeInput = row.querySelector('input[name="grade"]');
+            const remarksInput = row.querySelector('input[name="remarks"]');
+            
+            if (resultId && marksInput && gradeInput) {
+                updatedResults.push({
+                    id: parseInt(resultId),
+                    marks: parseInt(marksInput.value) || 0,
+                    grade: gradeInput.value.trim(),
+                    remarks: remarksInput ? remarksInput.value.trim() : ''
+                });
+            }
+        });
+
+        if (updatedResults.length === 0) {
+            showToast('Warning', 'No results to update.', 'bg-warning');
+            return;
+        }
+
+        const payload = { ...filterData, results: updatedResults };
+        
+        showSpinner(true);
+        fetch('{{ route("update.result") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Success', data.message, '#ccffcc');
+                // Refresh the results
+                setTimeout(() => {
+                    fetchExistingExamResults();
+                }, 1500);
+            } else {
+                let errorMsg = data.message || 'An error occurred.';
+                if(data.errors) {
+                    errorMsg = Object.values(data.errors).flat().join('<br>');
+                }
+                showToast('Error', errorMsg, 'bg-danger');
+            }
+        })
+        .catch(() => showToast('Error', 'An error occurred while updating results.', 'bg-danger'))
+        .finally(() => showSpinner(false));
+    }
 
     window.updateResultMark = function(index, value) {
         if (results[index]) {

@@ -740,138 +740,135 @@ function showErrorMessage(message) {
       $('#profileSection').show();
     <?php endif; ?>
 
-    // Function to populate the student profile fields
     function populateStudentProfile(student) {
-      // Clear previous alerts and sections
-      $('#academic').empty();
+    $('#academic').empty();
 
-      let ol_pending = true;
-      let al_pending = true;
+    let ol_exam = null;
+    let al_exam = null;
+    let ol_pending = true;
+    let al_pending = true;
 
-      if (student.exams && student.exams.length > 0) {
-        const exam = student.exams[0];
+    if (student.exams && student.exams.length > 0) {
+      student.exams.forEach(exam => {
+        // O/L
         let ol_subjects = exam.ol_exam_subjects;
-        let al_subjects = exam.al_exam_subjects;
-
         if (typeof ol_subjects === 'string') {
           try { ol_subjects = JSON.parse(ol_subjects); } catch (e) { ol_subjects = []; }
         }
         if (ol_subjects && ol_subjects.length > 0) {
+          ol_exam = exam;
           ol_pending = false;
         }
-
+        // A/L
+        let al_subjects = exam.al_exam_subjects;
         if (typeof al_subjects === 'string') {
           try { al_subjects = JSON.parse(al_subjects); } catch (e) { al_subjects = []; }
         }
         if (al_subjects && al_subjects.length > 0) {
+          al_exam = exam;
           al_pending = false;
         }
-      }
+      });
+    }
 
-      if (ol_pending) {
-        $('#academic').append(
-          '<div class="alert alert-warning mb-3"><strong>Pending Results:</strong> The student\'s O/L exam results are still pending.</div>'
-        );
-      } else {
-        // Populate O/L section
-        const exam = student.exams[0];
-        let olSubjectsHtml = '';
-        const ol_subjects = typeof exam.ol_exam_subjects === 'string' ? JSON.parse(exam.ol_exam_subjects) : exam.ol_exam_subjects;
-        (ol_subjects || []).forEach(subject => {
-            olSubjectsHtml += `<tr><td>${subject.subject || ''}</td><td>${subject.result || ''}</td></tr>`;
-        });
-
-        const olCertificateHtml = exam.ol_certificate 
-            ? `<a href="/storage/certificates/${exam.ol_certificate}" target="_blank">View Certificate</a>`
-            : '<span class="text-muted">Not uploaded</span>';
-
-        $('#academic').append(`
-          <div id="olExamSection">
-            <h5 class="mt-4 mb-3 fw-bold">O/L Exam Details</h5>
-            <div class="mb-3 row align-items-center mx-3">
-                <label class="col-sm-3 col-form-label fw-bold">Index No.</label>
-                <div class="col-sm-9"><input type="text" class="form-control" value="${exam.ol_index_no || ''}" readonly></div>
-            </div>
-            <div class="mb-3 row align-items-center mx-3">
-                <label class="col-sm-3 col-form-label fw-bold">Exam Type</label>
-                <div class="col-sm-9"><input type="text" class="form-control" value="${exam.ol_exam_type || ''}" readonly></div>
-            </div>
-            <div class="mb-3 row align-items-center mx-3">
-                <label class="col-sm-3 col-form-label fw-bold">Exam Year</label>
-                <div class="col-sm-9"><input type="text" class="form-control" value="${exam.ol_exam_year || ''}" readonly></div>
-            </div>
-            <div class="mb-3 row align-items-center mx-3">
-                <label class="col-sm-3 col-form-label fw-bold">Subjects & Results</label>
-                <div class="col-sm-9">
-                    <table class="table table-bordered mb-0">
-                        <thead class="bg-primary text-white"><tr><th>Subject</th><th>Result</th></tr></thead>
-                        <tbody>${olSubjectsHtml}</tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="mb-3 row align-items-center mx-3">
-                <label class="col-sm-3 col-form-label fw-bold">O/L Certificate</label>
-                <div class="col-sm-9">${olCertificateHtml}</div>
+    // O/L Section
+    if (ol_pending) {
+      $('#academic').append(
+        '<div class="alert alert-warning mb-3"><strong>Pending Results:</strong> The student\'s O/L exam results are still pending.</div>'
+      );
+    } else if (ol_exam) {
+      let olSubjectsHtml = '';
+      let ol_subjects = typeof ol_exam.ol_exam_subjects === 'string' ? JSON.parse(ol_exam.ol_exam_subjects) : ol_exam.ol_exam_subjects;
+      (ol_subjects || []).forEach(subject => {
+        olSubjectsHtml += `<tr><td>${subject.subject || ''}</td><td>${subject.result || ''}</td></tr>`;
+      });
+      const olCertificateHtml = ol_exam.ol_certificate
+        ? `<a href="/storage/certificates/${ol_exam.ol_certificate}" target="_blank">View Certificate</a>`
+        : '<span class="text-muted">Not uploaded</span>';
+      $('#academic').append(`
+        <div id="olExamSection">
+          <h5 class="mt-4 mb-3 fw-bold">O/L Exam Details</h5>
+          <div class="mb-3 row align-items-center mx-3">
+            <label class="col-sm-3 col-form-label fw-bold">Index No.</label>
+            <div class="col-sm-9"><input type="text" class="form-control" value="${ol_exam.ol_index_no || ''}" readonly></div>
+          </div>
+          <div class="mb-3 row align-items-center mx-3">
+            <label class="col-sm-3 col-form-label fw-bold">Exam Type</label>
+            <div class="col-sm-9"><input type="text" class="form-control" value="${ol_exam.ol_exam_type || ''}" readonly></div>
+          </div>
+          <div class="mb-3 row align-items-center mx-3">
+            <label class="col-sm-3 col-form-label fw-bold">Exam Year</label>
+            <div class="col-sm-9"><input type="text" class="form-control" value="${ol_exam.ol_exam_year || ''}" readonly></div>
+          </div>
+          <div class="mb-3 row align-items-center mx-3">
+            <label class="col-sm-3 col-form-label fw-bold">Subjects & Results</label>
+            <div class="col-sm-9">
+              <table class="table table-bordered mb-0">
+                <thead class="bg-primary text-white"><tr><th>Subject</th><th>Result</th></tr></thead>
+                <tbody>${olSubjectsHtml}</tbody>
+              </table>
             </div>
           </div>
-        `);
-      }
+          <div class="mb-3 row align-items-center mx-3">
+            <label class="col-sm-3 col-form-label fw-bold">O/L Certificate</label>
+            <div class="col-sm-9">${olCertificateHtml}</div>
+          </div>
+        </div>
+      `);
+    }
 
-      if (al_pending) {
-        $('#academic').append(
-          '<div class="alert alert-warning mb-3"><strong>Pending Results:</strong> The student\'s A/L exam results are still pending.</div>'
-        );
-      } else {
-        // Populate A/L section
-        const exam = student.exams[0];
-        let alSubjectsHtml = '';
-        const al_subjects = typeof exam.al_exam_subjects === 'string' ? JSON.parse(exam.al_exam_subjects) : exam.al_exam_subjects;
-        (al_subjects || []).forEach(subject => {
-            alSubjectsHtml += `<tr><td>${subject.subject || ''}</td><td>${subject.result || ''}</td></tr>`;
-        });
-        
-        const alCertificateHtml = exam.al_certificate 
-            ? `<a href="/storage/certificates/${exam.al_certificate}" target="_blank">View Certificate</a>`
-            : '<span class="text-muted">Not uploaded</span>';
-
-        $('#academic').append(`
-          <div id="alExamSection">
-            <hr>
-            <h5 class="mt-4 mb-3 fw-bold">A/L Exam Details</h5>
-            <div class="mb-3 row align-items-center mx-3">
-                <label class="col-sm-3 col-form-label fw-bold">Index No.</label>
-                <div class="col-sm-9"><input type="text" class="form-control" value="${exam.al_index_no || ''}" readonly></div>
-            </div>
-            <div class="mb-3 row align-items-center mx-3">
-                <label class="col-sm-3 col-form-label fw-bold">Exam Type</label>
-                <div class="col-sm-9"><input type="text" class="form-control" value="${exam.al_exam_type || ''}" readonly></div>
-            </div>
-            <div class="mb-3 row align-items-center mx-3">
-                <label class="col-sm-3 col-form-label fw-bold">Exam Year</label>
-                <div class="col-sm-9"><input type="text" class="form-control" value="${exam.al_exam_year || ''}" readonly></div>
-            </div>
-            <div class="mb-3 row align-items-center mx-3">
-                <label class="col-sm-3 col-form-label fw-bold">A/L Stream</label>
-                <div class="col-sm-9"><input type="text" class="form-control" value="${exam.al_stream || ''}" readonly></div>
-            </div>
-            <div class="mb-3 row align-items-center mx-3">
-                <label class="col-sm-3 col-form-label fw-bold">Subjects & Results</label>
-                <div class="col-sm-9">
-                    <table class="table table-bordered mb-0">
-                        <thead class="bg-primary text-white"><tr><th>Subject</th><th>Result</th></tr></thead>
-                        <tbody>${alSubjectsHtml}</tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="mb-3 row align-items-center mx-3">
-                <label class="col-sm-3 col-form-label fw-bold">A/L Certificate</label>
-                <div class="col-sm-9">${alCertificateHtml}</div>
+    // A/L Section
+    if (al_pending) {
+      $('#academic').append(
+        '<div class="alert alert-warning mb-3"><strong>Pending Results:</strong> The student\'s A/L exam results are still pending.</div>'
+      );
+    } else if (al_exam) {
+      let alSubjectsHtml = '';
+      let al_subjects = typeof al_exam.al_exam_subjects === 'string' ? JSON.parse(al_exam.al_exam_subjects) : al_exam.al_exam_subjects;
+      (al_subjects || []).forEach(subject => {
+        alSubjectsHtml += `<tr><td>${subject.subject || ''}</td><td>${subject.result || ''}</td></tr>`;
+      });
+      const alCertificateHtml = al_exam.al_certificate
+        ? `<a href="/storage/certificates/${al_exam.al_certificate}" target="_blank">View Certificate</a>`
+        : '<span class="text-muted">Not uploaded</span>';
+      $('#academic').append(`
+        <div id="alExamSection">
+          <hr>
+          <h5 class="mt-4 mb-3 fw-bold">A/L Exam Details</h5>
+          <div class="mb-3 row align-items-center mx-3">
+            <label class="col-sm-3 col-form-label fw-bold">Index No.</label>
+            <div class="col-sm-9"><input type="text" class="form-control" value="${al_exam.al_index_no || ''}" readonly></div>
+          </div>
+          <div class="mb-3 row align-items-center mx-3">
+            <label class="col-sm-3 col-form-label fw-bold">Exam Type</label>
+            <div class="col-sm-9"><input type="text" class="form-control" value="${al_exam.al_exam_type || ''}" readonly></div>
+          </div>
+          <div class="mb-3 row align-items-center mx-3">
+            <label class="col-sm-3 col-form-label fw-bold">Exam Year</label>
+            <div class="col-sm-9"><input type="text" class="form-control" value="${al_exam.al_exam_year || ''}" readonly></div>
+          </div>
+          <div class="mb-3 row align-items-center mx-3">
+            <label class="col-sm-3 col-form-label fw-bold">A/L Stream</label>
+            <div class="col-sm-9"><input type="text" class="form-control" value="${al_exam.al_stream || ''}" readonly></div>
+          </div>
+          <div class="mb-3 row align-items-center mx-3">
+            <label class="col-sm-3 col-form-label fw-bold">Subjects & Results</label>
+            <div class="col-sm-9">
+              <table class="table table-bordered mb-0">
+                <thead class="bg-primary text-white"><tr><th>Subject</th><th>Result</th></tr></thead>
+                <tbody>${alSubjectsHtml}</tbody>
+              </table>
             </div>
           </div>
-        `);
-      }
-      
-      // Populate all personal detail fields
+          <div class="mb-3 row align-items-center mx-3">
+            <label class="col-sm-3 col-form-label fw-bold">A/L Certificate</label>
+            <div class="col-sm-9">${alCertificateHtml}</div>
+          </div>
+        </div>
+      `);
+    }
+
+    // Populate all personal detail fields
       $('#studentIdHidden').val(student.student_id || '');
       $('#studentTitle').val(student.title || '');
       $('#studentName').val(student.full_name || '');
@@ -917,7 +914,7 @@ function showErrorMessage(message) {
         $('#alStream').val(student.exams[1].al_stream || '');
         $('#alCertificate').html(student.exams[1].al_certificate ? `<a href="/storage/certificates/${student.exams[1].al_certificate}" target="_blank">View Certificate</a>` : '<span class="text-muted">Not uploaded</span>');
       }
-    }
+  }
 
     // Handle Edit Personal Info button click
     $('#showEditPersonalInfoBtn').on('click', function() {

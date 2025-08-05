@@ -59,6 +59,7 @@ class PaymentController extends Controller
         try {
             $request->validate([
                 'student_id' => 'required|string',
+                'course_id' => 'required|string',
                 'payment_type' => 'required|string',
             ]);
 
@@ -71,18 +72,19 @@ class PaymentController extends Controller
                 return response()->json(['success' => false, 'message' => 'Student not found.'], Response::HTTP_NOT_FOUND);
             }
 
-            // Get course registration for this student
+            // Get course registration for this student and specific course
             $registration = CourseRegistration::where('student_id', $student->student_id)
+                ->where('course_id', $request->course_id)
                 ->with(['course', 'intake'])
                 ->first();
 
             if (!$registration) {
-                return response()->json(['success' => false, 'message' => 'Student is not registered for any course.'], Response::HTTP_NOT_FOUND);
+                return response()->json(['success' => false, 'message' => 'Student is not registered for the selected course.'], Response::HTTP_NOT_FOUND);
             }
 
             // Get student-specific payment plan (with discounts and loans applied)
             $studentPaymentPlan = \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
-                ->where('course_id', $registration->course_id)
+                ->where('course_id', $request->course_id)
                 ->with(['installments', 'discounts'])
                 ->first();
 
@@ -122,7 +124,7 @@ class PaymentController extends Controller
                 }
             } else {
                 // Fallback to general payment plan if no student-specific plan exists
-                $paymentPlan = PaymentPlan::where('course_id', $registration->course_id)
+                $paymentPlan = PaymentPlan::where('course_id', $request->course_id)
                     ->where('intake_id', $registration->intake_id)
                     ->first();
 
@@ -147,30 +149,68 @@ class PaymentController extends Controller
                                 ];
                             }
                         } else {
-                            foreach ($installmentsData as $installment) {
-                                $amount = 0;
-                                switch ($request->payment_type) {
-                                    case 'course_fee':
-                                        $amount = $installment['local_amount'] ?? 0;
-                                        break;
-                                    case 'franchise_fee':
-                                        $amount = $installment['international_amount'] ?? 0;
-                                        break;
-                                    default:
-                                        $amount = $installment['local_amount'] ?? 0;
-                                        break;
+                            // For course_fee, we need to calculate final amounts with discounts and loans
+                            if ($request->payment_type === 'course_fee') {
+                                // Get student-specific payment plan to check for SLT loan
+                                $studentPlan = \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
+                                    ->where('course_id', $request->course_id)
+                                    ->first();
+                                
+                                // Get SLT loan information
+                                $sltLoanAmount = 0;
+                                if ($studentPlan && $studentPlan->slt_loan_applied === 'yes') {
+                                    $sltLoanAmount = $studentPlan->slt_loan_amount;
                                 }
-                                if ($amount > 0) {
-                                    $paymentDetails[] = [
-                                        'installment_number' => $installment['installment_number'] ?? 1,
-                                        'due_date' => $installment['due_date'] ?? now()->addDays(30)->toDateString(),
-                                        'amount' => $amount,
-                                        'currency' => ($request->payment_type === 'franchise_fee') ? 
-                                            ($registration->intake->franchise_payment_currency ?? 'LKR') : 'LKR',
-                                        'paid_date' => null,
-                                        'status' => 'pending',
-                                        'receipt_no' => null
-                                    ];
+                                
+                                // Get student-specific discounts if any
+                                $discounts = collect();
+                                if ($studentPlan) {
+                                    $discounts = $studentPlan->discounts;
+                                } else {
+                                    // Fallback to active discounts if no student-specific plan
+                                    $discounts = \App\Models\Discount::where('status', 'active')->get();
+                                }
+                                
+                                foreach ($installmentsData as $installment) {
+                                    $baseAmount = $installment['local_amount'] ?? 0;
+                                    $finalAmount = $this->calculateFinalAmount($baseAmount, $discounts, $sltLoanAmount, count($installmentsData));
+                                    
+                                    if ($finalAmount > 0) {
+                                        $paymentDetails[] = [
+                                            'installment_number' => $installment['installment_number'] ?? 1,
+                                            'due_date' => $installment['due_date'] ?? now()->addDays(30)->toDateString(),
+                                            'amount' => $finalAmount,
+                                            'currency' => 'LKR',
+                                            'paid_date' => null,
+                                            'status' => 'pending',
+                                            'receipt_no' => null
+                                        ];
+                                    }
+                                }
+                            } else {
+                                // For other payment types, use the original logic
+                                foreach ($installmentsData as $installment) {
+                                    $amount = 0;
+                                    switch ($request->payment_type) {
+                                        case 'franchise_fee':
+                                            $amount = $installment['international_amount'] ?? 0;
+                                            break;
+                                        default:
+                                            $amount = $installment['local_amount'] ?? 0;
+                                            break;
+                                    }
+                                    if ($amount > 0) {
+                                        $paymentDetails[] = [
+                                            'installment_number' => $installment['installment_number'] ?? 1,
+                                            'due_date' => $installment['due_date'] ?? now()->addDays(30)->toDateString(),
+                                            'amount' => $amount,
+                                            'currency' => ($request->payment_type === 'franchise_fee') ? 
+                                                ($registration->intake->franchise_payment_currency ?? 'LKR') : 'LKR',
+                                            'paid_date' => null,
+                                            'status' => 'pending',
+                                            'receipt_no' => null
+                                        ];
+                                    }
                                 }
                             }
                         }
@@ -626,6 +666,8 @@ class PaymentController extends Controller
                 'amount' => 'required|numeric|min:0',
                 'installment_number' => 'nullable|integer',
                 'due_date' => 'nullable|date',
+                'conversion_rate' => 'nullable|numeric|min:0',
+                'currency_from' => 'nullable|string',
                 'remarks' => 'nullable|string',
             ]);
 
@@ -712,6 +754,9 @@ class PaymentController extends Controller
                 'franchise_fee' => $franchiseFee,
                 'franchise_fee_currency' => $registration->intake->franchise_payment_currency ?? 'LKR',
                 'registration_fee' => $registrationFee,
+                'conversion_rate' => $request->conversion_rate,
+                'currency_from' => $request->currency_from,
+                'lkr_amount' => $request->conversion_rate ? ($request->amount * $request->conversion_rate) : null,
                 'generated_at' => now()->toDateTimeString(),
                 'valid_until' => now()->addDays(7)->toDateString(), // Slip valid for 7 days
             ];
@@ -1325,5 +1370,54 @@ class PaymentController extends Controller
         ];
 
         return $types[$paymentType] ?? 'other';
+    }
+
+    /**
+     * Calculate final amount after applying discounts and loans.
+     */
+    private function calculateFinalAmount($baseAmount, $discounts, $sltLoanAmount, $totalInstallments)
+    {
+        $finalAmount = $baseAmount;
+        
+        // Apply percentage discounts
+        $totalDiscountPercentage = 0;
+        foreach ($discounts as $discount) {
+            // Handle both Discount model and PaymentPlanDiscount model
+            $discountType = $discount->discount_type ?? $discount->type ?? null;
+            $discountValue = $discount->discount_value ?? $discount->value ?? 0;
+            
+            if ($discountType === 'percentage') {
+                $totalDiscountPercentage += $discountValue;
+            }
+        }
+        
+        if ($totalDiscountPercentage > 0) {
+            $finalAmount = $finalAmount - ($finalAmount * $totalDiscountPercentage / 100);
+        }
+        
+        // Apply fixed amount discounts
+        $totalDiscountAmount = 0;
+        foreach ($discounts as $discount) {
+            // Handle both Discount model and PaymentPlanDiscount model
+            $discountType = $discount->discount_type ?? $discount->type ?? null;
+            $discountValue = $discount->discount_value ?? $discount->value ?? 0;
+            
+            if ($discountType === 'fixed') {
+                $totalDiscountAmount += $discountValue;
+            }
+        }
+        
+        if ($totalDiscountAmount > 0) {
+            $finalAmount = $finalAmount - $totalDiscountAmount;
+        }
+        
+        // Apply SLT loan (distributed across installments)
+        if ($sltLoanAmount > 0 && $totalInstallments > 0) {
+            $sltLoanPerInstallment = $sltLoanAmount / $totalInstallments;
+            $finalAmount = $finalAmount - $sltLoanPerInstallment;
+        }
+        
+        // Ensure final amount is not negative
+        return max(0, $finalAmount);
     }
 } 
