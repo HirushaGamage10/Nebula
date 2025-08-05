@@ -111,9 +111,10 @@
 
                 <!-- Filter Details -->
                 <div class="filter-details">
-                    <strong>Location:</strong> {{ $locationText }}<br>
-                    <strong>Course:</strong> {{ $courseText }}<br>
-                    <strong>Batch:</strong> {{ $intakeText }}
+                    <strong>Location:</strong> <?php echo e($locationText); ?><br>
+                    <strong>Course:</strong> <?php echo e($courseText); ?><br>
+                    <strong>Batch:</strong> <?php echo e($intakeText); ?>
+
                 </div>
 
                 <!-- Student List Table -->
@@ -129,29 +130,29 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($students as $index => $registration)
-                                    @if($registration->student)
+                                <?php $__empty_1 = true; $__currentLoopData = $students; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $registration): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                                    <?php if($registration->student): ?>
                                         <tr>
-                                            <td style="text-align: center;">{{ $index + 1 }}</td>
-                                            <td style="text-align: center;">{{ $registration->course_registration_id }}</td>
-                                            <td style="text-align: center;">{{ $registration->student->student_id }}</td>
-                                            <td>{{ $registration->student->name_with_initials }}</td>
+                                            <td style="text-align: center;"><?php echo e($index + 1); ?></td>
+                                            <td style="text-align: center;"><?php echo e($registration->course_registration_id); ?></td>
+                                            <td style="text-align: center;"><?php echo e($registration->student->student_id); ?></td>
+                                            <td><?php echo e($registration->student->name_with_initials); ?></td>
                                         </tr>
-                                    @endif
-                                @empty
+                                    <?php endif; ?>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                                     <tr>
                                         <td colspan="4" style="text-align: center;">No students found</td>
                                     </tr>
-                                @endforelse
+                                <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
                     <div class="d-flex justify-content-end mt-2">
-                        <span class="fw-bold">Total Students: {{ $total_count }}</span>
+                        <span class="fw-bold">Total Students: <?php echo e($total_count); ?></span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </body>
-</html> 
+</html> <?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/student_list_pdf.blade.php ENDPATH**/ ?>

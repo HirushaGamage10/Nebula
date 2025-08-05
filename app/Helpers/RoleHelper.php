@@ -24,7 +24,6 @@ class RoleHelper
             'dashboard',
             'special.approval',
             'student.list',
-            'repeat.students.management',
         ],
         'Program Administrator (level 01)' => [
             'dashboard',
@@ -68,7 +67,6 @@ class RoleHelper
             'dashboard',
             'payment.plan',
             'student.list',
-            'repeat.students.management',
         ],
         'Librarian' => [
             'dashboard',
@@ -83,7 +81,6 @@ class RoleHelper
         'Bursar' => [
             'dashboard',
             'payment.clearance',
-            'repeat.students.management',
         ],
         'Project Tutor' => [
             'dashboard',

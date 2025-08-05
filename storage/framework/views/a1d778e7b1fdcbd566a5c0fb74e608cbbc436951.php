@@ -1,13 +1,13 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Project Clearance')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Library Clearance'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-md-12 mt-2">
             <div class="p-4 rounded shadow w-100 bg-white mt-4">
-                <h2 class="text-center mb-4">Project Clearance Management</h2>
+                <h2 class="text-center mb-4">Library Clearance Management</h2>
                 <hr style="margin-bottom: 30px;">
 
                 <!-- Pending Requests Section -->
@@ -16,7 +16,7 @@
                         <h5 class="mb-0"><i class="ti ti-clock"></i> Pending Clearance Requests</h5>
                     </div>
                     <div class="card-body">
-                        @if($pendingRequests->count() > 0)
+                        <?php if($pendingRequests->count() > 0): ?>
                             <div class="table-responsive">
                                 <table class="table table-hover">
                                     <thead class="table-light">
@@ -31,38 +31,38 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach($pendingRequests as $request)
+                                        <?php $__currentLoopData = $pendingRequests; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $request): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                             <tr>
-                                                <td>{{ $request->student->student_id }}</td>
-                                                <td>{{ $request->student->name_with_initials }}</td>
-                                                <td>{{ $request->course->course_name }}</td>
-                                                <td>{{ $request->intake->batch }}</td>
-                                                <td>{{ $request->location }}</td>
-                                                <td>{{ $request->requested_at->format('d/m/Y H:i') }}</td>
+                                                <td><?php echo e($request->student->student_id); ?></td>
+                                                <td><?php echo e($request->student->name_with_initials); ?></td>
+                                                <td><?php echo e($request->course->course_name); ?></td>
+                                                <td><?php echo e($request->intake->batch); ?></td>
+                                                <td><?php echo e($request->location); ?></td>
+                                                <td><?php echo e($request->requested_at->format('d/m/Y H:i')); ?></td>
                                                 <td>
                                                     <button class="btn btn-success btn-sm approve-btn" 
-                                                            data-request-id="{{ $request->id }}"
-                                                            data-student-name="{{ $request->student->name_with_initials }}">
+                                                            data-request-id="<?php echo e($request->id); ?>"
+                                                            data-student-name="<?php echo e($request->student->name_with_initials); ?>">
                                                         <i class="ti ti-check"></i> Approve
                                                     </button>
                                                     <button class="btn btn-danger btn-sm reject-btn" 
-                                                            data-request-id="{{ $request->id }}"
-                                                            data-student-name="{{ $request->student->name_with_initials }}">
+                                                            data-request-id="<?php echo e($request->id); ?>"
+                                                            data-student-name="<?php echo e($request->student->name_with_initials); ?>">
                                                         <i class="ti ti-x"></i> Reject
                                                     </button>
                                                 </td>
                                             </tr>
-                                        @endforeach
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                     </tbody>
                                 </table>
                             </div>
-                        @else
+                        <?php else: ?>
                             <div class="text-center py-4">
                                 <i class="ti ti-check-circle text-success" style="font-size: 3rem;"></i>
                                 <h5 class="mt-3">No Pending Requests</h5>
-                                <p class="text-muted">All project clearance requests have been processed.</p>
+                                <p class="text-muted">All library clearance requests have been processed.</p>
                             </div>
-                        @endif
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -72,7 +72,7 @@
                         <h5 class="mb-0"><i class="ti ti-list-check"></i> Processed Clearance Requests</h5>
                     </div>
                     <div class="card-body">
-                        @if($processedRequests->count() > 0)
+                        <?php if($processedRequests->count() > 0): ?>
                             <div class="table-responsive">
                                 <table class="table table-hover">
                                     <thead class="table-light">
@@ -88,34 +88,34 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach($processedRequests as $request)
+                                        <?php $__currentLoopData = $processedRequests; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $request): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                             <tr>
-                                                <td>{{ $request->student->student_id }}</td>
-                                                <td>{{ $request->student->name_with_initials }}</td>
-                                                <td>{{ $request->course->course_name }}</td>
-                                                <td>{{ $request->intake->batch }}</td>
-                                                <td>{{ $request->location }}</td>
+                                                <td><?php echo e($request->student->student_id); ?></td>
+                                                <td><?php echo e($request->student->name_with_initials); ?></td>
+                                                <td><?php echo e($request->course->course_name); ?></td>
+                                                <td><?php echo e($request->intake->batch); ?></td>
+                                                <td><?php echo e($request->location); ?></td>
                                                 <td>
-                                                    @if($request->status === 'approved')
+                                                    <?php if($request->status === 'approved'): ?>
                                                         <span class="badge bg-success">Approved</span>
-                                                    @else
+                                                    <?php else: ?>
                                                         <span class="badge bg-danger">Rejected</span>
-                                                    @endif
+                                                    <?php endif; ?>
                                                 </td>
-                                                <td>{{ $request->approved_at ? $request->approved_at->format('d/m/Y H:i') : 'N/A' }}</td>
-                                                <td>{{ $request->remarks ?: 'No remarks' }}</td>
+                                                <td><?php echo e($request->approved_at ? $request->approved_at->format('d/m/Y H:i') : 'N/A'); ?></td>
+                                                <td><?php echo e($request->remarks ?: 'No remarks'); ?></td>
                                             </tr>
-                                        @endforeach
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                     </tbody>
                                 </table>
                             </div>
-                        @else
+                        <?php else: ?>
                             <div class="text-center py-4">
                                 <i class="ti ti-inbox text-muted" style="font-size: 3rem;"></i>
                                 <h5 class="mt-3">No Processed Requests</h5>
                                 <p class="text-muted">No clearance requests have been processed yet.</p>
                             </div>
-                        @endif
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -137,6 +137,11 @@
                     <label for="remarks" class="form-label">Remarks (Optional)</label>
                     <textarea class="form-control" id="remarks" rows="3" placeholder="Enter any remarks..."></textarea>
                 </div>
+                <div class="mb-3">
+                    <label for="clearance_slip" class="form-label">Clearance Slip (Optional)</label>
+                    <input type="file" class="form-control" id="clearance_slip" name="clearance_slip" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                    <small class="text-muted">Accepted formats: PDF, JPG, PNG, DOC, DOCX (Max size: 5MB)</small>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -150,9 +155,9 @@
 
 <!-- Toast Container -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 $(document).ready(function() {
     let currentRequestId = null;
@@ -165,8 +170,9 @@ $(document).ready(function() {
         const studentName = $(this).data('student-name');
         
         $('#approvalModalTitle').text('Approve Clearance');
-        $('#approvalModalText').text(`Are you sure you want to approve project clearance for ${studentName}?`);
+        $('#approvalModalText').text(`Are you sure you want to approve library clearance for ${studentName}?`);
         $('#remarks').val('');
+        $('#clearance_slip').val(''); // Clear file input
         $('#confirmApproval').removeClass('btn-danger').addClass('btn-success');
         $('#approvalModal').modal('show');
     });
@@ -178,8 +184,9 @@ $(document).ready(function() {
         const studentName = $(this).data('student-name');
         
         $('#approvalModalTitle').text('Reject Clearance');
-        $('#approvalModalText').text(`Are you sure you want to reject project clearance for ${studentName}?`);
+        $('#approvalModalText').text(`Are you sure you want to reject library clearance for ${studentName}?`);
         $('#remarks').val('');
+        $('#clearance_slip').val(''); // Clear file input
         $('#confirmApproval').removeClass('btn-success').addClass('btn-danger');
         $('#approvalModal').modal('show');
     });
@@ -189,17 +196,27 @@ $(document).ready(function() {
         if (!currentRequestId || !currentAction) return;
 
         const url = currentAction === 'approve' 
-            ? '{{ route("project.approve.clearance") }}'
-            : '{{ route("project.reject.clearance") }}';
+            ? '<?php echo e(route("library.approve.clearance")); ?>'
+            : '<?php echo e(route("library.reject.clearance")); ?>';
+
+        // Create FormData to handle file upload
+        const formData = new FormData();
+        formData.append('request_id', currentRequestId);
+        formData.append('remarks', $('#remarks').val());
+        formData.append('_token', '<?php echo e(csrf_token()); ?>');
+        
+        // Add file if selected
+        const fileInput = document.getElementById('clearance_slip');
+        if (fileInput.files.length > 0) {
+            formData.append('clearance_slip', fileInput.files[0]);
+        }
 
         $.ajax({
             url: url,
             method: 'POST',
-            data: {
-                request_id: currentRequestId,
-                remarks: $('#remarks').val(),
-                _token: '{{ csrf_token() }}'
-            },
+            data: formData,
+            processData: false,
+            contentType: false,
             success: function(response) {
                 if (response.success) {
                     showToast(response.message, 'success');
@@ -236,4 +253,6 @@ $(document).ready(function() {
     }
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/library_clearance.blade.php ENDPATH**/ ?>
