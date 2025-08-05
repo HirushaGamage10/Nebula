@@ -821,42 +821,86 @@ class PaymentController extends Controller
      * Download payment slip as PDF.
      */
     public function downloadPaymentSlipPDF(Request $request)
-    {
-        try {
-            $request->validate([
-                'receipt_no' => 'required|string',
-            ]);
+{
+    try {
+        $request->validate([
+            'receipt_no' => 'required|string',
+        ]);
 
-            // Retrieve the generated slip data from session
-            $slipData = session('generated_slip_' . $request->receipt_no);
-            
-            if (!$slipData) {
-                return response()->json(['success' => false, 'message' => 'Payment slip not found or expired.'], Response::HTTP_NOT_FOUND);
+        // Try retrieving from session
+        $slipData = session('generated_slip_' . $request->receipt_no);
+
+        if (!$slipData) {
+            // If session is expired, fetch from DB
+            $payment = PaymentDetail::with(['student', 'registration.course']) // eager load relationships
+                ->where('transaction_id', $request->receipt_no)
+                ->first();
+
+            if (!$payment) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment slip not found or expired.'
+                ], Response::HTTP_NOT_FOUND);
             }
 
-            // Generate PDF using DomPDF
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.payment_slip', [
-                'slipData' => $slipData
-            ]);
-
-            // Set PDF options
-            $pdf->setPaper('A4', 'portrait');
-            $pdf->setOptions([
-                'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
-                'defaultFont' => 'Arial'
-            ]);
-
-            // Generate filename
-            $filename = 'Payment_Slip_' . $slipData['receipt_no'] . '_' . date('Y-m-d') . '.pdf';
-
-            // Return PDF as download
-            return $pdf->download($filename);
-
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            // Build slipData manually (MUST match your Blade view expectations)
+            $slipData = [
+                'receipt_no' => $payment->transaction_id,
+                'student_id' => $payment->student_id,
+                'student_name' => $payment->student->full_name ?? 'N/A',
+                'student_nic' => $payment->student->id_value ?? 'N/A',
+                'course_name' => $payment->course->course_name ?? 'N/A',
+                'course_code' => $payment->course->course_code ?? 'N/A',
+                'intake' => $payment->registration->intake->batch ?? 'N/A',
+                'intake_id' => $payment->registration->intake_id ?? null,
+                'payment_type' => 'N/A', // You can fill if stored
+                'payment_type_display' => 'N/A', // optional
+                'amount' => 'USD ' . number_format($payment->usd_amount, 2) . ' (LKR ' . number_format($payment->lkr_amount, 0) . ')',
+                'installment_number' => $payment->installment_number,
+                'due_date' => optional($payment->due_date)->format('Y-m-d'),
+                'payment_date' => optional($payment->updated_at)->format('Y-m-d'),
+                'payment_method' => $payment->payment_method,
+                'remarks' => $payment->remarks,
+                'status' => $payment->status,
+                'location' => $payment->registration->location ?? 'N/A',
+                'registration_date' => $payment->registration->registration_date ?? null,
+                'course_fee' => 'N/A',
+                'franchise_fee' => 'N/A',
+                'franchise_fee_currency' => 'N/A',
+                'registration_fee' => 'N/A',
+                'conversion_rate' => 'N/A',
+                'currency_from' => 'N/A',
+                'lkr_amount' => 'N/A',
+                'generated_at' => $payment->created_at->format('Y-m-d H:i:s'),
+                'valid_until' => $payment->created_at->addDays(7)->format('Y-m-d'),
+            ];
         }
+
+        // Generate PDF
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.payment_slip', [
+            'slipData' => $slipData
+        ]);
+
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isRemoteEnabled' => true,
+            'defaultFont' => 'Arial'
+        ]);
+
+        $filename = 'Payment_Slip_' . $slipData['receipt_no'] . '_' . date('Y-m-d') . '.pdf';
+
+        return $pdf->download($filename);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred: ' . $e->getMessage()
+        ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
+}
+
+
 
     /**
      * Save payment record after payment is made.

@@ -6,35 +6,46 @@
     <title>Payment Slip - <?php echo e($slipData['receipt_no']); ?></title>
     <style>
         @page {
-            size: A4;
+            size: A4 landscape;
             margin: 0;
         }
         
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .slip-container {
+                page-break-inside: avoid;
+            }
+        }
+        
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
             margin: 0;
             padding: 0;
             color: #000;
             background-color: #fff;
             font-size: 9px;
-            line-height: 1.2;
+            line-height: 1.3;
         }
         
         .slip-container {
             width: 210mm;
             height: 148.5mm;
             position: relative;
-            border: 1px solid #000;
+            border: 2px solid #000;
             box-sizing: border-box;
-            padding: 5mm;
+            padding: 6mm;
             background: #fff;
+            margin: 0 auto;
         }
         
         .header {
             text-align: center;
-            margin-bottom: 8px;
-            border-bottom: 1px solid #000;
-            padding-bottom: 5px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 8px;
             position: relative;
         }
         
@@ -42,158 +53,233 @@
             position: absolute;
             left: 0;
             top: 0;
-            font-size: 7px;
+            font-size: 8px;
             font-weight: bold;
+            color: #333;
         }
         
         .logo {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
-            margin-bottom: 2px;
-            border: 2px solid #000;
-            width: 30px;
-            height: 30px;
+            margin-bottom: 3px;
+            border: 3px solid #000;
+            width: 35px;
+            height: 35px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             border-radius: 50%;
+            background-color: #f8f8f8;
         }
         
         .company-name {
-            font-size: 11px;
+            font-size: 12px;
             font-weight: bold;
-            margin-bottom: 2px;
+            margin-bottom: 3px;
+            color: #000;
         }
         
         .receipt-label {
-            font-size: 9px;
+            font-size: 10px;
             font-weight: bold;
+            background-color: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 3px;
         }
         
         .main-content {
-            height: calc(100% - 60px);
+            height: calc(100% - 80px);
             position: relative;
         }
         
         .numbered-fields {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            gap: 20px;
             height: 100%;
         }
         
         .left-section {
             display: flex;
             flex-direction: column;
+            padding-right: 10px;
         }
         
         .right-section {
             display: flex;
             flex-direction: column;
-            border-left: 1px solid #000;
-            padding-left: 10px;
+            border-left: 2px solid #000;
+            padding-left: 15px;
         }
         
         .field-group {
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
         
         .field-label {
-            font-size: 7px;
+            font-size: 8px;
             font-weight: bold;
-            margin-bottom: 2px;
+            margin-bottom: 3px;
+            color: #333;
         }
         
         .field-value {
             border-bottom: 1px solid #000;
-            min-height: 12px;
-            padding: 1px 3px;
-            font-size: 8px;
+            min-height: 14px;
+            padding: 2px 4px;
+            font-size: 9px;
+            background-color: #fafafa;
         }
         
         .payment-section {
-            margin: 10px 0;
+            margin: 12px 0;
             flex-grow: 1;
+            background-color: #f9f9f9;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
         }
         
         .payment-text {
-            font-size: 8px;
-            margin-bottom: 3px;
+            font-size: 9px;
+            margin-bottom: 4px;
+            font-weight: 500;
         }
         
         .amount-box {
-            border: 1px solid #000;
-            min-height: 15px;
-            padding: 3px;
-            font-size: 9px;
+            border: 2px solid #000;
+            min-height: 18px;
+            padding: 4px;
+            font-size: 11px;
             font-weight: bold;
-            margin: 5px 0;
+            margin: 6px 0;
+            text-align: center;
+            background-color: #fff;
         }
         
         .settlement-text {
-            font-size: 8px;
-            margin: 3px 0;
+            font-size: 9px;
+            margin: 4px 0;
+            font-style: italic;
         }
         
         .itemized-list {
-            margin: 8px 0;
+            margin: 10px 0;
+            background-color: #fff;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
         }
         
         .list-item {
             display: flex;
-            margin-bottom: 3px;
-            font-size: 7px;
+            margin-bottom: 4px;
+            font-size: 8px;
+            align-items: center;
         }
         
         .item-number {
-            width: 12px;
-            margin-right: 3px;
+            width: 15px;
+            margin-right: 5px;
+            font-weight: bold;
+            color: #666;
         }
         
         .item-line {
             flex-grow: 1;
-            border-bottom: 1px dotted #666;
-            min-height: 10px;
-            padding: 1px;
+            border-bottom: 1px dotted #999;
+            min-height: 12px;
+            padding: 2px;
+            font-size: 8px;
         }
         
         .right-amount-section {
-            margin: 15px 0;
+            margin: 18px 0;
+            text-align: center;
         }
         
         .total-box {
-            border: 2px solid #000;
-            min-height: 20px;
-            padding: 4px;
-            font-size: 10px;
+            border: 3px solid #000;
+            min-height: 25px;
+            padding: 6px;
+            font-size: 12px;
             font-weight: bold;
             text-align: center;
-            margin: 8px 0;
+            margin: 10px 0;
+            background-color: #f5f5f5;
+            border-radius: 4px;
         }
         
         .bottom-fields {
             margin-top: auto;
+            padding-top: 10px;
+        }
+        
+        .stamp-duty {
+            margin: 10px 0;
+            font-size: 8px;
+            font-style: italic;
+            color: #666;
+            text-align: center;
+            background-color: #f0f0f0;
+            padding: 3px;
+            border-radius: 3px;
+        }
+        
+        .validity-note {
+            margin: 6px 0;
+            font-size: 7px;
+            font-style: italic;
+            color: #888;
+            text-align: center;
+            line-height: 1.2;
         }
         
         .language-note {
             position: absolute;
-            bottom: 20px;
-            left: 5mm;
-            font-size: 6px;
+            bottom: 25px;
+            left: 6mm;
+            font-size: 7px;
             color: #666;
-            line-height: 1.1;
+            line-height: 1.2;
+            background-color: #f9f9f9;
+            padding: 3px;
+            border-radius: 2px;
         }
         
         .footer {
             position: absolute;
-            bottom: 5px;
-            left: 5mm;
-            right: 5mm;
-            font-size: 6px;
-            color: #666;
+            bottom: 8px;
+            left: 6mm;
+            right: 6mm;
+            font-size: 7px;
+            color: #888;
             text-align: center;
             border-top: 1px solid #ccc;
-            padding-top: 2px;
+            padding-top: 3px;
+            background-color: #fafafa;
+        }
+        
+        /* Print optimizations */
+        @media print {
+            .slip-container {
+                border: 2px solid #000 !important;
+                box-shadow: none;
+            }
+            
+            .field-value {
+                background-color: transparent !important;
+            }
+            
+            .payment-section {
+                background-color: transparent !important;
+                border: 1px solid #000 !important;
+            }
+            
+            .itemized-list {
+                background-color: transparent !important;
+                border: 1px solid #000 !important;
+            }
         }
     </style>
 </head>
@@ -313,11 +399,11 @@
                             <div class="field-value"><?php echo e($slipData['location'] ?? 'NEBULA Institute'); ?></div>
                         </div>
                         
-                        <div style="margin: 8px 0; font-size: 7px; font-style: italic;">
+                        <div class="stamp-duty">
                             (15) (Stamp Duty Paid)
                         </div>
                         
-                        <div style="margin: 5px 0; font-size: 7px; font-style: italic; color: #666;">
+                        <div class="validity-note">
                             (16) (This receipt is valid only after the realization of the cheque)
                         </div>
                     </div>
@@ -328,7 +414,7 @@
         <!-- Language Note -->
         <div class="language-note">
             සිංහල පරිවර්ථනය පසුපිටෙහි ඇත.<br>
-            தமிழ் மொழிபெயர்ப்பை மறுபக்கம் பார்க்கவும்.
+            தமிழ் மொழிபெயர்ப்பை மறுபக்கम் பார்க்கவும்.
         </div>
         
         <!-- Footer -->
