@@ -794,9 +794,6 @@
                                         </div>
                                     </div>
                                     <div class="text-center mt-3">
-                                        <button type="button" class="btn btn-primary me-2" onclick="uploadPaidSlip()">
-                                            <i class="ti ti-upload me-2"></i>Upload Paid Slip
-                                        </button>
                                         <button type="button" class="btn btn-success" onclick="savePaymentRecordFromUpdate()">
                                             <i class="ti ti-device-floppy me-2"></i>Save Payment Record
                                         </button>
@@ -2711,64 +2708,7 @@ function getPaymentStatusBadgeColor(status) {
     }
 }
 
-// Upload paid slip function
-function uploadPaidSlip() {
-    const receiptNo = document.getElementById('upload-receipt-no').value;
-    const paymentMethod = document.getElementById('upload-payment-method').value;
-    const paymentDate = document.getElementById('upload-payment-date').value;
-    const paidSlip = document.getElementById('upload-paid-slip').files[0];
-    const remarks = document.getElementById('upload-remarks').value;
 
-    if (!receiptNo || !paymentMethod || !paymentDate || !paidSlip) {
-        showWarningMessage('Please fill in all required fields.');
-        return;
-    }
-
-    // Validate file size (2MB max)
-    if (paidSlip.size > 2 * 1024 * 1024) {
-        showErrorMessage('File size must be less than 2MB.');
-        return;
-    }
-
-    showSpinner(true);
-
-    const formData = new FormData();
-    formData.append('receipt_no', receiptNo);
-    formData.append('payment_method', paymentMethod);
-    formData.append('payment_date', paymentDate);
-    formData.append('paid_slip', paidSlip);
-    formData.append('remarks', remarks);
-    formData.append('_token', '<?php echo e(csrf_token()); ?>');
-
-    fetch('/payment/upload-paid-slip', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showSuccessMessage(data.message || 'Paid slip uploaded successfully! 🎉');
-            
-            // Clear form
-            document.getElementById('upload-receipt-no').value = '';
-            document.getElementById('upload-payment-method').value = '';
-            document.getElementById('upload-payment-date').value = '';
-            document.getElementById('upload-paid-slip').value = '';
-            document.getElementById('upload-remarks').value = '';
-            
-            // Reload payment records if they are currently displayed
-            if (document.getElementById('paymentRecordsSection').style.display !== 'none') {
-                loadPaymentRecords();
-            }
-        } else {
-            showErrorMessage(data.message || 'Failed to upload paid slip.');
-        }
-    })
-    .catch(() => {
-        showErrorMessage('An error occurred while uploading the paid slip.');
-    })
-    .finally(() => showSpinner(false));
-}
 
 // Payment Details Modal
 function showPaymentDetailsModal() {

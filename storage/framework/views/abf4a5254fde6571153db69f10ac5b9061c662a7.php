@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Timetable Management')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Timetable Management'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -67,14 +67,6 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="mb-3 row align-items-center" id="degree_specialization_row" style="display: none;">
-                            <label for="degree_specialization" class="col-sm-3 col-form-label fw-bold">Specialization</label>
-                            <div class="col-sm-9">
-                                <select class="form-select filter-param" id="degree_specialization" name="specialization">
-                                    <option selected disabled value="">Select Specialization</option>
-                                </select>
-                            </div>
-                        </div>
                         <div class="mb-3 row align-items-center">
                             <label for="degree_start_date" class="col-sm-3 col-form-label fw-bold">Semester Start Date<span class="text-danger">*</span></label>
                             <div class="col-sm-9">
@@ -116,8 +108,8 @@
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
-                                    <form id="degreeTimetableForm" method="POST" action="{{ route('timetable.store') }}">
-                                        @csrf
+                                    <form id="degreeTimetableForm" method="POST" action="<?php echo e(route('timetable.store')); ?>">
+                                        <?php echo csrf_field(); ?>
                                         <input type="hidden" name="course_type" value="degree">
                                         <table class="table table-bordered text-center align-middle" style="min-width: 900px;">
                                             <thead class="table-light">
@@ -182,14 +174,6 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="mb-3 row align-items-center" id="certificate_specialization_row" style="display: none;">
-                            <label for="certificate_specialization" class="col-sm-3 col-form-label fw-bold">Specialization</label>
-                            <div class="col-sm-9">
-                                <select class="form-select filter-param" id="certificate_specialization" name="specialization">
-                                    <option selected disabled value="">Select Specialization</option>
-                                </select>
-                            </div>
-                        </div>
                         <div class="mb-3 row align-items-center">
                             <label for="certificate_start_date" class="col-sm-3 col-form-label fw-bold">Course Start Date<span class="text-danger">*</span></label>
                             <div class="col-sm-9">
@@ -231,8 +215,8 @@
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
-                                    <form id="certificateTimetableForm" method="POST" action="{{ route('timetable.store') }}">
-                                        @csrf
+                                    <form id="certificateTimetableForm" method="POST" action="<?php echo e(route('timetable.store')); ?>">
+                                        <?php echo csrf_field(); ?>
                                         <input type="hidden" name="course_type" value="certificate">
                                         <table class="table table-bordered text-center align-middle" style="min-width: 900px;">
                                             <thead class="table-light">
@@ -271,7 +255,7 @@
     </div>
 </div>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Degree Program Elements
@@ -509,18 +493,8 @@ document.addEventListener('DOMContentLoaded', function() {
         degreeSemester.value = '';
         clearDateValidation();
         
-        // Reset specialization
-        const degreeSpecialization = document.getElementById('degree_specialization');
-        const degreeSpecializationRow = document.getElementById('degree_specialization_row');
-        if (degreeSpecialization) {
-            degreeSpecialization.innerHTML = '<option selected disabled value="">Select Specialization</option>';
-            degreeSpecializationRow.style.display = 'none';
-        }
-        
         if (degreeCourse.value && degreeLocation.value) {
             fetchIntakesByCourse(degreeCourse.value, degreeLocation.value, degreeIntake);
-            // Check if course has specializations
-            fetchSpecializationsForCourse(degreeCourse.value, 'degree');
         }
     });
 
@@ -599,17 +573,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Specialization change event listener for degree programs
-    const degreeSpecialization = document.getElementById('degree_specialization');
-    if (degreeSpecialization) {
-        degreeSpecialization.addEventListener('change', function() {
-            if (degreeSemester.value) {
-                // Re-fetch modules with specialization filter
-                fetchModulesBySemester(degreeSemester.value, degreeSpecialization.value);
-            }
-        });
-    }
-
     // Certificate Program Event Listeners
     certificateLocation.addEventListener('change', function() {
         resetAndDisable(certificateCourse, 'Select Course');
@@ -617,14 +580,6 @@ document.addEventListener('DOMContentLoaded', function() {
         certificateCourse.value = '';
         certificateIntake.value = '';
         certificateTimetableSection.style.display = 'none';
-        
-        // Reset specialization
-        const certificateSpecialization = document.getElementById('certificate_specialization');
-        const certificateSpecializationRow = document.getElementById('certificate_specialization_row');
-        if (certificateSpecialization) {
-            certificateSpecialization.innerHTML = '<option selected disabled value="">Select Specialization</option>';
-            certificateSpecializationRow.style.display = 'none';
-        }
         
         if (certificateLocation.value) {
             fetchCoursesByLocation(certificateLocation.value, 'certificate', certificateCourse);
@@ -634,20 +589,9 @@ document.addEventListener('DOMContentLoaded', function() {
     certificateCourse.addEventListener('change', function() {
         resetAndDisable(certificateIntake, 'Select Intake');
         certificateIntake.value = '';
-        certificateTimetableSection.style.display = 'none';
-        
-        // Reset specialization
-        const certificateSpecialization = document.getElementById('certificate_specialization');
-        const certificateSpecializationRow = document.getElementById('certificate_specialization_row');
-        if (certificateSpecialization) {
-            certificateSpecialization.innerHTML = '<option selected disabled value="">Select Specialization</option>';
-            certificateSpecializationRow.style.display = 'none';
-        }
         
         if (certificateCourse.value && certificateLocation.value) {
             fetchIntakesByCourse(certificateCourse.value, certificateLocation.value, certificateIntake);
-            // Check if course has specializations
-            fetchSpecializationsForCourse(certificateCourse.value, 'certificate');
         }
     });
 
@@ -708,17 +652,6 @@ document.addEventListener('DOMContentLoaded', function() {
             certificateTimetableHeader.style.display = 'none';
         }
     });
-
-    // Specialization change event listener for certificate programs
-    const certificateSpecialization = document.getElementById('certificate_specialization');
-    if (certificateSpecialization) {
-        certificateSpecialization.addEventListener('change', function() {
-            if (certificateCourse.value) {
-                // Re-fetch modules with specialization filter
-                fetchCertificateModules(certificateCourse.value, certificateSpecialization.value);
-            }
-        });
-    }
 
     // Date change listeners for certificate programs
     certificateStartDate.addEventListener('change', updateCertificateTable);
@@ -827,38 +760,6 @@ document.addEventListener('DOMContentLoaded', function() {
             .finally(() => showSpinner(false));
     }
 
-    function fetchSpecializationsForCourse(courseId, courseType) {
-        showSpinner(true);
-        fetch(`/get-specializations-for-course?course_id=${encodeURIComponent(courseId)}`)
-            .then(response => response.json())
-            .then(data => {
-                const specializationSelect = document.getElementById(`${courseType}_specialization`);
-                const specializationRow = document.getElementById(`${courseType}_specialization_row`);
-                
-                if (data.specializations && data.specializations.length > 0) {
-                    // Populate specialization dropdown
-                    specializationSelect.innerHTML = '<option selected disabled value="">Select Specialization</option>';
-                    data.specializations.forEach(spec => {
-                        const option = document.createElement('option');
-                        option.value = spec;
-                        option.textContent = spec;
-                        specializationSelect.appendChild(option);
-                    });
-                    specializationRow.style.display = 'block';
-                    showToast('Info', `Course has ${data.specializations.length} specialization(s) available.`, 'bg-info');
-                } else {
-                    // Hide specialization row if no specializations
-                    specializationRow.style.display = 'none';
-                }
-            })
-            .catch(() => {
-                const specializationRow = document.getElementById(`${courseType}_specialization_row`);
-                specializationRow.style.display = 'none';
-                showToast('Error', 'Failed to fetch specializations.', 'bg-danger');
-            })
-            .finally(() => showSpinner(false));
-    }
-
     function fetchWeeks(startDate, endDate) {
         showSpinner(true);
         fetch(`/get-weeks?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`)
@@ -944,16 +845,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to fetch modules for a semester
-    function fetchModulesBySemester(semesterId, specialization = null) {
-        console.log('Fetching modules for semester ID:', semesterId, 'specialization:', specialization);
+    function fetchModulesBySemester(semesterId) {
+        console.log('Fetching modules for semester ID:', semesterId);
         showSpinner(true);
-        
-        let url = `/get-modules-by-semester?semester_id=${encodeURIComponent(semesterId)}`;
-        if (specialization) {
-            url += `&specialization=${encodeURIComponent(specialization)}`;
-        }
-        
-        fetch(url)
+        fetch(`/get-modules-by-semester?semester_id=${encodeURIComponent(semesterId)}`)
             .then(response => {
                 console.log('Response status:', response.status);
                 return response.json();
@@ -1047,23 +942,15 @@ document.addEventListener('DOMContentLoaded', function() {
             .finally(() => showSpinner(false));
     }
 
-    function fetchCertificateModules(courseId, specialization = null) {
+    function fetchCertificateModules(courseId) {
         showSpinner(true);
         // For certificate programs, we'll simulate modules based on the course
         setTimeout(() => {
-            let mockModules = [
+            const mockModules = [
                 { module_id: 1, module_code: 'CERT101', module_name: 'Certificate Module 1', full_name: 'Certificate Module 1 (CERT101)' },
                 { module_id: 2, module_code: 'CERT102', module_name: 'Certificate Module 2', full_name: 'Certificate Module 2 (CERT102)' },
                 { module_id: 3, module_code: 'CERT103', module_name: 'Certificate Module 3', full_name: 'Certificate Module 3 (CERT103)' }
             ];
-            
-            // Filter modules by specialization if provided
-            if (specialization) {
-                mockModules = mockModules.filter(module => {
-                    // For certificate programs, we'll simulate specialization filtering
-                    return module.module_code.includes('CERT');
-                });
-            }
             
             window.availableCertificateModules = mockModules;
             showToast('Success', `${mockModules.length} modules loaded.`, 'bg-success');
@@ -1166,86 +1053,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form submission handlers
     document.getElementById('degreeTimetableForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        
-        // Collect form data including specialization
-        const formData = new FormData();
-        formData.append('location', degreeLocation.value);
-        formData.append('course_id', degreeCourse.value);
-        formData.append('intake_id', degreeIntake.value);
-        formData.append('semester', degreeSemester.value);
-        
-        // Add specialization if selected
-        const degreeSpecialization = document.getElementById('degree_specialization');
-        if (degreeSpecialization && degreeSpecialization.value) {
-            formData.append('specialization', degreeSpecialization.value);
-        }
-        
-        // Add timetable data
-        const timetableData = collectTimetableData();
-        formData.append('timetable_data', JSON.stringify(timetableData));
-        
-        // Submit form
-        fetch('/timetable', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('Success', data.message, 'bg-success');
-            } else {
-                showToast('Error', data.message, 'bg-danger');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('Error', 'Failed to save timetable.', 'bg-danger');
-        });
+        // Add form submission logic here
+        showToast('Success', 'Degree timetable saved successfully!', 'bg-success');
     });
 
     document.getElementById('certificateTimetableForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        
-        // Collect form data including specialization
-        const formData = new FormData();
-        formData.append('location', certificateLocation.value);
-        formData.append('course_id', certificateCourse.value);
-        formData.append('intake_id', certificateIntake.value);
-        formData.append('semester', '1'); // Certificate programs typically have 1 semester
-        
-        // Add specialization if selected
-        const certificateSpecialization = document.getElementById('certificate_specialization');
-        if (certificateSpecialization && certificateSpecialization.value) {
-            formData.append('specialization', certificateSpecialization.value);
-        }
-        
-        // Add timetable data
-        const timetableData = collectCertificateTimetableData();
-        formData.append('timetable_data', JSON.stringify(timetableData));
-        
-        // Submit form
-        fetch('/timetable', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('Success', data.message, 'bg-success');
-            } else {
-                showToast('Error', data.message, 'bg-danger');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('Error', 'Failed to save timetable.', 'bg-danger');
-        });
+        // Add form submission logic here
+        showToast('Success', 'Certificate timetable saved successfully!', 'bg-success');
     });
 
     // PDF Download handlers
@@ -1369,43 +1184,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return timetableData;
     }
 
-    function collectCertificateTimetableData() {
-        const timetableData = [];
-        const rows = certificateTimetableBody.querySelectorAll('tr');
-        
-        rows.forEach((row, rowIndex) => {
-            const timeInput = row.querySelector('input[name*="[time]"]');
-            if (timeInput && timeInput.value) {
-                const rowData = {
-                    time: timeInput.value,
-                    monday: '',
-                    tuesday: '',
-                    wednesday: '',
-                    thursday: '',
-                    friday: '',
-                    saturday: '',
-                    sunday: ''
-                };
-                
-                const daySelects = row.querySelectorAll('select');
-                daySelects.forEach((select, dayIndex) => {
-                    const dayName = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][dayIndex];
-                    if (select.value) {
-                        // Get the module name (text) instead of the module ID (value)
-                        const selectedOption = select.options[select.selectedIndex];
-                        if (selectedOption) {
-                            rowData[dayName] = selectedOption.text;
-                        }
-                    }
-                });
-                
-                timetableData.push(rowData);
-            }
-        });
-        
-        return timetableData;
-    }
-
     // Tab coloring logic
     $('#timetableTabs .nav-link').on('shown.bs.tab', function (e) {
         $('#timetableTabs .nav-link').removeClass('bg-primary text-white');
@@ -1413,7 +1191,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
 
 <style>
 .lds-ring { display: inline-block; position: relative; width: 80px; height: 80px; }
@@ -1438,4 +1216,5 @@ input[type="date"].is-loading {
     color: #856404;
 }
 </style>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/timetable.blade.php ENDPATH**/ ?>
