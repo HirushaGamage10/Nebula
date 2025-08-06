@@ -28,6 +28,7 @@ class TimetableController extends Controller
                 'course_id' => 'required|exists:courses,course_id',
                 'intake_id' => 'required|exists:intakes,intake_id',
                 'semester' => 'required|string',
+                'specialization' => 'nullable|string',
                 'timetable_data' => 'required|array',
                 'timetable_data.*.time' => 'required|string',
                 'timetable_data.*.monday' => 'nullable|string',
@@ -40,12 +41,19 @@ class TimetableController extends Controller
             ]);
 
             // Delete existing timetable entries for this combination
-            \DB::table('timetable')->where([
+            $deleteConditions = [
                 'location' => $validatedData['location'],
                 'course_id' => $validatedData['course_id'],
                 'intake_id' => $validatedData['intake_id'],
                 'semester' => $validatedData['semester']
-            ])->delete();
+            ];
+            
+            // Add specialization to delete conditions if provided
+            if (!empty($validatedData['specialization'])) {
+                $deleteConditions['specialization'] = $validatedData['specialization'];
+            }
+            
+            \DB::table('timetable')->where($deleteConditions)->delete();
 
             // Insert new timetable entries
             $timetableEntries = [];
@@ -59,7 +67,7 @@ class TimetableController extends Controller
                     if (!empty($row[$day])) {
                         $date = $startDate->copy()->addDays($index);
                         
-                        $timetableEntries[] = [
+                        $timetableEntry = [
                             'location' => $validatedData['location'],
                             'course_id' => $validatedData['course_id'],
                             'intake_id' => $validatedData['intake_id'],
@@ -70,6 +78,13 @@ class TimetableController extends Controller
                             'created_at' => now(),
                             'updated_at' => now(),
                         ];
+                        
+                        // Add specialization if provided
+                        if (!empty($validatedData['specialization'])) {
+                            $timetableEntry['specialization'] = $validatedData['specialization'];
+                        }
+                        
+                        $timetableEntries[] = $timetableEntry;
                     }
                 }
             }
@@ -161,16 +176,24 @@ class TimetableController extends Controller
                 'course_id' => 'required|exists:courses,course_id',
                 'intake_id' => 'required|exists:intakes,intake_id',
                 'semester' => 'required|string',
+                'specialization' => 'nullable|string',
             ]);
+
+            $whereConditions = [
+                'timetable.location' => $validatedData['location'],
+                'timetable.course_id' => $validatedData['course_id'],
+                'timetable.intake_id' => $validatedData['intake_id'],
+                'timetable.semester' => $validatedData['semester']
+            ];
+            
+            // Add specialization filter if provided
+            if (!empty($validatedData['specialization'])) {
+                $whereConditions['timetable.specialization'] = $validatedData['specialization'];
+            }
 
             $timetableData = \DB::table('timetable')
                 ->join('modules', 'timetable.module_id', '=', 'modules.module_id')
-                ->where([
-                    'timetable.location' => $validatedData['location'],
-                    'timetable.course_id' => $validatedData['course_id'],
-                    'timetable.intake_id' => $validatedData['intake_id'],
-                    'timetable.semester' => $validatedData['semester']
-                ])
+                ->where($whereConditions)
                 ->select('timetable.time', 'timetable.date', 'modules.module_name', 'modules.module_code')
                 ->orderBy('timetable.date')
                 ->orderBy('timetable.time')
@@ -331,12 +354,50 @@ class TimetableController extends Controller
         }
     }
 
-    // Method to get modules for a specific semester
+    // Method to get specializations for a course
+    public function getSpecializationsForCourse(Request $request)
+    {
+        $courseId = $request->input('course_id');
+        
+        if (!$courseId) {
+            return response()->json(['specializations' => []]);
+        }
+
+        try {
+            $course = Course::find($courseId);
+            
+            if (!$course) {
+                return response()->json(['specializations' => []]);
+            }
+
+            $specializations = [];
+            if ($course->specializations) {
+                if (is_array($course->specializations)) {
+                    $specializations = $course->specializations;
+                } elseif (is_string($course->specializations)) {
+                    $specializations = json_decode($course->specializations, true) ?: [];
+                }
+            }
+
+            // Filter out empty specializations
+            $specializations = array_filter($specializations, function($spec) {
+                return !empty($spec) && trim($spec) !== '';
+            });
+
+            return response()->json(['specializations' => $specializations]);
+        } catch (\Exception $e) {
+            \Log::error('Error in getSpecializationsForCourse:', ['error' => $e->getMessage()]);
+            return response()->json(['specializations' => []]);
+        }
+    }
+
+    // Method to get modules for a specific semester with specialization filter
     public function getModulesBySemester(Request $request)
     {
         $semesterId = $request->input('semester_id');
+        $specialization = $request->input('specialization');
         
-        \Log::info('getModulesBySemester called with semester_id:', ['semester_id' => $semesterId]);
+        \Log::info('getModulesBySemester called with semester_id:', ['semester_id' => $semesterId, 'specialization' => $specialization]);
 
         if (!$semesterId) {
             \Log::warning('No semester_id provided');
@@ -353,7 +414,21 @@ class TimetableController extends Controller
                 return response()->json(['modules' => []]);
             }
 
-            $modules = $semester->modules->map(function($module) {
+            $modules = $semester->modules;
+
+            // Filter modules by specialization if provided
+            if ($specialization) {
+                $modules = $modules->filter(function($module) use ($specialization) {
+                    // Check if module has specialization field and matches
+                    if (isset($module->specialization)) {
+                        return $module->specialization === $specialization;
+                    }
+                    // If no specialization field, include core modules
+                    return $module->module_type === 'core';
+                });
+            }
+
+            $formattedModules = $modules->map(function($module) {
                 return [
                     'module_id' => $module->module_id,
                     'module_code' => $module->module_code,
@@ -362,9 +437,9 @@ class TimetableController extends Controller
                 ];
             });
 
-            \Log::info('Modules found for semester:', ['module_count' => $modules->count(), 'modules' => $modules->toArray()]);
+            \Log::info('Modules found for semester:', ['module_count' => $formattedModules->count(), 'modules' => $formattedModules->toArray()]);
 
-            return response()->json(['modules' => $modules]);
+            return response()->json(['modules' => $formattedModules]);
         } catch (\Exception $e) {
             \Log::error('Error in getModulesBySemester:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json(['modules' => []]);
