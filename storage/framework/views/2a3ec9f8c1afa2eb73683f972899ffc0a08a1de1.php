@@ -374,4 +374,4 @@
         </ul>
     </nav>
 </div>
-<?php /**PATH /Users/inazawaelectronics/Documents/SLT/Nebula/resources/views/components/sidebar.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\xampp\htdocs\nebula new\Nebula\resources\views/components/sidebar.blade.php ENDPATH**/ ?>

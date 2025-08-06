@@ -14,136 +14,104 @@ class SemesterRegistrationController extends Controller
         $courses = Course::all();
         $intakes = Intake::all();
         $semesters = Semester::all();
-        
+
         return view('semester_registration', compact('courses', 'intakes', 'semesters'));
     }
 
     public function store(Request $request)
     {
-        // Debug: Log the incoming request
         \Log::info('Semester registration store method called with data:', $request->all());
-        
+
         $request->validate([
             'course_id' => 'required|exists:courses,course_id',
             'intake_id' => 'required|exists:intakes,intake_id',
             'semester_id' => 'required|exists:semesters,id',
             'location' => 'required|string',
             'specialization' => 'nullable|string|max:255',
-            'register_students' => 'required|string', // Changed to string since we're sending JSON
+            'register_students' => 'required|string',
         ]);
 
         try {
-            // Get the selected students
-            $selectedStudents = $request->input('register_students', []);
-            
-            // If register_students is a JSON string, decode it
-            if (is_string($selectedStudents)) {
-                $selectedStudents = json_decode($selectedStudents, true);
-            }
-            
-            // Validate that we have a valid array after decoding
+            $selectedStudentsRaw = $request->input('register_students');
+            $selectedStudents = json_decode($selectedStudentsRaw, true);
+
             if (!is_array($selectedStudents) || empty($selectedStudents)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No students selected for registration.'
-                ], 400);
+                return response()->json(['success' => false, 'message' => 'No students selected for registration.'], 400);
             }
-            
-            // Validate that all student IDs exist
-            $validStudentIds = \App\Models\Student::whereIn('student_id', $selectedStudents)->pluck('student_id')->toArray();
-            $invalidStudentIds = array_diff($selectedStudents, $validStudentIds);
-            
-            if (!empty($invalidStudentIds)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Some selected students do not exist in the system.'
-                ], 400);
-            }
-            
-            \Log::info('Semester registration request:', [
-                'course_id' => $request->course_id,
-                'intake_id' => $request->intake_id,
-                'semester_id' => $request->semester_id,
-                'location' => $request->location,
-                'specialization' => $request->specialization,
-                'selected_students' => $selectedStudents
-            ]);
-            
-            // Check for existing registrations
-            $existingRegistrations = \App\Models\SemesterRegistration::where('semester_id', $request->semester_id)
-                ->whereIn('student_id', $selectedStudents)
-                ->pluck('student_id')
-                ->toArray();
-            
-            // Filter out students who are already registered
-            $newStudents = array_diff($selectedStudents, $existingRegistrations);
-            
-            if (empty($newStudents)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'All selected students are already registered for this semester.'
-                ], 400);
-            }
-            
-            // Prepare registration data for new students only
-            $registrationData = [];
-            $registrationDate = now()->toDateString();
-            
-            foreach ($newStudents as $studentId) {
-                $registrationData[] = [
-                    'student_id' => $studentId,
-                    'semester_id' => $request->semester_id,
-                    'course_id' => $request->course_id,
-                    'intake_id' => $request->intake_id,
-                    'location' => $request->location,
-                    'specialization' => $request->specialization,
-                    'status' => 'registered',
-                    'registration_date' => $registrationDate,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
-            
-            // Save semester registrations
-            try {
-                \App\Models\SemesterRegistration::insert($registrationData);
-                
-                $alreadyRegisteredCount = count($existingRegistrations);
-                $newlyRegisteredCount = count($newStudents);
-                
-                $message = "Semester registrations updated successfully! {$newlyRegisteredCount} students registered.";
-                if ($alreadyRegisteredCount > 0) {
-                    $message .= " ({$alreadyRegisteredCount} students were already registered)";
+
+            // Validate structure of each entry (must have student_id and status)
+            foreach ($selectedStudents as $entry) {
+                if (!isset($entry['student_id']) || !isset($entry['status'])) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Invalid student entry format.'
+                    ], 400);
                 }
-                
-                return response()->json([
-                    'success' => true,
-                    'message' => $message
-                ]);
-            } catch (\Exception $e) {
-                \Log::error('Database error during semester registration: ' . $e->getMessage());
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Database error occurred while saving registrations. Please try again.'
-                ], 500);
             }
-            
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Validation error in semester registration: ' . json_encode($e->errors()));
+
+            // Extract only the IDs for validation
+            $studentIds = array_column($selectedStudents, 'student_id');
+
+            // Validate students exist
+            $validStudentIds = \App\Models\Student::whereIn('student_id', $studentIds)->pluck('student_id')->toArray();
+            $invalidStudentIds = array_diff($studentIds, $validStudentIds);
+
+            if (!empty($invalidStudentIds)) {
+                return response()->json(['success' => false, 'message' => 'Some selected students do not exist in the system.'], 400);
+            }
+
+            // Block if terminated students are being registered again
+            $terminatedStudentIds = array_column(array_filter($selectedStudents, function ($entry) {
+                return $entry['status'] === 'registered';
+            }), 'student_id');
+
+            if (!empty($terminatedStudentIds)) {
+                $terminatedRecords = \App\Models\SemesterRegistration::whereIn('student_id', $terminatedStudentIds)
+                    ->where('intake_id', $request->intake_id)
+                    ->where('status', 'terminated')
+                    ->pluck('student_id')
+                    ->toArray();
+
+                if (!empty($terminatedRecords)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Some selected students are terminated and cannot be registered again.',
+                    ], 400);
+                }
+            }
+
+            // ✅ Perform registration or termination
+            foreach ($selectedStudents as $entry) {
+                $studentId = $entry['student_id'];
+                $status = $entry['status'];
+
+                \App\Models\SemesterRegistration::updateOrCreate(
+                    [
+                        'student_id' => $studentId,
+                        'intake_id' => $request->intake_id,
+                        'semester_id' => $request->semester_id,
+                    ],
+                    [
+                        'course_id' => $request->course_id,
+                        'location' => $request->location,
+                        'specialization' => $request->specialization,
+                        'status' => $status,
+                        'registration_date' => now()->toDateString(),
+                    ]
+                );
+            }
+
             return response()->json([
-                'success' => false,
-                'message' => 'Validation failed. Please check your input.',
-                'errors' => $e->errors()
-            ], 422);
+                'success' => true,
+                'message' => 'Student registration statuses updated successfully.'
+            ]);
         } catch (\Exception $e) {
             \Log::error('Error saving semester registrations: ' . $e->getMessage());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
-            return response()->json([
-                'success' => false,
-                'message' => 'An error occurred while saving registrations. Please try again.'
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Server error occurred.'], 500);
         }
     }
+
+
 
     // 1. Get courses by location (degree programs only)
     public function getCoursesByLocation(Request $request) {
@@ -159,13 +127,13 @@ class SemesterRegistrationController extends Controller
         $courseId = $request->input('course_id');
         $location = $request->input('location');
         $now = now();
-        
+
         \Log::info('getOngoingIntakes called with:', [
             'course_id' => $courseId,
             'location' => $location,
             'current_date' => $now
         ]);
-        
+
         // First, get intakes that are currently active (within date range)
         $activeIntakes = \App\Models\Intake::where('course_name', function($q) use ($courseId) {
                 $q->select('course_name')->from('courses')->where('course_id', $courseId)->limit(1);
@@ -174,9 +142,9 @@ class SemesterRegistrationController extends Controller
             ->where('start_date', '<=', $now)
             ->where('end_date', '>=', $now)
             ->get(['intake_id', 'batch']);
-            
+
         \Log::info('Active intakes found:', ['count' => $activeIntakes->count(), 'intakes' => $activeIntakes->toArray()]);
-            
+
         // Also get intakes that have semesters created for them
         $intakesWithSemesters = \App\Models\Intake::where('course_name', function($q) use ($courseId) {
                 $q->select('course_name')->from('courses')->where('course_id', $courseId)->limit(1);
@@ -186,14 +154,14 @@ class SemesterRegistrationController extends Controller
                 $q->select('intake_id')->from('semesters')->where('course_id', $courseId);
             })
             ->get(['intake_id', 'batch']);
-            
+
         \Log::info('Intakes with semesters found:', ['count' => $intakesWithSemesters->count(), 'intakes' => $intakesWithSemesters->toArray()]);
-            
+
         // Merge and deduplicate the results
         $allIntakes = $activeIntakes->merge($intakesWithSemesters)->unique('intake_id');
-        
+
         \Log::info('Final intakes returned:', ['count' => $allIntakes->count(), 'intakes' => $allIntakes->toArray()]);
-        
+
         return response()->json(['success' => true, 'intakes' => $allIntakes]);
     }
 
@@ -201,12 +169,12 @@ class SemesterRegistrationController extends Controller
     public function getOpenSemesters(Request $request) {
         $courseId = $request->input('course_id');
         $intakeId = $request->input('intake_id');
-        
+
         \Log::info('getOpenSemesters called with:', [
             'course_id' => $courseId,
             'intake_id' => $intakeId
         ]);
-        
+
         // Get all semesters for this course and intake
         $semesters = \App\Models\Semester::where('course_id', $courseId)
             ->where('intake_id', $intakeId)
@@ -218,9 +186,9 @@ class SemesterRegistrationController extends Controller
                     'status' => $semester->status
                 ];
             });
-            
+
         \Log::info('Found semesters:', ['count' => $semesters->count(), 'semesters' => $semesters->toArray()]);
-            
+
         return response()->json(['success' => true, 'semesters' => $semesters]);
     }
 
@@ -228,24 +196,33 @@ class SemesterRegistrationController extends Controller
     public function getEligibleStudents(Request $request) {
         $courseId = $request->input('course_id');
         $intakeId = $request->input('intake_id');
+
         $students = \App\Models\CourseRegistration::where('course_id', $courseId)
             ->where('intake_id', $intakeId)
             ->where(function($query) {
                 $query->where('status', 'Registered')
-                      ->orWhere('approval_status', 'Approved by DGM');
+                    ->orWhere('approval_status', 'Approved by DGM');
             })
             ->with('student')
             ->get()
             ->map(function($reg) {
+                $semReg = \App\Models\SemesterRegistration::where('student_id', $reg->student->student_id)
+                    ->where('intake_id', $reg->intake_id)
+                    ->latest()
+                    ->first();
+
                 return [
                     'student_id' => $reg->student->student_id,
                     'name' => $reg->student->name_with_initials,
                     'email' => $reg->student->email,
                     'nic' => $reg->student->id_value,
+                    'status' => $semReg?->status ?? 'pending',
                 ];
             });
+
         return response()->json(['success' => true, 'students' => $students]);
     }
+
 
     // 4. Get all possible semesters for a course (for semester creation page)
     public function getAllSemestersForCourse(Request $request) {
@@ -254,12 +231,12 @@ class SemesterRegistrationController extends Controller
         if (!$course || !$course->no_of_semesters) {
             return response()->json(['success' => false, 'semesters' => [], 'message' => 'Course not found or no semesters defined.']);
         }
-        
+
         // Get the semesters that have already been created for this course
         $createdSemesterNames = \App\Models\Semester::where('course_id', $courseId)
             ->pluck('name')
             ->toArray();
-        
+
         // Generate all possible semesters for this course (1 to no_of_semesters)
         $allPossibleSemesters = [];
         for ($i = 1; $i <= $course->no_of_semesters; $i++) {
@@ -271,7 +248,32 @@ class SemesterRegistrationController extends Controller
                 ];
             }
         }
-            
+
         return response()->json(['success' => true, 'semesters' => $allPossibleSemesters]);
     }
-} 
+
+    public function updateStatus(Request $request)
+    {
+        $request->validate([
+            'student_id' => 'required|integer',
+            'semester_id' => 'required|integer',
+            'intake_id' => 'required|integer',
+            'status' => 'required|in:registered,terminated',
+        ]);
+
+        $reg = \App\Models\SemesterRegistration::updateOrCreate(
+            [
+                'student_id' => $request->student_id,
+                'semester_id' => $request->semester_id,
+            ],
+            [
+                'intake_id' => $request->intake_id,
+                'status' => $request->status,
+                'updated_at' => now(),
+            ]
+        );
+
+        return response()->json(['success' => true, 'message' => 'Status updated successfully.']);
+    }
+
+}

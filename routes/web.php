@@ -60,7 +60,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
      // Dashboard Page - All authenticated users can access
      Route::get('/dashboard', [DashboardController::class, 'showDashboard'])->name('dashboard');
-     
+
      // Student Registration Routes - DGM, Program Administrator (level 01), Program Administrator (level 02), Student Counselor, Bursar, Marketing Manager, Developer
      Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Student Counselor,Bursar,Marketing Manager,Developer'])->group(function () {
          Route::get('/student/register', [StudentRegistraionController::class, 'showStudentRegistration'])->name('student.registration');
@@ -87,7 +87,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // User Page - All authenticated users can access
     Route::get('/user', [UserProfileController::class, 'showUserProfile'])->name('user.profile');
     Route::post('/user/change-password', [UserProfileController::class, 'changePassword'])->name('user.changePassword');
-    
+
     // User management - Only DGM, Program Administrator (level 01), and Developer can create/update/delete users
     Route::middleware(['role:DGM,Program Administrator (level 01),Developer'])->group(function () {
         Route::get('/user/create', [UserProfileController::class, 'showCreateUserForm'])->name('create.user');
@@ -97,7 +97,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::post('/user/get-details', [UserProfileController::class, 'getUserDetails'])->name('user.getDetails');
         Route::post('/user/reset-password', [UserProfileController::class, 'resetPassword'])->name('user.resetPassword');
     });
-   
+
     // Remove DGM user management create user routes (user.create) from the DGM user management context
     // Only keep user listing, edit, and delete routes for this page
 
@@ -151,7 +151,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // Module Management Page - DGM, Program Administrator (level 01), Program Administrator (level 02), Developer
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Developer'])->group(function () {
         Route::get('/module-management', [ModuleManagementController::class, 'showModuleManagement'])->name('module.management');
-        
+
         // Module Management API routes
         Route::post('/module-management/get-intakes', [ModuleManagementController::class, 'getIntakes'])->name('module.management.getIntakes');
         Route::post('/module-management/get-students', [ModuleManagementController::class, 'getStudents'])->name('module.management.getStudents');
@@ -180,13 +180,13 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::post('/file/upload', [FileManagementController::class, 'uploadFile'])->name('file.upload');
         Route::post('/file/upload-multiple', [FileManagementController::class, 'uploadMultipleFiles'])->name('file.uploadMultiple');
         Route::get('/file/download', [FileManagementController::class, 'downloadFile'])->name('file.download');
-        
+
         // File management routes
         Route::delete('/file/delete', [FileManagementController::class, 'deleteFile'])->name('file.delete');
         Route::delete('/file/delete-multiple', [FileManagementController::class, 'deleteMultipleFiles'])->name('file.deleteMultiple');
         Route::get('/file/info', [FileManagementController::class, 'getFileInfo'])->name('file.info');
         Route::get('/file/list', [FileManagementController::class, 'listFiles'])->name('file.list');
-        
+
         // Storage management routes
         Route::get('/file/storage-stats', [FileManagementController::class, 'getStorageStats'])->name('file.storageStats');
         Route::post('/file/cleanup', [FileManagementController::class, 'cleanupOrphanedFiles'])->name('file.cleanup');
@@ -196,14 +196,14 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Developer'])->group(function () {
         // Reporting dashboard
         Route::get('/reporting', [ReportingController::class, 'showReportingDashboard'])->name('reporting.dashboard');
-        
+
         // Report generation routes
         Route::post('/reporting/enrollment', [ReportingController::class, 'generateStudentEnrollmentReport'])->name('reporting.enrollment');
         Route::post('/reporting/performance', [ReportingController::class, 'generateCoursePerformanceReport'])->name('reporting.performance');
         Route::post('/reporting/attendance', [ReportingController::class, 'generateAttendanceReport'])->name('reporting.attendance');
         Route::post('/reporting/financial', [ReportingController::class, 'generateFinancialReport'])->name('reporting.financial');
         Route::post('/reporting/module', [ReportingController::class, 'generateModuleAssignmentReport'])->name('reporting.module');
-        
+
         // Report export routes
         Route::post('/reporting/export', [ReportingController::class, 'exportReport'])->name('reporting.export');
     });
@@ -214,19 +214,19 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Developer'])->group(function () {
         // Dashboard
         Route::get('/data-export-import', [DataExportImportController::class, 'showDashboard'])->name('data.export.import');
-        
+
         // Export routes
         Route::post('/data-export/students', [DataExportImportController::class, 'exportStudents'])->name('data.export.students');
         Route::post('/data-export/courses', [DataExportImportController::class, 'exportCourses'])->name('data.export.courses');
         Route::post('/data-export/attendance', [DataExportImportController::class, 'exportAttendance'])->name('data.export.attendance');
         Route::post('/data-export/exam-results', [DataExportImportController::class, 'exportExamResults'])->name('data.export.examResults');
-        
+
         // Import routes
         Route::post('/data-import/students', [DataExportImportController::class, 'importStudents'])->name('data.import.students');
-        
+
         // Template routes
         Route::get('/data-import/template', [DataExportImportController::class, 'getImportTemplate'])->name('data.import.template');
-        
+
         // Statistics
         Route::get('/data-export/stats', [DataExportImportController::class, 'getExportStats'])->name('data.export.stats');
     });
@@ -369,7 +369,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/student/certificate/download/{id}', [StudentProfileController::class, 'downloadCertificate'])->name('student.certificate.download');
         Route::post('/student/certificate-upload', [StudentProfileController::class, 'uploadCertificate'])->name('student.certificate.upload');
         Route::get('/get-academic-details', [AcademicDetailsController::class, 'getAcademicDetails'])->name('academic.details');
-        
+
         // Payment API routes
         Route::get('/api/student/{studentId}/course/{courseId}/intakes', [StudentProfileController::class, 'getIntakesForCourse'])->name('student.intakes.for.course');
         Route::get('/api/student/{studentId}/course/{courseId}/intake/{intake}/payment-details', [StudentProfileController::class, 'getPaymentDetails'])->name('student.payment.details');
@@ -387,9 +387,9 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/student/{studentId}/certificates', [StudentProfileController::class, 'getStudentCertificates']);
     });
 
-    
 
-    
+
+
     // Timetable Management - Program Administrator (level 02) and Developer only
     Route::get('/timetable', [TimetableController::class, 'showTimetable'])->name('timetable.show');
     Route::post('/timetable', [TimetableController::class, 'store'])->name('timetable.store');
@@ -469,7 +469,7 @@ Route::middleware(['auth', 'role:DGM,Student Counselor,Developer,Program Adminis
         App\Http\Controllers\EligibilityCheckingAndRegistrationController::class,
         'sendSpecialApprovalRequest',
     ]);
-    
+
     // Test route for debugging
     Route::post('/test-special-approval', function(Request $request) {
         return response()->json([
@@ -496,7 +496,8 @@ Route::middleware(['auth', 'role:Program Administrator (level 01),Program Admini
     Route::get('/semester-registration/get-open-semesters', [App\Http\Controllers\SemesterRegistrationController::class, 'getOpenSemesters'])->name('semester.registration.getOpenSemesters');
     Route::get('/semester-registration/get-eligible-students', [App\Http\Controllers\SemesterRegistrationController::class, 'getEligibleStudents'])->name('semester.registration.getEligibleStudents');
     Route::get('/semester-registration/get-all-semesters-for-course', [App\Http\Controllers\SemesterRegistrationController::class, 'getAllSemestersForCourse'])->name('semester.registration.getAllSemestersForCourse');
-    
+    Route::post('/semester-registration/update-status', [App\Http\Controllers\SemesterRegistrationController::class, 'updateStatus'])->name('semester.registration.updateStatus');
+
     // Test route for debugging semester registration
     Route::post('/test-semester-registration', function(Request $request) {
         \Log::info('Test semester registration data:', $request->all());
