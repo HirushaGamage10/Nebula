@@ -621,11 +621,16 @@
                   <div class="tab-pane fade" id="certificates">
                     <h5 class="mt-4 mb-3 fw-bold">Certificates</h5>
                     <div class="mb-3 row align-items-center mx-3">
-                      <label for="olCertificate" class="col-sm-3 col-form-label fw-bold">O/L Certificate</label>
-                      
+                      <label class="col-sm-3 col-form-label fw-bold">O/L Certificate</label>
+                      <div class="col-sm-9" id="olCertificate"></div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
-                      <label for="alCertificate" class="col-sm-3 col-form-label fw-bold">A/L Certificate</label>
+                      <label class="col-sm-3 col-form-label fw-bold">A/L Certificate</label>
+                      <div class="col-sm-9" id="alCertificate"></div>
+                    </div>
+                    <div class="mb-3 row align-items-center mx-3">
+                      <label class="col-sm-3 col-form-label fw-bold">Disciplinary Issue Document</label>
+                      <div class="col-sm-9" id="disciplinaryDocument"></div>
                     </div>
                   </div>
 
@@ -759,6 +764,8 @@ function showErrorMessage(message) {
       });
     }
 
+
+
     // O/L Section
     if (ol_pending) {
       $('#academic').append(
@@ -855,6 +862,36 @@ function showErrorMessage(message) {
         </div>
       `);
     }
+
+    function fetchStudentCertificates() {
+      const studentId = $('#studentIdHidden').val();
+      if (!studentId) return;
+      $.ajax({
+        url: '/api/student/' + studentId + '/certificates',
+        method: 'GET',
+        success: function (res) {
+          if (res.success) {
+            $('#olCertificate').html(res.ol_certificate
+              ? `<a href="/storage/certificates/${res.ol_certificate}" target="_blank">View Certificate</a>`
+              : '<span class="text-muted">Not uploaded</span>');
+            $('#alCertificate').html(res.al_certificate
+              ? `<a href="/storage/certificates/${res.al_certificate}" target="_blank">View Certificate</a>`
+              : '<span class="text-muted">Not uploaded</span>');
+            $('#disciplinaryDocument').html(res.disciplinary_issue_document
+              ? `<a href="/storage/${res.disciplinary_issue_document}" target="_blank">View Document</a>`
+              : '<span class="text-muted">Not uploaded</span>');
+          } else {
+            $('#olCertificate, #alCertificate, #disciplinaryDocument').html('<span class="text-muted">Not uploaded</span>');
+          }
+        }
+      });
+    }
+
+    // Fetch certificates when the Certificates tab is shown
+    $('a[data-bs-toggle="tab"][href="#certificates"]').on('shown.bs.tab', function () {
+      fetchStudentCertificates();
+    });
+
 
     // Populate all personal detail fields
       $('#studentIdHidden').val(student.student_id || '');

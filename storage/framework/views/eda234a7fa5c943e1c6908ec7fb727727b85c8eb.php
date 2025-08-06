@@ -100,7 +100,7 @@
                                                         <span class="badge bg-danger">Rejected</span>
                                                     <?php endif; ?>
                                                 </td>
-                                                <td><?php echo e($request->processed_at->format('d/m/Y H:i')); ?></td>
+                                                <td><?php echo e($request->approved_at ? $request->approved_at->format('d/m/Y H:i') : 'N/A'); ?></td>
                                                 <td><?php echo e($request->remarks ?: 'No remarks'); ?></td>
                                             </tr>
                                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
