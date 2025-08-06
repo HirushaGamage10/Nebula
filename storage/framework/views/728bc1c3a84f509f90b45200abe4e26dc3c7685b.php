@@ -616,30 +616,77 @@
                   </div>
 
                   <!-- Certificates Tab Content -->
-                  <div class="tab-pane fade" id="certificates">
-                    <h5 class="mt-4 mb-3 fw-bold">Certificates</h5>
-                    <div class="mb-3 row align-items-center mx-3">
-                      <label for="olCertificate" class="col-sm-3 col-form-label fw-bold">O/L Certificate</label>
-                      <div class="col-sm-9">
-                        <?php if(!empty($student->exams[0]->ol_certificate)): ?>
-                          <a href="<?php echo e(asset('storage/certificates/' . $student->exams[0]->ol_certificate)); ?>" target="_blank">View Certificate</a>
-                        <?php else: ?>
-                          <span class="text-muted">Not uploaded</span>
-                        <?php endif; ?>
-                      </div>
-                    </div>
-                    <div class="mb-3 row align-items-center mx-3">
-                      <label for="alCertificate" class="col-sm-3 col-form-label fw-bold">A/L Certificate</label>
-                      <div class="col-sm-9">
-                        <?php if(!empty($student->exams[1]->al_certificate)): ?>
-                          <a href="<?php echo e(asset('storage/certificates/' . $student->exams[1]->al_certificate)); ?>" target="_blank">View Certificate</a>
-                        <?php else: ?>
-                          <span class="text-muted">Not uploaded</span>
-                        <?php endif; ?>
-                      </div>
-                    </div>
-                  </div>
-
+<div class="tab-pane fade" id="certificates">
+  <h5 class="mt-4 mb-3 fw-bold">Certificates</h5>
+  <div class="mb-3 row align-items-center mx-3">
+    <label class="col-sm-3 col-form-label fw-bold">O/L Certificate</label>
+    <div class="col-sm-9">
+      <?php
+        // Get latest OL exam with certificate
+        $ol_exam = null;
+        if (!empty($student->exams)) {
+          foreach ($student->exams as $exam) {
+            if (!empty($exam->ol_certificate)) {
+              $ol_exam = $exam;
+              break;
+            }
+          }
+        }
+        $ol_cert = $ol_exam->ol_certificate ?? null;
+      ?>
+      <?php if(!empty($ol_cert)): ?>
+        <a href="<?php echo e(asset('storage/certificates/' . $ol_cert)); ?>" target="_blank" class="btn btn-outline-primary btn-sm">
+          <i class="ti ti-download"></i> Download O/L Certificate
+        </a>
+        <span class="ms-2"><?php echo e($ol_cert); ?></span>
+      <?php else: ?>
+        <span class="text-muted">Not uploaded</span>
+      <?php endif; ?>
+    </div>
+  </div>
+  <div class="mb-3 row align-items-center mx-3">
+    <label class="col-sm-3 col-form-label fw-bold">A/L Certificate</label>
+    <div class="col-sm-9">
+      <?php
+        // Get latest AL exam with certificate
+        $al_exam = null;
+        if (!empty($student->exams)) {
+          foreach ($student->exams as $exam) {
+            if (!empty($exam->al_certificate)) {
+              $al_exam = $exam;
+              break;
+            }
+          }
+        }
+        $al_cert = $al_exam->al_certificate ?? null;
+      ?>
+      <?php if(!empty($al_cert)): ?>
+        <a href="<?php echo e(asset('storage/certificates/' . $al_cert)); ?>" target="_blank" class="btn btn-outline-primary btn-sm">
+          <i class="ti ti-download"></i> Download A/L Certificate
+        </a>
+        <span class="ms-2"><?php echo e($al_cert); ?></span>
+      <?php else: ?>
+        <span class="text-muted">Not uploaded</span>
+      <?php endif; ?>
+    </div>
+  </div>
+  <div class="mb-3 row align-items-center mx-3">
+    <label class="col-sm-3 col-form-label fw-bold">Disciplinary Issue Document</label>
+    <div class="col-sm-9">
+      <?php
+        $disciplinary_doc = !empty($student->other_information) ? $student->other_information->disciplinary_issue_document : null;
+      ?>
+      <?php if(!empty($disciplinary_doc)): ?>
+        <a href="<?php echo e(asset('storage/disciplinary_documents/' . $disciplinary_doc)); ?>" target="_blank" class="btn btn-outline-primary btn-sm">
+          <i class="ti ti-download"></i> Download Disciplinary Document
+        </a>
+        <span class="ms-2"><?php echo e($disciplinary_doc); ?></span>
+      <?php else: ?>
+        <span class="text-muted">Not uploaded</span>
+      <?php endif; ?>
+    </div>
+  </div>
+</div>
                   <!-- History Tab Content -->
                   <div class="tab-pane fade" id="history">
                     <h5 class="fw-bold mb-3">Course Registration History</h5>

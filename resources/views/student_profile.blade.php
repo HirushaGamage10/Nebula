@@ -622,23 +622,10 @@
                     <h5 class="mt-4 mb-3 fw-bold">Certificates</h5>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="olCertificate" class="col-sm-3 col-form-label fw-bold">O/L Certificate</label>
-                      <div class="col-sm-9">
-                        @if(!empty($student->exams[0]->ol_certificate))
-                          <a href="{{ asset('storage/certificates/' . $student->exams[0]->ol_certificate) }}" target="_blank">View Certificate</a>
-                        @else
-                          <span class="text-muted">Not uploaded</span>
-                        @endif
-                      </div>
+                      
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                       <label for="alCertificate" class="col-sm-3 col-form-label fw-bold">A/L Certificate</label>
-                      <div class="col-sm-9">
-                        @if(!empty($student->exams[1]->al_certificate))
-                          <a href="{{ asset('storage/certificates/' . $student->exams[1]->al_certificate) }}" target="_blank">View Certificate</a>
-                        @else
-                          <span class="text-muted">Not uploaded</span>
-                        @endif
-                      </div>
                     </div>
                   </div>
 

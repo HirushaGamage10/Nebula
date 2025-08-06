@@ -481,4 +481,37 @@ class StudentProfileController extends Controller
             'clearances' => $clearances
         ]);
     }
+
+    
+    public function getStudentCertificates($studentId)
+    {
+        $student = \App\Models\Student::find($studentId);
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+        }
+
+        // Get latest OL and AL exam records
+        $ol_exam = \App\Models\StudentExam::where('student_id', $studentId)
+            ->whereNotNull('ol_certificate')
+            ->orderByDesc('created_at')
+            ->first();
+
+        $al_exam = \App\Models\StudentExam::where('student_id', $studentId)
+            ->whereNotNull('al_certificate')
+            ->orderByDesc('created_at')
+            ->first();
+
+        $otherInfo = \App\Models\StudentOtherInformation::where('student_id', $studentId)->first();
+
+        $ol_cert = $ol_exam && !empty($ol_exam->ol_certificate) ? $ol_exam->ol_certificate : null;
+        $al_cert = $al_exam && !empty($al_exam->al_certificate) ? $al_exam->al_certificate : null;
+        $disciplinary_doc = $otherInfo && !empty($otherInfo->disciplinary_issue_document) ? $otherInfo->disciplinary_issue_document : null;
+
+        return response()->json([
+            'success' => true,
+            'ol_certificate' => $ol_cert,
+            'al_certificate' => $al_cert,
+            'disciplinary_issue_document' => $disciplinary_doc,
+        ]);
+    }
 }

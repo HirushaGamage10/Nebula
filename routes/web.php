@@ -383,6 +383,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/api/student/{studentId}/course/{courseId}/semester/{semester}/attendance', [StudentProfileController::class, 'getAttendance']);
 
         Route::get('/api/student/{studentId}/clearances', [StudentProfileController::class, 'getStudentClearances']);
+
+        Route::get('/student/{studentId}/certificates', [StudentProfileController::class, 'getStudentCertificates']);
     });
 
     
