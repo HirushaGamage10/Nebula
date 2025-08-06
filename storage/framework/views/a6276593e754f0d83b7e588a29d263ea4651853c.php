@@ -223,4 +223,4 @@
 </body>
 </html>
 
-<?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/inc/app.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\xampp\htdocs\nebula new\Nebula\resources\views/inc/app.blade.php ENDPATH**/ ?>

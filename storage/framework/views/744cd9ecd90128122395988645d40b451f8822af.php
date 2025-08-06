@@ -54,6 +54,17 @@
                     </div>
                 </div>
                 <div class="mb-3 row mx-3" id="students_table_row" style="display:none;">
+                    <ul class="nav nav-tabs mb-3" id="statusTabs">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#" data-status="all">All</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-status="registered">Registered</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-status="terminated">Terminated</a>
+                </li>
+                </ul>
                     <div class="col-sm-12">
                         <div class="table-responsive">
                             <table class="table table-bordered" id="students_table">
@@ -63,7 +74,8 @@
                                         <th>Name</th>
                                         <th>Email</th>
                                         <th>NIC</th>
-                                        <th>Register</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -114,7 +126,7 @@ document.addEventListener('DOMContentLoaded', function() {
         select.innerHTML = `<option value="" selected disabled>${placeholder}</option>`;
         select.disabled = true;
     }
-    
+
     function resetSpecialization() {
         document.getElementById('specialization').innerHTML = '<option value="">Select Specialization</option>';
         document.getElementById('specialization_row').style.display = 'none';
@@ -131,10 +143,10 @@ document.addEventListener('DOMContentLoaded', function() {
         studentsTableBody.innerHTML = '';
         document.getElementById('students_table_row').style.display = 'none';
         resetSpecialization();
-        
+
         // Update hidden location field
         document.getElementById('location_hidden').value = this.value;
-        
+
         if (locationSelect.value) {
             fetch(`/semester-registration/get-courses-by-location?location=${encodeURIComponent(locationSelect.value)}`)
                 .then(res => res.json())
@@ -159,7 +171,7 @@ document.addEventListener('DOMContentLoaded', function() {
         studentsTableBody.innerHTML = '';
         document.getElementById('students_table_row').style.display = 'none';
         document.getElementById('specialization_row').style.display = 'none';
-        
+
         if (courseSelect.value && locationSelect.value) {
             // First, check if the course has specializations
             fetch(`/api/courses/${courseSelect.value}`)
@@ -177,10 +189,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else if (Array.isArray(data.course.specializations)) {
                             specializations = data.course.specializations;
                         }
-                        
+
                         // Filter out empty/null values
                         specializations = specializations.filter(spec => spec && spec.trim() !== '');
-                        
+
                         if (specializations.length > 0) {
                             let options = '<option value="">Select Specialization</option>';
                             specializations.forEach(spec => {
@@ -199,7 +211,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Error fetching course details:', error);
                     document.getElementById('specialization_row').style.display = 'none';
                 });
-            
+
             // Then fetch intakes
             fetch(`/semester-registration/get-ongoing-intakes?course_id=${encodeURIComponent(courseSelect.value)}&location=${encodeURIComponent(locationSelect.value)}`)
                 .then(res => res.json())
@@ -228,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 intake_id: intakeSelect.value,
                 location: locationSelect.value
             });
-            
+
             fetch(`/semester-registration/get-open-semesters?course_id=${encodeURIComponent(courseSelect.value)}&intake_id=${encodeURIComponent(intakeSelect.value)}&location=${encodeURIComponent(locationSelect.value)}`)
                 .then(res => res.json())
                 .then(data => {
@@ -236,8 +248,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.success && data.semesters.length > 0) {
                         let options = '<option value="" selected disabled>Select Semester</option>';
                         data.semesters.forEach(sem => {
-                            const statusText = sem.status === 'active' ? ' (Active)' : 
-                                             sem.status === 'upcoming' ? ' (Upcoming)' : 
+                            const statusText = sem.status === 'active' ? ' (Active)' :
+                                             sem.status === 'upcoming' ? ' (Upcoming)' :
                                              sem.status === 'completed' ? ' (Completed)' : '';
                             options += `<option value="${sem.semester_id}">${sem.semester_name}${statusText}</option>`;
                         });
@@ -258,11 +270,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     semesterSelect.addEventListener('change', function() {
         console.log('Semester selected:', this.value);
-        
+
         // Reset students table
         studentsTableBody.innerHTML = '';
         document.getElementById('students_table_row').style.display = 'none';
-        
+
         if (courseSelect.value && intakeSelect.value && semesterSelect.value) {
             // Check if the course has specializations
             fetch(`/api/courses/${courseSelect.value}`)
@@ -280,10 +292,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else if (Array.isArray(data.course.specializations)) {
                             specializations = data.course.specializations;
                         }
-                        
+
                         // Filter out empty/null values
                         specializations = specializations.filter(spec => spec && spec.trim() !== '');
-                        
+
                         if (specializations.length > 0) {
                             // Show specialization dropdown
                             let options = '<option value="">Select Specialization</option>';
@@ -314,27 +326,40 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Function to load students table
-    function loadStudentsTable() {
+    function loadStudentsTable(filterStatus = 'all') {
         console.log('Loading students table...');
         studentsTableBody.innerHTML = '';
         document.getElementById('students_table_row').style.display = 'none';
-        
+
         if (courseSelect.value && intakeSelect.value && semesterSelect.value) {
             fetch(`/semester-registration/get-eligible-students?course_id=${encodeURIComponent(courseSelect.value)}&intake_id=${encodeURIComponent(intakeSelect.value)}`)
                 .then(res => res.json())
                 .then(data => {
                     console.log('Students API response:', data);
                     if (data.success && data.students.length > 0) {
+                        let filtered = data.students;
+                        if (filterStatus !== 'all') {
+                            filtered = filtered.filter(stu => stu.status === filterStatus);
+                        }
+
                         let rows = '';
-                        data.students.forEach(student => {
-                            rows += `<tr>
+                        filtered.forEach(student => {
+                            rows += `<tr data-student-id="${student.student_id}" data-status="${student.status}" class="${student.status === 'terminated' ? 'table-danger' : ''}">
                                 <td>${student.student_id}</td>
                                 <td>${student.name}</td>
                                 <td>${student.email}</td>
                                 <td>${student.nic}</td>
-                                <td><input type="checkbox" name="register_students[]" value="${student.student_id}"></td>
+                                <td class="student-status">${student.status}</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-outline-success btn-sm toggle-selection ${student.status === 'registered' ? 'active' : ''}" data-action="registered">Register</button>
+                                        <button type="button" class="btn btn-outline-danger btn-sm toggle-selection ${student.status === 'terminated' ? 'active' : ''}" data-action="terminated">Terminate</button>
+                                    </div>
+                                </td>
                             </tr>`;
+
                         });
+
                         studentsTableBody.innerHTML = rows;
                         document.getElementById('students_table_row').style.display = '';
                         console.log('Students table loaded with', data.students.length, 'students');
@@ -352,10 +377,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    document.querySelectorAll('#statusTabs .nav-link').forEach(tab => {
+        tab.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelectorAll('#statusTabs .nav-link').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            loadStudentsTable(this.dataset.status);
+        });
+    });
+
+
     // Add event listener for specialization dropdown
     document.getElementById('specialization').addEventListener('change', function() {
         document.getElementById('specialization_hidden').value = this.value;
-        
+
         // Load students table when specialization is selected
         loadStudentsTable();
     });
@@ -363,18 +398,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle form submission
     document.getElementById('courseForm').addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         // Get selected students
         const selectedStudents = [];
-        document.querySelectorAll('input[name="register_students[]"]:checked').forEach(checkbox => {
-            selectedStudents.push(checkbox.value);
+        document.querySelectorAll('#students_table tbody tr').forEach(row => {
+            const studentId = row.dataset.studentId;
+            const status = row.dataset.status;
+            selectedStudents.push({ student_id: studentId, status: status });
         });
-        
+
+
         if (selectedStudents.length === 0) {
             alert('Please select at least one student to register.');
             return;
         }
-        
+
         // Prepare form data
         const formData = new FormData();
         formData.append('course_id', courseSelect.value);
@@ -384,19 +422,19 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('specialization', document.getElementById('specialization_hidden').value);
         formData.append('register_students', JSON.stringify(selectedStudents));
         formData.append('_token', document.querySelector('input[name="_token"]').value);
-        
+
         // Debug: Log the form data being sent
         console.log('Form data being sent:');
         for (let [key, value] of formData.entries()) {
             console.log(key + ': ' + value);
         }
-        
+
         // Show loading state
         const submitBtn = document.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
         submitBtn.disabled = true;
         submitBtn.textContent = 'Registering...';
-        
+
         // Submit form via AJAX
         fetch('<?php echo e(route("semester.registration.store")); ?>', {
             method: 'POST',
@@ -422,7 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 // Show success message
                 showToast(data.message, 'success');
-                
+
                 // Reset form
                 setTimeout(() => {
                     document.getElementById('courseForm').reset();
@@ -451,9 +489,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function showToast(message, type) {
         // Remove existing toasts
         document.querySelectorAll('.toast').forEach(toast => toast.remove());
-        
+
         const toastContainer = document.querySelector('.toast-container') || createToastContainer();
-        
+
         const toastHtml = `
             <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
                 <div class="toast-header bg-${type === 'success' ? 'success' : 'danger'} text-white">
@@ -465,9 +503,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
         `;
-        
+
         toastContainer.innerHTML = toastHtml;
-        
+
         // Auto-hide after 5 seconds
         setTimeout(() => {
             const toast = toastContainer.querySelector('.toast');
@@ -485,6 +523,25 @@ document.addEventListener('DOMContentLoaded', function() {
         return container;
     }
 });
+
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('toggle-selection')) {
+        const button = e.target;
+        const row = button.closest('tr');
+        const action = button.dataset.action;
+
+        // Set visual toggle
+        row.querySelectorAll('.toggle-selection').forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+
+        // Update hidden data-status on row
+        row.dataset.status = action;
+        row.querySelector('.student-status').textContent = action;
+    }
+});
+
+
 </script>
-<?php $__env->stopSection(); ?> 
-<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Users/inazawaelectronics/Documents/SLT/Nebula/resources/views/semester_registration.blade.php ENDPATH**/ ?>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\xampp\htdocs\nebula new\Nebula\resources\views/semester_registration.blade.php ENDPATH**/ ?>
