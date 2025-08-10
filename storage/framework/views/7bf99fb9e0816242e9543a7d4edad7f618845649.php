@@ -1,8 +1,6 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | Student List'); ?>
 
-@section('title', 'NEBULA | Student List')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
   <div class="card">
     <div class="card-body">
@@ -22,9 +20,9 @@
           <div class="col-sm-10">
             <select class="form-select" id="location">
               <option value="" selected disabled>Select a Location</option>
-              @foreach($locations as $loc)
-                <option value="{{ $loc }}">Nebula Institute of Technology - {{ $loc }}</option>
-              @endforeach
+              <?php $__currentLoopData = $locations; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $loc): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                <option value="<?php echo e($loc); ?>">Nebula Institute of Technology - <?php echo e($loc); ?></option>
+              <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </select>
           </div>
         </div>
@@ -98,7 +96,7 @@
   </div>
 </div>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   const locationSelect = document.getElementById('location');
@@ -197,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showSpinner(true);
     fetch('/get-student-list-data', {
       method:'POST',
-      headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},
+      headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'<?php echo e(csrf_token()); ?>'},
       body: JSON.stringify({location, course_id:courseId, intake_id:intakeId})
     })
     .then(r=>r.json())
@@ -273,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.createElement('form');
     form.method='POST'; form.action='/download-student-list'; form.target='_blank'; form.style.display='none';
     form.innerHTML = `
-      <input type="hidden" name="_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="_token" value="<?php echo e(csrf_token()); ?>">
       <input type="hidden" name="location" value="${location}">
       <input type="hidden" name="course_id" value="${courseId}">
       <input type="hidden" name="intake_id" value="${intakeId}">
@@ -297,5 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
   @keyframes lds-ring { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
   #spinner-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; justify-content:center; align-items:center; z-index:9999; }
 </style>
-@endpush
-@endsection
+<?php $__env->stopPush(); ?>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/nebula/Nebula/resources/views/student_list.blade.php ENDPATH**/ ?>

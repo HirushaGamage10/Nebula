@@ -30,11 +30,11 @@
                 <hr>
 
                 <div class="filter-details">
-                    <strong>Location:</strong> {{ $locationText }}<br>
-                    <strong>Course:</strong> {{ $courseText }}<br>
-                    <strong>Batch:</strong> {{ $intakeText }}<br>
+                    <strong>Location:</strong> <?php echo e($locationText); ?><br>
+                    <strong>Course:</strong> <?php echo e($courseText); ?><br>
+                    <strong>Batch:</strong> <?php echo e($intakeText); ?><br>
                     <strong>View:</strong>
-                    @if(($status ?? 'all') === 'all') All @else {{ ucfirst($status) }} @endif
+                    <?php if(($status ?? 'all') === 'all'): ?> All <?php else: ?> <?php echo e(ucfirst($status)); ?> <?php endif; ?>
                 </div>
 
                 <div class="mt-4">
@@ -49,26 +49,26 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($students as $i => $st)
+                            <?php $__empty_1 = true; $__currentLoopData = $students; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $st): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                                 <tr>
-                                    <td style="text-align:center;">{{ $i + 1 }}</td>
-                                    <td style="text-align:center;">{{ $st->course_registration_id }}</td>
-                                    <td style="text-align:center;">{{ $st->student_id }}</td>
-                                    <td>{{ $st->name }}</td>
+                                    <td style="text-align:center;"><?php echo e($i + 1); ?></td>
+                                    <td style="text-align:center;"><?php echo e($st->course_registration_id); ?></td>
+                                    <td style="text-align:center;"><?php echo e($st->student_id); ?></td>
+                                    <td><?php echo e($st->name); ?></td>
                                     <td style="text-align:center;">
-                                        <span class="status-chip">{{ $st->status }}</span>
+                                        <span class="status-chip"><?php echo e($st->status); ?></span>
                                     </td>
                                 </tr>
-                            @empty
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                                 <tr>
                                     <td colspan="5" style="text-align:center;">No students found</td>
                                 </tr>
-                            @endforelse
+                            <?php endif; ?>
                         </tbody>
                     </table>
 
                     <div class="mt-2" style="text-align:right;">
-                        <span class="fw-bold">Total Students: {{ $total_count ?? count($students ?? []) }}</span>
+                        <span class="fw-bold">Total Students: <?php echo e($total_count ?? count($students ?? [])); ?></span>
                     </div>
                 </div>
             </div>
@@ -76,3 +76,4 @@
     </div>
 </body>
 </html>
+<?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/nebula/Nebula/resources/views/student_list_pdf.blade.php ENDPATH**/ ?>

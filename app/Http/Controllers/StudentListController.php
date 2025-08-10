@@ -3,99 +3,117 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Models\Course;
 use App\Models\Intake;
-use App\Models\CourseRegistration;
-use App\Models\Student;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class StudentListController extends Controller
 {
-    // Method to show the student list view
     public function showStudentList()
     {
         $locations = ['Welisara', 'Moratuwa', 'Peradeniya'];
         return view('student_list', compact('locations'));
     }
 
+    /**
+     * Return ALL students for the intake from semester_registrations
+     * (the UI can filter by tab). Includes status + course_registration_id.
+     */
     public function getStudentListData(Request $request)
     {
         $request->validate([
-            'location' => 'required|string',
+            'location'  => 'required|string',
             'course_id' => 'required|integer|exists:courses,course_id',
             'intake_id' => 'required|integer|exists:intakes,intake_id',
         ]);
 
-        $students = CourseRegistration::where('location', $request->location)
-            ->where('course_id', $request->course_id)
-            ->where('intake_id', $request->intake_id)
-            ->where(function($query) {
-                $query->where('status', 'Registered')
-                      ->orWhere('approval_status', 'Approved by DGM');
+        $location  = $request->location;
+        $course_id = (int) $request->course_id;
+        $intake_id = (int) $request->intake_id;
+
+        $rows = DB::table('semester_registrations as sr')
+            ->join('students as s', 's.student_id', '=', 'sr.student_id')
+            ->leftJoin('course_registration as cr', function ($j) use ($intake_id, $course_id, $location) {
+                $j->on('cr.student_id', '=', 'sr.student_id')
+                  ->where('cr.intake_id', $intake_id)
+                  ->where('cr.course_id', $course_id)
+                  ->where('cr.location', $location);
             })
-            ->with('student')
-            ->get()
-            ->map(function($reg) {
-                if ($reg->student) {
-                    return [
-                        'course_registration_id' => $reg->course_registration_id,
-                        'student_id' => $reg->student->student_id,
-                        'registration_number' => $reg->student->registration_id ?? $reg->student->student_id,
-                        'name_with_initials' => $reg->student->name_with_initials,
-                    ];
-                }
-                return null;
-            })
-            ->filter(); 
+            ->where('sr.intake_id', $intake_id)
+            ->where('sr.course_id', $course_id)
+            ->where('sr.location', $location)
+            ->select([
+                'sr.student_id',
+                'sr.status', // registered | terminated | ...
+                DB::raw('COALESCE(cr.course_registration_id, "") as course_registration_id'),
+                DB::raw('COALESCE(s.name_with_initials, s.full_name) as name'),
+            ])
+            ->orderByRaw('COALESCE(s.name_with_initials, s.full_name)')
+            ->get();
 
         return response()->json([
-            'success' => true,
-            'students' => $students,
+            'success'  => true,
+            'students' => $rows,
         ]);
     }
 
-    // Download student list as PDF
+    /**
+     * Download the list as PDF.
+     * Optional status filter: all | registered | terminated
+     */
     public function downloadStudentList(Request $request)
     {
         $request->validate([
-            'location' => 'required|string',
+            'location'  => 'required|string',
             'course_id' => 'required|integer|exists:courses,course_id',
             'intake_id' => 'required|integer|exists:intakes,intake_id',
+            'status'    => 'nullable|string|in:all,registered,terminated',
         ]);
 
-        $students = CourseRegistration::where('location', $request->location)
-            ->where('course_id', $request->course_id)
-            ->where('intake_id', $request->intake_id)
-            ->where(function($query) {
-                $query->where('status', 'Registered')
-                      ->orWhere('approval_status', 'Approved by DGM');
+        $location  = $request->location;
+        $course_id = (int) $request->course_id;
+        $intake_id = (int) $request->intake_id;
+        $status    = $request->input('status', 'all');
+
+        $query = DB::table('semester_registrations as sr')
+            ->join('students as s', 's.student_id', '=', 'sr.student_id')
+            ->leftJoin('course_registration as cr', function ($j) use ($intake_id, $course_id, $location) {
+                $j->on('cr.student_id', '=', 'sr.student_id')
+                  ->where('cr.intake_id', $intake_id)
+                  ->where('cr.course_id', $course_id)
+                  ->where('cr.location', $location);
             })
-            ->with(['student', 'course', 'intake'])
+            ->where('sr.intake_id', $intake_id)
+            ->where('sr.course_id', $course_id)
+            ->where('sr.location', $location);
+
+        if ($status !== 'all') {
+            $query->where('sr.status', $status);
+        }
+
+        $students = $query->select([
+                'sr.student_id',
+                'sr.status',
+                DB::raw('COALESCE(cr.course_registration_id, "") as course_registration_id'),
+                DB::raw('COALESCE(s.name_with_initials, s.full_name) as name'),
+            ])
+            ->orderByRaw('COALESCE(s.name_with_initials, s.full_name)')
             ->get();
 
-        // Get course and intake details
-        $course = Course::find($request->course_id);
-        $intake = Intake::find($request->intake_id);
-
-        // Get location text
-        $locationText = 'Nebula Institute of Technology - ' . $request->location;
-        $courseText = $course ? $course->course_name : 'N/A';
-        $intakeText = $intake ? $intake->batch : 'N/A';
+        $course = Course::find($course_id);
+        $intake = Intake::find($intake_id);
 
         $data = [
-            'students' => $students,
-            'location' => $request->location,
-            'locationText' => $locationText,
-            'course' => $course,
-            'courseText' => $courseText,
-            'intake' => $intake,
-            'intakeText' => $intakeText,
-            'total_count' => $students->count(),
-            'isPdf' => true // Flag to indicate this is for PDF generation
+            'students'     => $students,
+            'locationText' => 'Nebula Institute of Technology - ' . $location,
+            'courseText'   => $course?->course_name ?? 'N/A',
+            'intakeText'   => $intake?->batch ?? 'N/A',
+            'total_count'  => $students->count(),
+            'status'       => $status,
         ];
 
-        $pdf = PDF::loadView('student_list_pdf', $data);
-        
+        $pdf = Pdf::loadView('student_list_pdf', $data);
         return $pdf->download('student_list.pdf');
     }
 }
