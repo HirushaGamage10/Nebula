@@ -354,6 +354,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/student-other-information', [StudentOtherInformationController::class, 'showStudentOtherInformation'])->name('student.other.information');
         Route::post('/retrieve-student-details', [StudentOtherInformationController::class, 'getStudentDetails'])->name('retrieve.student.details');
         Route::post('/store-other-informations', [StudentOtherInformationController::class, 'storeOtherInformations'])->name('store.other.informations');
+        Route::post('/reinstate-student', [StudentOtherInformationController::class, 'reinstateStudent'])->name('reinstate.student');
+
     });
 
     // Student Profile Page - DGM, Program Administrator (level 01), Program Administrator (level 02), Student Counselor, Bursar, Marketing Manager, Developer

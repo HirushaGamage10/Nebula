@@ -23,6 +23,14 @@ class Student extends Model
     protected $primaryKey = 'student_id';
     protected $table = 'students';
 
+    /**
+     * Academic status constants
+     */
+    public const ACADEMIC_ACTIVE     = 'active';
+    public const ACADEMIC_TERMINATED = 'terminated';
+    public const ACADEMIC_SUSPENDED  = 'suspended';
+    public const ACADEMIC_GRADUATED  = 'graduated';
+
     protected $fillable = [
         'title',
         'name_with_initials',
@@ -43,23 +51,38 @@ class Student extends Model
         'future_potentials',
         'other_document_upload',
         'remarks',
+
+        // NOTE: existing "status" is marital status in your DB
         'status',
+
         'btec_completed',
         'marketing_survey',
         'blacklisted',
         'user_photo',
+
+        // NEW — academic status fields
+        'academic_status',
+        'academic_status_reason',
+        'academic_status_document',
+        'academic_status_changed_at',
+
         'created_at',
-        'updated_at'
+        'updated_at',
     ];
 
     protected $casts = [
         'foundation_program' => 'boolean',
-        'btec_completed' => 'boolean',
-        'blacklisted' => 'boolean',
-        'birthday' => 'date',
+        'btec_completed'     => 'boolean',
+        'blacklisted'        => 'boolean',
+        'birthday'           => 'date',
+
+        // NEW
+        'academic_status_changed_at' => 'datetime',
     ];
 
-    // Relationships
+    /* =======================
+     * Relationships
+     * ======================= */
     public function exams()
     {
         return $this->hasMany(StudentExam::class, 'student_id', 'student_id');
@@ -115,7 +138,11 @@ class Student extends Model
         return $this->hasOne(StudentOtherInformation::class, 'student_id', 'student_id');
     }
 
-    // Scopes
+    /* =======================
+     * Query Scopes
+     * ======================= */
+
+    // Your existing blacklist scopes
     public function scopeActive($query)
     {
         return $query->where('blacklisted', false);
@@ -131,7 +158,30 @@ class Student extends Model
         return $query->where('institute_location', $location);
     }
 
-    // Accessors
+    // NEW: filter by academic status
+    public function scopeAcademicActive($query)
+    {
+        return $query->where('academic_status', self::ACADEMIC_ACTIVE);
+    }
+
+    public function scopeAcademicTerminated($query)
+    {
+        return $query->where('academic_status', self::ACADEMIC_TERMINATED);
+    }
+
+    public function scopeAcademicSuspended($query)
+    {
+        return $query->where('academic_status', self::ACADEMIC_SUSPENDED);
+    }
+
+    public function scopeAcademicGraduated($query)
+    {
+        return $query->where('academic_status', self::ACADEMIC_GRADUATED);
+    }
+
+    /* =======================
+     * Accessors
+     * ======================= */
     public function getFullNameAttribute($value)
     {
         return ucwords(strtolower($value));
@@ -142,7 +192,9 @@ class Student extends Model
         return strtoupper($value);
     }
 
-    // Mutators
+    /* =======================
+     * Mutators
+     * ======================= */
     public function setEmailAttribute($value)
     {
         $this->attributes['email'] = strtolower($value);
@@ -152,4 +204,23 @@ class Student extends Model
     {
         $this->attributes['mobile_phone'] = preg_replace('/[^0-9]/', '', $value);
     }
-} 
+
+    /* =======================
+     * Helpers
+     * ======================= */
+    public function isAcademicallyActive(): bool
+    {
+        return $this->academic_status === self::ACADEMIC_ACTIVE;
+    }
+
+    public function isTerminated(): bool
+    {
+        return $this->academic_status === self::ACADEMIC_TERMINATED;
+    }
+
+    public function canRegisterForSemester(): bool
+    {
+        // block if terminated or suspended; allow if active or graduated (adjust if needed)
+        return in_array($this->academic_status, [self::ACADEMIC_ACTIVE], true);
+    }
+}
