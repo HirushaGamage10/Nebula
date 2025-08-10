@@ -208,11 +208,20 @@ class AttendanceController extends Controller
 
             $date = Carbon::parse($request->date);
             
+            // Get the semester to convert ID to name
+            $semester = \App\Models\Semester::find($request->semester);
+            if (!$semester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Semester not found.'
+                ], 404);
+            }
+            
             // Delete existing attendance records for this date, course, intake, semester, and module
             Attendance::where('date', $date)
                      ->where('course_id', $request->course_id)
                      ->where('intake_id', $request->intake_id)
-                     ->where('semester', $request->semester)
+                     ->where('semester', $semester->name)
                      ->where('module_id', $request->module_id)
                      ->delete();
 
@@ -223,7 +232,7 @@ class AttendanceController extends Controller
                     'location' => $request->location,
                     'course_id' => $request->course_id,
                     'intake_id' => $request->intake_id,
-                    'semester' => $request->semester,
+                    'semester' => $semester->name,
                     'module_id' => $request->module_id,
                     'date' => $date,
                     'student_id' => $studentData['student_id'],
@@ -263,10 +272,19 @@ class AttendanceController extends Controller
             'date' => 'required|date'
         ]);
 
+        // Get the semester to convert ID to name
+        $semester = \App\Models\Semester::find($request->semester);
+        if (!$semester) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Semester not found.'
+            ], 404);
+        }
+
         $attendance = Attendance::where('location', $request->location)
                                ->where('course_id', $request->course_id)
                                ->where('intake_id', $request->intake_id)
-                               ->where('semester', $request->semester)
+                               ->where('semester', $semester->name)
                                ->where('module_id', $request->module_id)
                                ->where('date', $request->date)
                                ->with('student')

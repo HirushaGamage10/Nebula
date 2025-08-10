@@ -62,6 +62,7 @@ class PaymentDiscountController extends Controller
             $request->validate([
                 'name' => 'required|string|max:255',
                 'type' => 'required|in:percentage,amount',
+                'discount_category' => 'required|in:local_course_fee,registration_fee',
                 'value' => 'required|numeric|min:0',
                 'description' => 'nullable|string'
             ]);
@@ -69,6 +70,7 @@ class PaymentDiscountController extends Controller
             $discount = Discount::create([
                 'name' => $request->name,
                 'type' => $request->type,
+                'discount_category' => $request->discount_category,
                 'value' => $request->value,
                 'status' => 'active',
                 'description' => $request->description
@@ -111,6 +113,31 @@ class PaymentDiscountController extends Controller
         }
     }
 
+    // Get discounts by category (AJAX)
+    public function getDiscountsByCategory(Request $request)
+    {
+        try {
+            $category = $request->input('category');
+            
+            $discounts = Discount::where('status', 'active')
+                ->where('discount_category', $category)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'discounts' => $discounts
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching discounts by category: ' . $e->getMessage());
+            return response()->json([
+                'success' => false, 
+                'message' => 'Error fetching discounts: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     // Update discount (AJAX)
     public function updateDiscount(Request $request)
     {
@@ -119,6 +146,7 @@ class PaymentDiscountController extends Controller
                 'id' => 'required|exists:discounts,id',
                 'name' => 'required|string|max:255',
                 'type' => 'required|in:percentage,amount',
+                'discount_category' => 'required|in:local_course_fee,registration_fee',
                 'value' => 'required|numeric|min:0',
                 'description' => 'nullable|string'
             ]);
@@ -127,6 +155,7 @@ class PaymentDiscountController extends Controller
             $discount->update([
                 'name' => $request->name,
                 'type' => $request->type,
+                'discount_category' => $request->discount_category,
                 'value' => $request->value,
                 'description' => $request->description
             ]);
