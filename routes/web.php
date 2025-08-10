@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 use App\Http\Controllers\{
     AllClearanceController,
     AttendanceController,
@@ -40,6 +41,7 @@ use App\Http\Controllers\{
     PaymentDiscountController,
     PaymentController,
     LatePaymentController,
+    SemesterRegistrationController,
 };
 
 // Default
@@ -489,24 +491,39 @@ Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Ad
 
 // Semester Registration - Program Administrator (level 01), Program Administrator (level 02), Developer
 Route::middleware(['auth', 'role:Program Administrator (level 01),Program Administrator (level 02),Developer'])->group(function () {
-    Route::get('/semester-registration', [App\Http\Controllers\SemesterRegistrationController::class, 'index'])->name('semester.registration');
-    Route::post('/semester-registration/store', [App\Http\Controllers\SemesterRegistrationController::class, 'store'])->name('semester.registration.store');
-    Route::get('/semester-registration/get-courses-by-location', [App\Http\Controllers\SemesterRegistrationController::class, 'getCoursesByLocation'])->name('semester.registration.getCoursesByLocation');
-    Route::get('/semester-registration/get-ongoing-intakes', [App\Http\Controllers\SemesterRegistrationController::class, 'getOngoingIntakes'])->name('semester.registration.getOngoingIntakes');
-    Route::get('/semester-registration/get-open-semesters', [App\Http\Controllers\SemesterRegistrationController::class, 'getOpenSemesters'])->name('semester.registration.getOpenSemesters');
-    Route::get('/semester-registration/get-eligible-students', [App\Http\Controllers\SemesterRegistrationController::class, 'getEligibleStudents'])->name('semester.registration.getEligibleStudents');
-    Route::get('/semester-registration/get-all-semesters-for-course', [App\Http\Controllers\SemesterRegistrationController::class, 'getAllSemestersForCourse'])->name('semester.registration.getAllSemestersForCourse');
-    Route::post('/semester-registration/update-status', [App\Http\Controllers\SemesterRegistrationController::class, 'updateStatus'])->name('semester.registration.updateStatus');
+    
+    // Semester registration management
+    Route::get('/semester-registration', [SemesterRegistrationController::class, 'index'])
+        ->name('semester.registration');
 
-    // Test route for debugging semester registration
-    Route::post('/test-semester-registration', function(Request $request) {
-        \Log::info('Test semester registration data:', $request->all());
-        return response()->json([
-            'success' => true,
-            'message' => 'Test route working',
-            'data' => $request->all()
-        ]);
-    });
+    Route::post('/semester-registration/store', [SemesterRegistrationController::class, 'store'])
+        ->name('semester.registration.store'); // ✅ This fixes your Blade error
+
+    Route::get('/semester-registration/get-courses-by-location', [SemesterRegistrationController::class, 'getCoursesByLocation'])
+        ->name('semester.registration.getCoursesByLocation');
+
+    Route::get('/semester-registration/get-ongoing-intakes', [SemesterRegistrationController::class, 'getOngoingIntakes'])
+        ->name('semester.registration.getOngoingIntakes');
+
+    Route::get('/semester-registration/get-open-semesters', [SemesterRegistrationController::class, 'getOpenSemesters'])
+        ->name('semester.registration.getOpenSemesters');
+
+    Route::get('/semester-registration/get-eligible-students', [SemesterRegistrationController::class, 'getEligibleStudents'])
+        ->name('semester.registration.getEligibleStudents');
+
+    Route::get('/semester-registration/get-all-semesters-for-course', [SemesterRegistrationController::class, 'getAllSemestersForCourse'])
+        ->name('semester.registration.getAllSemestersForCourse');
+
+    Route::post('/semester-registration/update-status', [SemesterRegistrationController::class, 'updateStatus'])
+        ->name('semester.registration.updateStatus');
+
+    // DGM approval actions (if required)
+    Route::post('/semester-registration/approve-reenroll', [SemesterRegistrationController::class, 'approveReRegister'])
+        ->name('semester.registration.approveReenroll');
+
+    Route::post('/semester-registration/reject-reenroll', [SemesterRegistrationController::class, 'rejectReRegister'])
+        ->name('semester.registration.rejectReenroll');
+
 });
 
 // Payment Plan - Marketing Manager and Developer only
@@ -591,3 +608,12 @@ Route::middleware(['auth', 'role:Bursar,Developer'])->group(function () {
 });
 
 Route::get('/courses/by-location', [App\Http\Controllers\SemesterCreationController::class, 'getCoursesByLocation'])->name('courses.byLocation');
+
+Route::middleware(['auth','role:DGM,Developer,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
+    Route::get('/special-approval-list', fn()=>view('Special_approval_list'))->name('special.approval.list');
+
+    // NEW endpoints for the third tab
+    Route::get('/semester-registration/terminated-requests', [SemesterRegistrationController::class,'terminatedRequests']);
+    Route::post('/semester-registration/approve-reregister',   [SemesterRegistrationController::class,'approveReRegister'])->name('semester.registration.approveReRegister');
+    Route::post('/semester-registration/reject-reregister',    [SemesterRegistrationController::class,'rejectReRegister'])->name('semester.registration.rejectReRegister');
+});

@@ -109,34 +109,45 @@
 @endif
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // --- Toast auto-hide ---
     setTimeout(function() {
-        const toasts = document.querySelectorAll('.toast');
-        toasts.forEach(toast => {
+        document.querySelectorAll('.toast').forEach(toast => {
             const bsToast = new bootstrap.Toast(toast);
             bsToast.hide();
         });
     }, 3000);
 
+    // --- DOM refs ---
     const locationSelect = document.getElementById('location');
     const courseSelect = document.getElementById('course_id');
     const intakeSelect = document.getElementById('intake_id');
     const semesterSelect = document.getElementById('semester_id');
     const studentsTableBody = document.querySelector('#students_table tbody');
 
+    // Special approval modal + payload store
+    const saModalEl = document.getElementById('specialApprovalModal');
+    const saFormEl  = document.getElementById('specialApprovalForm');
+    const saStudentIdEl = document.getElementById('sa_student_id');
+    const saReasonEl    = document.getElementById('sa_reason');
+    const saFileEl      = document.getElementById('sa_file');
+    const saModal = saModalEl ? new bootstrap.Modal(saModalEl) : null;
+
+    // Keep per-student SA payload until submit
+    const specialApprovalPayload = {}; // { [studentId]: { reason, file } }
+
+    // --- helpers ---
     function resetAndDisable(select, placeholder) {
         select.innerHTML = `<option value="" selected disabled>${placeholder}</option>`;
         select.disabled = true;
     }
-
     function resetSpecialization() {
         document.getElementById('specialization').innerHTML = '<option value="">Select Specialization</option>';
         document.getElementById('specialization_row').style.display = 'none';
         document.getElementById('specialization_hidden').value = '';
     }
-    function enableSelect(select) {
-        select.disabled = false;
-    }
+    function enableSelect(select) { select.disabled = false; }
 
+    // --- Location change ---
     locationSelect.addEventListener('change', function() {
         resetAndDisable(courseSelect, 'Select Course');
         resetAndDisable(intakeSelect, 'Select Intake');
@@ -145,7 +156,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('students_table_row').style.display = 'none';
         resetSpecialization();
 
-        // Update hidden location field
         document.getElementById('location_hidden').value = this.value;
 
         if (locationSelect.value) {
@@ -166,6 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // --- Course change ---
     courseSelect.addEventListener('change', function() {
         resetAndDisable(intakeSelect, 'Select Intake');
         resetAndDisable(semesterSelect, 'Select Semester');
@@ -174,46 +185,28 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('specialization_row').style.display = 'none';
 
         if (courseSelect.value && locationSelect.value) {
-            // First, check if the course has specializations
+            // Specializations
             fetch(`/api/courses/${courseSelect.value}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.success && data.course && data.course.specializations) {
                         let specializations = [];
                         if (typeof data.course.specializations === 'string') {
-                            try {
-                                specializations = JSON.parse(data.course.specializations);
-                            } catch (e) {
-                                console.error('Error parsing specializations JSON:', e);
-                                specializations = [];
-                            }
+                            try { specializations = JSON.parse(data.course.specializations); } catch (e) { specializations = []; }
                         } else if (Array.isArray(data.course.specializations)) {
                             specializations = data.course.specializations;
                         }
-
-                        // Filter out empty/null values
                         specializations = specializations.filter(spec => spec && spec.trim() !== '');
-
                         if (specializations.length > 0) {
                             let options = '<option value="">Select Specialization</option>';
-                            specializations.forEach(spec => {
-                                options += `<option value="${spec}">${spec}</option>`;
-                            });
+                            specializations.forEach(spec => { options += `<option value="${spec}">${spec}</option>`; });
                             document.getElementById('specialization').innerHTML = options;
                             document.getElementById('specialization_row').style.display = '';
-                        } else {
-                            document.getElementById('specialization_row').style.display = 'none';
                         }
-                    } else {
-                        document.getElementById('specialization_row').style.display = 'none';
                     }
-                })
-                .catch(error => {
-                    console.error('Error fetching course details:', error);
-                    document.getElementById('specialization_row').style.display = 'none';
                 });
 
-            // Then fetch intakes
+            // Intakes
             fetch(`/semester-registration/get-ongoing-intakes?course_id=${encodeURIComponent(courseSelect.value)}&location=${encodeURIComponent(locationSelect.value)}`)
                 .then(res => res.json())
                 .then(data => {
@@ -231,104 +224,67 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // --- Intake change ---
     intakeSelect.addEventListener('change', function() {
         resetAndDisable(semesterSelect, 'Select Semester');
         studentsTableBody.innerHTML = '';
         document.getElementById('students_table_row').style.display = 'none';
-        if (courseSelect.value && intakeSelect.value && locationSelect.value) {
-            console.log('Fetching semesters for:', {
-                course_id: courseSelect.value,
-                intake_id: intakeSelect.value,
-                location: locationSelect.value
-            });
 
+        if (courseSelect.value && intakeSelect.value && locationSelect.value) {
             fetch(`/semester-registration/get-open-semesters?course_id=${encodeURIComponent(courseSelect.value)}&intake_id=${encodeURIComponent(intakeSelect.value)}&location=${encodeURIComponent(locationSelect.value)}`)
                 .then(res => res.json())
                 .then(data => {
-                    console.log('Semester API response:', data);
                     if (data.success && data.semesters.length > 0) {
                         let options = '<option value="" selected disabled>Select Semester</option>';
                         data.semesters.forEach(sem => {
                             const statusText = sem.status === 'active' ? ' (Active)' :
-                                             sem.status === 'upcoming' ? ' (Upcoming)' :
-                                             sem.status === 'completed' ? ' (Completed)' : '';
+                                               sem.status === 'upcoming' ? ' (Upcoming)' :
+                                               sem.status === 'completed' ? ' (Completed)' : '';
                             options += `<option value="${sem.semester_id}">${sem.semester_name}${statusText}</option>`;
                         });
                         semesterSelect.innerHTML = options;
                         enableSelect(semesterSelect);
-                        console.log('Semester dropdown populated with', data.semesters.length, 'options');
                     } else {
                         resetAndDisable(semesterSelect, 'No semesters available');
-                        console.log('No semesters found or API returned empty array');
                     }
-                })
-                .catch(error => {
-                    console.error('Error fetching semesters:', error);
-                    resetAndDisable(semesterSelect, 'Error loading semesters');
                 });
         }
     });
 
+    // --- Semester change ---
     semesterSelect.addEventListener('change', function() {
-        console.log('Semester selected:', this.value);
-
-        // Reset students table
         studentsTableBody.innerHTML = '';
         document.getElementById('students_table_row').style.display = 'none';
 
         if (courseSelect.value && intakeSelect.value && semesterSelect.value) {
-            // Check if the course has specializations
             fetch(`/api/courses/${courseSelect.value}`)
                 .then(res => res.json())
                 .then(data => {
+                    let specs = [];
                     if (data.success && data.course && data.course.specializations) {
-                        let specializations = [];
                         if (typeof data.course.specializations === 'string') {
-                            try {
-                                specializations = JSON.parse(data.course.specializations);
-                            } catch (e) {
-                                console.error('Error parsing specializations JSON:', e);
-                                specializations = [];
-                            }
+                            try { specs = JSON.parse(data.course.specializations); } catch (e) { specs = []; }
                         } else if (Array.isArray(data.course.specializations)) {
-                            specializations = data.course.specializations;
+                            specs = data.course.specializations;
                         }
-
-                        // Filter out empty/null values
-                        specializations = specializations.filter(spec => spec && spec.trim() !== '');
-
-                        if (specializations.length > 0) {
-                            // Show specialization dropdown
-                            let options = '<option value="">Select Specialization</option>';
-                            specializations.forEach(spec => {
-                                options += `<option value="${spec}">${spec}</option>`;
-                            });
-                            document.getElementById('specialization').innerHTML = options;
-                            document.getElementById('specialization_row').style.display = '';
-                            console.log('Specialization dropdown shown with', specializations.length, 'options');
-                        } else {
-                            // No specializations, load students directly
-                            document.getElementById('specialization_row').style.display = 'none';
-                            loadStudentsTable();
-                        }
+                        specs = specs.filter(s => s && s.trim() !== '');
+                    }
+                    if (specs.length > 0) {
+                        let options = '<option value="">Select Specialization</option>';
+                        specs.forEach(s => { options += `<option value="${s}">${s}</option>`; });
+                        document.getElementById('specialization').innerHTML = options;
+                        document.getElementById('specialization_row').style.display = '';
                     } else {
-                        // No specializations, load students directly
                         document.getElementById('specialization_row').style.display = 'none';
                         loadStudentsTable();
                     }
                 })
-                .catch(error => {
-                    console.error('Error checking course specializations:', error);
-                    // On error, try to load students directly
-                    document.getElementById('specialization_row').style.display = 'none';
-                    loadStudentsTable();
-                });
+                .catch(() => { loadStudentsTable(); });
         }
     });
 
-    // Function to load students table
+    // --- Load students table ---
     function loadStudentsTable(filterStatus = 'all') {
-        console.log('Loading students table...');
         studentsTableBody.innerHTML = '';
         document.getElementById('students_table_row').style.display = 'none';
 
@@ -336,16 +292,16 @@ document.addEventListener('DOMContentLoaded', function() {
             fetch(`/semester-registration/get-eligible-students?course_id=${encodeURIComponent(courseSelect.value)}&intake_id=${encodeURIComponent(intakeSelect.value)}`)
                 .then(res => res.json())
                 .then(data => {
-                    console.log('Students API response:', data);
                     if (data.success && data.students.length > 0) {
-                        let filtered = data.students;
-                        if (filterStatus !== 'all') {
-                            filtered = filtered.filter(stu => stu.status === filterStatus);
-                        }
-
+                        let filtered = filterStatus === 'all' ? data.students : data.students.filter(stu => stu.status === filterStatus);
                         let rows = '';
                         filtered.forEach(student => {
-                            rows += `<tr data-student-id="${student.student_id}" data-status="${student.status}" class="${student.status === 'terminated' ? 'table-danger' : ''}">
+                            rows += `
+                            <tr 
+                                data-student-id="${student.student_id}" 
+                                data-status="${student.status}" 
+                                data-original-status="${student.status}"
+                                class="${student.status === 'terminated' ? 'table-danger' : ''}">
                                 <td>${student.student_id}</td>
                                 <td>${student.name}</td>
                                 <td>${student.email}</td>
@@ -358,26 +314,22 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                 </td>
                             </tr>`;
-
                         });
-
                         studentsTableBody.innerHTML = rows;
                         document.getElementById('students_table_row').style.display = '';
-                        console.log('Students table loaded with', data.students.length, 'students');
                     } else {
-                        studentsTableBody.innerHTML = '<tr><td colspan="5" class="text-center">No eligible students found.</td></tr>';
+                        studentsTableBody.innerHTML = '<tr><td colspan="6" class="text-center">No eligible students found.</td></tr>';
                         document.getElementById('students_table_row').style.display = '';
-                        console.log('No eligible students found');
                     }
                 })
-                .catch(error => {
-                    console.error('Error loading students:', error);
-                    studentsTableBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading students.</td></tr>';
+                .catch(() => {
+                    studentsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Error loading students.</td></tr>';
                     document.getElementById('students_table_row').style.display = '';
                 });
         }
     }
 
+    // --- Tabs filter ---
     document.querySelectorAll('#statusTabs .nav-link').forEach(tab => {
         tab.addEventListener('click', function(e) {
             e.preventDefault();
@@ -387,83 +339,132 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-
-    // Add event listener for specialization dropdown
+    // --- Specialization change ---
     document.getElementById('specialization').addEventListener('change', function() {
         document.getElementById('specialization_hidden').value = this.value;
-
-        // Load students table when specialization is selected
         loadStudentsTable();
     });
 
-    // Handle form submission
+    // --- Toggle register/terminate selection (with SA trigger) ---
+    document.addEventListener('click', function(e) {
+        if (!e.target.classList.contains('toggle-selection')) return;
+
+        const btn = e.target;
+        const row = btn.closest('tr');
+        const action = btn.dataset.action;
+        const originalStatus = row.dataset.originalStatus; // from initial load
+        const currentStatus  = row.dataset.status;         // current UI state
+        const studentId = row.dataset.studentId;
+
+        // If originally terminated and trying to set to registered → require SA
+        if (action === 'registered' && originalStatus === 'terminated') {
+            if (saModal) {
+                saStudentIdEl.value = studentId;
+                saReasonEl.value = '';
+                if (saFileEl) saFileEl.value = '';
+                saModal.show();
+            }
+            return; // don't toggle yet; toggle after SA submit
+        }
+
+        // Normal toggle
+        row.querySelectorAll('.toggle-selection').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        row.dataset.status = action;
+        row.querySelector('.student-status').textContent = action;
+        // Optional: update row styling
+        row.classList.toggle('table-danger', action === 'terminated');
+        row.classList.toggle('table-warning', false);
+    });
+
+    // --- Special Approval modal submit ---
+    if (saFormEl) {
+        saFormEl.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const studentId = saStudentIdEl.value;
+            const reason = saReasonEl.value.trim();
+            const file = saFileEl && saFileEl.files && saFileEl.files[0] ? saFileEl.files[0] : null;
+
+            if (!reason) {
+                alert('Please provide a reason.');
+                return;
+            }
+
+            // Store payload
+            specialApprovalPayload[studentId] = { reason, file };
+
+            // Update the row visually to "registered"
+            const row = document.querySelector(`#students_table tbody tr[data-student-id="${studentId}"]`);
+            if (row) {
+                row.querySelectorAll('.toggle-selection').forEach(b => b.classList.remove('active'));
+                const regBtn = row.querySelector('.toggle-selection[data-action="registered"]');
+                if (regBtn) regBtn.classList.add('active');
+                row.dataset.status = 'registered';
+                row.querySelector('.student-status').textContent = 'registered';
+                // mark as pending approval locally
+                row.classList.remove('table-danger');
+                row.classList.add('table-warning'); // hint: has SA attached
+            }
+
+            saModal.hide();
+        });
+    }
+
+    // --- Form submit ---
     document.getElementById('courseForm').addEventListener('submit', function(e) {
         e.preventDefault();
 
-        // Get selected students
+        // Build student selection payload
         const selectedStudents = [];
         document.querySelectorAll('#students_table tbody tr').forEach(row => {
-            const studentId = row.dataset.studentId;
-            const status = row.dataset.status;
-            selectedStudents.push({ student_id: studentId, status: status });
+            selectedStudents.push({
+                student_id: row.dataset.studentId,
+                status: row.dataset.status
+            });
         });
-
-
         if (selectedStudents.length === 0) {
-            alert('Please select at least one student to register.');
+            alert('Please select at least one student.');
             return;
         }
 
-        // Prepare form data
-        const formData = new FormData();
-        formData.append('course_id', courseSelect.value);
-        formData.append('intake_id', intakeSelect.value);
-        formData.append('semester_id', semesterSelect.value);
-        formData.append('location', document.getElementById('location_hidden').value);
-        formData.append('specialization', document.getElementById('specialization_hidden').value);
-        formData.append('register_students', JSON.stringify(selectedStudents));
-        formData.append('_token', document.querySelector('input[name="_token"]').value);
-
-        // Debug: Log the form data being sent
-        console.log('Form data being sent:');
-        for (let [key, value] of formData.entries()) {
-            console.log(key + ': ' + value);
-        }
-
-        // Show loading state
-        const submitBtn = document.querySelector('button[type="submit"]');
+        const submitBtn = this.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
         submitBtn.disabled = true;
         submitBtn.textContent = 'Registering...';
 
-        // Submit form via AJAX
+        const formData = new FormData(this);
+        // ensure hidden fields are up to date
+        formData.set('location', locationSelect.value || '');
+        formData.set('specialization', document.getElementById('specialization').value || '');
+        formData.append('register_students', JSON.stringify(selectedStudents));
+
+        // Attach SA payloads
+        Object.keys(specialApprovalPayload).forEach(studentId => {
+            const p = specialApprovalPayload[studentId];
+            formData.append(`sa_reasons[${studentId}]`, p.reason);
+            if (p.file) {
+                formData.append(`sa_files[${studentId}]`, p.file);
+            }
+        });
+
         fetch('{{ route("semester.registration.store") }}', {
             method: 'POST',
             body: formData,
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         })
-        .then(response => {
-            // Check if response is JSON
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-                return response.json();
-            } else {
-                // If not JSON, throw an error with the response text
-                return response.text().then(text => {
-                    throw new Error('Server returned HTML instead of JSON. Response: ' + text.substring(0, 200));
-                });
+        .then(async r => {
+            const ct = r.headers.get('content-type') || '';
+            if (!ct.includes('application/json')) {
+                const text = await r.text();
+                throw new Error(text.slice(0, 300));
             }
+            return r.json();
         })
         .then(data => {
             if (data.success) {
-                // Show success message
-                showToast(data.message, 'success');
-
-                // Reset form
+                showToast(data.message || 'Saved.', 'success');
                 setTimeout(() => {
+                    // reset UI
                     document.getElementById('courseForm').reset();
                     studentsTableBody.innerHTML = '';
                     document.getElementById('students_table_row').style.display = 'none';
@@ -471,76 +472,72 @@ document.addEventListener('DOMContentLoaded', function() {
                     resetAndDisable(courseSelect, 'Select Course');
                     resetAndDisable(intakeSelect, 'Select Intake');
                     resetAndDisable(semesterSelect, 'Select Semester');
-                }, 2000);
+                }, 1500);
             } else {
                 showToast(data.message || 'An error occurred.', 'error');
             }
         })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('An error occurred while registering students. Please check the console for details.', 'error');
+        .catch(err => {
+            console.error(err);
+            showToast('An error occurred while saving. Check console.', 'error');
         })
         .finally(() => {
-            // Restore button state
             submitBtn.disabled = false;
             submitBtn.textContent = originalText;
         });
     });
 
+    // --- Toast helpers ---
     function showToast(message, type) {
-        // Remove existing toasts
-        document.querySelectorAll('.toast').forEach(toast => toast.remove());
-
+        document.querySelectorAll('.toast').forEach(t => t.remove());
         const toastContainer = document.querySelector('.toast-container') || createToastContainer();
-
-        const toastHtml = `
-            <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+        toastContainer.innerHTML = `
+            <div class="toast show" role="alert">
                 <div class="toast-header bg-${type === 'success' ? 'success' : 'danger'} text-white">
                     <strong class="me-auto">${type === 'success' ? 'Success' : 'Error'}</strong>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
                 </div>
-                <div class="toast-body">
-                    ${message}
-                </div>
-            </div>
-        `;
-
-        toastContainer.innerHTML = toastHtml;
-
-        // Auto-hide after 5 seconds
+                <div class="toast-body">${message}</div>
+            </div>`;
         setTimeout(() => {
             const toast = toastContainer.querySelector('.toast');
-            if (toast) {
-                const bsToast = new bootstrap.Toast(toast);
-                bsToast.hide();
-            }
+            if (toast) new bootstrap.Toast(toast).hide();
         }, 5000);
     }
-
     function createToastContainer() {
-        const container = document.createElement('div');
-        container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-        document.body.appendChild(container);
-        return container;
+        const c = document.createElement('div');
+        c.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(c);
+        return c;
     }
 });
-
-document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('toggle-selection')) {
-        const button = e.target;
-        const row = button.closest('tr');
-        const action = button.dataset.action;
-
-        // Set visual toggle
-        row.querySelectorAll('.toggle-selection').forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-
-        // Update hidden data-status on row
-        row.dataset.status = action;
-        row.querySelector('.student-status').textContent = action;
-    }
-});
-
-
 </script>
+<!-- Special Approval Modal -->
+<div class="modal fade" id="specialApprovalModal" tabindex="-1" aria-labelledby="specialApprovalModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="specialApprovalForm" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="specialApprovalModalLabel">Special Approval (DGM) Required</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="sa_student_id">
+        <div class="mb-3">
+          <label class="form-label">Reason <span class="text-danger">*</span></label>
+          <textarea id="sa_reason" class="form-control" rows="4" required placeholder="Explain why this terminated student should be re-registered"></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Attachment (optional)</label>
+          <input type="file" id="sa_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.webp">
+          <small class="text-muted">Attach any supporting document (max ~2MB recommended).</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="btn btn-primary">Attach to Request</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 @endsection
