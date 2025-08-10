@@ -319,7 +319,6 @@ class CourseRegistraionController extends Controller
                     'message' => 'Course registration completed successfully.',
                     'registration_id' => $courseRegistration->id
                 ]);
-
             } catch (\Exception $e) {
                 Log::error('Error in storeCourseRegistration: ' . $e->getMessage());
                 return response()->json([
@@ -346,6 +345,15 @@ class CourseRegistraionController extends Controller
                 ], 404);
             }
 
+            // ⛔ Block terminated students
+            if (strtolower($student->academic_status) === 'terminated') {
+                $reason = $student->academic_status_reason ? ' — ' . $student->academic_status_reason : '';
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Student terminated for discipline reason' . $reason
+                ], 403); // 403 or 423 is fine; your JS already just reads JSON
+            }
+
             // Get student exam details
             $studentExam = StudentExam::where('student_id', $student->student_id)->first();
 
@@ -355,7 +363,7 @@ class CourseRegistraionController extends Controller
                 $ol_exams[] = [
                     'exam_type' => ['exam_type' => $studentExam->ol_exam_type],
                     'exam_year' => $studentExam->ol_exam_year,
-                    'subjects' => $studentExam->ol_exam_subjects ? json_decode($studentExam->ol_exam_subjects, true) : []
+                    'subjects'  => $studentExam->ol_exam_subjects ? json_decode($studentExam->ol_exam_subjects, true) : []
                 ];
             }
 
@@ -365,31 +373,32 @@ class CourseRegistraionController extends Controller
                 $al_exams[] = [
                     'exam_type' => ['exam_type' => $studentExam->al_exam_type],
                     'exam_year' => $studentExam->al_exam_year,
-                    'stream' => ['stream' => $studentExam->al_exam_stream],
-                    'z_score' => $studentExam->z_score_value,
-                    'subjects' => $studentExam->al_exam_subjects ? json_decode($studentExam->al_exam_subjects, true) : []
+                    'stream'    => ['stream' => $studentExam->al_exam_stream],
+                    'z_score'   => $studentExam->z_score_value,
+                    'subjects'  => $studentExam->al_exam_subjects ? json_decode($studentExam->al_exam_subjects, true) : []
                 ];
             }
 
             return response()->json([
                 'success' => true,
                 'student' => [
-                    'student_id' => $student->student_id,
+                    'student_id'        => $student->student_id,
                     'name_with_initials' => $student->name_with_initials,
-                    'id_value' => $student->id_value,
-                    'registration_id' => $student->student_id // Using student_id as registration_id for compatibility
+                    'id_value'          => $student->id_value,
+                    'registration_id'   => $student->student_id, // kept for compatibility
                 ],
                 'ol_exams' => $ol_exams,
                 'al_exams' => $al_exams
             ]);
         } catch (\Exception $e) {
-            Log::error('Error getting student by NIC: ' . $e->getMessage());
+            \Log::error('Error getting student by NIC: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred while fetching student data'
             ], 500);
         }
     }
+
 
     // API method to get intakes by course
     public function getIntakesByCourse($courseId)
@@ -487,7 +496,6 @@ class CourseRegistraionController extends Controller
                 'message' => 'Course registration completed successfully.',
                 'registration_id' => $courseRegistration->id
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error in storeCourseRegistrationAPI: ' . $e->getMessage());
             return response()->json([
@@ -509,18 +517,18 @@ class CourseRegistraionController extends Controller
         $year = $request->query('year');
         $courseId = $request->query('course_id');
         $intakeId = $request->query('intake_id');
-        
+
         if (!$courseId || !$intakeId) {
             return response()->json(['semesters' => []]);
         }
-        
+
         // Get actual created semesters for this course and intake
         $semesters = \App\Models\Semester::where('course_id', $courseId)
             ->where('intake_id', $intakeId)
             ->whereIn('status', ['active', 'upcoming'])
             ->select('id', 'name')
             ->get();
-            
+
         return response()->json(['semesters' => $semesters]);
     }
 
@@ -616,7 +624,6 @@ class CourseRegistraionController extends Controller
                 'message' => 'Course registration saved for eligibility checking.',
                 'registration_id' => $courseRegistration->id
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error in storeCourseRegistrationForEligibilityAPI: ' . $e->getMessage());
             return response()->json([
