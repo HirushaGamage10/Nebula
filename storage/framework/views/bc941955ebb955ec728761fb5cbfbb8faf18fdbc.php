@@ -1,8 +1,6 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | Add External Institute Student ID'); ?>
 
-@section('title', 'NEBULA | Add External Institute Student ID')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <style>
 /* Success Message Styles */
 .success-message{
@@ -102,7 +100,7 @@ $(function () {
     $('#studentsSection').hide();
     if(!location) return;
 
-    $.post("{{ route('uh.index.courses') }}",{location,_token:'{{ csrf_token() }}'},function(res){
+    $.post("<?php echo e(route('uh.index.courses')); ?>",{location,_token:'<?php echo e(csrf_token()); ?>'},function(res){
       (res.courses||[]).forEach(c=>$('#courseSelect').append(`<option value="${c.course_id}">${c.course_name}</option>`));
       $('#courseSelect').prop('disabled',false);
     });
@@ -115,7 +113,7 @@ $(function () {
     $('#studentsSection').hide();
     if(!course_id) return;
 
-    $.post("{{ route('uh.index.intakes') }}",{course_id,_token:'{{ csrf_token() }}'},function(res){
+    $.post("<?php echo e(route('uh.index.intakes')); ?>",{course_id,_token:'<?php echo e(csrf_token()); ?>'},function(res){
       (res.intakes||[]).forEach(i=>$('#intakeSelect').append(`<option value="${i.intake_id}">${i.batch}</option>`));
       $('#intakeSelect').prop('disabled',false);
     });
@@ -127,7 +125,7 @@ $(function () {
     $('#studentsSection').hide();
     if(!intake_id) return;
 
-    $.post("{{ route('uh.index.students') }}",{intake_id,_token:'{{ csrf_token() }}'},function(res){
+    $.post("<?php echo e(route('uh.index.students')); ?>",{intake_id,_token:'<?php echo e(csrf_token()); ?>'},function(res){
       const $tb=$('#studentsTableBody').empty();
       if(res.students && res.students.length){
         res.students.forEach(st=>{
@@ -158,8 +156,8 @@ $(function () {
     const intake_id=$tr.data('intake-id');
     if(!confirm('Terminate this student from the intake?')) return;
 
-    $.post("{{ route('uh.index.terminate') }}",
-      {student_id,intake_id,_token:'{{ csrf_token() }}'},
+    $.post("<?php echo e(route('uh.index.terminate')); ?>",
+      {student_id,intake_id,_token:'<?php echo e(csrf_token()); ?>'},
       function(res){
         if(res.success){
           showSuccessMessage(res.message || 'Student terminated.');
@@ -187,7 +185,7 @@ $(function () {
       if(student_id) students.push({student_id, uh_index_number});
     });
 
-    $.post("{{ route('uh.index.save') }}",{students,_token:'{{ csrf_token() }}'},function(res){
+    $.post("<?php echo e(route('uh.index.save')); ?>",{students,_token:'<?php echo e(csrf_token()); ?>'},function(res){
       if(res.success) showSuccessMessage(res.message || 'Saved.');
       else showErrorMessage(res.message || 'Failed to save.');
     }).fail((xhr)=>{
@@ -197,4 +195,6 @@ $(function () {
   });
 });
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/nebula/Nebula/resources/views/uh_index_numbers.blade.php ENDPATH**/ ?>
