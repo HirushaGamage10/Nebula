@@ -30,6 +30,7 @@ class Semester extends Model
 
     public function modules()
     {
-        return $this->belongsToMany(Module::class, 'semester_module', 'semester_id', 'module_id');
+        return $this->belongsToMany(Module::class, 'semester_module', 'semester_id', 'module_id')
+            ->withPivot('specialization');
     }
 }

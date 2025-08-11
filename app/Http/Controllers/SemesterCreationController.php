@@ -196,7 +196,7 @@ class SemesterCreationController extends Controller
             \Log::info('Semester created successfully:', ['semester_id' => $semester->id]);
 
             // Handle modules if present - save to semester_module table
-            $modules = $request->modules;
+            $modules = $request->input('modules', []);
             if (!empty($modules) && is_array($modules)) {
                 $semesterModuleData = [];
                 foreach ($modules as $module) {
@@ -208,10 +208,9 @@ class SemesterCreationController extends Controller
                         ];
                     }
                 }
-                
+                \Log::info('Semester module insert:', $semesterModuleData);
                 if (!empty($semesterModuleData)) {
                     \DB::table('semester_module')->insert($semesterModuleData);
-                    \Log::info('Modules saved to semester_module table:', ['count' => count($semesterModuleData)]);
                 }
             }
 

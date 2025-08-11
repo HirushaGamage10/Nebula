@@ -1,15 +1,13 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | Semester Creation'); ?>
 
-@section('title', 'NEBULA | Semester Creation')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
             <h2 class="text-center mb-4">Create Semester</h2>
             <hr>
-            <form action="{{ route('semesters.store') }}" method="POST">
-                @csrf
+            <form action="<?php echo e(route('semesters.store')); ?>" method="POST">
+                <?php echo csrf_field(); ?>
                 <div class="mb-3 row mx-3">
                     <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
@@ -57,7 +55,12 @@
                         <input type="date" name="end_date" id="end_date" class="form-control" required>
                     </div>
                 </div>
-
+                <div class="mb-3 row mx-3">
+                    <label for="registration_date" class="col-sm-2 col-form-label">Registration Date <span class="text-danger">*</span></label>
+                    <div class="col-sm-10">
+                        <input type="date" class="form-control" id="registration_date" name="registration_date" required>
+                    </div>
+                </div>
                 <div class="mb-3 row mx-3">
                     <label for="status" class="col-sm-2 col-form-label">Status <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
@@ -127,9 +130,9 @@
         </div>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('scripts')
+<?php $__env->startSection('scripts'); ?>
 <script>
 let courseSpecializations = [];
 document.addEventListener('DOMContentLoaded', function() {
@@ -344,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             fetch('/semester/get-filtered-modules', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+                headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
                 body: JSON.stringify(data)
             })
             .then(response => response.json())
@@ -409,12 +412,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (specializationRow && specializationRow.style.display !== 'none') {
             specialization = document.getElementById('specialization_select').value || '';
         }
-<<<<<<< HEAD
-        if (!moduleId || !moduleName || !semester) return;
-        // Prevent duplicate - allow same module for different specializations
-        if (addedModules.some(m => m.moduleId === moduleId && m.semester === semester && m.specialization === specialization)) return;
-        addedModules.push({moduleId, moduleName, moduleType, moduleCredits, semester, specialization});
-=======
 
         // Validate required selections
         if (!moduleId || !moduleName || !semester) {
@@ -443,7 +440,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Build table row
->>>>>>> 9793f79 (module save bug fix)
         const row = document.createElement('tr');
         let rowHtml = `<td>${semesterSelect.options[semesterSelect.selectedIndex].text}</td>`;
         if (courseSpecializations.length > 0) {
@@ -459,10 +455,7 @@ document.addEventListener('DOMContentLoaded', function() {
         row.dataset.moduleId = moduleId;
         row.dataset.semester = semester;
         row.dataset.specialization = specialization;
-<<<<<<< HEAD
-=======
 
->>>>>>> 9793f79 (module save bug fix)
         modulesTableBody.appendChild(row);
     });
 
@@ -472,9 +465,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const row = e.target.closest('tr');
             const moduleId = row.dataset.moduleId;
             const semester = row.dataset.semester;
-            // Remove module considering specialization
-            const specialization = row.dataset.specialization || '';
-            addedModules = addedModules.filter(m => !(m.moduleId === moduleId && m.semester === semester && m.specialization === specialization));
+            addedModules = addedModules.filter(m => !(m.moduleId === moduleId && m.semester === semester));
             row.remove();
         }
     });
@@ -491,19 +482,15 @@ window.showToast = function(message, type = 'success') {
 };
 
 // AJAX form submission for semester creation
-const semesterForm = document.querySelector('form[action="{{ route('semesters.store') }}"]');
+const semesterForm = document.querySelector('form[action="<?php echo e(route('semesters.store')); ?>"]');
 semesterForm.addEventListener('submit', function(e) {
     e.preventDefault();
 
     // Validate required fields
-<<<<<<< HEAD
-    const requiredFields = ['location', 'course_id', 'intake_id', 'semester', 'start_date', 'end_date', 'status'];
-=======
     const requiredFields = [
         'location', 'course_id', 'intake_id', 'semester',
         'start_date', 'end_date', 'registration_date', 'status'
     ];
->>>>>>> 9793f79 (module save bug fix)
     const missingFields = [];
     requiredFields.forEach(field => {
         const element = document.getElementById(field);
@@ -524,8 +511,9 @@ semesterForm.addEventListener('submit', function(e) {
         semester: document.getElementById('semester').value,
         start_date: document.getElementById('start_date').value,
         end_date: document.getElementById('end_date').value,
+        registration_date: document.getElementById('registration_date').value,
         status: document.getElementById('status').value,
-        _token: '{{ csrf_token() }}'
+        _token: '<?php echo e(csrf_token()); ?>'
     };
 
     // Gather modules with specialization using data attributes
@@ -550,7 +538,7 @@ semesterForm.addEventListener('submit', function(e) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
             'Accept': 'application/json'
         },
         body: JSON.stringify(formData)
@@ -591,7 +579,7 @@ semesterForm.addEventListener('submit', function(e) {
 });
 
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
 
 <style>
     select:disabled {
@@ -604,3 +592,5 @@ semesterForm.addEventListener('submit', function(e) {
         box-shadow: 0 0 0 0.1rem #6c8cff33;
     }
 </style>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Users/inazawaelectronics/Documents/SLT/Nebula/resources/views/semester_creation.blade.php ENDPATH**/ ?>
