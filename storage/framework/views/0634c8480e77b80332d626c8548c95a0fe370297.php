@@ -1,15 +1,15 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Semester Creation')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Semester Creation'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
             <h2 class="text-center mb-4">Create Semester</h2>
             <hr>
-            <form action="{{ route('semesters.store') }}" method="POST">
-                @csrf
+            <form action="<?php echo e(route('semesters.store')); ?>" method="POST">
+                <?php echo csrf_field(); ?>
                 <div class="mb-3 row mx-3">
                     <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
@@ -127,9 +127,9 @@
         </div>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('scripts')
+<?php $__env->startSection('scripts'); ?>
 <script>
 let courseSpecializations = [];
 document.addEventListener('DOMContentLoaded', function() {
@@ -344,7 +344,7 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             fetch('/semester/get-filtered-modules', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+                headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
                 body: JSON.stringify(data)
             })
             .then(response => response.json())
@@ -453,7 +453,7 @@ window.showToast = function(message, type = 'success') {
     toast.show();
 };
 // AJAX form submission for semester creation
-const semesterForm = document.querySelector('form[action="{{ route('semesters.store') }}"]');
+const semesterForm = document.querySelector('form[action="<?php echo e(route('semesters.store')); ?>"]');
 semesterForm.addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -482,7 +482,7 @@ semesterForm.addEventListener('submit', function(e) {
         start_date: document.getElementById('start_date').value,
         end_date: document.getElementById('end_date').value,
         status: document.getElementById('status').value,
-        _token: '{{ csrf_token() }}'
+        _token: '<?php echo e(csrf_token()); ?>'
     };
     
     // Debug: Log form data
@@ -533,7 +533,7 @@ semesterForm.addEventListener('submit', function(e) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
             'Accept': 'application/json'
         },
         body: JSON.stringify(formData)
@@ -566,7 +566,7 @@ semesterForm.addEventListener('submit', function(e) {
     });
 });
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
 
 <style>
     select:disabled {
@@ -579,3 +579,5 @@ semesterForm.addEventListener('submit', function(e) {
         box-shadow: 0 0 0 0.1rem #6c8cff33;
     }
 </style>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/semester_creation.blade.php ENDPATH**/ ?>

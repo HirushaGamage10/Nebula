@@ -107,7 +107,38 @@ class Course extends Model
 
     public function getDurationFormattedAttribute()
     {
-        return "{$this->duration} - {$this->no_of_semesters} semesters";
+        if (!$this->duration) {
+            return 'Not specified';
+        }
+        
+        $parts = explode('-', $this->duration);
+        if (count($parts) !== 3) {
+            return $this->duration; // Return as-is if format is unexpected
+        }
+        
+        $years = (int)$parts[0];
+        $months = (int)$parts[1];
+        $days = (int)$parts[2];
+        
+        $durationParts = [];
+        
+        if ($years > 0) {
+            $durationParts[] = $years . ' ' . ($years === 1 ? 'year' : 'years');
+        }
+        
+        if ($months > 0) {
+            $durationParts[] = $months . ' ' . ($months === 1 ? 'month' : 'months');
+        }
+        
+        if ($days > 0) {
+            $durationParts[] = $days . ' ' . ($days === 1 ? 'day' : 'days');
+        }
+        
+        if (empty($durationParts)) {
+            return 'Not specified';
+        }
+        
+        return implode(', ', $durationParts);
     }
 
     public function getTotalFeeAttribute()

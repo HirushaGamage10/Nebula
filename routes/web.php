@@ -489,6 +489,10 @@ Route::middleware(['auth', 'role:DGM,Student Counselor,Developer,Program Adminis
 Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Administrator (level 02),Developer'])->group(function () {
     Route::get('semesters/create', [App\Http\Controllers\SemesterCreationController::class, 'create'])->name('semesters.create');
     Route::post('semesters', [App\Http\Controllers\SemesterCreationController::class, 'store'])->name('semesters.store');
+    Route::get('semesters', [App\Http\Controllers\SemesterCreationController::class, 'index'])->name('semesters.index');
+    Route::get('semesters/{semester}/edit', [App\Http\Controllers\SemesterCreationController::class, 'edit'])->name('semesters.edit');
+    Route::put('semesters/{semester}', [App\Http\Controllers\SemesterCreationController::class, 'update'])->name('semesters.update');
+    Route::delete('semesters/{semester}', [App\Http\Controllers\SemesterCreationController::class, 'destroy'])->name('semesters.destroy');
 });
 
 // Semester Registration - Program Administrator (level 01), Program Administrator (level 02), Developer

@@ -139,7 +139,7 @@
                             <div class="row mb-3">
                                 <label class="col-sm-2 col-form-label">Entry Qualifications</label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" id="entryQualificationsInput" readonly>
+                                    <textarea class="form-control" id="entryQualificationsInput" readonly rows="4" style="resize: vertical;"></textarea>
                                 </div>
                             </div>
                         </div>

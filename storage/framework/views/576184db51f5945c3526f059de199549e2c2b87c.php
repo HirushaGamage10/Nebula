@@ -1,15 +1,15 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Course Management')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Course Management'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
               <h2 class="text-center mb-4">Course Management</h2>
             <hr>
             <form id="courseForm">
-                @csrf
+                <?php echo csrf_field(); ?>
                 <div class="mb-3 row mx-3">
                     <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
@@ -214,31 +214,31 @@
                         </tr>
                     </thead>
                     <tbody id="existingCoursesTableBody">
-                        @forelse($courses as $course)
-                        <tr data-course-id="{{ $course->course_id }}">
-                            <td>{{ $course->course_name }}</td>
+                        <?php $__empty_1 = true; $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <tr data-course-id="<?php echo e($course->course_id); ?>">
+                            <td><?php echo e($course->course_name); ?></td>
                             <td>
-                                @if($course->course_type == 'degree')
+                                <?php if($course->course_type == 'degree'): ?>
                                     Degree Program
-                                @elseif($course->course_type == 'certificate')
+                                <?php elseif($course->course_type == 'certificate'): ?>
                                     Certificate Program
-                                @else
+                                <?php else: ?>
                                     N/A
-                                @endif
+                                <?php endif; ?>
                             </td>
-                            <td>{{ $course->location }}</td>
-                            <td>{{ $course->duration_formatted }}</td>
-                            <td>{{ $course->course_medium }}</td>
+                            <td><?php echo e($course->location); ?></td>
+                            <td><?php echo e($course->duration_formatted); ?></td>
+                            <td><?php echo e($course->course_medium); ?></td>
                             <td>
-                                <button class="btn btn-sm btn-primary edit-course-btn" data-course-id="{{ $course->course_id }}">Edit</button>
-                                <button class="btn btn-sm btn-danger delete-course-btn" data-course-id="{{ $course->course_id }}">Delete</button>
+                                <button class="btn btn-sm btn-primary edit-course-btn" data-course-id="<?php echo e($course->course_id); ?>">Edit</button>
+                                <button class="btn btn-sm btn-danger delete-course-btn" data-course-id="<?php echo e($course->course_id); ?>">Delete</button>
                             </td>
                         </tr>
-                        @empty
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <tr class="no-courses-found">
                             <td colspan="6" class="text-center">No courses found.</td>
                         </tr>
-                        @endforelse
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -268,9 +268,9 @@
         </div>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
     <script>
     $(document).ready(function() {
         // Course type change handler
@@ -345,7 +345,7 @@
             const editCourseId = getQueryParam('course_id');
             const isEditMode = editCourseId !== null;
             
-            const url = isEditMode ? `/api/courses/update/${editCourseId}` : '{{ route("course.store") }}';
+            const url = isEditMode ? `/api/courses/update/${editCourseId}` : '<?php echo e(route("course.store")); ?>';
             const method = 'POST'; // Always use POST
 
             $.ajax({
@@ -527,7 +527,7 @@
             $.ajax({
                 url: '/api/courses/' + courseId,
                 type: 'DELETE',
-                data: {_token: '{{ csrf_token() }}'},
+                data: {_token: '<?php echo e(csrf_token()); ?>'},
                 success: function(response) {
                     if (response.success) {
                         showToast('Course deleted successfully', 'success');
@@ -593,4 +593,6 @@
         });
     });
     </script>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/course_management.blade.php ENDPATH**/ ?>

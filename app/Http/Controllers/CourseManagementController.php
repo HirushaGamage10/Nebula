@@ -76,6 +76,14 @@ class CourseManagementController extends Controller
 
             DB::commit();
 
+            // Parse duration for the response
+            $durationParts = explode('-', $course->duration);
+            $course->duration = [
+                'years' => (int)($durationParts[0] ?? 0),
+                'months' => (int)($durationParts[1] ?? 0),
+                'days' => (int)($durationParts[2] ?? 0)
+            ];
+
             return response()->json([
                 'success' => true,
                 'message' => 'Course created successfully.',
@@ -100,6 +108,24 @@ class CourseManagementController extends Controller
     {
         $course = Course::with(['modules'])->find($id);
         if ($course) {
+            // Parse duration into years, months, days for form population
+            $durationParts = explode('-', $course->duration);
+            $course->duration = [
+                'years' => (int)($durationParts[0] ?? 0),
+                'months' => (int)($durationParts[1] ?? 0),
+                'days' => (int)($durationParts[2] ?? 0)
+            ];
+            
+            // Parse training_period if it exists
+            if ($course->training_period) {
+                $trainingParts = explode('-', $course->training_period);
+                $course->training_period = [
+                    'years' => (int)($trainingParts[0] ?? 0),
+                    'months' => (int)($trainingParts[1] ?? 0),
+                    'days' => (int)($trainingParts[2] ?? 0)
+                ];
+            }
+            
             return response()->json(['success' => true, 'course' => $course]);
         } else {
             return response()->json(['success' => false, 'message' => 'Course not found'], 404);
@@ -190,6 +216,14 @@ class CourseManagementController extends Controller
             $course->update($courseData);
 
             DB::commit();
+
+            // Parse duration for the response
+            $durationParts = explode('-', $course->duration);
+            $course->duration = [
+                'years' => (int)($durationParts[0] ?? 0),
+                'months' => (int)($durationParts[1] ?? 0),
+                'days' => (int)($durationParts[2] ?? 0)
+            ];
 
             return response()->json([
                 'success' => true,

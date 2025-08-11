@@ -27,6 +27,7 @@ class Intake extends Model
         'bank_charges',
         'start_date',
         'end_date',
+        'enrollment_end_date',
         'course_registration_id_pattern',
         'created_at',
         'updated_at'
@@ -39,6 +40,7 @@ class Intake extends Model
         'bank_charges' => 'decimal:2',
         'start_date' => 'date',
         'end_date' => 'date',
+        'enrollment_end_date' => 'date',
     ];
 
     public function course()

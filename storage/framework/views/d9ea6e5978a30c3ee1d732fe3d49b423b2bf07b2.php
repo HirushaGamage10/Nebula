@@ -130,21 +130,13 @@
                 </div>
                 </div>
                 <div class="mb-3 row mx-3">
-    <label for="course_registration_id_pattern" class="col-sm-2 col-form-label">
-        Course Registration ID Pattern <span class="text-danger">*</span>
-    </label>
-    <div class="col-sm-10">
-        <input type="text" class="form-control" id="course_registration_id_pattern" name="course_registration_id_pattern" placeholder="e.g., 2025/SE/HND/001" required>
-        <small class="text-muted">
-            <strong>Pattern Format:</strong> Use any format you want, ending with numbers (e.g., 001, 01, 1).<br>
-            <strong>Examples:</strong><br>
-            • <code>2025/HND/SE/001</code> → 2025/HND/SE/001, 2025/HND/SE/002, 2025/HND/SE/003...<br>
-            • <code>NEBULA/2025/001</code> → NEBULA/2025/001, NEBULA/2025/002, NEBULA/2025/003...<br>
-            • <code>REG/2025/01</code> → REG/2025/01, REG/2025/02, REG/2025/03...<br>
-            • <code>STUDENT/001</code> → STUDENT/001, STUDENT/002, STUDENT/003...
-        </small>
-    </div>
-</div>
+                    <label for="enrollment_end_date" class="col-sm-2 col-form-label">Enrollment End Date</label>
+                    <div class="col-sm-10">
+                        <input type="date" class="form-control" id="enrollment_end_date" name="enrollment_end_date">
+                        <small class="form-text text-muted">Last date for students to enroll in this intake (optional)</small>
+                    </div>
+                </div>
+
                 <div class="d-grid mt-3">
                     <button type="submit" class="btn btn-primary">Create Intake</button>
                 </div>
@@ -167,8 +159,8 @@
                             <th style="position: sticky; top: 0; background: #fff;">Type</th>
                             <th style="position: sticky; top: 0; background: #fff;">Start Date</th>
                             <th style="position: sticky; top: 0; background: #fff;">End Date</th>
+                            <th style="position: sticky; top: 0; background: #fff;">Enrollment End</th>
                             <th style="position: sticky; top: 0; background: #fff;">Capacity</th>
-                            <th style="position: sticky; top: 0; background: #fff;">Registration Pattern</th>
                             <th style="position: sticky; top: 0; background: #fff;">Status</th>
                         </tr>
                     </thead>
@@ -182,10 +174,8 @@
                             <td><?php echo e($intake->intake_type); ?></td>
                             <td><?php echo e($intake->start_date ? $intake->start_date->format('Y-m-d') : ''); ?></td>
                             <td><?php echo e($intake->end_date ? $intake->end_date->format('Y-m-d') : ''); ?></td>
+                            <td><?php echo e($intake->enrollment_end_date ? $intake->enrollment_end_date->format('Y-m-d') : '-'); ?></td>
                             <td><?php echo e($intake->registrations->count()); ?> / <?php echo e($intake->batch_size); ?></td>
-                            <td>
-                                <code><?php echo e($intake->course_registration_id_pattern ?? 'Not set'); ?></code>
-                            </td>
                             <td>
                                 <?php if($intake->isPast()): ?>
                                     <span class="badge bg-danger">Finished</span>
@@ -239,8 +229,8 @@ $(document).ready(function() {
                             <td>${intake.intake_type}</td>
                             <td>${formatDate(intake.start_date)}</td>
                             <td>${formatDate(intake.end_date)}</td>
+                            <td>${intake.enrollment_end_date ? formatDate(intake.enrollment_end_date) : '-'}</td>
                             <td>${intake.registrations_count ?? 0} / ${intake.batch_size}</td>
-                            <td><code>${intake.course_registration_id_pattern || 'Not set'}</code></td>
                             <td>
                                 ${intake.isPast ? '<span class="badge bg-danger">Finished</span>' : (intake.isCurrent ? '<span class="badge bg-success">Ongoing</span>' : '<span class="badge bg-warning">Upcoming</span>')}
                             </td>
@@ -333,7 +323,7 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success && response.course) {
                     var c = response.course;
-                    $('#cd_duration').text(c.duration ? c.duration : '-');
+                    $('#cd_duration').text(c.duration_formatted ? c.duration_formatted : '-');
                     $('#cd_min_credits').text(c.min_credits ? c.min_credits : '-');
                     $('#cd_training').text(c.training_period ? c.training_period : '-');
                     $('#cd_entry_qualification').html(c.entry_qualification ? c.entry_qualification.replace(/\n/g, '<br>') : '-');
@@ -375,6 +365,25 @@ $(document).ready(function() {
     }
 
     $('#course_name, #location, #intake_type').on('change', autofillPaymentPlan);
+
+    // Validate enrollment end date
+    $('#enrollment_end_date').on('change', function() {
+        const enrollmentEndDate = new Date($(this).val());
+        const startDate = new Date($('#start_date').val());
+        const endDate = new Date($('#end_date').val());
+        
+        if ($('#start_date').val() && enrollmentEndDate < startDate) {
+            showToast('Enrollment end date cannot be before the start date.', 'danger');
+            $(this).val('');
+            return;
+        }
+        
+        if ($('#end_date').val() && enrollmentEndDate > endDate) {
+            showToast('Enrollment end date cannot be after the end date.', 'danger');
+            $(this).val('');
+            return;
+        }
+    });
 });
     </script>
 <?php $__env->stopPush(); ?>

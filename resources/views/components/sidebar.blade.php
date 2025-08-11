@@ -263,6 +263,12 @@
                         <span class="hide-menu">Semester Creation</span>
                     </a>
                 </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link {{ Route::currentRouteName() == 'semesters.index' ? 'active' : '' }}" href="{{ route('semesters.index') }}">
+                        <span><i class="ti ti-list"></i></span>
+                        <span class="hide-menu">Semester Management</span>
+                    </a>
+                </li>
             @endif
             @if(RoleHelper::hasPermission($role, 'semester.registration'))
                 <li class="sidebar-item">
