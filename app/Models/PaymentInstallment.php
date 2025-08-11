@@ -29,6 +29,10 @@ class PaymentInstallment extends Model
     {
         return $this->belongsTo(StudentPaymentPlan::class, 'payment_plan_id');
     }
+    public function plan()
+{
+    return $this->belongsTo(\App\Models\StudentPaymentPlan::class, 'payment_plan_id');
+}
 
     // Accessors
     public function getFormattedDueDateAttribute()

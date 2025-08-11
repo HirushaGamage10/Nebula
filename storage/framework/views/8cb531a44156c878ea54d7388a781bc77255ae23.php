@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Payment Management')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Payment Management'); ?>
+
+<?php $__env->startSection('content'); ?>
 
 <style>
 /* Toast Notification Styles */
@@ -306,9 +306,9 @@
                                 <div class="col-sm-10">
                                     <select class="form-select filter-param" id="plan-course" name="course_id" required>
                                         <option selected disabled value="">Select a Course</option>
-                                        @foreach($courses as $course)
-                                            <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
-                                        @endforeach
+                                        <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                     </select>
                                 </div>
                             </div>
@@ -491,11 +491,11 @@
                                 <div class="col-sm-10">
                                     <select class="form-select" id="slip-course" required onchange="loadIntakesForCourse()">
                                         <option value="" selected disabled>Select Course</option>
-                                        @if(isset($courses))
-                                            @foreach($courses as $course)
-                                                <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
-                                            @endforeach
-                                        @endif
+                                        <?php if(isset($courses)): ?>
+                                            <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                <option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                        <?php endif; ?>
                                     </select>
                                 </div>
                             </div>
@@ -606,7 +606,7 @@
                             <div class="payment-slip-template" style="max-width: 800px; margin: 0 auto; padding: 20px; border: 2px solid #000; font-family: Arial, sans-serif;">
                                 <!-- Header -->
                                 <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px;">
-                                    <img src="{{ asset('images/logos/nebula.png') }}" alt="Nebula Logo" style="height: 60px; margin-bottom: 10px;">
+                                    <img src="<?php echo e(asset('images/logos/nebula.png')); ?>" alt="Nebula Logo" style="height: 60px; margin-bottom: 10px;">
                                     <h2 style="margin: 0; color: #333;">SLTMOBITEL NEBULA INSTITUTE OF TECHNOLOGY</h2>
                                     <p style="margin: 5px 0; font-size: 14px;">Payment Slip</p>
                                     <p style="margin: 5px 0; font-size: 12px;">Generated on: <span id="print-generated-date"></span></p>
@@ -1191,7 +1191,7 @@ function loadCoursesForStudent() {
     if (!studentNic) {
         // Reset course dropdown to show all courses
         document.getElementById('plan-course').innerHTML = '<option selected disabled value="">Select a Course</option>' + 
-            '@foreach($courses as $course)<option value="{{ $course->course_id }}">{{ $course->course_name }}</option>@endforeach';
+            '<?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>';
         return;
     }
 
@@ -1200,7 +1200,7 @@ function loadCoursesForStudent() {
     // Make API call to get courses for the student
     fetch('/payment/get-student-courses', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
         body: JSON.stringify({
             student_nic: studentNic
         })
@@ -1222,14 +1222,14 @@ function loadCoursesForStudent() {
             showErrorMessage(data.message || 'Failed to load courses for student.');
             // Reset to all courses on error
             document.getElementById('plan-course').innerHTML = '<option selected disabled value="">Select a Course</option>' + 
-                '@foreach($courses as $course)<option value="{{ $course->course_id }}">{{ $course->course_name }}</option>@endforeach';
+                '<?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>';
         }
     })
     .catch(() => {
         showErrorMessage('An error occurred while loading courses.');
         // Reset to all courses on error
         document.getElementById('plan-course').innerHTML = '<option selected disabled value="">Select a Course</option>' + 
-            '@foreach($courses as $course)<option value="{{ $course->course_id }}">{{ $course->course_name }}</option>@endforeach';
+            '<?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>';
     })
     .finally(() => showSpinner(false));
 }
@@ -1249,7 +1249,7 @@ function loadStudentForPaymentPlan() {
     // Make API call to get student and course details
     fetch('/payment/get-plans', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
         body: JSON.stringify({
             student_nic: studentNic,
             course_id: parseInt(courseId)
@@ -1332,7 +1332,7 @@ function loadExistingPaymentPlans(studentNic, courseId) {
     // First try to fetch existing payment plan installments
     fetch('/payment/get-installments', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
         body: JSON.stringify({
             student_nic: studentNic,
             course_id: parseInt(courseId)
@@ -1661,7 +1661,7 @@ function createPaymentPlan() {
     // First, get the payment plan installments from the backend
     fetch('/payment/get-installments', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
         body: JSON.stringify({
             student_nic: window.currentStudentData.student_nic,
             course_id: parseInt(window.currentStudentData.course_id)
@@ -1694,7 +1694,7 @@ function createPaymentPlan() {
             // Send to backend
             return fetch('/payment/create-payment-plan', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+                headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
                 body: JSON.stringify(paymentPlanData)
             });
         } else {
@@ -1806,7 +1806,7 @@ function savePaymentPlans() {
     
     fetch('/payment/save-plans', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
         body: JSON.stringify({
             student_id: plan.student_id,
             course_id: document.getElementById('plan-course').value,
@@ -1864,7 +1864,7 @@ function generatePaymentSlip() {
     
     fetch('/payment/generate-slip', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
         body: JSON.stringify({
             student_id: studentId,
             payment_type: paymentType,
@@ -2007,7 +2007,7 @@ function downloadPaymentSlip() {
     const csrfToken = document.createElement('input');
     csrfToken.type = 'hidden';
     csrfToken.name = '_token';
-    csrfToken.value = '{{ csrf_token() }}';
+    csrfToken.value = '<?php echo e(csrf_token()); ?>';
     form.appendChild(csrfToken);
 
     // Add receipt number
@@ -2051,7 +2051,7 @@ function loadPaymentRecords() {
 
     fetch('/payment/get-records', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
         body: JSON.stringify({
             student_nic: studentNic,
             course_id: courseId
@@ -2089,7 +2089,7 @@ function loadStudentCoursesForUpdate() {
 
     fetch('/payment/get-student-courses', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
         body: JSON.stringify({
             student_nic: studentNic
         })
@@ -2170,7 +2170,7 @@ function loadStudentCoursesForSummary() {
 
     fetch('/payment/get-student-courses', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
         body: JSON.stringify({
             student_nic: studentNic
         })
@@ -2215,7 +2215,7 @@ function generatePaymentSummary() {
 
     fetch('/payment/get-summary', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
         body: JSON.stringify({
             student_nic: studentNic,
             course_id: courseId
@@ -2571,7 +2571,7 @@ function loadPaymentDetails() {
     
     fetch('/payment/get-payment-details', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
         body: JSON.stringify({
             student_id: studentId,
             course_id: courseId,
@@ -2853,7 +2853,7 @@ function confirmSavePaymentRecord() {
 
     fetch('/payment/save-record', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
         body: JSON.stringify({
             receipt_no: window.currentSlipData.receipt_no,
             payment_method: paymentMethod,
@@ -2896,7 +2896,7 @@ function savePaymentRecordFromUpdate() {
 
     fetch('/payment/save-record', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
         body: JSON.stringify({
             receipt_no: receiptNo,
             payment_method: paymentMethod,
@@ -2931,4 +2931,5 @@ function savePaymentRecordFromUpdate() {
     .finally(() => showSpinner(false));
 }
 </script>
-@endsection 
+<?php $__env->stopSection(); ?> 
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/payment.blade.php ENDPATH**/ ?>
