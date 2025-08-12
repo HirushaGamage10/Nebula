@@ -13,7 +13,8 @@ class SemesterCreationController extends Controller
     public function index()
     {
         $semesters = Semester::with(['course', 'intake', 'modules'])->orderBy('created_at', 'desc')->get();
-        return view('semester_index', compact('semesters'));
+        $courses = Course::orderBy('course_name', 'asc')->get();
+        return view('semester_index', compact('semesters', 'courses'));
     }
 
     public function create()
@@ -44,6 +45,12 @@ class SemesterCreationController extends Controller
         \Log::info('Semester update request data:', $request->all());
 
         try {
+            // Handle JSON requests
+            if ($request->isJson()) {
+                $data = $request->json()->all();
+                $request->merge($data);
+            }
+            
             // Map the form field 'semester' to 'name' for the database
             if ($request->has('semester')) {
                 $request->merge(['name' => $request->semester]);
@@ -158,6 +165,12 @@ class SemesterCreationController extends Controller
         \Log::info('Semester creation request data:', $request->all());
 
         try {
+            // Handle JSON requests
+            if ($request->isJson()) {
+                $data = $request->json()->all();
+                $request->merge($data);
+            }
+            
             // Map the form field 'semester' to 'name' for the database
             if ($request->has('semester')) {
                 $request->merge(['name' => $request->semester]);
@@ -276,5 +289,120 @@ class SemesterCreationController extends Controller
             ->orderBy('course_name', 'asc')
             ->get();
         return response()->json(['success' => true, 'courses' => $courses]);
+    }
+
+    public function bulkUpdateStatus(Request $request)
+    {
+        try {
+            $request->validate([
+                'semester_ids' => 'required|array',
+                'semester_ids.*' => 'exists:semesters,id',
+                'status' => 'required|in:upcoming,active,completed'
+            ]);
+
+            $semesterIds = $request->semester_ids;
+            $status = $request->status;
+
+            // Update semesters
+            Semester::whereIn('id', $semesterIds)->update(['status' => $status]);
+
+            $updatedCount = count($semesterIds);
+            
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully updated status for {$updatedCount} semester(s)."
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in bulk status update:', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while updating semester statuses.'
+            ], 500);
+        }
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        try {
+            $request->validate([
+                'semester_ids' => 'required|array',
+                'semester_ids.*' => 'exists:semesters,id'
+            ]);
+
+            $semesterIds = $request->semester_ids;
+
+            // Delete associated modules first
+            \DB::table('semester_module')->whereIn('semester_id', $semesterIds)->delete();
+            
+            // Delete semesters
+            Semester::whereIn('id', $semesterIds)->delete();
+
+            $deletedCount = count($semesterIds);
+            
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully deleted {$deletedCount} semester(s)."
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in bulk delete:', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while deleting semesters.'
+            ], 500);
+        }
+    }
+
+    public function duplicateSemester(Request $request, Semester $semester)
+    {
+        try {
+            $request->validate([
+                'new_name' => 'required|string|max:255',
+                'start_date' => 'required|date',
+                'end_date' => 'required|date|after_or_equal:start_date',
+            ]);
+
+            // Create new semester
+            $newSemester = $semester->replicate();
+            $newSemester->name = $request->new_name;
+            $newSemester->start_date = $request->start_date;
+            $newSemester->end_date = $request->end_date;
+            
+            // Determine status based on dates
+            $today = now()->toDateString();
+            if ($newSemester->start_date > $today) {
+                $newSemester->status = 'upcoming';
+            } elseif ($newSemester->start_date <= $today && $newSemester->end_date >= $today) {
+                $newSemester->status = 'active';
+            } else {
+                $newSemester->status = 'completed';
+            }
+            
+            $newSemester->save();
+
+            // Copy modules
+            $semesterModules = \DB::table('semester_module')
+                ->where('semester_id', $semester->id)
+                ->get();
+
+            foreach ($semesterModules as $module) {
+                \DB::table('semester_module')->insert([
+                    'semester_id' => $newSemester->id,
+                    'module_id' => $module->module_id,
+                    'specialization' => $module->specialization
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Semester duplicated successfully.',
+                'semester_id' => $newSemester->id
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error duplicating semester:', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while duplicating the semester.'
+            ], 500);
+        }
     }
 }

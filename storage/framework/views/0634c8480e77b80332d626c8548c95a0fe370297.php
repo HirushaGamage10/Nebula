@@ -6,7 +6,12 @@
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
-            <h2 class="text-center mb-4">Create Semester</h2>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">Create Semester</h2>
+                <a href="<?php echo e(route('semesters.index')); ?>" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Semesters
+                </a>
+            </div>
             <hr>
             <form action="<?php echo e(route('semesters.store')); ?>" method="POST">
                 <?php echo csrf_field(); ?>
@@ -110,7 +115,10 @@
                     </div>
                 </div>
                 <div class="d-grid mx-3">
-                    <button type="submit" class="btn btn-success">Create Semester</button>
+                    <button type="submit" class="btn btn-success" id="submitBtn">
+                        <span id="submitText">Create Semester</span>
+                        <span id="submitSpinner" class="spinner-border spinner-border-sm ms-2" style="display: none;"></span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -404,28 +412,55 @@ document.addEventListener('DOMContentLoaded', function() {
         const moduleCredits = moduleOption ? moduleOption.getAttribute('data-credits') : '';
         const semester = semesterSelect.value;
         let specialization = '';
-        if (document.getElementById('specializationRow').style.display !== 'none') {
+        // Get specialization if visible
+        const specializationRow = document.getElementById('specializationRow');
+        if (specializationRow && specializationRow.style.display !== 'none') {
             specialization = document.getElementById('specialization_select').value || '';
         }
-        if (!moduleId || !moduleName || !semester) return;
-        // Prevent duplicate - allow same module for different specializations
-        if (addedModules.some(m => m.moduleId === moduleId && m.semester === semester && m.specialization === specialization)) return;
-        addedModules.push({moduleId, moduleName, moduleType, moduleCredits, semester, specialization});
+        
+        // Validate required selections
+        if (!moduleId || !moduleName || !semester) {
+            window.showToast('Please select semester, module, and type.', 'danger');
+            return;
+        }
+
+        // Prevent duplicate (same module, semester, specialization)
+        if (addedModules.some(m =>
+            m.moduleId === moduleId &&
+            m.semester === semester &&
+            m.specialization === specialization
+        )) {
+            window.showToast('This module with the selected specialization is already added.', 'warning');
+            return;
+        }
+
+        // Add to JS array
+        addedModules.push({
+            moduleId,
+            moduleName,
+            moduleType,
+            moduleCredits,
+            semester,
+            specialization
+        });
+
+        // Build table row
         const row = document.createElement('tr');
         let rowHtml = `<td>${semesterSelect.options[semesterSelect.selectedIndex].text}</td>`;
         if (courseSpecializations.length > 0) {
             rowHtml += `<td>${specialization ? specialization : '-'}</td>`;
         }
         rowHtml += `
-            <td>${moduleSelect.options[moduleSelect.selectedIndex].text}</td>
-            <td>${moduleTypeSelect.value}</td>
-            <td>${moduleSelect.selectedOptions[0].getAttribute('data-credits') || ''}</td>
+            <td>${moduleName}</td>
+            <td>${moduleType}</td>
+            <td>${moduleCredits}</td>
             <td><button type="button" class="btn btn-danger btn-sm remove-module">Remove</button></td>
         `;
         row.innerHTML = rowHtml;
         row.dataset.moduleId = moduleId;
         row.dataset.semester = semester;
         row.dataset.specialization = specialization;
+
         modulesTableBody.appendChild(row);
     });
 
@@ -452,27 +487,29 @@ window.showToast = function(message, type = 'success') {
     const toast = new bootstrap.Toast(toastEl, { delay: 2500 });
     toast.show();
 };
+
 // AJAX form submission for semester creation
 const semesterForm = document.querySelector('form[action="<?php echo e(route('semesters.store')); ?>"]');
 semesterForm.addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     // Validate required fields
-    const requiredFields = ['location', 'course_id', 'intake_id', 'semester', 'start_date', 'end_date', 'status'];
+    const requiredFields = [
+        'location', 'course_id', 'intake_id', 'semester',
+        'start_date', 'end_date', 'status'
+    ];
     const missingFields = [];
-    
     requiredFields.forEach(field => {
         const element = document.getElementById(field);
         if (!element || !element.value) {
             missingFields.push(field);
         }
     });
-    
     if (missingFields.length > 0) {
         showToast('Please fill in all required fields: ' + missingFields.join(', '), 'danger');
         return;
     }
-    
+
     // Gather form data as JSON
     const formData = {
         location: document.getElementById('location').value,
@@ -485,49 +522,45 @@ semesterForm.addEventListener('submit', function(e) {
         _token: '<?php echo e(csrf_token()); ?>'
     };
     
-    // Debug: Log form data
-    console.log('Form data being sent:', formData);
-    
-    // Gather modules with specialization
+    // Validate CSRF token
+    if (!formData._token) {
+        showToast('CSRF token is missing. Please refresh the page and try again.', 'danger');
+        return;
+    }
+
+    // Gather modules with specialization using data attributes
     const modules = [];
     document.querySelectorAll('#modules_table tbody tr').forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length >= 5) {
-            const semester = cells[0].textContent.trim();
-            let specialization = null;
-            let moduleName, moduleType, credits;
-            if (courseSpecializations.length > 0) {
-                specialization = cells[1].textContent.trim();
-                moduleName = cells[2].textContent.trim();
-                moduleType = cells[3].textContent.trim();
-                credits = cells[4].textContent.trim();
-            } else {
-                moduleName = cells[1].textContent.trim();
-                moduleType = cells[2].textContent.trim();
-                credits = cells[3].textContent.trim();
-            }
-            // Find module_id by name (assumes moduleSelect options have unique names)
-            let moduleId = null;
-            document.querySelectorAll('#module_select option').forEach(opt => {
-                if (opt.textContent.trim() === moduleName) {
-                    moduleId = opt.value;
-                }
+        const moduleId = row.dataset.moduleId;
+        const specialization = row.dataset.specialization;
+        if (moduleId) {
+            modules.push({
+                module_id: moduleId,
+                specialization: specialization && specialization !== '-' ? specialization : null
             });
-            if (moduleId) {
-                modules.push({
-                    module_id: moduleId,
-                    specialization: specialization && specialization !== '-' ? specialization : null
-                });
-            }
         }
     });
-    
-    // Add modules to form data
     formData.modules = modules;
-    
+
+    // Validate that at least one module is added
+    if (modules.length === 0) {
+        showToast('Please add at least one module to the semester.', 'danger');
+        return;
+    }
+
     // Debug: Log final data
     console.log('Final data with modules:', formData);
+    console.log('Form action URL:', semesterForm.action);
+
+    // Show loading state
+    const submitBtn = document.getElementById('submitBtn');
+    const submitText = document.getElementById('submitText');
+    const submitSpinner = document.getElementById('submitSpinner');
     
+    submitBtn.disabled = true;
+    submitText.textContent = 'Creating Semester...';
+    submitSpinner.style.display = 'inline-block';
+
     // Send AJAX request
     fetch(semesterForm.action, {
         method: 'POST',
@@ -538,33 +571,56 @@ semesterForm.addEventListener('submit', function(e) {
         },
         body: JSON.stringify(formData)
     })
-    .then(response => {
+    .then(async response => {
         console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        
+        let data;
+        try {
+            data = await response.json();
+            console.log('Response data:', data);
+        } catch (err) {
+            console.error('JSON parse error:', err);
+            throw new Error('Server returned invalid response.');
+        }
         if (!response.ok) {
-            return response.json().then(data => {
-                console.error('Error response:', data);
-                throw new Error(data.message || 'Network response was not ok');
-            });
+            // Validation or server error
+            let errorMsg = data.message || 'An error occurred while creating the semester.';
+            if (data.errors) {
+                errorMsg += '<br>' + Object.values(data.errors).flat().join('<br>');
+            }
+            showToast(errorMsg, 'danger');
+            throw new Error(errorMsg);
         }
-        return response.json();
+        return data;
     })
-    .then(data => {
-        console.log('Success response:', data);
-        if (data.success) {
-            showToast(data.message || 'Semester created successfully!', 'success');
-            // Refresh the page after a short delay to show the success message
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
-        } else {
-            showToast(data.message || 'Failed to create semester.', 'danger');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast(error.message || 'An unexpected error occurred.', 'danger');
-    });
+            .then(data => {
+            // Reset loading state
+            submitBtn.disabled = false;
+            submitText.textContent = 'Create Semester';
+            submitSpinner.style.display = 'none';
+            
+            if (data.success) {
+                showToast(data.message || 'Semester created successfully!', 'success');
+                setTimeout(() => {
+                    window.location.href = '<?php echo e(route("semesters.index")); ?>';
+                }, 1500);
+            } else {
+                showToast(data.message || 'Failed to create semester.', 'danger');
+            }
+        })
+        .catch(error => {
+            // Reset loading state
+            submitBtn.disabled = false;
+            submitText.textContent = 'Create Semester';
+            submitSpinner.style.display = 'none';
+            
+            // Already handled above, but fallback here
+            console.error('Error:', error);
+            showToast(error.message || 'An unexpected error occurred.', 'danger');
+        });
 });
+
 </script>
 <?php $__env->stopSection(); ?>
 

@@ -8,9 +8,14 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="mb-0">Edit Semester</h2>
-                <a href="{{ route('semesters.index') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to Semesters
-                </a>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#duplicateModal">
+                        <i class="fas fa-copy"></i> Duplicate
+                    </button>
+                    <a href="{{ route('semesters.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Semesters
+                    </a>
+                </div>
             </div>
             <hr>
             <form action="{{ route('semesters.update', $semester) }}" method="POST" id="semesterEditForm">
@@ -65,13 +70,13 @@
                 <div class="mb-3 row mx-3">
                     <label for="start_date" class="col-sm-2 col-form-label">Start Date <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
-                        <input type="date" name="start_date" id="start_date" class="form-control" value="{{ $semester->start_date ? $semester->start_date->format('Y-m-d') : '' }}" required>
+                        <input type="date" name="start_date" id="start_date" class="form-control" value="{{ $semester->start_date ? (is_string($semester->start_date) ? \Carbon\Carbon::parse($semester->start_date)->format('Y-m-d') : $semester->start_date->format('Y-m-d')) : '' }}" required>
                     </div>
                 </div>
                 <div class="mb-3 row mx-3">
                     <label for="end_date" class="col-sm-2 col-form-label">End Date <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
-                        <input type="date" name="end_date" id="end_date" class="form-control" value="{{ $semester->end_date ? $semester->end_date->format('Y-m-d') : '' }}" required>
+                        <input type="date" name="end_date" id="end_date" class="form-control" value="{{ $semester->end_date ? (is_string($semester->end_date) ? \Carbon\Carbon::parse($semester->end_date)->format('Y-m-d') : $semester->end_date->format('Y-m-d')) : '' }}" required>
                     </div>
                 </div>
                 <div class="mb-3 row mx-3" id="specializationRow" style="display:none;">
@@ -119,6 +124,39 @@
                     <button type="submit" class="btn btn-success">Update Semester</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Duplicate Semester Modal -->
+<div class="modal fade" id="duplicateModal" tabindex="-1" aria-labelledby="duplicateModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="duplicateModalLabel">Duplicate Semester</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">This will create a copy of "{{ $semester->name }}" with all its modules and settings.</p>
+                <div class="mb-3">
+                    <label for="newSemesterName" class="form-label">New Semester Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="newSemesterName" placeholder="Enter new semester name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="newStartDate" class="form-label">Start Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="newStartDate" required>
+                </div>
+                <div class="mb-3">
+                    <label for="newEndDate" class="form-label">End Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="newEndDate" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="duplicateSemesterBtn">
+                    <i class="fas fa-copy"></i> Duplicate Semester
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
         </div>
     </div>
 </div>
@@ -459,6 +497,55 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Error:', error);
             showToast(error.message || 'An unexpected error occurred.', 'danger');
+        });
+    });
+
+    // Duplicate semester functionality
+    document.getElementById('duplicateSemesterBtn').addEventListener('click', function() {
+        const newName = document.getElementById('newSemesterName').value.trim();
+        const newStartDate = document.getElementById('newStartDate').value;
+        const newEndDate = document.getElementById('newEndDate').value;
+
+        if (!newName || !newStartDate || !newEndDate) {
+            showToast('Please fill in all required fields.', 'warning');
+            return;
+        }
+
+        if (newStartDate >= newEndDate) {
+            showToast('End date must be after start date.', 'warning');
+            return;
+        }
+
+        fetch('{{ route("semesters.duplicate", $semester) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                new_name: newName,
+                start_date: newStartDate,
+                end_date: newEndDate
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('duplicateModal')).hide();
+                // Redirect to semester index after a short delay
+                setTimeout(() => {
+                    window.location.href = '{{ route("semesters.index") }}';
+                }, 1500);
+            } else {
+                showToast(data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('An error occurred while duplicating the semester.', 'danger');
         });
     });
 });

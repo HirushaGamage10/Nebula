@@ -493,6 +493,9 @@ Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Ad
     Route::get('semesters/{semester}/edit', [App\Http\Controllers\SemesterCreationController::class, 'edit'])->name('semesters.edit');
     Route::put('semesters/{semester}', [App\Http\Controllers\SemesterCreationController::class, 'update'])->name('semesters.update');
     Route::delete('semesters/{semester}', [App\Http\Controllers\SemesterCreationController::class, 'destroy'])->name('semesters.destroy');
+Route::post('semesters/bulk-update-status', [App\Http\Controllers\SemesterCreationController::class, 'bulkUpdateStatus'])->name('semesters.bulkUpdateStatus');
+Route::post('semesters/bulk-delete', [App\Http\Controllers\SemesterCreationController::class, 'bulkDelete'])->name('semesters.bulkDelete');
+Route::post('semesters/{semester}/duplicate', [App\Http\Controllers\SemesterCreationController::class, 'duplicateSemester'])->name('semesters.duplicate');
 });
 
 // Semester Registration - Program Administrator (level 01), Program Administrator (level 02), Developer

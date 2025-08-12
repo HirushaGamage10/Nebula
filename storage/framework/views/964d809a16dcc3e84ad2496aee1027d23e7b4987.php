@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Semester Management')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Semester Management'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -12,7 +12,7 @@
                     <button id="bulkActionsBtn" class="btn btn-outline-secondary" style="display: none;">
                         <i class="fas fa-tasks"></i> Bulk Actions
                     </button>
-                    <a href="{{ route('semesters.create') }}" class="btn btn-primary">
+                    <a href="<?php echo e(route('semesters.create')); ?>" class="btn btn-primary">
                         <i class="fas fa-plus"></i> Create New Semester
                     </a>
                 </div>
@@ -38,9 +38,9 @@
                 <div class="col-md-3">
                     <select id="courseFilter" class="form-select">
                         <option value="">All Courses</option>
-                        @foreach($courses ?? [] as $course)
-                            <option value="{{ $course->course_name }}">{{ $course->course_name }}</option>
-                        @endforeach
+                        <?php $__currentLoopData = $courses ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($course->course_name); ?>"><?php echo e($course->course_name); ?></option>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -57,7 +57,7 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between">
                                 <div>
-                                    <h4 class="mb-0" id="totalSemesters">{{ $semesters->count() }}</h4>
+                                    <h4 class="mb-0" id="totalSemesters"><?php echo e($semesters->count()); ?></h4>
                                     <small>Total Semesters</small>
                                 </div>
                                 <div class="align-self-center">
@@ -72,7 +72,7 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between">
                                 <div>
-                                    <h4 class="mb-0" id="activeSemesters">{{ $semesters->where('status', 'active')->count() }}</h4>
+                                    <h4 class="mb-0" id="activeSemesters"><?php echo e($semesters->where('status', 'active')->count()); ?></h4>
                                     <small>Active Semesters</small>
                                 </div>
                                 <div class="align-self-center">
@@ -87,7 +87,7 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between">
                                 <div>
-                                    <h4 class="mb-0" id="upcomingSemesters">{{ $semesters->where('status', 'upcoming')->count() }}</h4>
+                                    <h4 class="mb-0" id="upcomingSemesters"><?php echo e($semesters->where('status', 'upcoming')->count()); ?></h4>
                                     <small>Upcoming Semesters</small>
                                 </div>
                                 <div class="align-self-center">
@@ -102,7 +102,7 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between">
                                 <div>
-                                    <h4 class="mb-0" id="completedSemesters">{{ $semesters->where('status', 'completed')->count() }}</h4>
+                                    <h4 class="mb-0" id="completedSemesters"><?php echo e($semesters->where('status', 'completed')->count()); ?></h4>
                                     <small>Completed Semesters</small>
                                 </div>
                                 <div class="align-self-center">
@@ -133,81 +133,81 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($semesters as $semester)
-                        <tr data-semester="{{ strtolower($semester->name) }}" 
-                            data-course="{{ strtolower($semester->course->course_name ?? '') }}"
-                            data-status="{{ $semester->status }}">
+                        <?php $__empty_1 = true; $__currentLoopData = $semesters; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $semester): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <tr data-semester="<?php echo e(strtolower($semester->name)); ?>" 
+                            data-course="<?php echo e(strtolower($semester->course->course_name ?? '')); ?>"
+                            data-status="<?php echo e($semester->status); ?>">
                             <td>
-                                <input type="checkbox" class="form-check-input semester-checkbox" value="{{ $semester->id }}">
+                                <input type="checkbox" class="form-check-input semester-checkbox" value="<?php echo e($semester->id); ?>">
                             </td>
                             <td>
-                                <strong>{{ $semester->name }}</strong>
-                                @if($semester->status === 'active')
+                                <strong><?php echo e($semester->name); ?></strong>
+                                <?php if($semester->status === 'active'): ?>
                                     <span class="badge bg-success ms-2">Current</span>
-                                @endif
+                                <?php endif; ?>
                             </td>
-                            <td>{{ $semester->course->course_name ?? 'N/A' }}</td>
-                            <td>{{ $semester->intake->batch ?? 'N/A' }}</td>
-                            <td>{{ $semester->start_date ? (is_string($semester->start_date) ? \Carbon\Carbon::parse($semester->start_date)->format('M d, Y') : $semester->start_date->format('M d, Y')) : 'N/A' }}</td>
-                            <td>{{ $semester->end_date ? (is_string($semester->end_date) ? \Carbon\Carbon::parse($semester->end_date)->format('M d, Y') : $semester->end_date->format('M d, Y')) : 'N/A' }}</td>
+                            <td><?php echo e($semester->course->course_name ?? 'N/A'); ?></td>
+                            <td><?php echo e($semester->intake->batch ?? 'N/A'); ?></td>
+                            <td><?php echo e($semester->start_date ? (is_string($semester->start_date) ? \Carbon\Carbon::parse($semester->start_date)->format('M d, Y') : $semester->start_date->format('M d, Y')) : 'N/A'); ?></td>
+                            <td><?php echo e($semester->end_date ? (is_string($semester->end_date) ? \Carbon\Carbon::parse($semester->end_date)->format('M d, Y') : $semester->end_date->format('M d, Y')) : 'N/A'); ?></td>
                             <td>
-                                @if($semester->start_date && $semester->end_date)
-                                    @php
+                                <?php if($semester->start_date && $semester->end_date): ?>
+                                    <?php
                                         $start = \Carbon\Carbon::parse($semester->start_date);
                                         $end = \Carbon\Carbon::parse($semester->end_date);
                                         $duration = $start->diffInDays($end);
-                                    @endphp
-                                    {{ $duration }} days
-                                @else
+                                    ?>
+                                    <?php echo e($duration); ?> days
+                                <?php else: ?>
                                     N/A
-                                @endif
+                                <?php endif; ?>
                             </td>
                             <td>
-                                @if($semester->status === 'upcoming')
+                                <?php if($semester->status === 'upcoming'): ?>
                                     <span class="badge bg-warning">Upcoming</span>
-                                @elseif($semester->status === 'active')
+                                <?php elseif($semester->status === 'active'): ?>
                                     <span class="badge bg-success">Active</span>
-                                @else
+                                <?php else: ?>
                                     <span class="badge bg-secondary">Completed</span>
-                                @endif
+                                <?php endif; ?>
                             </td>
                             <td>
-                                @php
+                                <?php
                                     $moduleCount = $semester->modules->count();
-                                @endphp
-                                <span class="badge bg-info">{{ $moduleCount }} module{{ $moduleCount !== 1 ? 's' : '' }}</span>
-                                @if($moduleCount > 0)
+                                ?>
+                                <span class="badge bg-info"><?php echo e($moduleCount); ?> module<?php echo e($moduleCount !== 1 ? 's' : ''); ?></span>
+                                <?php if($moduleCount > 0): ?>
                                     <button type="button" class="btn btn-sm btn-outline-info ms-1" 
-                                            data-bs-toggle="modal" data-bs-target="#modulesModal{{ $semester->id }}">
+                                            data-bs-toggle="modal" data-bs-target="#modulesModal<?php echo e($semester->id); ?>">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                @endif
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <div class="btn-group" role="group">
-                                    <a href="{{ route('semesters.edit', $semester) }}" class="btn btn-sm btn-outline-primary" 
+                                    <a href="<?php echo e(route('semesters.edit', $semester)); ?>" class="btn btn-sm btn-outline-primary" 
                                        title="Edit Semester">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     <button type="button" class="btn btn-sm btn-outline-info" 
-                                            data-bs-toggle="modal" data-bs-target="#semesterModal{{ $semester->id }}"
+                                            data-bs-toggle="modal" data-bs-target="#semesterModal<?php echo e($semester->id); ?>"
                                             title="View Details">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-danger delete-semester" 
-                                            data-semester-id="{{ $semester->id }}" 
-                                            data-semester-name="{{ $semester->name }}"
+                                            data-semester-id="<?php echo e($semester->id); ?>" 
+                                            data-semester-name="<?php echo e($semester->name); ?>"
                                             title="Delete Semester">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
                             </td>
                         </tr>
-                        @empty
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <tr>
                             <td colspan="10" class="text-center">No semesters found.</td>
                         </tr>
-                        @endforelse
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -216,12 +216,12 @@
 </div>
 
 <!-- Semester Detail Modals -->
-@foreach($semesters as $semester)
-<div class="modal fade" id="semesterModal{{ $semester->id }}" tabindex="-1" aria-labelledby="semesterModalLabel{{ $semester->id }}" aria-hidden="true">
+<?php $__currentLoopData = $semesters; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $semester): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+<div class="modal fade" id="semesterModal<?php echo e($semester->id); ?>" tabindex="-1" aria-labelledby="semesterModalLabel<?php echo e($semester->id); ?>" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="semesterModalLabel{{ $semester->id }}">Semester Details - {{ $semester->name }}</h5>
+                <h5 class="modal-title" id="semesterModalLabel<?php echo e($semester->id); ?>">Semester Details - <?php echo e($semester->name); ?></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -229,44 +229,44 @@
                     <div class="col-md-6">
                         <h6>Basic Information</h6>
                         <table class="table table-sm">
-                            <tr><td><strong>Name:</strong></td><td>{{ $semester->name }}</td></tr>
-                            <tr><td><strong>Course:</strong></td><td>{{ $semester->course->course_name ?? 'N/A' }}</td></tr>
-                            <tr><td><strong>Intake:</strong></td><td>{{ $semester->intake->batch ?? 'N/A' }}</td></tr>
+                            <tr><td><strong>Name:</strong></td><td><?php echo e($semester->name); ?></td></tr>
+                            <tr><td><strong>Course:</strong></td><td><?php echo e($semester->course->course_name ?? 'N/A'); ?></td></tr>
+                            <tr><td><strong>Intake:</strong></td><td><?php echo e($semester->intake->batch ?? 'N/A'); ?></td></tr>
                             <tr><td><strong>Status:</strong></td><td>
-                                @if($semester->status === 'upcoming')
+                                <?php if($semester->status === 'upcoming'): ?>
                                     <span class="badge bg-warning">Upcoming</span>
-                                @elseif($semester->status === 'active')
+                                <?php elseif($semester->status === 'active'): ?>
                                     <span class="badge bg-success">Active</span>
-                                @else
+                                <?php else: ?>
                                     <span class="badge bg-secondary">Completed</span>
-                                @endif
+                                <?php endif; ?>
                             </td></tr>
                         </table>
                     </div>
                     <div class="col-md-6">
                         <h6>Date Information</h6>
                         <table class="table table-sm">
-                            <tr><td><strong>Start Date:</strong></td><td>{{ $semester->start_date ? (is_string($semester->start_date) ? \Carbon\Carbon::parse($semester->start_date)->format('M d, Y') : $semester->start_date->format('M d, Y')) : 'N/A' }}</td></tr>
-                            <tr><td><strong>End Date:</strong></td><td>{{ $semester->end_date ? (is_string($semester->end_date) ? \Carbon\Carbon::parse($semester->end_date)->format('M d, Y') : $semester->end_date->format('M d, Y')) : 'N/A' }}</td></tr>
+                            <tr><td><strong>Start Date:</strong></td><td><?php echo e($semester->start_date ? (is_string($semester->start_date) ? \Carbon\Carbon::parse($semester->start_date)->format('M d, Y') : $semester->start_date->format('M d, Y')) : 'N/A'); ?></td></tr>
+                            <tr><td><strong>End Date:</strong></td><td><?php echo e($semester->end_date ? (is_string($semester->end_date) ? \Carbon\Carbon::parse($semester->end_date)->format('M d, Y') : $semester->end_date->format('M d, Y')) : 'N/A'); ?></td></tr>
                             <tr><td><strong>Duration:</strong></td><td>
-                                @if($semester->start_date && $semester->end_date)
-                                    @php
+                                <?php if($semester->start_date && $semester->end_date): ?>
+                                    <?php
                                         $start = \Carbon\Carbon::parse($semester->start_date);
                                         $end = \Carbon\Carbon::parse($semester->end_date);
                                         $duration = $start->diffInDays($end);
-                                    @endphp
-                                    {{ $duration }} days
-                                @else
+                                    ?>
+                                    <?php echo e($duration); ?> days
+                                <?php else: ?>
                                     N/A
-                                @endif
+                                <?php endif; ?>
                             </td></tr>
-                            <tr><td><strong>Created:</strong></td><td>{{ $semester->created_at ? (is_string($semester->created_at) ? \Carbon\Carbon::parse($semester->created_at)->format('M d, Y H:i') : $semester->created_at->format('M d, Y H:i')) : 'N/A' }}</td></tr>
+                            <tr><td><strong>Created:</strong></td><td><?php echo e($semester->created_at ? (is_string($semester->created_at) ? \Carbon\Carbon::parse($semester->created_at)->format('M d, Y H:i') : $semester->created_at->format('M d, Y H:i')) : 'N/A'); ?></td></tr>
                         </table>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <a href="{{ route('semesters.edit', $semester) }}" class="btn btn-primary">Edit Semester</a>
+                <a href="<?php echo e(route('semesters.edit', $semester)); ?>" class="btn btn-primary">Edit Semester</a>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
@@ -274,15 +274,15 @@
 </div>
 
 <!-- Modules Modal -->
-<div class="modal fade" id="modulesModal{{ $semester->id }}" tabindex="-1" aria-labelledby="modulesModalLabel{{ $semester->id }}" aria-hidden="true">
+<div class="modal fade" id="modulesModal<?php echo e($semester->id); ?>" tabindex="-1" aria-labelledby="modulesModalLabel<?php echo e($semester->id); ?>" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="modulesModalLabel{{ $semester->id }}">Modules - {{ $semester->name }}</h5>
+                <h5 class="modal-title" id="modulesModalLabel<?php echo e($semester->id); ?>">Modules - <?php echo e($semester->name); ?></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                @if($semester->modules->count() > 0)
+                <?php if($semester->modules->count() > 0): ?>
                     <div class="table-responsive">
                         <table class="table table-striped">
                             <thead>
@@ -294,24 +294,25 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($semester->modules as $module)
+                                <?php $__currentLoopData = $semester->modules; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $module): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                 <tr>
-                                    <td>{{ $module->module_name }}</td>
+                                    <td><?php echo e($module->module_name); ?></td>
                                     <td>
-                                        <span class="badge bg-{{ $module->module_type === 'core' ? 'primary' : ($module->module_type === 'elective' ? 'success' : 'warning') }}">
-                                            {{ ucfirst(str_replace('_', ' ', $module->module_type)) }}
+                                        <span class="badge bg-<?php echo e($module->module_type === 'core' ? 'primary' : ($module->module_type === 'elective' ? 'success' : 'warning')); ?>">
+                                            <?php echo e(ucfirst(str_replace('_', ' ', $module->module_type))); ?>
+
                                         </span>
                                     </td>
-                                    <td>{{ $module->credits ?? 'N/A' }}</td>
-                                    <td>{{ $module->pivot->specialization ?? 'N/A' }}</td>
+                                    <td><?php echo e($module->credits ?? 'N/A'); ?></td>
+                                    <td><?php echo e($module->pivot->specialization ?? 'N/A'); ?></td>
                                 </tr>
-                                @endforeach
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </tbody>
                         </table>
                     </div>
-                @else
+                <?php else: ?>
                     <p class="text-center text-muted">No modules assigned to this semester.</p>
-                @endif
+                <?php endif; ?>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -319,7 +320,7 @@
         </div>
     </div>
 </div>
-@endforeach
+<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 
 <!-- Bulk Actions Modal -->
 <div class="modal fade" id="bulkActionsModal" tabindex="-1" aria-labelledby="bulkActionsModalLabel" aria-hidden="true">
@@ -367,9 +368,9 @@
         </div>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('scripts')
+<?php $__env->startSection('scripts'); ?>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('searchInput');
@@ -508,11 +509,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const semesterIds = Array.from(selectedCheckboxes).map(cb => cb.value);
         
-        fetch('{{ route("semesters.bulkUpdateStatus") }}', {
+        fetch('<?php echo e(route("semesters.bulkUpdateStatus")); ?>', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
                 'Accept': 'application/json'
             },
             body: JSON.stringify({
@@ -570,11 +571,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const semesterIds = Array.from(selectedCheckboxes).map(cb => cb.value);
         
-        fetch('{{ route("semesters.bulkDelete") }}', {
+        fetch('<?php echo e(route("semesters.bulkDelete")); ?>', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
                 'Accept': 'application/json'
             },
             body: JSON.stringify({
@@ -624,7 +625,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
                         'Accept': 'application/json'
                     }
                 })
@@ -666,4 +667,5 @@ function showToast(message, type = 'success') {
     toast.show();
 }
 </script>
-@endsection 
+<?php $__env->stopSection(); ?> 
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/semester_index.blade.php ENDPATH**/ ?>

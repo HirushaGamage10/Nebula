@@ -172,9 +172,9 @@
                             <td>{{ $intake->location }}</td>
                             <td>{{ $intake->intake_mode }}</td>
                             <td>{{ $intake->intake_type }}</td>
-                            <td>{{ $intake->start_date ? $intake->start_date->format('Y-m-d') : '' }}</td>
-                            <td>{{ $intake->end_date ? $intake->end_date->format('Y-m-d') : '' }}</td>
-                            <td>{{ $intake->enrollment_end_date ? $intake->enrollment_end_date->format('Y-m-d') : '-' }}</td>
+                            <td>{{ $intake->start_date ? (is_string($intake->start_date) ? \Carbon\Carbon::parse($intake->start_date)->format('Y-m-d') : $intake->start_date->format('Y-m-d')) : '' }}</td>
+                            <td>{{ $intake->end_date ? (is_string($intake->end_date) ? \Carbon\Carbon::parse($intake->end_date)->format('Y-m-d') : $intake->end_date->format('Y-m-d')) : '' }}</td>
+                            <td>{{ $intake->enrollment_end_date ? (is_string($intake->enrollment_end_date) ? \Carbon\Carbon::parse($intake->enrollment_end_date)->format('Y-m-d') : $intake->enrollment_end_date->format('Y-m-d')) : '-' }}</td>
                             <td>{{ $intake->registrations->count() }} / {{ $intake->batch_size }}</td>
                             <td>
                                 @if($intake->isPast())

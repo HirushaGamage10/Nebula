@@ -6,7 +6,12 @@
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
-            <h2 class="text-center mb-4">Create Semester</h2>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">Create Semester</h2>
+                <a href="{{ route('semesters.index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Semesters
+                </a>
+            </div>
             <hr>
             <form action="{{ route('semesters.store') }}" method="POST">
                 @csrf
@@ -110,7 +115,10 @@
                     </div>
                 </div>
                 <div class="d-grid mx-3">
-                    <button type="submit" class="btn btn-success">Create Semester</button>
+                    <button type="submit" class="btn btn-success" id="submitBtn">
+                        <span id="submitText">Create Semester</span>
+                        <span id="submitSpinner" class="spinner-border spinner-border-sm ms-2" style="display: none;"></span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -409,13 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (specializationRow && specializationRow.style.display !== 'none') {
             specialization = document.getElementById('specialization_select').value || '';
         }
-<<<<<<< HEAD
-        if (!moduleId || !moduleName || !semester) return;
-        // Prevent duplicate - allow same module for different specializations
-        if (addedModules.some(m => m.moduleId === moduleId && m.semester === semester && m.specialization === specialization)) return;
-        addedModules.push({moduleId, moduleName, moduleType, moduleCredits, semester, specialization});
-=======
-
+        
         // Validate required selections
         if (!moduleId || !moduleName || !semester) {
             window.showToast('Please select semester, module, and type.', 'danger');
@@ -443,7 +445,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Build table row
->>>>>>> 9793f79 (module save bug fix)
         const row = document.createElement('tr');
         let rowHtml = `<td>${semesterSelect.options[semesterSelect.selectedIndex].text}</td>`;
         if (courseSpecializations.length > 0) {
@@ -459,10 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
         row.dataset.moduleId = moduleId;
         row.dataset.semester = semester;
         row.dataset.specialization = specialization;
-<<<<<<< HEAD
-=======
 
->>>>>>> 9793f79 (module save bug fix)
         modulesTableBody.appendChild(row);
     });
 
@@ -496,14 +494,10 @@ semesterForm.addEventListener('submit', function(e) {
     e.preventDefault();
 
     // Validate required fields
-<<<<<<< HEAD
-    const requiredFields = ['location', 'course_id', 'intake_id', 'semester', 'start_date', 'end_date', 'status'];
-=======
     const requiredFields = [
         'location', 'course_id', 'intake_id', 'semester',
-        'start_date', 'end_date', 'registration_date', 'status'
+        'start_date', 'end_date', 'status'
     ];
->>>>>>> 9793f79 (module save bug fix)
     const missingFields = [];
     requiredFields.forEach(field => {
         const element = document.getElementById(field);
@@ -527,6 +521,12 @@ semesterForm.addEventListener('submit', function(e) {
         status: document.getElementById('status').value,
         _token: '{{ csrf_token() }}'
     };
+    
+    // Validate CSRF token
+    if (!formData._token) {
+        showToast('CSRF token is missing. Please refresh the page and try again.', 'danger');
+        return;
+    }
 
     // Gather modules with specialization using data attributes
     const modules = [];
@@ -542,8 +542,24 @@ semesterForm.addEventListener('submit', function(e) {
     });
     formData.modules = modules;
 
+    // Validate that at least one module is added
+    if (modules.length === 0) {
+        showToast('Please add at least one module to the semester.', 'danger');
+        return;
+    }
+
     // Debug: Log final data
     console.log('Final data with modules:', formData);
+    console.log('Form action URL:', semesterForm.action);
+
+    // Show loading state
+    const submitBtn = document.getElementById('submitBtn');
+    const submitText = document.getElementById('submitText');
+    const submitSpinner = document.getElementById('submitSpinner');
+    
+    submitBtn.disabled = true;
+    submitText.textContent = 'Creating Semester...';
+    submitSpinner.style.display = 'inline-block';
 
     // Send AJAX request
     fetch(semesterForm.action, {
@@ -556,10 +572,15 @@ semesterForm.addEventListener('submit', function(e) {
         body: JSON.stringify(formData)
     })
     .then(async response => {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        
         let data;
         try {
             data = await response.json();
+            console.log('Response data:', data);
         } catch (err) {
+            console.error('JSON parse error:', err);
             throw new Error('Server returned invalid response.');
         }
         if (!response.ok) {
@@ -573,21 +594,31 @@ semesterForm.addEventListener('submit', function(e) {
         }
         return data;
     })
-    .then(data => {
-        if (data.success) {
-            showToast(data.message || 'Semester created successfully!', 'success');
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
-        } else {
-            showToast(data.message || 'Failed to create semester.', 'danger');
-        }
-    })
-    .catch(error => {
-        // Already handled above, but fallback here
-        console.error('Error:', error);
-        showToast(error.message || 'An unexpected error occurred.', 'danger');
-    });
+            .then(data => {
+            // Reset loading state
+            submitBtn.disabled = false;
+            submitText.textContent = 'Create Semester';
+            submitSpinner.style.display = 'none';
+            
+            if (data.success) {
+                showToast(data.message || 'Semester created successfully!', 'success');
+                setTimeout(() => {
+                    window.location.href = '{{ route("semesters.index") }}';
+                }, 1500);
+            } else {
+                showToast(data.message || 'Failed to create semester.', 'danger');
+            }
+        })
+        .catch(error => {
+            // Reset loading state
+            submitBtn.disabled = false;
+            submitText.textContent = 'Create Semester';
+            submitSpinner.style.display = 'none';
+            
+            // Already handled above, but fallback here
+            console.error('Error:', error);
+            showToast(error.message || 'An unexpected error occurred.', 'danger');
+        });
 });
 
 </script>

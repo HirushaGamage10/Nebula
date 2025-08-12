@@ -18,14 +18,21 @@ class Semester extends Model
         'status',
     ];
 
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
     public function course()
     {
-        return $this->belongsTo(Course::class);
+        return $this->belongsTo(Course::class, 'course_id', 'course_id');
     }
 
     public function intake()
     {
-        return $this->belongsTo(Intake::class);
+        return $this->belongsTo(Intake::class, 'intake_id', 'intake_id');
     }
 
     public function modules()
