@@ -20,6 +20,7 @@ class Attendance extends Model
         'semester',
         'date',
         'student_id',
+        'status',
         'created_at',
         'updated_at'
     ];
@@ -31,6 +32,7 @@ class Attendance extends Model
         'intake_id' => 'int',
         'student_id' => 'int',
         'date' => 'date',
+        'status' => 'boolean',
     ];
 
     // Relationships

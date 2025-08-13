@@ -12,7 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('intakes', function (Blueprint $table) {
-            $table->string('franchise_payment')->nullable()->change();
+            // Check if franchise_payment column exists before modifying it
+            if (Schema::hasColumn('intakes', 'franchise_payment')) {
+                $table->string('franchise_payment')->nullable()->change();
+            }
         });
     }
 
@@ -22,7 +25,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('intakes', function (Blueprint $table) {
-            $table->string('franchise_payment')->nullable(false)->change();
+            // Check if franchise_payment column exists before modifying it
+            if (Schema::hasColumn('intakes', 'franchise_payment')) {
+                $table->string('franchise_payment')->nullable(false)->change();
+            }
         });
     }
 }; 

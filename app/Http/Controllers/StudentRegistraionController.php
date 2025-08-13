@@ -77,7 +77,6 @@ class StudentRegistraionController extends Controller
 
     public function register(StudentRegistrationRequest $request)
     {
-
         try {
             // Upload files using FileManagementService
             $otherDocs = $request->file('otherDocumentsFiles');
@@ -86,6 +85,8 @@ class StudentRegistraionController extends Controller
             $alCert = $request->file('al_certificate');
 
             $otherDocNames = [];
+            $uploadErrors = [];
+
             if ($otherDocs) {
                 foreach ($otherDocs as $doc) {
                     try {
@@ -96,7 +97,7 @@ class StudentRegistraionController extends Controller
                             'original_name' => $doc->getClientOriginalName(),
                             'error' => $e->getMessage()
                         ]);
-                        // Continue with other files
+                        $uploadErrors[] = 'Failed to upload: ' . $doc->getClientOriginalName();
                     }
                 }
             }
@@ -111,6 +112,7 @@ class StudentRegistraionController extends Controller
                         'original_name' => $photo->getClientOriginalName(),
                         'error' => $e->getMessage()
                     ]);
+                    $uploadErrors[] = 'Failed to upload photo';
                 }
             }
 
@@ -124,6 +126,7 @@ class StudentRegistraionController extends Controller
                         'original_name' => $olCert->getClientOriginalName(),
                         'error' => $e->getMessage()
                     ]);
+                    $uploadErrors[] = 'Failed to upload O/L certificate';
                 }
             }
 
@@ -137,7 +140,13 @@ class StudentRegistraionController extends Controller
                         'original_name' => $alCert->getClientOriginalName(),
                         'error' => $e->getMessage()
                     ]);
+                    $uploadErrors[] = 'Failed to upload A/L certificate';
                 }
+            }
+
+            // If there are upload errors, return them but continue with registration
+            if (!empty($uploadErrors)) {
+                Log::warning('File upload errors during student registration', ['errors' => $uploadErrors]);
             }
 
             // Create student record with only the fields that exist in the database

@@ -11,6 +11,7 @@ use App\Models\CourseRegistration;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 
 class ExamResultController extends Controller
 {
@@ -102,29 +103,84 @@ class ExamResultController extends Controller
                 'results.*.remarks' => 'nullable|string|max:255',
             ]);
 
-            foreach ($validatedData['results'] as $result) {
-                ExamResult::create([
-                    'student_id' => $result['student_id'],
-                    'course_id' => $validatedData['course_id'],
-                    'module_id' => $validatedData['module_id'],
-                    'intake_id' => $validatedData['intake_id'],
-                    'location' => $validatedData['location'],
-                    'semester' => $validatedData['semester'],
-                    'marks' => $result['marks'] ?? null,
-                    'grade' => $result['grade'] ?? null,
-                    'remarks' => $result['remarks'] ?? null,
-                ]);
+            // Get the semester to convert ID to name
+            $semester = \App\Models\Semester::find($validatedData['semester']);
+            if (!$semester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Semester not found.'
+                ], 404);
             }
 
-            return response()->json(['success' => true, 'message' => 'Exam results stored successfully.'], Response::HTTP_CREATED);
+            DB::beginTransaction();
+
+            $createdCount = 0;
+            foreach ($validatedData['results'] as $result) {
+                // Check if result already exists
+                $existingResult = ExamResult::where('student_id', $result['student_id'])
+                    ->where('course_id', $validatedData['course_id'])
+                    ->where('module_id', $validatedData['module_id'])
+                    ->where('intake_id', $validatedData['intake_id'])
+                    ->where('location', $validatedData['location'])
+                    ->where('semester', $semester->name)
+                    ->first();
+
+                if ($existingResult) {
+                    // Update existing result
+                    $existingResult->update([
+                        'marks' => $result['marks'] ?? null,
+                        'grade' => $result['grade'] ?? null,
+                        'remarks' => $result['remarks'] ?? null,
+                    ]);
+                } else {
+                    // Create new result
+                    ExamResult::create([
+                        'student_id' => $result['student_id'],
+                        'course_id' => $validatedData['course_id'],
+                        'module_id' => $validatedData['module_id'],
+                        'intake_id' => $validatedData['intake_id'],
+                        'location' => $validatedData['location'],
+                        'semester' => $semester->name,
+                        'marks' => $result['marks'] ?? null,
+                        'grade' => $result['grade'] ?? null,
+                        'remarks' => $result['remarks'] ?? null,
+                    ]);
+                }
+                $createdCount++;
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true, 
+                'message' => "Exam results stored successfully for {$createdCount} student(s)."
+            ], Response::HTTP_CREATED);
 
         } catch (QueryException $e) {
-            return response()->json(['success' => false, 'message' => 'Database error: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            DB::rollBack();
+            \Log::error('Database error storing exam result: ' . $e->getMessage(), [
+                'request_data' => $request->all()
+            ]);
+            return response()->json([
+                'success' => false, 
+                'message' => 'Database error: ' . $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json(['success' => false, 'message' => 'Validation failed.', 'errors' => $e->errors()], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return response()->json([
+                'success' => false, 
+                'message' => 'Validation failed.', 
+                'errors' => $e->errors()
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (\Exception $e) {
-            \Log::error('Error storing exam result: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'An error occurred while storing the results.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+            DB::rollBack();
+            \Log::error('Error storing exam result: ' . $e->getMessage(), [
+                'request_data' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'success' => false, 
+                'message' => 'An error occurred while storing the results.'
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -437,23 +493,36 @@ class ExamResultController extends Controller
                 'module_id' => 'required|exists:modules,module_id',
                 'results' => 'required|array|min:1',
                 'results.*.id' => 'required|exists:exam_results,id',
-                'results.*.marks' => 'required|integer|min:0|max:100',
-                'results.*.grade' => 'required|string|max:5',
+                'results.*.marks' => 'nullable|integer|min:0|max:100',
+                'results.*.grade' => 'nullable|string|max:5',
                 'results.*.remarks' => 'nullable|string|max:255',
             ]);
+
+            // Get the semester to convert ID to name
+            $semester = \App\Models\Semester::find($validatedData['semester']);
+            if (!$semester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Semester not found.'
+                ], 404);
+            }
+
+            DB::beginTransaction();
 
             $updatedCount = 0;
             foreach ($validatedData['results'] as $result) {
                 $examResult = ExamResult::find($result['id']);
                 if ($examResult) {
                     $examResult->update([
-                        'marks' => $result['marks'],
-                        'grade' => $result['grade'],
+                        'marks' => $result['marks'] ?? null,
+                        'grade' => $result['grade'] ?? null,
                         'remarks' => $result['remarks'] ?? null,
                     ]);
                     $updatedCount++;
                 }
             }
+
+            DB::commit();
 
             return response()->json([
                 'success' => true, 
@@ -461,6 +530,10 @@ class ExamResultController extends Controller
             ], Response::HTTP_OK);
 
         } catch (QueryException $e) {
+            DB::rollBack();
+            \Log::error('Database error updating exam result: ' . $e->getMessage(), [
+                'request_data' => $request->all()
+            ]);
             return response()->json([
                 'success' => false, 
                 'message' => 'Database error: ' . $e->getMessage()
@@ -472,7 +545,11 @@ class ExamResultController extends Controller
                 'errors' => $e->errors()
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (\Exception $e) {
-            \Log::error('Error updating exam result: ' . $e->getMessage());
+            DB::rollBack();
+            \Log::error('Error updating exam result: ' . $e->getMessage(), [
+                'request_data' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json([
                 'success' => false, 
                 'message' => 'An error occurred while updating the results.'

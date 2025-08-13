@@ -3,41 +3,43 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Students;
-use App\Models\Courses;
-use App\Models\Course;
 use App\Models\Student;
+use App\Models\Course;
 use App\Models\CourseRegistration;
+use App\Models\StudentExam;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class EligibilityCheckingAndRegistrationController extends Controller
 {
-
-
-
-   public function index()
-{
-    return view('eligibility_checking_&_registration');
-}
-
-public function search(Request $request)
-{
-    $nic = $request->input('nic');
-    $courseId = $request->input('course_id');
-
-    $student = Students::where('nic_number', $nic)->first();
-    $course = Courses::find($courseId);
-
-    if (!$student || !$course) {
-        return back()->with('error', 'No matching student or course found.');
+    public function index()
+    {
+        return view('eligibility_checking_&_registration');
     }
 
-    return view('eligibility_checking_&_registration', [
-        'student' => $student,
-        'course' => $course,
-        'showDetails' => true,
-    ]);
-}
+    public function search(Request $request)
+    {
+        try {
+            $nic = $request->input('nic');
+            $courseId = $request->input('course_id');
+
+            $student = Student::where('id_value', $nic)->first();
+            $course = Course::find($courseId);
+
+            if (!$student || !$course) {
+                return back()->with('error', 'No matching student or course found.');
+            }
+
+            return view('eligibility_checking_&_registration', [
+                'student' => $student,
+                'course' => $course,
+                'showDetails' => true,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in eligibility search: ' . $e->getMessage());
+            return back()->with('error', 'An error occurred while searching.');
+        }
+    }
 
     // Show the eligibility registration view
     public function showEligibilityRegistration()
@@ -127,17 +129,17 @@ public function search(Request $request)
     public function getRegisteredCoursesByNic(Request $request)
     {
         $nic = $request->query('nic');
-        \Log::debug('Eligibility NIC search', ['nic' => $nic]);
+        Log::debug('Eligibility NIC search', ['nic' => $nic]);
         $student = \App\Models\Student::where('id_value', $nic)->first();
-        \Log::debug('Found student', ['student_id' => $student->student_id, 'id_value' => $student->id_value]);
+        Log::debug('Found student', ['student_id' => $student->student_id, 'id_value' => $student->id_value]);
         if (!$student) {
-            \Log::debug('No student found for NIC', ['nic' => $nic]);
+            Log::debug('No student found for NIC', ['nic' => $nic]);
             return response()->json(['success' => false, 'courses' => []]);
         }
         $courseRegs = \App\Models\CourseRegistration::where('student_id', $student->student_id)
             ->with('course')
             ->get();
-        \Log::debug('Course registrations', ['count' => $courseRegs->count(), 'ids' => $courseRegs->pluck('course_id')]);
+        Log::debug('Course registrations', ['count' => $courseRegs->count(), 'ids' => $courseRegs->pluck('course_id')]);
         $courses = $courseRegs->filter(function($reg) {
             return $reg->course !== null;
         })->map(function($reg) {
@@ -146,7 +148,7 @@ public function search(Request $request)
                 'course_name' => $reg->course->course_name
             ];
         })->values();
-        \Log::debug('Returned courses', ['courses' => $courses]);
+        Log::debug('Returned courses', ['courses' => $courses]);
         return response()->json(['success' => true, 'courses' => $courses]);
     }
 
@@ -234,17 +236,17 @@ public function search(Request $request)
     {
         // Debug: Check if there are any special approval registrations
         $count = CourseRegistration::where('status', 'Special approval required')->count();
-        \Log::info('Special approval registrations count:', ['count' => $count]);
+        Log::info('Special approval registrations count:', ['count' => $count]);
         
         $registrations = CourseRegistration::where('status', 'Special approval required')
             ->with(['student', 'course', 'intake'])
             ->get();
             
-        \Log::info('Found registrations:', ['count' => $registrations->count()]);
+        Log::info('Found registrations:', ['count' => $registrations->count()]);
         
         $mappedData = $registrations->map(function($reg) {
             // Debug: Log the student data
-            \Log::info('Student data for special approval:', [
+            Log::info('Student data for special approval:', [
                 'student_id' => $reg->student->student_id,
                 'id_value' => $reg->student->id_value,
                 'nic_number' => $reg->student->nic_number ?? 'not set',
@@ -264,14 +266,14 @@ public function search(Request $request)
                     }
                     
                     // Log for debugging
-                    \Log::info('Document URL generated', [
+                    Log::info('Document URL generated', [
                         'student_id' => $reg->student->student_id,
                         'file_path' => $reg->special_approval_pdf,
                         'file_exists' => Storage::disk('public')->exists($reg->special_approval_pdf),
                         'generated_url' => $documentUrl
                     ]);
                 } else {
-                    \Log::warning('Special approval document not found', [
+                    Log::warning('Special approval document not found', [
                         'student_id' => $reg->student->student_id,
                         'file_path' => $reg->special_approval_pdf
                     ]);
@@ -296,7 +298,7 @@ public function search(Request $request)
         });
         
         // Debug: Log the final response
-        \Log::info('Final response data:', $mappedData->toArray());
+        Log::info('Final response data:', $mappedData->toArray());
         
         return response()->json(['success' => true, 'students' => $mappedData]);
     }
@@ -417,7 +419,7 @@ public function search(Request $request)
     public function sendSpecialApprovalRequest(Request $request)
     {
         // Debug logging
-        \Log::info('Special approval request received', [
+        Log::info('Special approval request received', [
             'request_data' => $request->all(),
             'files' => $request->allFiles(),
             'user' => auth()->user() ? auth()->user()->user_role : 'not authenticated'
@@ -462,13 +464,13 @@ public function search(Request $request)
         // Find DGM user(s) and log the request
         $dgms = \App\Models\User::where('user_role', 'DGM')->get();
         if ($dgms->isEmpty()) {
-            \Log::warning('No DGM user found for special approval request', [
+            Log::warning('No DGM user found for special approval request', [
                 'student_id' => $student->student_id,
                 'course_id' => $course->course_id
             ]);
         } else {
             foreach ($dgms as $dgm) {
-                \Log::info('Special approval request sent to DGM', [
+                Log::info('Special approval request sent to DGM', [
                     'dgm_id' => $dgm->user_id,
                     'dgm_name' => $dgm->name,
                     'student_id' => $student->student_id,
@@ -524,7 +526,7 @@ public function search(Request $request)
             ->first();
             
         // Log for debugging
-        \Log::info('Looking for existing registrations', [
+        Log::info('Looking for existing registrations', [
             'intake_id' => $intake->intake_id,
             'pattern' => $pattern,
             'prefix' => $prefix,
@@ -543,7 +545,7 @@ public function search(Request $request)
         $nextId = $prefix . $nextNumber;
         
         // Log for debugging
-        \Log::info('Generated course registration ID', [
+        Log::info('Generated course registration ID', [
             'intake_id' => $intake_id,
             'pattern' => $pattern,
             'prefix' => $prefix,

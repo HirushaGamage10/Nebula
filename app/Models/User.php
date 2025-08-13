@@ -33,7 +33,8 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'status' => 'boolean',
+        // Remove status boolean cast since it's stored as string
+        // 'status' => 'boolean',
     ];
 
     protected $dates = [

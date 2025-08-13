@@ -275,6 +275,7 @@ class CourseRegistraionController extends Controller
                     'surveyNo' => 'required|numeric',
                     'registrationFee' => 'required|numeric',
                     'courseStartDate' => 'required|date',
+                    'intakeId' => 'nullable|exists:intakes,intake_id', // Add intake validation
                 ]);
 
                 // Check if the student is already registered for the course
@@ -289,12 +290,23 @@ class CourseRegistraionController extends Controller
                     ], 400);
                 }
 
+                // Get the default intake for the course if not provided
+                $intakeId = $validatedData['intakeId'] ?? null;
+                if (!$intakeId) {
+                    $defaultIntake = \App\Models\Intake::where('course_id', $validatedData['course'])
+                        ->where('location', $validatedData['location'])
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+                    $intakeId = $defaultIntake ? $defaultIntake->intake_id : null;
+                }
+
                 // Create a new CourseRegistration instance
                 $courseRegistration = new CourseRegistration();
 
                 // Assign the validated data to the CourseRegistration instance
                 $courseRegistration->student_id = $validatedData['studentId'];
                 $courseRegistration->course_id = $validatedData['course'];
+                $courseRegistration->intake_id = $intakeId; // Assign intake_id
                 $courseRegistration->registration_date = now();
                 $courseRegistration->registration_fee = $validatedData['registrationFee'];
                 $courseRegistration->status = 'Pending';
@@ -302,6 +314,7 @@ class CourseRegistraionController extends Controller
                 $courseRegistration->location = $validatedData['location'];
                 $courseRegistration->slt_employee = ($validatedData['sltEmployee'] === 'yes') ? 1 : 0;
                 $courseRegistration->employee_service_number = $validatedData['serviceNo'];
+                $courseRegistration->course_start_date = $validatedData['courseStartDate'];
                 $courseRegistration->remarks = 'Pre-registration via web form';
 
                 // Save the CourseRegistration instance
@@ -319,6 +332,13 @@ class CourseRegistraionController extends Controller
                     'message' => 'Course registration completed successfully.',
                     'registration_id' => $courseRegistration->id
                 ]);
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                Log::error('Validation error in storeCourseRegistration: ' . json_encode($e->errors()));
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed.',
+                    'errors' => $e->errors()
+                ], 422);
             } catch (\Exception $e) {
                 Log::error('Error in storeCourseRegistration: ' . $e->getMessage());
                 return response()->json([

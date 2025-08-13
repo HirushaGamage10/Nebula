@@ -197,10 +197,10 @@ class AttendanceController extends Controller
             'location' => 'required|string',
             'course_id' => 'required|integer',
             'intake_id' => 'required|integer',
-            'semester' => 'required|string',
+            'semester' => 'required',
             'module_id' => 'required|integer',
             'date' => 'required|date',
-            'attendance_data' => 'required|array'
+            'attendance_data' => 'required|array|min:1'
         ]);
 
         try {
@@ -228,6 +228,10 @@ class AttendanceController extends Controller
             // Insert new attendance records
             $attendanceRecords = [];
             foreach ($request->attendance_data as $studentData) {
+                if (!isset($studentData['student_id'])) {
+                    continue; // Skip invalid records
+                }
+                
                 $attendanceRecords[] = [
                     'location' => $request->location,
                     'course_id' => $request->course_id,
@@ -242,17 +246,29 @@ class AttendanceController extends Controller
                 ];
             }
 
+            if (empty($attendanceRecords)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No valid attendance data provided.'
+                ], 400);
+            }
+
             Attendance::insert($attendanceRecords);
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Attendance saved successfully'
+                'message' => 'Attendance saved successfully for ' . count($attendanceRecords) . ' students.'
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            \Log::error('Attendance save error: ' . $e->getMessage(), [
+                'request_data' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
             
             return response()->json([
                 'success' => false,
@@ -267,33 +283,44 @@ class AttendanceController extends Controller
             'location' => 'required|string',
             'course_id' => 'required|integer',
             'intake_id' => 'required|integer',
-            'semester' => 'required|string',
+            'semester' => 'required',
             'module_id' => 'required|integer',
             'date' => 'required|date'
         ]);
 
-        // Get the semester to convert ID to name
-        $semester = \App\Models\Semester::find($request->semester);
-        if (!$semester) {
+        try {
+            // Get the semester to convert ID to name
+            $semester = \App\Models\Semester::find($request->semester);
+            if (!$semester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Semester not found.'
+                ], 404);
+            }
+
+            $attendance = Attendance::where('location', $request->location)
+                                   ->where('course_id', $request->course_id)
+                                   ->where('intake_id', $request->intake_id)
+                                   ->where('semester', $semester->name)
+                                   ->where('module_id', $request->module_id)
+                                   ->where('date', $request->date)
+                                   ->with('student')
+                                   ->get();
+
+            return response()->json([
+                'success' => true,
+                'attendance' => $attendance
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Attendance history error: ' . $e->getMessage(), [
+                'request_data' => $request->all()
+            ]);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Semester not found.'
-            ], 404);
+                'message' => 'Failed to fetch attendance history: ' . $e->getMessage()
+            ], 500);
         }
-
-        $attendance = Attendance::where('location', $request->location)
-                               ->where('course_id', $request->course_id)
-                               ->where('intake_id', $request->intake_id)
-                               ->where('semester', $semester->name)
-                               ->where('module_id', $request->module_id)
-                               ->where('date', $request->date)
-                               ->with('student')
-                               ->get();
-
-        return response()->json([
-            'success' => true,
-            'attendance' => $attendance
-        ]);
     }
 
     // Debug method to check database data

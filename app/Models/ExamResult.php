@@ -34,7 +34,7 @@ class ExamResult extends Model
         'course_id' => 'int',
         'module_id' => 'int',
         'intake_id' => 'int',
-        'marks' => 'int',
+        'marks' => 'integer',
     ];
 
     /**

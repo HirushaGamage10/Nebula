@@ -1,3 +1,5 @@
+
+
 <?php $__env->startSection('title', 'NEBULA | Payment Management'); ?>
 
 <?php $__env->startSection('content'); ?>
@@ -354,6 +356,10 @@
                                                 <div class="mb-2">
                                                     <strong>Total Amount:</strong> <span id="total-amount-display">-</span>
                                                 </div>
+                                                <div class="mb-2">
+                                                <strong>Franchise Fee:</strong> <span id="franchise-amount-display">-</span>
+                                                </div>
+
                                             </div>
                                         </div>
                                         
@@ -1271,26 +1277,53 @@ function loadStudentForPaymentPlan() {
 function populatePaymentPlanForm(studentData) {
     console.log('populatePaymentPlanForm called with studentData:', studentData);
     
+    const courseFee = Number(studentData.course_fee) || 0;           // LKR
+    const regFee    = Number(studentData.registration_fee) || 0;     // LKR
+    const intlFee   = Number(studentData.international_fee) || 0;    // e.g., USD
+    const intlCur   = (studentData.international_currency || 'USD').toUpperCase();
+
+    const fmt2 = (n) => n.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+    // Basic info
     document.getElementById('student-name-display').textContent = studentData.student_name || 'N/A';
-    document.getElementById('student-id-display').textContent = studentData.student_id || 'N/A';
-    document.getElementById('course-name-display').textContent = studentData.course_name || 'N/A';
-    document.getElementById('intake-name-display').textContent = studentData.intake_name || 'N/A';
-    document.getElementById('course-fee-display').textContent = 'LKR ' + (studentData.course_fee || 0).toLocaleString();
-    document.getElementById('registration-fee-display').textContent = 'LKR ' + (studentData.registration_fee || 0).toLocaleString();
-    document.getElementById('total-amount-display').textContent = 'LKR ' + (studentData.total_amount || 0).toLocaleString();
+    document.getElementById('student-id-display').textContent   = studentData.student_id || 'N/A';
+    document.getElementById('course-name-display').textContent  = studentData.course_name || 'N/A';
+    document.getElementById('intake-name-display').textContent  = studentData.intake_name || 'N/A';
+
+    // LKR breakdown
+    document.getElementById('course-fee-display').textContent       = 'LKR ' + fmt2(courseFee);
+    document.getElementById('registration-fee-display').textContent = 'LKR ' + fmt2(regFee);
+
+    // LKR total = course + registration (franchise NOT included)
+    const totalAmount = courseFee + regFee;
+    document.getElementById('total-amount-display').textContent = 'LKR ' + fmt2(totalAmount);
+
+    // Show franchise fee (amount only)
+const frEl = document.getElementById('franchise-amount-display');
+if (frEl) {
+    frEl.textContent = intlFee > 0 ? fmt2(intlFee) : '-';
+}
+
+
+
+    // Store for later use (and keep a clean split)
+    window.currentStudentData = {
+    ...studentData,
+    total_amount_lkr: totalAmount,
+    international_fee: intlFee,
+    international_currency: intlCur,
+    franchise_display: `${intlFee} ${intlCur}` // example: "500 USD"
+};
+
     
-    // Store student data for later use
-    window.currentStudentData = studentData;
-    
-    // Hide the warning message since student data is now loaded
+    // Hide warning if present
     const statusIndicator = document.getElementById('student-data-status');
-    if (statusIndicator) {
-        statusIndicator.style.display = 'none';
-    }
+    if (statusIndicator) statusIndicator.style.display = 'none';
     
     // Calculate initial final amount
-    calculateFinalAmount();
+    if (typeof calculateFinalAmount === 'function') calculateFinalAmount();
 }
+
 
 // Load existing payment plans for the student and course
 function loadExistingPaymentPlans(studentNic, courseId) {
@@ -1326,91 +1359,109 @@ function loadExistingPaymentPlans(studentNic, courseId) {
     });
 }
 
-// Display installments in the table
+// Display installments in the table (discounts first, then SLT prorated by original local total)
 function displayInstallments(installments) {
-    const tbody = document.getElementById('installmentTableBody');
-    tbody.innerHTML = '';
-    
-    console.log('displayInstallments called with installments:', installments);
-    
-    // Check if installments array is empty
-    if (!installments || installments.length === 0) {
-        console.log('No installments found, showing preview');
-        showInstallmentPreview();
-        return;
+  const tbody = document.getElementById('installmentTableBody');
+  tbody.innerHTML = '';
+
+  if (!installments || !installments.length) {
+    showInstallmentPreview();
+    return;
+  }
+
+  // helpers
+  const N   = v => Number(String(v).replace(/,/g, '')) || 0;
+  const r2  = v => Math.round(v * 100) / 100;
+  const fmt = n => N(n).toLocaleString();
+
+  // current form state
+  const discountSelects  = document.querySelectorAll('.discount-select');
+  const sltLoanApplied   = (document.getElementById('slt-loan-applied')?.value || '').toLowerCase();
+  const sltLoanAmount    = N(document.getElementById('slt-loan-amount')?.value);
+
+  // collect all discounts
+  let pct = 0, fixed = 0;
+  discountSelects.forEach(select => {
+    if (!select.value) return;
+    const opt  = select.options[select.selectedIndex];
+    const type = opt.dataset.type;
+    const val  = N(opt.dataset.value);
+    if (type === 'percentage') pct  += val;
+    else if (type === 'amount') fixed += val;
+  });
+
+  // original local total BEFORE any discounts
+  const originalLocalTotal = installments.reduce((sum, ins) => sum + N(ins.amount), 0);
+
+  // apply discounts to last installment only (percentage first, then fixed)
+  const discounted = installments.map((ins, idx, arr) => {
+    let dAmt = N(ins.amount);
+    let applied = 0;
+
+    if (idx === arr.length - 1) {
+      if (pct > 0) { const p = (originalLocalTotal * pct) / 100; dAmt -= p; applied += p; }
+      if (fixed > 0) { dAmt -= fixed; applied += fixed; }
     }
-    
-    // Get current form settings
-    const discountSelects = document.querySelectorAll('.discount-select');
-    const sltLoanApplied = document.getElementById('slt-loan-applied').value;
-    const sltLoanAmount = parseFloat(document.getElementById('slt-loan-amount').value) || 0;
-    
-    // Calculate total discounts
-    let totalDiscountAmount = 0;
-    let totalDiscountPercentage = 0;
-    
-    discountSelects.forEach(select => {
-        if (select.value) {
-            const selectedOption = select.options[select.selectedIndex];
-            const discountType = selectedOption.dataset.type;
-            const discountValue = parseFloat(selectedOption.dataset.value);
-            
-            if (discountType === 'percentage') {
-                totalDiscountPercentage += discountValue;
-            } else if (discountType === 'amount') {
-                totalDiscountAmount += discountValue;
-            }
-        }
-    });
-    
-    // Calculate total local fee for percentage discount
-    const totalLocalFee = installments.reduce((sum, installment) => sum + parseFloat(installment.amount), 0);
-    
-    installments.forEach((installment, index) => {
-        let finalAmount = parseFloat(installment.amount);
-        let discountText = '-';
-        let sltLoanText = '-';
-        let discountAmount = 0;
-        
-        // Apply percentage discount to the last installment
-        if (index === installments.length - 1 && totalDiscountPercentage > 0) {
-            discountAmount = (totalLocalFee * totalDiscountPercentage) / 100;
-            finalAmount -= discountAmount;
-            discountText = `LKR ${discountAmount.toLocaleString()}`;
-        }
-        
-        // Apply fixed amount discount to the last installment
-        if (index === installments.length - 1 && totalDiscountAmount > 0) {
-            discountAmount = totalDiscountAmount;
-            finalAmount -= discountAmount;
-            discountText = `LKR ${discountAmount.toLocaleString()}`;
-        }
-        
-        // Apply SLT loan to every installment
-        if (sltLoanApplied === 'yes' && sltLoanAmount > 0) {
-            const sltLoanPerInstallment = sltLoanAmount / installments.length;
-            finalAmount -= sltLoanPerInstallment;
-            sltLoanText = `LKR ${sltLoanPerInstallment.toFixed(2)}`;
-        }
-        
-        const row = `
-            <tr>
-                <td>${installment.installment_number}</td>
-                <td>${new Date(installment.due_date).toLocaleDateString()}</td>
-                <td>LKR ${parseFloat(installment.amount).toLocaleString()}</td>
-                <td>${discountText}</td>
-                <td>${sltLoanText}</td>
-                <td>LKR ${Math.max(0, finalAmount).toLocaleString()}</td>
-                <td>
-                    <span class="badge bg-${getStatusBadgeColor(installment.status)}">
-                        ${installment.status}
-                    </span>
-                </td>
-            </tr>
-        `;
-        tbody.insertAdjacentHTML('beforeend', row);
-    });
+
+    dAmt = Math.max(0, dAmt);
+    return { ...ins, discountedAmount: dAmt, discountApplied: applied };
+  });
+
+  // sum of discounted amounts
+  const sumAfterDiscounts = discounted.reduce((s, x) => s + x.discountedAmount, 0);
+
+  // target total by your rule:
+  // ΣFi = (ΣAi / L) * (L - S)  where Ai = discountedAmount, L = originalLocalTotal, S = SLT
+  const useLoan = (sltLoanApplied === 'yes' && sltLoanAmount > 0 && originalLocalTotal > 0);
+  const targetTotal = useLoan
+    ? (sumAfterDiscounts / originalLocalTotal) * (originalLocalTotal - sltLoanAmount)
+    : sumAfterDiscounts;
+
+  // build rows; prorate SLT AFTER discounts using originalLocalTotal; fix rounding on last row
+  let runningFinals = 0;
+
+  discounted.forEach((ins, idx) => {
+    const isLast = idx === discounted.length - 1;
+
+    const discountText = ins.discountApplied > 0
+      ? `LKR ${fmt(ins.discountApplied)}`
+      : '-';
+
+    let finalAmount = ins.discountedAmount;
+    let sltLoanText = '-';
+
+    if (useLoan) {
+      let Fi;
+      if (!isLast) {
+        Fi = r2((ins.discountedAmount / originalLocalTotal) * (originalLocalTotal - sltLoanAmount));
+        runningFinals += Fi;
+      } else {
+        // last row gets remainder to fix rounding drift
+        Fi = r2(targetTotal - runningFinals);
+      }
+
+      const loanAlloc = r2(ins.discountedAmount - Fi);
+      finalAmount = Math.max(0, Fi);
+      sltLoanText = `LKR ${loanAlloc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    const row = `
+      <tr>
+        <td>${ins.installment_number}</td>
+        <td>${new Date(ins.due_date).toLocaleDateString()}</td>
+        <td>LKR ${fmt(ins.amount)}</td>
+        <td>${discountText}</td>
+        <td>${sltLoanText}</td>
+        <td>LKR ${finalAmount.toLocaleString()}</td>
+        <td>
+          <span class="badge bg-${getStatusBadgeColor(ins.status)}">${ins.status}</span>
+        </td>
+      </tr>
+    `;
+    tbody.insertAdjacentHTML('beforeend', row);
+  });
 }
+
 
 // Get badge color based on status
 function getStatusBadgeColor(status) {
@@ -1496,7 +1547,7 @@ function calculateAndDisplayInstallments() {
 
 // Calculate final amount after multiple discounts and SLT loan
 function calculateFinalAmount() {
-    const totalAmount = window.currentStudentData ? window.currentStudentData.total_amount : 0;
+    const totalAmount = window.currentStudentData ? window.currentStudentData.total_amount_lkr : 0;
     const discountSelects = document.querySelectorAll('.discount-select');
     const sltLoanApplied = document.getElementById('slt-loan-applied').value;
     const sltLoanAmount = parseFloat(document.getElementById('slt-loan-amount').value) || 0;

@@ -29,7 +29,6 @@ class CreateUserRequest extends FormRequest
                 'email',
                 'max:255',
                 'unique:users,email',
-                'regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/'
             ],
             'employee_id' => 'required|string|max:255|unique:users,employee_id',
             'user_role' => [
@@ -141,44 +140,9 @@ class CreateUserRequest extends FormRequest
         $validator->after(function ($validator) {
             // Additional custom validation logic can be added here
             if ($this->has('email')) {
-                // Check for common email format issues
-                $email = $this->email;
-                
                 // Check for spaces in email
-                if (strpos($email, ' ') !== false) {
+                if (strpos($this->email, ' ') !== false) {
                     $validator->errors()->add('email', 'Email address cannot contain spaces.');
-                }
-                
-                // Check for multiple @ symbols
-                if (substr_count($email, '@') > 1) {
-                    $validator->errors()->add('email', 'Email address can only contain one @ symbol.');
-                }
-                
-                // Check for valid domain format
-                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    $validator->errors()->add('email', 'Please enter a valid email address format.');
-                }
-            }
-            
-            if ($this->has('password')) {
-                // Check password strength
-                $password = $this->password;
-                
-                if (strlen($password) < 6) {
-                    $validator->errors()->add('password', 'Password must be at least 6 characters long.');
-                }
-                
-                // Optional: Add more password strength requirements
-                if (!preg_match('/[A-Z]/', $password)) {
-                    $validator->errors()->add('password', 'Password should contain at least one uppercase letter.');
-                }
-                
-                if (!preg_match('/[a-z]/', $password)) {
-                    $validator->errors()->add('password', 'Password should contain at least one lowercase letter.');
-                }
-                
-                if (!preg_match('/[0-9]/', $password)) {
-                    $validator->errors()->add('password', 'Password should contain at least one number.');
                 }
             }
         });

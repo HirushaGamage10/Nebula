@@ -13,9 +13,16 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::table('payment_plans', function (Blueprint $table) {
-            $table->dropColumn('course_type');
-        });
+        try {
+            Schema::table('payment_plans', function (Blueprint $table) {
+                $table->dropColumn('course_type');
+            });
+        } catch (\Exception $e) {
+            // If column doesn't exist, ignore the error
+            if (strpos($e->getMessage(), "doesn't exist") === false) {
+                throw $e;
+            }
+        }
     }
 
     /**
@@ -25,8 +32,15 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('payment_plans', function (Blueprint $table) {
-            $table->string('course_type')->after('location');
-        });
+        try {
+            Schema::table('payment_plans', function (Blueprint $table) {
+                $table->string('course_type')->after('location');
+            });
+        } catch (\Exception $e) {
+            // If column already exists, ignore the error
+            if (strpos($e->getMessage(), 'Duplicate column name') === false) {
+                throw $e;
+            }
+        }
     }
 };
