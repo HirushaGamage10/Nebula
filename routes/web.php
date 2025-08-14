@@ -598,6 +598,9 @@ Route::get('/payment/get-discounts', [PaymentController::class, 'getDiscounts'])
 Route::post('/payment/get-installments', [PaymentController::class, 'getPaymentPlanInstallments'])->name('payment.get.installments');
 Route::post('/payment/get-payment-details', [PaymentController::class, 'getPaymentDetails'])->name('payment.get.payment.details');
 Route::post('/payment/save-plans', [PaymentController::class, 'savePaymentPlans'])->name('payment.save.plans');
+
+Route::post('/payment/existing-plans', [PaymentController::class, 'getExistingPaymentPlans'])
+    ->name('payment.existingPlans'); // keep behind same middleware as the page if needed
 //Slip Gen
 Route::post('/payment/generate-slip', [PaymentController::class, 'generatePaymentSlip'])->name('payment.generate.slip');
 Route::post('/payment/download-slip-pdf', [PaymentController::class, 'downloadPaymentSlipPDF'])->name('payment.download.slip.pdf');

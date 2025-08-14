@@ -54,215 +54,141 @@ class PaymentController extends Controller
     /**
      * Get payment details for a student and payment type.
      */
-    public function getPaymentDetails(Request $request)
-    {
-        try {
-            $request->validate([
-                'student_id' => 'required|string',
-                'course_id' => 'required|string',
-                'payment_type' => 'required|string',
-            ]);
+   public function getPaymentDetails(Request $request)
+{
+    try {
+        $request->validate([
+            'student_id'   => 'required|string',   // Student ID or NIC
+            'course_id'    => 'required|integer|exists:courses,course_id',
+            'payment_type' => 'required|in:course_fee,franchise_fee,registration_fee',
+        ]);
 
-            // Find student by ID/NIC
-            $student = Student::where('student_id', $request->student_id)
-                ->orWhere('id_value', $request->student_id)
-                ->first();
-            
-            if (!$student) {
-                return response()->json(['success' => false, 'message' => 'Student not found.'], Response::HTTP_NOT_FOUND);
-            }
+        // find student by student_id or NIC (id_value)
+        $student = \App\Models\Student::where('student_id', $request->student_id)
+            ->orWhere('id_value', $request->student_id)
+            ->first();
 
-            // Get course registration for this student and specific course
-            $registration = CourseRegistration::where('student_id', $student->student_id)
-                ->where('course_id', $request->course_id)
-                ->with(['course', 'intake'])
-                ->first();
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+        }
 
-            if (!$registration) {
-                return response()->json(['success' => false, 'message' => 'Student is not registered for the selected course.'], Response::HTTP_NOT_FOUND);
-            }
+        // need registration to know intake/location
+        $registration = \App\Models\CourseRegistration::where('student_id', $student->student_id)
+            ->where('course_id', $request->course_id)
+            ->with(['course','intake'])
+            ->first();
 
-            // Get student-specific payment plan (with discounts and loans applied)
-            $studentPaymentPlan = \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
-                ->where('course_id', $request->course_id)
-                ->with(['installments', 'discounts'])
-                ->first();
+        if (!$registration) {
+            return response()->json(['success' => false, 'message' => 'Student is not registered for the selected course.'], 404);
+        }
 
-            $paymentDetails = [];
+        $rows = [];
+        switch ($request->payment_type) {
+            case 'course_fee':
+                // per-student plan → payment_installments
+                $studentPlan = \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
+                    ->where('course_id', $request->course_id)
+                    ->first();
 
-            if ($studentPaymentPlan) {
-                // Use student-specific payment plan with final amounts after discounts
-                if (in_array($request->payment_type, ['registration_fee'])) {
-                    $amount = $registration->intake->registration_fee ?? 0;
-                    if ($amount > 0) {
-                        $paymentDetails[] = [
-                            'installment_number' => 1,
-                            'due_date' => now()->addDays(30)->toDateString(),
-                            'amount' => $amount,
-                            'currency' => 'LKR',
-                            'paid_date' => null,
-                            'status' => 'pending',
-                            'receipt_no' => null
-                        ];
-                    }
-                } else {
-                    // Handle installment-based payments with final amounts after discounts
-                    foreach ($studentPaymentPlan->installments as $installment) {
-                        if ($installment->amount > 0) {
-                            $paymentDetails[] = [
-                                'installment_number' => $installment->installment_number,
-                                'due_date' => $installment->due_date,
-                                'amount' => $installment->amount, // Final amount after discounts
-                                'currency' => ($request->payment_type === 'franchise_fee') ? 
-                                    ($registration->intake->franchise_payment_currency ?? 'LKR') : 'LKR',
-                                'paid_date' => null,
-                                'status' => 'pending',
-                                'receipt_no' => null
-                            ];
-                        }
-                    }
+                if (!$studentPlan) {
+                    return response()->json([
+                        'success' => true,
+                        'payment_details' => [],
+                        'message' => 'No student payment plan found. Create a plan first.',
+                    ]);
                 }
-            } else {
-                // Fallback to general payment plan if no student-specific plan exists
-                $paymentPlan = PaymentPlan::where('course_id', $request->course_id)
+
+                $installments = \App\Models\PaymentInstallment::where('payment_plan_id', $studentPlan->id)
+                    ->orderBy('installment_number')
+                    ->get();
+
+                foreach ($installments as $ins) {
+                    $final = $ins->final_amount ?? $ins->amount;
+                    $rows[] = [
+                        'installment_number' => $ins->installment_number,
+                        'due_date'           => optional($ins->due_date)->toDateString(),
+                        'amount'             => (float) $final,     // payable shown in UI
+                        'base_amount'        => (float) $ins->amount,
+                        'status'             => $ins->status ?? 'pending',
+                        'paid_date'          => optional($ins->paid_date)->toDateString(),
+                        'receipt_no'         => null,
+                        'currency'           => 'LKR',
+                    ];
+                }
+                break;
+
+            case 'franchise_fee':
+                // intake plan → split by installments JSON: international_amount
+                $plan = \App\Models\PaymentPlan::where('course_id', $request->course_id)
                     ->where('intake_id', $registration->intake_id)
                     ->first();
 
-                if ($paymentPlan && $paymentPlan->installments) {
-                    $installmentsData = $paymentPlan->installments;
-                    if (is_string($installmentsData)) {
-                        $installmentsData = json_decode($installmentsData, true);
-                    }
+                if (!$plan) {
+                    return response()->json(['success' => false, 'message' => 'No payment plan found for this course/intake.'], 404);
+                }
 
-                    if (is_array($installmentsData)) {
-                        if (in_array($request->payment_type, ['registration_fee'])) {
-                            $amount = $paymentPlan->registration_fee ?? 0;
-                            if ($amount > 0) {
-                                $paymentDetails[] = [
-                                    'installment_number' => 1,
-                                    'due_date' => now()->addDays(30)->toDateString(),
-                                    'amount' => $amount,
-                                    'currency' => 'LKR',
-                                    'paid_date' => null,
-                                    'status' => 'pending',
-                                    'receipt_no' => null
-                                ];
-                            }
-                        } else {
-                            // For course_fee, we need to calculate final amounts with discounts and loans
-                            if ($request->payment_type === 'course_fee') {
-                                // Get student-specific payment plan to check for SLT loan
-                                $studentPlan = \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
-                                    ->where('course_id', $request->course_id)
-                                    ->first();
-                                
-                                // Get SLT loan information
-                                $sltLoanAmount = 0;
-                                if ($studentPlan && $studentPlan->slt_loan_applied === 'yes') {
-                                    $sltLoanAmount = $studentPlan->slt_loan_amount;
-                                }
-                                
-                                // Get student-specific discounts if any
-                                $discounts = collect();
-                                if ($studentPlan) {
-                                    $discounts = $studentPlan->discounts;
-                                } else {
-                                    // Fallback to active discounts if no student-specific plan
-                                    $discounts = \App\Models\Discount::where('status', 'active')->get();
-                                }
-                                
-                                foreach ($installmentsData as $installment) {
-                                    $baseAmount = $installment['local_amount'] ?? 0;
-                                    $finalAmount = $this->calculateFinalAmount($baseAmount, $discounts, $sltLoanAmount, count($installmentsData));
-                                    
-                                    if ($finalAmount > 0) {
-                                        $paymentDetails[] = [
-                                            'installment_number' => $installment['installment_number'] ?? 1,
-                                            'due_date' => $installment['due_date'] ?? now()->addDays(30)->toDateString(),
-                                            'amount' => $finalAmount,
-                                            'currency' => 'LKR',
-                                            'paid_date' => null,
-                                            'status' => 'pending',
-                                            'receipt_no' => null
-                                        ];
-                                    }
-                                }
-                            } else {
-                                // For other payment types, use the original logic
-                                foreach ($installmentsData as $installment) {
-                                    $amount = 0;
-                                    switch ($request->payment_type) {
-                                        case 'franchise_fee':
-                                            $amount = $installment['international_amount'] ?? 0;
-                                            break;
-                                        default:
-                                            $amount = $installment['local_amount'] ?? 0;
-                                            break;
-                                    }
-                                    if ($amount > 0) {
-                                        $paymentDetails[] = [
-                                            'installment_number' => $installment['installment_number'] ?? 1,
-                                            'due_date' => $installment['due_date'] ?? now()->addDays(30)->toDateString(),
-                                            'amount' => $amount,
-                                            'currency' => ($request->payment_type === 'franchise_fee') ? 
-                                                ($registration->intake->franchise_payment_currency ?? 'LKR') : 'LKR',
-                                            'paid_date' => null,
-                                            'status' => 'pending',
-                                            'receipt_no' => null
-                                        ];
-                                    }
-                                }
-                            }
-                        }
+                $instData = $plan->installments;
+                if (is_string($instData)) {
+                    $instData = json_decode($instData, true);
+                }
+
+                if (is_array($instData)) {
+                    foreach ($instData as $item) {
+                        $fx = (float) ($item['international_amount'] ?? 0);
+                        if ($fx <= 0) continue; // only franchise (international) rows
+                        $rows[] = [
+                            'installment_number' => $item['installment_number'] ?? null,
+                            'due_date'           => $item['due_date'] ?? null,
+                            'amount'             => $fx,
+                            'base_amount'        => $fx,
+                            'status'             => 'pending',
+                            'paid_date'          => null,
+                            'receipt_no'         => null,
+                            'currency'           => $plan->international_currency ?: 'USD',
+                            // pass-through flags/rates so the frontend can show/apply them
+                            'apply_tax'          => (bool)($item['apply_tax'] ?? false),
+                            'sscl_tax'           => (float)($plan->sscl_tax ?? 0),
+                            'bank_charges'       => (float)($plan->bank_charges ?? 0),
+                        ];
                     }
                 }
-            }
 
-            // If no payment plan exists or no installments found, create a default entry
-            if (empty($paymentDetails)) {
-                $defaultAmount = 0;
-                
-                switch ($request->payment_type) {
-                    case 'course_fee':
-                        $defaultAmount = $registration->course->course_fee ?? 0;
-                        break;
-                    case 'franchise_fee':
-                        $defaultAmount = $registration->course->international_fee ?? 0;
-                        break;
-                    case 'registration_fee':
-                        $defaultAmount = $registration->registration_fee ?? 0;
-                        break;
-                    case 'library_fee':
-                    case 'hostel_fee':
-                        // These fees are not in the database yet, so return empty
-                        $defaultAmount = 0;
-                        break;
-                    default:
-                        $defaultAmount = $registration->course->course_fee ?? 0;
-                        break;
+                // if there were no franchise rows at all, still respond with empty array
+                break;
+
+            case 'registration_fee':
+                // intake plan → single row
+                $plan = \App\Models\PaymentPlan::where('course_id', $request->course_id)
+                    ->where('intake_id', $registration->intake_id)
+                    ->first();
+
+                if (!$plan) {
+                    return response()->json(['success' => false, 'message' => 'No payment plan found for this course/intake.'], 404);
                 }
 
-                if ($defaultAmount > 0) {
-                    $paymentDetails[] = [
-                        'installment_number' => 1,
-                        'due_date' => now()->addDays(30)->toDateString(),
-                        'amount' => $defaultAmount,
-                        'paid_date' => null,
-                        'status' => 'pending',
-                        'receipt_no' => null
-                    ];
-                }
-            }
-
-            return response()->json([
-                'success' => true,
-                'payment_details' => $paymentDetails
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+                $rows[] = [
+                    'installment_number' => 1,
+                    'due_date'           => now()->toDateString(),
+                    'amount'             => (float) $plan->registration_fee,
+                    'base_amount'        => (float) $plan->registration_fee,
+                    'status'             => 'pending',
+                    'paid_date'          => null,
+                    'receipt_no'         => null,
+                    'currency'           => 'LKR',
+                ];
+                break;
         }
+
+        return response()->json([
+            'success'         => true,
+            'payment_details' => $rows,
+        ]);
+
+    } catch (\Throwable $e) {
+        \Log::error('getPaymentDetails error: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+        return response()->json(['success' => false, 'message' => 'An error occurred: '.$e->getMessage()], 500);
     }
+}
 
     /**
      * Get payment plan installments for a student and course.
@@ -509,120 +435,228 @@ class PaymentController extends Controller
      * Create a new payment plan for a student and course.
      */
     public function createPaymentPlan(Request $request)
-    {
-        try {
-            $request->validate([
-                'student_id' => 'required|exists:students,student_id',
-                'course_id' => 'required|exists:courses,course_id',
-                'payment_plan_type' => 'required|in:installments,full',
-                'discounts' => 'nullable|array',
-                'discounts.*.discount_id' => 'required|integer|exists:discounts,id',
-                'discounts.*.discount_type' => 'required|in:percentage,amount',
-                'discounts.*.discount_value' => 'required|numeric|min:0',
-                'slt_loan_applied' => 'nullable|in:yes',
-                'slt_loan_amount' => 'nullable|numeric|min:0',
-                'total_amount' => 'required|numeric|min:0',
-                'final_amount' => 'required|numeric|min:0',
-                'installments' => 'required|array|min:1',
-                'installments.*.installment_number' => 'required|integer|min:1',
-                'installments.*.due_date' => 'required|date',
-                'installments.*.amount' => 'required|numeric|min:0',
-                'installments.*.status' => 'required|in:pending,paid,overdue'
-            ]);
+{
+    try {
+        $request->validate([
+            'student_id'        => 'required|exists:students,student_id',
+            'course_id'         => 'required|exists:courses,course_id',
+            'payment_plan_type' => 'required|in:installments,full',
 
-            // Check if student is registered for this course
-            $registration = CourseRegistration::where('student_id', $request->student_id)
-                ->where('course_id', $request->course_id)
-                ->first();
+            'discounts'                     => 'nullable|array',
+            'discounts.*.discount_id'       => 'required|integer|exists:discounts,id',
+            'discounts.*.discount_type'     => 'required|in:percentage,amount', // "amount" = fixed
+            'discounts.*.discount_value'    => 'required|numeric|min:0',
 
-            if (!$registration) {
-                return response()->json([
-                    'success' => false, 
-                    'message' => 'Student is not registered for this course.'
-                ], Response::HTTP_BAD_REQUEST);
+            'slt_loan_applied'  => 'nullable|in:yes',
+            'slt_loan_amount'   => 'nullable|numeric|min:0',
+
+            // We compute these from rows (frontend shows bases in `amount`)
+            'installments'                          => 'required|array|min:1',
+            'installments.*.installment_number'     => 'required|integer|min:1',
+            'installments.*.due_date'               => 'required|date',
+            'installments.*.amount'                 => 'required|numeric|min:0', // base local amount (pre-discount)
+            'installments.*.status'                 => 'required|in:pending,paid,overdue',
+        ]);
+
+        // Must be registered
+        $registration = \App\Models\CourseRegistration::where('student_id', $request->student_id)
+            ->where('course_id', $request->course_id)
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Student is not registered for this course.'
+            ], \Illuminate\Http\Response::HTTP_BAD_REQUEST);
+        }
+
+        // No duplicate plan
+        $exists = \App\Models\StudentPaymentPlan::where('student_id', $request->student_id)
+            ->where('course_id',  $request->course_id)
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'A payment plan already exists for this student and course.'
+            ], \Illuminate\Http\Response::HTTP_BAD_REQUEST);
+        }
+
+        return \DB::transaction(function () use ($request, $registration) {
+
+            // ====== 1) Inputs (use FE rows only) ======
+            $rows = collect($request->installments)
+                ->sortBy('installment_number')
+                ->values()
+                ->all();
+
+            // Original local total L = sum of bases (pre-discount)
+            $L = 0.0;
+            foreach ($rows as $r) { $L += (float)($r['amount'] ?? 0); }
+            $L = round($L, 2);
+            if ($L <= 0) {
+                throw new \RuntimeException('Total local fee (sum of installments) must be greater than zero.');
             }
 
-            // Check if payment plan already exists
-            $existingPlan = \App\Models\StudentPaymentPlan::where('student_id', $request->student_id)
-                ->where('course_id', $request->course_id)
-                ->first();
-
-            if ($existingPlan) {
-                return response()->json([
-                    'success' => false, 
-                    'message' => 'A payment plan already exists for this student and course.'
-                ], Response::HTTP_BAD_REQUEST);
+            // Discounts (frontend collects multiple, applies ALL to last row)
+            $pct = 0.0; $fixed = 0.0;
+            foreach (($request->discounts ?? []) as $d) {
+                $type = strtolower($d['discount_type'] ?? '');
+                $val  = (float)($d['discount_value'] ?? 0);
+                if ($type === 'percentage') $pct  += $val;     // % of L
+                if ($type === 'amount')     $fixed += $val;     // fixed LKR
             }
 
-            // Create payment plan
-            $paymentPlan = \App\Models\StudentPaymentPlan::create([
-                'student_id' => $request->student_id,
-                'course_id' => $request->course_id,
+            // FE logic: percentage on L, then fixed, all on LAST row; clamp result to ≥0
+            $lastIdx  = count($rows) - 1;
+            $lastBase = (float)$rows[$lastIdx]['amount'];
+            $pAmt     = $L * ($pct / 100);
+            $discAsk  = $pAmt + $fixed;                   // requested to subtract
+            $lastDiscEff = min($lastBase, $discAsk);      // effective (clamped)
+            $lastDiscBase = round($lastBase - $lastDiscEff, 2);
+            if ($lastDiscBase < 0) $lastDiscBase = 0.0;
+
+            // Build discounted bases array A_i
+            $discountedBases = [];
+            foreach ($rows as $i => $r) {
+                $base = (float)$r['amount'];
+                $discountedBases[$i] = ($i === $lastIdx) ? $lastDiscBase : round($base, 2);
+            }
+
+            // Sum after discounts (ΣAi)
+            $sumAfterDiscounts = 0.0;
+            foreach ($discountedBases as $Ai) $sumAfterDiscounts += $Ai;
+            $sumAfterDiscounts = round($sumAfterDiscounts, 2);
+
+            // Loan S and target total T by your rule:
+            // targetTotal = (ΣAi / L) * (L - S)
+            $S = ($request->slt_loan_applied === 'yes') ? (float)($request->slt_loan_amount ?? 0) : 0.0;
+            $S = max(0, min($S, $L)); // clamp
+            $T = ($sumAfterDiscounts > 0)
+                ? round(($sumAfterDiscounts / $L) * ($L - $S), 2)
+                : 0.0;
+
+            // ====== 2) Compute per-row finals exactly like FE ======
+            $computed = [];
+            $runningFinals = 0.0;
+
+            foreach ($rows as $i => $r) {
+                $base = round((float)$r['amount'], 2);
+                $Ai   = round($discountedBases[$i], 2);
+                $isLast = ($i === $lastIdx);
+
+                // Precompute Fi
+                if (!$isLast) {
+                    // Fi = round((Ai / L) * (L - S), 2)
+                    $Fi = round(($Ai / $L) * ($L - $S), 2);
+                    $runningFinals += $Fi;
+                } else {
+                    // Last gets the remainder to fix rounding drift
+                    $Fi = round($T - $runningFinals, 2);
+                }
+
+                $Fi = max(0, $Fi);
+                $loanPart = round($Ai - $Fi, 2); // for audit (what FE shows in "SLT Loan")
+
+                // Only last row shows discountApplied value (purely informational)
+                $discApplied = $isLast ? round($lastDiscEff, 2) : 0.0;
+
+                $computed[] = [
+                    'installment_number' => $r['installment_number'],
+                    'due_date'           => $r['due_date'],
+                    'status'             => $r['status'],
+                    'base'               => $base,
+                    'discount_amount'    => $discApplied, // display value
+                    'discounted_base'    => $Ai,
+                    'loan_amount'        => $loanPart,
+                    'final'              => $Fi,
+                ];
+            }
+
+            // ====== 3) Persist ======
+            $plan = \App\Models\StudentPaymentPlan::create([
+                'student_id'        => $request->student_id,
+                'course_id'         => $request->course_id,
                 'payment_plan_type' => $request->payment_plan_type,
-                'slt_loan_applied' => $request->slt_loan_applied,
-                'slt_loan_amount' => $request->slt_loan_amount,
-                'total_amount' => $request->total_amount,
-                'final_amount' => $request->final_amount,
-                'status' => 'active'
+                'slt_loan_applied'  => $request->slt_loan_applied,
+                'slt_loan_amount'   => $S,
+                'total_amount'      => $L,   // original sum
+                'final_amount'      => $T,   // FE rule total
+                'status'            => 'active',
             ]);
 
-            \Log::info('Payment plan created:', [
-                'payment_plan_id' => $paymentPlan->id,
-                'student_id' => $paymentPlan->student_id,
-                'course_id' => $paymentPlan->course_id,
-                'payment_plan_type' => $paymentPlan->payment_plan_type,
-                'total_amount' => $paymentPlan->total_amount,
-                'final_amount' => $paymentPlan->final_amount
-            ]);
-
-            // Create payment plan discounts
-            if ($request->discounts && is_array($request->discounts)) {
-                foreach ($request->discounts as $discount) {
+            // Save selected discounts (as chosen)
+            if ($request->filled('discounts')) {
+                foreach ($request->discounts as $d) {
                     \App\Models\PaymentPlanDiscount::create([
-                        'payment_plan_id' => $paymentPlan->id,
-                        'discount_id' => $discount['discount_id'],
-                        'discount_type' => $discount['discount_type'],
-                        'discount_value' => $discount['discount_value']
+                        'payment_plan_id' => $plan->id,
+                        'discount_id'     => $d['discount_id'],
+                        'discount_type'   => $d['discount_type'],
+                        'discount_value'  => $d['discount_value'],
                     ]);
                 }
             }
 
-            // Create installments
-            $installmentCount = 0;
-            foreach ($request->installments as $installment) {
-                \App\Models\PaymentInstallment::create([
-                    'payment_plan_id' => $paymentPlan->id,
-                    'installment_number' => $installment['installment_number'],
-                    'due_date' => $installment['due_date'],
-                    'amount' => $installment['amount'],
-                    'status' => $installment['status']
-                ]);
-                $installmentCount++;
+            // Column presence (safe fallback)
+            $hasBase   = \Schema::hasColumn('payment_installments', 'base_amount');
+            $hasDisc   = \Schema::hasColumn('payment_installments', 'discount_amount');
+            $hasLoan   = \Schema::hasColumn('payment_installments', 'slt_loan_amount');
+            $hasFinal  = \Schema::hasColumn('payment_installments', 'final_amount');
+
+            $saved = 0;
+            foreach ($computed as $c) {
+                // If you don't have extra cols, put FINAL into legacy `amount`
+                $legacyAmount = ($hasFinal || $hasBase) ? $c['base'] : $c['final'];
+
+                $data = [
+                    'payment_plan_id'    => $plan->id,
+                    'installment_number' => $c['installment_number'],
+                    'due_date'           => $c['due_date'],
+                    'amount'             => $legacyAmount, // legacy
+                    'status'             => $c['status'],
+                ];
+                if ($hasBase)  $data['base_amount']     = $c['base'];
+                if ($hasDisc)  $data['discount_amount'] = $c['discount_amount'];
+                if ($hasLoan)  $data['slt_loan_amount'] = $c['loan_amount'];
+                if ($hasFinal) $data['final_amount']    = $c['final'];
+
+                \App\Models\PaymentInstallment::create($data);
+                $saved++;
             }
 
-            \Log::info('Installments created:', [
-                'payment_plan_id' => $paymentPlan->id,
-                'installment_count' => $installmentCount
-            ]);
-
-            // Update course registration with payment plan
-            $registration->update([
-                'payment_plan_id' => $paymentPlan->id
-            ]);
+            // Link plan to registration
+            $registration->update(['payment_plan_id' => $plan->id]);
 
             return response()->json([
-                'success' => true,
-                'message' => 'Payment plan created successfully.',
-                'payment_plan_id' => $paymentPlan->id
-            ]);
+                'success'            => true,
+                'message'            => 'Payment plan created successfully.',
+                'payment_plan_id'    => $plan->id,
+                'installments_saved' => $saved,
+                'total_amount'       => $L,
+                'final_amount'       => $T,
+                'debug' => [
+                    'L' => $L,
+                    'pct_discount_on_L' => $pct,
+                    'fixed_discount'    => $fixed,
+                    'discount_applied_last' => $lastDiscEff,
+                    'sum_after_discounts'   => $sumAfterDiscounts,
+                    'loan_total'            => $S,
+                    'target_total'          => $T,
+                ],
+            ], \Illuminate\Http\Response::HTTP_OK);
+        });
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false, 
-                'message' => 'An error occurred: ' . $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+    } catch (\Illuminate\Validation\ValidationException $ve) {
+        $msg = collect($ve->errors())->flatten()->first() ?? 'Validation error';
+        return response()->json(['success' => false, 'message' => $msg], \Illuminate\Http\Response::HTTP_UNPROCESSABLE_ENTITY);
+    } catch (\Exception $e) {
+        \Log::error('createPaymentPlan error', ['e' => $e]);
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred: ' . $e->getMessage()
+        ], \Illuminate\Http\Response::HTTP_INTERNAL_SERVER_ERROR);
     }
+}
 
     /**
      * Save payment plans.
@@ -654,25 +688,155 @@ class PaymentController extends Controller
         }
     }
 
-    /**
-     * Generate payment slip for pending payments.
-     */
-    public function generatePaymentSlip(Request $request)
+    // app/Http/Controllers/PaymentController.php
+
+public function getExistingPaymentPlans(\Illuminate\Http\Request $request)
 {
     try {
         $request->validate([
-            'student_id' => 'required|string',
-            'payment_type' => 'required|string',
-            'amount' => 'required|numeric|min:0',
-            'installment_number' => 'nullable|integer',
-            'due_date' => 'nullable|date',
-            'conversion_rate' => 'nullable|numeric|min:0',
-            'currency_from' => 'nullable|string',
-            'remarks' => 'nullable|string',
+            'student_nic' => 'required|string',
+            'course_id'   => 'nullable|integer|exists:courses,course_id',
         ]);
 
-        // Find student
-        $student = Student::where('student_id', $request->student_id)
+        // find the student by NIC or by student_id
+        $student = \App\Models\Student::where('id_value', $request->student_nic)
+            ->orWhere('student_id', $request->student_nic)
+            ->first();
+
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+        }
+
+        // fetch plans for the student (optionally for a specific course)
+        $plans = \App\Models\StudentPaymentPlan::with(['installments', 'discounts'])
+            ->where('student_id', $student->student_id)
+            ->when($request->course_id, fn($q) => $q->where('course_id', $request->course_id))
+            ->orderByDesc('created_at')
+            ->get();
+
+        // map to a frontend-friendly shape
+        $payload = $plans->map(function ($p) use ($student) {
+            $courseName = \App\Models\Course::where('course_id', $p->course_id)->value('course_name') ?? 'N/A';
+
+            $inst = $p->installments->map(function ($i) {
+                // normalize fields; support schemas with/without extra columns
+                $baseAmount  = (float) ($i->base_amount ?? $i->amount ?? 0);
+                $finalAmount = (float) ($i->final_amount ?? $i->amount ?? 0);
+
+                return [
+                    'installment_number' => $i->installment_number,
+                    'due_date'           => optional($i->due_date)->format('Y-m-d'),
+                    'amount'             => $baseAmount,
+                    'discount_amount'    => (float) ($i->discount_amount ?? 0),
+                    'slt_loan_amount'    => (float) ($i->slt_loan_amount ?? 0),
+                    'final_amount'       => $finalAmount,
+                    'status'             => $i->status ?? 'pending',
+                ];
+            })->values();
+
+            return [
+                'payment_plan_id'   => $p->id,
+                'student_id'        => $student->student_id,
+                'student_name'      => $student->full_name,
+                'student_nic'       => $student->id_value,
+                'course_id'         => $p->course_id,
+                'course_name'       => $courseName,
+                'payment_plan_type' => $p->payment_plan_type,
+                'total_amount'      => (float) $p->total_amount,
+                'final_amount'      => (float) $p->final_amount,
+                'status'            => $p->status,
+                'installments'      => $inst,
+            ];
+        });
+
+        return response()->json(['success' => true, 'plans' => $payload], 200);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first()], 422);
+    } catch (\Throwable $e) {
+        return response()->json(['success' => false, 'message' => 'An error occurred: '.$e->getMessage()], 500);
+    }
+}
+// Teleshop constants (from Teleshop Payment slip)
+private const TS_PAYMENT_TYPE = 'Miscellaneous';
+private const TS_COST_CENTRE  = '5212';
+private const TS_ACCOUNT_CODE = '481.910';
+
+// Map "program/course" to Teleshop Payment Code
+private function teleshopPaymentCode(string $program): string
+{
+    // You can make this array configurable later
+    $map = [
+        'CAIT'           => '1010',
+        'Foundation'     => '1020',
+        'BTEC DT'        => '1030',
+        'BTEC EE'        => '1040',
+        'UH'             => '1050',
+        'English'        => '1060',
+        'BTEC Computing' => '1070',
+        'Other Courses'  => '1080',
+        'Hostel'         => '1090',
+    ];
+
+    // try exact, then loose contains
+    foreach ($map as $key => $code) {
+        if (strcasecmp($program, $key) === 0 || stripos($program, $key) !== false) {
+            return $code;
+        }
+    }
+    return '1080'; // default: Other Courses
+}
+
+// Make a clean "Reference 1" like: UH-B09-L5-1st Installment  OR  UH-B09-L5-Franchise Payment
+private function teleshopRef1(string $programShort, ?string $batch, ?string $level, string $paymentType, ?int $instNo): string
+{
+    $left  = trim($programShort);
+    $mid1  = $batch ? trim($batch) : '';
+    $mid2  = $level ? trim($level) : '';
+    $right = ($paymentType === 'franchise_fee')
+        ? 'Franchise Payment'
+        : ($instNo ? $this->ordinal($instNo) . ' Installment' : 'Installment');
+
+    return implode('-', array_filter([$left, $mid1, $mid2])) . '-' . $right;
+}
+
+// Reference Number (e.g., BTEC/UH Number). Fall back to student_id if not present.
+private function teleshopRefNumber(\App\Models\Student $student, \App\Models\CourseRegistration $reg): string
+{
+    // If you store UH/BTEC number somewhere, plug it here:
+    // return $student->uh_no ?? $student->btec_no ?? $student->student_id;
+    return $student->student_id;
+}
+
+private function ordinal(int $n): string
+{
+    $suf = 'th';
+    if (!in_array($n % 100, [11,12,13])) {
+        $suf = [1=>'st',2=>'nd',3=>'rd'][$n % 10] ?? 'th';
+    }
+    return $n . $suf;
+}
+
+    /**
+     * Generate payment slip for pending payments.
+     */
+   public function generatePaymentSlip(Request $request)
+{
+    try {
+        $request->validate([
+            'student_id'         => 'required|string',
+            'course_id'          => 'required|integer|exists:courses,course_id', // ✅ now required
+            'payment_type'       => 'required|string', // 'course_fee' | 'franchise_fee' | 'registration_fee'
+            'amount'             => 'required|numeric|min:0',
+            'installment_number' => 'nullable|integer',
+            'due_date'           => 'nullable|date',
+            'conversion_rate'    => 'nullable|numeric|min:0',
+            'currency_from'      => 'nullable|string',
+            'remarks'            => 'nullable|string',
+        ]);
+
+        // Find student by Student ID or NIC
+        $student = \App\Models\Student::where('student_id', $request->student_id)
             ->orWhere('id_value', $request->student_id)
             ->first();
 
@@ -680,127 +844,168 @@ class PaymentController extends Controller
             return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
         }
 
-        // Get registration
-        $registration = CourseRegistration::where('student_id', $student->student_id)
+        // Registration for THIS course
+        $registration = \App\Models\CourseRegistration::where('student_id', $student->student_id)
+            ->where('course_id', $request->course_id)
             ->with(['course', 'intake'])
             ->first();
 
         if (!$registration) {
-            return response()->json(['success' => false, 'message' => 'Student is not registered for any course.'], 404);
+            return response()->json(['success' => false, 'message' => 'Student is not registered for this course.'], 404);
         }
 
-        // ✅ Check for existing payment record with same student_id, course_registration_id, and installment_number
-        $existingPayment = PaymentDetail::where('student_id', $student->student_id)
+        // --- Prevent duplicate pending slips (NO payment_type filter; that column doesn't exist) ---
+        $existingPayment = \App\Models\PaymentDetail::where('student_id', $student->student_id)
             ->where('course_registration_id', $registration->id)
-            ->where('installment_number', $request->installment_number)
-            ->where('status', 'pending') // Optional: only return if still unpaid
+            ->when($request->installment_number, fn($q) => $q->where('installment_number', $request->installment_number))
+            ->when($request->due_date, fn($q) => $q->whereDate('due_date', $request->due_date))
+            ->where('status', 'pending')
             ->first();
 
+        // Common slip fields
+        $course      = $registration->course;
+        $intake      = $registration->intake;
+        $paymentType = $request->payment_type;
+        $amount      = (float) $request->amount;
+
+        // For franchise FX display
+        $fxRate   = $request->conversion_rate;
+        $fxFrom   = $request->currency_from;
+        $fxLkrAmt = ($paymentType === 'franchise_fee' && $fxRate) ? $amount * (float) $fxRate : null;
+        $fxCcy    = $intake->franchise_payment_currency ?? ($registration->intake->franchise_payment_currency ?? 'USD');
+
+        // Basic breakdown (kept simple and consistent with UI)
+        $courseFee       = $paymentType === 'course_fee'       ? $amount : 0;
+        $franchiseFee    = $paymentType === 'franchise_fee'    ? $amount : 0;
+        $registrationFee = $paymentType === 'registration_fee' ? ($intake->registration_fee ?? 0) : 0;
+
+        // If a pending slip already exists, return it
         if ($existingPayment) {
-            // Build slipData from existing record
-            $existingSlipData = [
-                'receipt_no' => $existingPayment->transaction_id,
-                'student_id' => $student->student_id,
-                'student_name' => $student->full_name,
-                'student_nic' => $student->id_value,
-                'course_name' => $registration->course->course_name ?? 'N/A',
-                'course_code' => $registration->course->course_code ?? 'N/A',
-                'intake' => $registration->intake->batch ?? 'N/A',
-                'intake_id' => $registration->intake->intake_id ?? null,
-                'payment_type' => $request->payment_type,
-                'payment_type_display' => $this->getPaymentTypeDisplay($request->payment_type),
-                'amount' => $existingPayment->amount,
-                'installment_number' => $existingPayment->installment_number,
-                'due_date' => $existingPayment->due_date,
-                'payment_date' => $existingPayment->created_at->toDateString(),
-                'payment_method' => $existingPayment->payment_method ?? 'Cash',
-                'remarks' => $existingPayment->remarks,
-                'status' => $existingPayment->status,
-                'location' => $registration->location ?? 'N/A',
-                'registration_date' => $registration->registration_date,
-                'course_fee' => 0, // optional
-                'franchise_fee' => 0, // optional
-                'franchise_fee_currency' => $registration->intake->franchise_payment_currency ?? 'LKR',
-                'registration_fee' => $registration->intake->registration_fee ?? 0,
-                'conversion_rate' => $request->conversion_rate,
-                'currency_from' => $request->currency_from,
-                'lkr_amount' => $request->conversion_rate ? ($existingPayment->amount * $request->conversion_rate) : null,
-                'generated_at' => $existingPayment->created_at->toDateTimeString(),
-                'valid_until' => now()->addDays(7)->toDateString(),
+            $slipData = [
+                'receipt_no'             => $existingPayment->transaction_id,
+                'student_id'             => $student->student_id,
+                'student_name'           => $student->full_name,
+                'student_nic'            => $student->id_value,
+                'course_name'            => $course->course_name ?? 'N/A',
+                'course_code'            => $course->course_code ?? 'N/A',
+                'intake'                 => $intake->batch ?? 'N/A',
+                'intake_id'              => $intake->intake_id ?? null,
+
+                // we echo the requested type for display (column not in DB)
+                'payment_type'           => $paymentType,
+                'payment_type_display'   => $this->getPaymentTypeDisplay($paymentType),
+
+                // Amount shown = the amount stored on the existing pending record
+                'amount'                 => (float) $existingPayment->amount,
+                'lkr_amount'             => $fxLkrAmt, // only used for franchise
+                'franchise_fee_currency' => $fxCcy,
+
+                'installment_number'     => $existingPayment->installment_number,
+                'due_date'               => optional($existingPayment->due_date)->format('Y-m-d'),
+                'payment_date'           => optional($existingPayment->created_at)->format('Y-m-d'),
+                'payment_method'         => $existingPayment->payment_method ?? 'Cash',
+                'remarks'                => $existingPayment->remarks,
+                'status'                 => $existingPayment->status,
+
+                'location'               => $registration->location ?? 'N/A',
+                'registration_date'      => optional($registration->registration_date)->format('Y-m-d'),
+
+                // simple breakdown
+                'course_fee'             => $courseFee,
+                'franchise_fee'          => $franchiseFee,
+                'registration_fee'       => $registrationFee,
+
+                'conversion_rate'        => $fxRate,
+                'currency_from'          => $fxFrom,
+                'generated_at'           => optional($existingPayment->created_at)->format('Y-m-d H:i:s'),
+                'valid_until'            => optional($existingPayment->created_at)->addDays(7)->format('Y-m-d'),
             ];
 
+            // keep for PDF download path (session)
+            session(['generated_slip_' . $existingPayment->transaction_id => $slipData]);
+
             return response()->json([
-                'success' => true,
-                'slip_data' => $existingSlipData,
-                'message' => 'Existing payment slip found.'
+                'success'  => true,
+                'slip_data'=> $slipData,
+                'message'  => 'Existing payment slip found.'
             ]);
         }
 
-        // ➕ Generate new receipt number
-        $today = date('Ymd');
-        $latest = PaymentDetail::where('transaction_id', 'like', "RCP{$today}%")
-            ->orderBy('transaction_id', 'desc')
-            ->first();
-
+        // --- Create a new pending slip ---
+        $today      = date('Ymd');
+        $latest     = \App\Models\PaymentDetail::where('transaction_id', 'like', "RCP{$today}%")
+                        ->orderBy('transaction_id', 'desc')->first();
         $lastNumber = $latest ? (int) substr($latest->transaction_id, -4) : 0;
         $nextNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
-        $receiptNo = 'RCP' . $today . $nextNumber;
+        $receiptNo  = 'RCP' . $today . $nextNumber;
 
-        // ➕ Insert into DB
-        $payment = PaymentDetail::create([
-            'student_id' => $student->student_id,
+        $payment = \App\Models\PaymentDetail::create([
+            'student_id'          => $student->student_id,
             'course_registration_id' => $registration->id,
-            'amount' => $request->amount,
-            'payment_method' => 'Cash',
-            'transaction_id' => $receiptNo,
-            'status' => 'pending',
-            'remarks' => $request->remarks,
-            'installment_number' => $request->installment_number,
-            'due_date' => $request->due_date,
+            'amount'              => $amount,         // for franchise, this is FX amount; UI shows FX+LKR
+            'payment_method'      => 'Cash',
+            'transaction_id'      => $receiptNo,
+            'status'              => 'pending',
+            'remarks'             => $request->remarks,  // you can prefix with [$paymentType] if you want
+            'installment_number'  => $request->installment_number,
+            'due_date'            => $request->due_date,
         ]);
 
-        // 📦 Create slipData for return
         $slipData = [
-            'receipt_no' => $receiptNo,
-            'student_id' => $student->student_id,
-            'student_name' => $student->full_name,
-            'student_nic' => $student->id_value,
-            'course_name' => $registration->course->course_name ?? 'N/A',
-            'course_code' => $registration->course->course_code ?? 'N/A',
-            'intake' => $registration->intake->batch ?? 'N/A',
-            'intake_id' => $registration->intake->intake_id ?? null,
-            'payment_type' => $request->payment_type,
-            'payment_type_display' => $this->getPaymentTypeDisplay($request->payment_type),
-            'amount' => $request->amount,
-            'installment_number' => $request->installment_number,
-            'due_date' => $request->due_date,
-            'payment_date' => now()->toDateString(),
-            'payment_method' => 'Cash',
-            'remarks' => $request->remarks,
-            'status' => 'pending',
-            'location' => $registration->location ?? 'N/A',
-            'registration_date' => $registration->registration_date,
-            'course_fee' => 0,
-            'franchise_fee' => 0,
-            'franchise_fee_currency' => $registration->intake->franchise_payment_currency ?? 'LKR',
-            'registration_fee' => $registration->intake->registration_fee ?? 0,
-            'conversion_rate' => $request->conversion_rate,
-            'currency_from' => $request->currency_from,
-            'lkr_amount' => $request->conversion_rate ? ($request->amount * $request->conversion_rate) : null,
-            'generated_at' => now()->toDateTimeString(),
-            'valid_until' => now()->addDays(7)->toDateString(),
+            'receipt_no'             => $receiptNo,
+            'student_id'             => $student->student_id,
+            'student_name'           => $student->full_name,
+            'student_nic'            => $student->id_value,
+            'course_name'            => $course->course_name ?? 'N/A',
+            'course_code'            => $course->course_code ?? 'N/A',
+            'intake'                 => $intake->batch ?? 'N/A',
+            'intake_id'              => $intake->intake_id ?? null,
+
+            'payment_type'           => $paymentType,
+            'payment_type_display'   => $this->getPaymentTypeDisplay($paymentType),
+
+            'amount'                 => $amount,
+            'lkr_amount'             => $fxLkrAmt,  // only for franchise
+            'franchise_fee_currency' => $fxCcy,
+
+            'installment_number'     => $request->installment_number,
+            'due_date'               => $request->due_date,
+            'payment_date'           => now()->toDateString(),
+            'payment_method'         => 'Cash',
+            'remarks'                => $request->remarks,
+            'status'                 => 'pending',
+            'location'               => $registration->location ?? 'N/A',
+            'registration_date'      => optional($registration->registration_date)->format('Y-m-d'),
+
+            // simple breakdown
+            'course_fee'             => $courseFee,
+            'franchise_fee'          => $franchiseFee,
+            'registration_fee'       => $registrationFee,
+
+            'conversion_rate'        => $fxRate,
+            'currency_from'          => $fxFrom,
+            'generated_at'           => now()->format('Y-m-d H:i:s'),
+            'valid_until'            => now()->addDays(7)->format('Y-m-d'),
         ];
 
+        // store for PDF download
+        session(['generated_slip_' . $receiptNo => $slipData]);
+
         return response()->json([
-            'success' => true,
+            'success'   => true,
             'slip_data' => $slipData,
-            'message' => 'New payment slip generated.'
+            'message'   => 'New payment slip generated.'
         ]);
 
     } catch (\Exception $e) {
-        return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], 500);
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred: ' . $e->getMessage()
+        ], 500);
     }
 }
+
+
 
 
     /**
@@ -827,12 +1032,12 @@ class PaymentController extends Controller
             'receipt_no' => 'required|string',
         ]);
 
-        // Try retrieving from session
+        // Try session first
         $slipData = session('generated_slip_' . $request->receipt_no);
 
         if (!$slipData) {
-            // If session is expired, fetch from DB
-            $payment = PaymentDetail::with(['student', 'registration.course']) // eager load relationships
+            // Fallback to DB with correct relations
+            $payment = PaymentDetail::with(['student', 'registration.course', 'registration.intake'])
                 ->where('transaction_id', $request->receipt_no)
                 ->first();
 
@@ -840,65 +1045,32 @@ class PaymentController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Payment slip not found or expired.'
-                ], Response::HTTP_NOT_FOUND);
+                ], \Illuminate\Http\Response::HTTP_NOT_FOUND);
             }
 
-            // Build slipData manually (MUST match your Blade view expectations)
-            $slipData = [
-                'receipt_no' => $payment->transaction_id,
-                'student_id' => $payment->student_id,
-                'student_name' => $payment->student->full_name ?? 'N/A',
-                'student_nic' => $payment->student->id_value ?? 'N/A',
-                'course_name' => $payment->course->course_name ?? 'N/A',
-                'course_code' => $payment->course->course_code ?? 'N/A',
-                'intake' => $payment->registration->intake->batch ?? 'N/A',
-                'intake_id' => $payment->registration->intake_id ?? null,
-                'payment_type' => 'N/A', // You can fill if stored
-                'payment_type_display' => 'N/A', // optional
-                'amount' => 'USD ' . number_format($payment->usd_amount, 2) . ' (LKR ' . number_format($payment->lkr_amount, 0) . ')',
-                'installment_number' => $payment->installment_number,
-                'due_date' => optional($payment->due_date)->format('Y-m-d'),
-                'payment_date' => optional($payment->updated_at)->format('Y-m-d'),
-                'payment_method' => $payment->payment_method,
-                'remarks' => $payment->remarks,
-                'status' => $payment->status,
-                'location' => $payment->registration->location ?? 'N/A',
-                'registration_date' => $payment->registration->registration_date ?? null,
-                'course_fee' => 'N/A',
-                'franchise_fee' => 'N/A',
-                'franchise_fee_currency' => 'N/A',
-                'registration_fee' => 'N/A',
-                'conversion_rate' => 'N/A',
-                'currency_from' => 'N/A',
-                'lkr_amount' => 'N/A',
-                'generated_at' => $payment->created_at->format('Y-m-d H:i:s'),
-                'valid_until' => $payment->created_at->addDays(7)->format('Y-m-d'),
-            ];
+            // Build in the exact shape the Blade expects
+            $slipData = $this->buildSlipDataFromPaymentDetail($payment);
         }
 
-        // Generate PDF
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.payment_slip', [
-            'slipData' => $slipData
-        ]);
-
-        $pdf->setPaper('A4', 'portrait');
-        $pdf->setOptions([
-            'isHtml5ParserEnabled' => true,
-            'isRemoteEnabled' => true,
-            'defaultFont' => 'Arial'
-        ]);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.payment_slip', compact('slipData'))
+              ->setPaper('A4', 'portrait')
+              ->setOptions([
+                  'isHtml5ParserEnabled' => true,
+                  'isRemoteEnabled'      => true,
+                  'defaultFont'          => 'Arial',
+              ]);
 
         $filename = 'Payment_Slip_' . $slipData['receipt_no'] . '_' . date('Y-m-d') . '.pdf';
-
         return $pdf->download($filename);
 
-    } catch (\Exception $e) {
+    } catch (\Throwable $e) {
         return response()->json([
             'success' => false,
             'message' => 'An error occurred: ' . $e->getMessage()
-        ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        ], \Illuminate\Http\Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 }
+
 
 
 
@@ -1405,4 +1577,78 @@ class PaymentController extends Controller
         // Ensure final amount is not negative
         return max(0, $finalAmount);
     }
+  /**
+ * Build the array the Blade view expects from a PaymentDetail.
+ * $overrides lets you inject values we only know at request-time (e.g., FX rate).
+ */
+private function buildSlipDataFromPaymentDetail(\App\Models\PaymentDetail $payment, array $overrides = []): array
+{
+    $student       = $payment->student;
+    $registration  = $payment->registration;              // CourseRegistration
+    $course        = optional($registration)->course;
+    $intake        = optional($registration)->intake;
+
+    // what type was this? if not stored, guess "course_fee" and let UI text override
+    $type = $overrides['payment_type'] ?? ($payment->payment_type ?? 'course_fee');
+
+    // FX (for franchise): if a rate is provided via overrides, compute LKR too
+    $currencyFrom = $overrides['currency_from'] ?? null;
+    $convRate     = isset($overrides['conversion_rate']) ? (float)$overrides['conversion_rate'] : null;
+    $lkrAmount    = ($type === 'franchise_fee' && $convRate) ? round(((float)$payment->amount) * $convRate, 2) : null;
+
+    // currency to display for franchise (fallback to intake’s currency fields if you have them)
+    $fxCurrency   = $overrides['franchise_fee_currency']
+        ?? ($intake->franchise_payment_currency
+            ?? $intake->international_currency
+            ?? 'USD');
+
+    // simple per-type breakdown for the “Payment Breakdown” table
+    $courseFee       = $type === 'course_fee'       ? (float)$payment->amount : 0.0;
+    $franchiseFee    = $type === 'franchise_fee'    ? (float)$payment->amount : 0.0;
+    $registrationFee = $type === 'registration_fee' ? (float)($intake->registration_fee ?? 0) : 0.0;
+
+    return [
+        'receipt_no'             => $payment->transaction_id,
+        'student_id'             => $payment->student_id,
+        'student_name'           => optional($student)->full_name ?? 'N/A',
+        'student_nic'            => optional($student)->id_value ?? 'N/A',
+
+        'course_name'            => optional($course)->course_name ?? 'N/A',
+        'course_code'            => optional($course)->course_code ?? 'N/A',
+        'intake'                 => optional($intake)->batch ?? 'N/A',
+        'intake_id'              => optional($intake)->intake_id,
+
+        'payment_type'           => $type,
+        'payment_type_display'   => $this->getPaymentTypeDisplay($type),
+
+        // amount is ALWAYS numeric; Blade formats it
+        'amount'                 => (float)$payment->amount,
+
+        // franchise extras (null for non-franchise)
+        'currency_from'          => $currencyFrom,
+        'conversion_rate'        => $convRate,
+        'lkr_amount'             => $lkrAmount,
+        'franchise_fee_currency' => $fxCurrency,
+
+        'installment_number'     => $payment->installment_number,
+        'due_date'               => optional($payment->due_date)->format('Y-m-d'),
+        'payment_date'           => optional($payment->updated_at)->format('Y-m-d'),
+        'payment_method'         => $payment->payment_method,
+        'remarks'                => $payment->remarks,
+        'status'                 => $payment->status,
+
+        'location'               => $registration->location ?? 'N/A',
+        'registration_date'      => optional($registration->registration_date)->format('Y-m-d'),
+
+        // breakdown
+        'course_fee'             => $courseFee,
+        'franchise_fee'          => $franchiseFee,
+        'registration_fee'       => $registrationFee,
+
+        'generated_at'           => optional($payment->created_at)->format('Y-m-d H:i:s'),
+        'valid_until'            => optional($payment->created_at)->copy()->addDays(7)->format('Y-m-d'),
+    ];
+}
+  
+    
 } 
