@@ -1,8 +1,6 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | Exam Results'); ?>
 
-@section('title', 'NEBULA | Exam Results')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -536,12 +534,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         showSpinner(true);
-        const url = '{{ route('exam.results.get.filtered.modules') }}';
+        const url = '<?php echo e(route('exam.results.get.filtered.modules')); ?>';
         console.log('DEBUG: Calling modules API with URL:', url);
         console.log('DEBUG: Request data:', data);
         fetch(url, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -613,9 +611,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         showSpinner(true);
-        fetch('{{ route("get.student.name") }}', {
+        fetch('<?php echo e(route("get.student.name")); ?>', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify({ student_id: studentId })
         })
         .then(response => response.json())
@@ -662,24 +660,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const payload = { ...filterData, results: filteredResults };
         
         showSpinner(true);
-        fetch('{{ route("store.result") }}', {
+        fetch('<?php echo e(route("store.result")); ?>', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(payload)
         })
-        .then(response => {
-            console.log('Response status:', response.status);
-            console.log('Response headers:', response.headers);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
-            console.log('Response data:', data);
-            
             if (data.success) {
                 showToast('Success', data.message, '#ccffcc');
                 setTimeout(function() {
@@ -687,17 +674,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 1500);
                 results = [];
                 renderTable();
-                // Fix: Use the correct element ID and add null checks
-                const newStudentIdElement = document.getElementById('new_student_id');
-                const newStudentNameElement = document.getElementById('new_student_name');
-                
-                if (newStudentIdElement) {
-                    newStudentIdElement.value = '';
-                }
-                if (newStudentNameElement) {
-                    newStudentNameElement.value = '';
-                }
-                
+                document.getElementById('student_id').form.reset();
                 resetAndDisable(courseSelect, 'Select a Course');
                 resetAndDisable(intakeSelect, 'Select an Intake');
                 resetAndDisable(semesterSelect, 'Select a Semester');
@@ -711,19 +688,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showToast('Error', errorMsg, 'bg-danger');
             }
         })
-        .catch(error => {
-            console.error('Error saving exam results:', error);
-            let errorMsg = 'An error occurred while saving results.';
-            
-            // Try to get more specific error information
-            if (error.message) {
-                errorMsg = error.message;
-            } else if (error.status) {
-                errorMsg = `Server error (${error.status}): ${error.statusText || 'Unknown error'}`;
-            }
-            
-            showToast('Error', errorMsg, 'bg-danger');
-        })
+        .catch(() => showToast('Error', 'An error occurred while saving results.', 'bg-danger'))
         .finally(() => showSpinner(false));
     }
     
@@ -762,18 +727,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function clearInputFields() {
-        const newStudentIdElement = document.getElementById('new_student_id');
-        const newStudentNameElement = document.getElementById('new_student_name');
-        
-        if (newStudentIdElement) {
-            newStudentIdElement.value = '';
-        }
-        if (newStudentNameElement) {
-            newStudentNameElement.value = '';
-        }
-        if (newStudentIdElement) {
-            newStudentIdElement.focus();
-        }
+        document.getElementById('new_student_id').value = '';
+        document.getElementById('new_student_name').value = '';
+        document.getElementById('new_student_id').focus();
     }
 
     function updateResultsHeader() {
@@ -840,7 +796,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showSpinner(true);
         fetch('/get-students-for-exam-result', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -1008,4 +964,5 @@ document.addEventListener('DOMContentLoaded', function() {
         box-shadow: 0 0 0 2px #e0e7ff;
     }
 </style>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Users/inazawaelectronics/Documents/SLT/Nebula/resources/views/exam_results.blade.php ENDPATH**/ ?>
