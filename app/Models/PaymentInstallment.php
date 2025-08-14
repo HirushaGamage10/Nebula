@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
+// app/Models/PaymentInstallment.php
 class PaymentInstallment extends Model
 {
     use HasFactory;
@@ -15,13 +15,24 @@ class PaymentInstallment extends Model
         'payment_plan_id',
         'installment_number',
         'due_date',
-        'amount',
+        'amount',            // legacy base
         'status',
+        'base_amount',
+        'discount_amount',
+        'discount_note',
+        'slt_loan_amount',
+        'final_amount',
+        'paid_date',
     ];
 
     protected $casts = [
-        'due_date' => 'date',
-        'amount' => 'decimal:2',
+        'due_date'        => 'date',
+        'paid_date'       => 'date',
+        'amount'          => 'decimal:2',
+        'base_amount'     => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'slt_loan_amount' => 'decimal:2',
+        'final_amount'    => 'decimal:2',
     ];
 
     // Relationships
@@ -30,11 +41,11 @@ class PaymentInstallment extends Model
         return $this->belongsTo(StudentPaymentPlan::class, 'payment_plan_id');
     }
     public function plan()
-{
-    return $this->belongsTo(\App\Models\StudentPaymentPlan::class, 'payment_plan_id');
-}
+    {
+        return $this->belongsTo(\App\Models\StudentPaymentPlan::class, 'payment_plan_id');
+    }
 
-    // Accessors
+    // Accessors / helpers
     public function getFormattedDueDateAttribute()
     {
         return $this->due_date ? $this->due_date->format('d/m/Y') : 'N/A';
@@ -42,17 +53,14 @@ class PaymentInstallment extends Model
 
     public function getFormattedAmountAttribute()
     {
-        return 'LKR ' . number_format($this->amount, 2);
+        // show final if available; fallback to base/legacy
+        $value = $this->final_amount ?? $this->base_amount ?? $this->amount ?? 0;
+        return 'LKR ' . number_format((float)$value, 2);
     }
 
     public function getStatusBadgeAttribute()
     {
-        $badges = [
-            'pending' => 'warning',
-            'paid' => 'success',
-            'overdue' => 'danger',
-        ];
-        
+        $badges = ['pending' => 'warning','paid' => 'success','overdue' => 'danger'];
         return $badges[$this->status] ?? 'secondary';
     }
 }

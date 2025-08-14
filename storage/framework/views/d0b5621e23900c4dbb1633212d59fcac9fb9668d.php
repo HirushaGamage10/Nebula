@@ -1,4 +1,4 @@
-@php
+<?php
     // Helpers
     $get = fn($key, $default = null) => data_get($slipData ?? [], $key, $default);
     $fmt = function ($n, $dec = 2) {
@@ -56,12 +56,12 @@
         'reference_1',
         trim($courseName) . ' / ' . ($installment ? ($installment . ' Installment') : 'Payment')
     );
-@endphp
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Teleshop Payment Slip - {{ $receiptNo }}</title>
+<title>Teleshop Payment Slip - <?php echo e($receiptNo); ?></title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
     @page { margin: 20px; }
@@ -86,10 +86,10 @@
 </head>
 <body>
 
-    {{-- Header --}}
+    
     <div class="header">
-{{-- Robust logo render for DomPDF --}}
-@php
+
+<?php
     $rel   = 'images/logos/nebula.png';
     $path  = public_path($rel);
     $mime  = 'image/png';
@@ -108,48 +108,48 @@
     if (!$src) {
         $src = asset($rel);
     }
-@endphp
+?>
 
-@if($src)
-  <img src="{{ $src }}" alt="Nebula" width="180" class="logo">
-@else
+<?php if($src): ?>
+  <img src="<?php echo e($src); ?>" alt="Nebula" width="180" class="logo">
+<?php else: ?>
   <div style="width:180px;height:50px;border:1px solid #ccc;display:inline-block;"></div>
-@endif
+<?php endif; ?>
 
         <div class="title">SLTMOBITEL NEBULA INSTITUTE OF TECHNOLOGY</div>
         <div class="sub">Teleshop Payment Slip</div>
         <div class="meta">
             <span class="label">Teleshop Receipt No:</span>
-            <span class="mono">{{ $receiptNo }}</span> &nbsp; | &nbsp;
+            <span class="mono"><?php echo e($receiptNo); ?></span> &nbsp; | &nbsp;
             <span class="label" style="min-width: auto;">Generated:</span>
-            <span class="mono">{{ $generatedAt }}</span>
+            <span class="mono"><?php echo e($generatedAt); ?></span>
         </div>
     </div>
 
-    {{-- Teleshop Payment Section --}}
+    
     <div class="section">
         <div class="section-title">Teleshop Payment</div>
-        <div class="row"><span class="label">Payment Type:</span> {{ $paymentType }}</div>
-        <div class="row"><span class="label">Cost Centre:</span> {{ $costCentre }}</div>
-        <div class="row"><span class="label">Account Code:</span> {{ $accountCode }}</div>
-        <div class="row"><span class="label">Payment Code:</span> {{ $paymentCode }}</div>
+        <div class="row"><span class="label">Payment Type:</span> <?php echo e($paymentType); ?></div>
+        <div class="row"><span class="label">Cost Centre:</span> <?php echo e($costCentre); ?></div>
+        <div class="row"><span class="label">Account Code:</span> <?php echo e($accountCode); ?></div>
+        <div class="row"><span class="label">Payment Code:</span> <?php echo e($paymentCode); ?></div>
     </div>
 
     <div class="divider"></div>
 
-    {{-- Customer Details --}}
+    
     <div class="section">
         <div class="section-title">Customer Details</div>
-        <div class="row"><span class="label">Name:</span> {{ $studentName }}</div>
-        <div class="row"><span class="label">Reference Number:</span> {{ $studentId }}</div>
-        <div class="row"><span class="label">Course:</span> {{ $courseName }}</div>
-        <div class="row"><span class="label">Intake:</span> {{ $intake }}</div>
-        <div class="row"><span class="label">Installment #:</span> {{ $installment ?? '-' }}</div>
-        <div class="row"><span class="label">Due Date:</span> {{ $dateOr($dueDate) }}</div>
-        <div class="row"><span class="label">Reference:</span> {{ $reference1 }}</div>
+        <div class="row"><span class="label">Name:</span> <?php echo e($studentName); ?></div>
+        <div class="row"><span class="label">Reference Number:</span> <?php echo e($studentId); ?></div>
+        <div class="row"><span class="label">Course:</span> <?php echo e($courseName); ?></div>
+        <div class="row"><span class="label">Intake:</span> <?php echo e($intake); ?></div>
+        <div class="row"><span class="label">Installment #:</span> <?php echo e($installment ?? '-'); ?></div>
+        <div class="row"><span class="label">Due Date:</span> <?php echo e($dateOr($dueDate)); ?></div>
+        <div class="row"><span class="label">Reference:</span> <?php echo e($reference1); ?></div>
     </div>
 
-    {{-- Quick Payment Code Table (static mapping for reference) --}}
+    
     <table>
         <thead>
             <tr>
@@ -170,12 +170,13 @@
         </tbody>
     </table>
 
-    {{-- Amount Section --}}
+    
     <div class="section" style="margin-top: 12px;">
-        <div class="row"><span class="label">Amount (Rs.):</span> {{ $fmt($amount) }}</div>
-        <div class="row"><span class="label">Late Payment Amount (Rs.):</span> {{ $fmt(0) }}</div>
-        <div class="row total"><span class="label">Total Payment to Pay (Rs.):</span> {{ $fmt($amount) }}</div>
+        <div class="row"><span class="label">Amount (Rs.):</span> <?php echo e($fmt($amount)); ?></div>
+        <div class="row"><span class="label">Late Payment Amount (Rs.):</span> <?php echo e($fmt(0)); ?></div>
+        <div class="row total"><span class="label">Total Payment to Pay (Rs.):</span> <?php echo e($fmt($amount)); ?></div>
     </div>
 
 </body>
 </html>
+<?php /**PATH D:\SLT\Welisara\Nebula\resources\views/pdf/payment_slip.blade.php ENDPATH**/ ?>

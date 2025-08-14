@@ -263,6 +263,12 @@
                         <span class="hide-menu">Semester Creation</span>
                     </a>
                 </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'semesters.index' ? 'active' : ''); ?>" href="<?php echo e(route('semesters.index')); ?>">
+                        <span><i class="ti ti-list"></i></span>
+                        <span class="hide-menu">Semester Management</span>
+                    </a>
+                </li>
             <?php endif; ?>
             <?php if(RoleHelper::hasPermission($role, 'semester.registration')): ?>
                 <li class="sidebar-item">

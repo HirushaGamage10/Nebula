@@ -250,7 +250,15 @@
     align-items: center;
     z-index: 9999;
 }
+
+  .slt-formula { display:inline-flex; align-items:center; gap:.5rem; }
+  .slt-formula .fraction { display:inline-flex; flex-direction:column; align-items:center; line-height:1; font-variant-numeric: tabular-nums; }
+  .slt-formula .top,.slt-formula .bottom { display:block; }
+  .slt-formula .bar { display:block; width:100%; border-top:1px solid currentColor; margin:.15rem 0; }
+  .slt-formula .times { white-space:nowrap; }
+
 </style>
+
 
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
@@ -449,29 +457,30 @@
                             </div>
                         </div>
                         
-                        <!-- Existing Payment Plans Table -->
-                        <div class="mt-4" id="existingPaymentPlansSection" style="display:none;">
-                            <h4 class="text-center mb-3">Existing Payment Plans</h4>
-                            <div class="table-responsive">
-                                <table class="table table-bordered">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Student ID</th>
-                                            <th>Student Name</th>
-                                            <th>Student NIC</th>
-                                            <th>Course</th>
-                                            <th>Payment Plan Type</th>
-                                            <th>Total Amount</th>
-                                            <th>Installments</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="existingPaymentPlansTableBody">
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                        <!-- keep your existing section markup -->
+<!-- Existing Payment Plans Table -->
+<div class="mt-4" id="existingPaymentPlansSection" style="display:none;">
+  <h4 class="text-center mb-3">Existing Payment Plans</h4>
+  <div class="table-responsive">
+    <table class="table table-bordered">
+      <thead class="table-light">
+        <tr>
+          <th>Student ID</th>
+          <th>Student Name</th>
+          <th>Student NIC</th>
+          <th>Course</th>
+          <th>Payment Plan Type</th>
+          <th>Total Amount</th>
+          <th>Installments</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="existingPaymentPlansTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
                     </div>
                 </div>
 
@@ -1325,39 +1334,121 @@ if (frEl) {
 }
 
 
+// helpers
+const fmtLKR = n => `LKR ${Number(n || 0).toLocaleString()}`;
+const badge  = s => `<span class="badge bg-${s==='paid'?'success':(s==='pending'?'warning':'danger')}">${s}</span>`;
+
 // Load existing payment plans for the student and course
 function loadExistingPaymentPlans(studentNic, courseId) {
-    console.log('Loading existing payment plans for:', { studentNic, courseId });
-    
-    // First try to fetch existing payment plan installments
-    fetch('/payment/get-installments', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
-        body: JSON.stringify({
-            student_nic: studentNic,
-            course_id: parseInt(courseId)
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('Payment plan installments response:', data);
-        if (data.success) {
-            console.log('Payment plan found, displaying installments');
-            // Display existing installments in the table
-            displayInstallments(data.installments);
-        } else {
-            console.log('No payment plan found for this course and intake, showing preview');
-            // Show preview of installments based on payment plan type
-            showInstallmentPreview();
-        }
-    })
-    .catch(error => {
-        console.error('Error loading installments:', error);
-        // Show error message
-        const tbody = document.getElementById('installmentTableBody');
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">Error loading payment plan installments.</td></tr>';
+  const section = document.getElementById('existingPaymentPlansSection');
+  const tbody   = document.getElementById('existingPaymentPlansTableBody');
+  tbody.innerHTML = '';
+  section.style.display = 'none';
+
+  // optional spinner if you have one
+  if (typeof showSpinner === 'function') showSpinner(true);
+
+  fetch('/payment/existing-plans', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+    body: JSON.stringify({ student_nic: studentNic, course_id: Number(courseId) })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (!data.success) throw new Error(data.message || 'Failed to load existing plans');
+
+    const plans = data.plans || [];
+    if (plans.length === 0) {
+      // no plans: hide section and (optionally) show preview in the editor
+      section.style.display = 'none';
+      return;
+    }
+
+    plans.forEach(p => {
+      const inst = p.installments || [];
+      const instCount = inst.length;
+
+      // main row
+      tbody.insertAdjacentHTML('beforeend', `
+        <tr>
+          <td>${p.student_id}</td>
+          <td>${p.student_name}</td>
+          <td>${p.student_nic}</td>
+          <td>${p.course_name}</td>
+          <td>${p.payment_plan_type}</td>
+          <td>
+            <div>${fmtLKR(p.total_amount)}</div>
+            <small class="text-muted">Final: ${fmtLKR(p.final_amount)}</small>
+          </td>
+          <td>
+            ${instCount} installment${instCount===1?'':'s'}
+            <button class="btn btn-link btn-sm p-0 ms-1" type="button"
+              data-bs-toggle="collapse" data-bs-target="#plan-${p.payment_plan_id}-inst">
+              View
+            </button>
+          </td>
+          <td>${badge(p.status)}</td>
+          <td class="text-nowrap">
+            <button class="btn btn-sm btn-outline-primary"
+              data-bs-toggle="collapse" data-bs-target="#plan-${p.payment_plan_id}-inst">
+              Details
+            </button>
+            <button class="btn btn-sm btn-primary ms-1"
+              onclick='displayInstallments(${JSON.stringify(inst).replace(/'/g,"&#39;")})'>
+              Load to editor
+            </button>
+          </td>
+        </tr>
+        <tr class="collapse" id="plan-${p.payment_plan_id}-inst">
+          <td colspan="9">
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>#</th>
+                    <th>Due Date</th>
+                    <th>Amount</th>
+                    <th>Discount</th>
+                    <th>SLT Loan</th>
+                    <th>Final Amount</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${inst.map(i => `
+                    <tr>
+                      <td>${i.installment_number}</td>
+                      <td>${i.due_date ?? '-'}</td>
+                      <td>${fmtLKR(i.amount ?? i.base_amount)}</td>
+                      <td>${i.discount_amount ? fmtLKR(i.discount_amount) : '-'}</td>
+                      <td>${i.slt_loan_amount ? fmtLKR(i.slt_loan_amount) : '-'}</td>
+                      <td>${fmtLKR(i.final_amount ?? i.amount)}</td>
+                      <td>${badge(i.status || 'pending')}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+      `);
     });
+
+    section.style.display = 'block';
+  })
+  .catch(err => {
+    console.error(err);
+    tbody.innerHTML = `
+      <tr><td colspan="9" class="text-center text-danger">
+        ${err.message || 'Error loading existing payment plans.'}
+      </td></tr>`;
+    section.style.display = 'block';
+  })
+  .finally(() => {
+    if (typeof showSpinner === 'function') showSpinner(false);
+  });
 }
+
 
 // Display installments in the table (discounts first, then SLT prorated by original local total)
 function displayInstallments(installments) {
@@ -1373,6 +1464,18 @@ function displayInstallments(installments) {
   const N   = v => Number(String(v).replace(/,/g, '')) || 0;
   const r2  = v => Math.round(v * 100) / 100;
   const fmt = n => N(n).toLocaleString();
+  const fmt0 = n => N(n).toLocaleString(undefined, {maximumFractionDigits:0}); // 200,000 style
+
+  // 👉 formula HTML builder
+  const sltFormulaHTML = (Ai, L, LminusS) => `
+    <div class="slt-formula">
+      <span class="fraction">
+        <span class="top">${fmt0(Ai)}</span>
+        <span class="bar"></span>
+        <span class="bottom">${fmt0(L)}</span>
+      </span>
+      <span class="times">× ${fmt0(LminusS)}</span>
+    </div>`;
 
   // current form state
   const discountSelects  = document.querySelectorAll('.discount-select');
@@ -1440,9 +1543,14 @@ function displayInstallments(installments) {
         Fi = r2(targetTotal - runningFinals);
       }
 
-      const loanAlloc = r2(ins.discountedAmount - Fi);
+      const Ai = ins.discountedAmount;
+      const L  = originalLocalTotal;
+      const S  = sltLoanAmount;
+
+      // 👉 show the final-amount formula in SLT column (e.g., 200,000 / 500,000 × 400,000)
+      sltLoanText = sltFormulaHTML(Ai, L, L - S);
+
       finalAmount = Math.max(0, Fi);
-      sltLoanText = `LKR ${loanAlloc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
 
     const row = `
@@ -1461,6 +1569,7 @@ function displayInstallments(installments) {
     tbody.insertAdjacentHTML('beforeend', row);
   });
 }
+
 
 
 // Get badge color based on status
@@ -1618,106 +1727,109 @@ function calculateInstallments() {
 
 // Create payment plan
 function createPaymentPlan() {
-    const planType = document.getElementById('payment-plan-type').value;
-    const discountSelects = document.querySelectorAll('.discount-select');
-    const sltLoanApplied = document.getElementById('slt-loan-applied').value;
-    const sltLoanAmount = document.getElementById('slt-loan-amount').value;
-    
-    console.log('Creating payment plan with data:', {
-        planType,
-        studentData: window.currentStudentData,
-        discountSelects: discountSelects.length,
-        sltLoanApplied,
-        sltLoanAmount
-    });
-    
-    // Check if student data exists
-    if (!window.currentStudentData || !window.currentStudentData.student_nic) {
-        showErrorMessage('Please load student details first before creating a payment plan.');
-        return;
+  const planType       = document.getElementById('payment-plan-type').value;
+  const discountSelects= document.querySelectorAll('.discount-select');
+  const sltLoanApplied = document.getElementById('slt-loan-applied').value;
+  const sltLoanAmount  = parseFloat(document.getElementById('slt-loan-amount').value || '0');
+
+  if (!window.currentStudentData || !window.currentStudentData.student_nic) {
+    showErrorMessage('Please load student details first before creating a payment plan.');
+    return;
+  }
+  if (!planType) {
+    showErrorMessage('Please select a payment plan type.');
+    return;
+  }
+
+  showSpinner(true);
+
+  // collect discounts
+  const selectedDiscounts = [];
+  discountSelects.forEach((select) => {
+    if (select.value) {
+      const opt = select.options[select.selectedIndex];
+      selectedDiscounts.push({
+        discount_id: parseInt(select.value, 10),
+        discount_type: opt.dataset.type,      // "percentage" | "amount"
+        discount_value: parseFloat(opt.dataset.value || '0')
+      });
     }
-    
-    // Validate required fields
-    if (!planType) {
-        showErrorMessage('Please select a payment plan type.');
-        return;
-    }
-    
-    showSpinner(true);
-    
-    // Collect selected discounts
-    const selectedDiscounts = [];
-    discountSelects.forEach(select => {
-        if (select.value) {
-            const selectedOption = select.options[select.selectedIndex];
-            selectedDiscounts.push({
-                discount_id: parseInt(select.value),
-                discount_type: selectedOption.dataset.type,
-                discount_value: parseFloat(selectedOption.dataset.value)
-            });
-        }
+  });
+
+  // 1) Get raw plan installments from backend (they already include `final_amount` after discount)
+  fetch('/payment/get-installments', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+    body: JSON.stringify({
+      student_nic: window.currentStudentData.student_nic,
+      course_id: parseInt(window.currentStudentData.course_id, 10)
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (!data.success) throw new Error(data.message || 'Failed to get payment plan installments');
+
+    // Compute SLT loan per installment (frontend distributes it)
+    const count = (data.installments || []).length || 1;
+    const sltPerInst = (sltLoanApplied === 'yes' && sltLoanAmount > 0) ? (sltLoanAmount / count) : 0;
+
+    // Build installments INCLUDING final_amount
+    const installments = (data.installments || []).map(inst => {
+      const base = parseFloat(inst.amount || 0);                 // local base amount
+      const discounted = parseFloat(inst.final_amount || base);  // backend already applied discount (usually last row)
+      const discountAmount = Math.max(0, base - discounted);     // derived discount applied to this row
+      const finalWithLoan = Math.max(0, discounted - sltPerInst);
+
+      return {
+        installment_number: inst.installment_number,
+        due_date: inst.due_date,                 // already ISO from backend
+        amount: base,                            // base amount
+        discount_amount: discountAmount,         // numeric
+        discount_note: inst.discount || null,    // e.g. "Discount (10% on total)" or null
+        slt_loan_amount: sltPerInst,             // distributed loan
+        final_amount: finalWithLoan,             // ✅ REQUIRED by backend
+        status: 'pending'
+      };
     });
-    
-    // First, get the payment plan installments from the backend
-    fetch('/payment/get-installments', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
-        body: JSON.stringify({
-            student_nic: window.currentStudentData.student_nic,
-            course_id: parseInt(window.currentStudentData.course_id)
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Use the installments from the payment plan
-            const installments = data.installments.map(installment => ({
-                installment_number: installment.installment_number,
-                due_date: installment.due_date,
-                amount: installment.amount,
-                status: 'pending'
-            }));
-            
-            // Prepare payment plan data
-            const paymentPlanData = {
-                student_id: window.currentStudentData.student_id,
-                course_id: parseInt(window.currentStudentData.course_id),
-                payment_plan_type: planType,
-                discounts: selectedDiscounts,
-                slt_loan_applied: sltLoanApplied,
-                slt_loan_amount: sltLoanAmount,
-                total_amount: window.currentStudentData.total_amount,
-                final_amount: window.currentStudentData.final_amount || window.currentStudentData.total_amount,
-                installments: installments
-            };
-            
-            // Send to backend
-            return fetch('/payment/create-payment-plan', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
-                body: JSON.stringify(paymentPlanData)
-            });
-        } else {
-            throw new Error(data.message || 'Failed to get payment plan installments');
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            console.log('Payment plan created successfully:', data);
-            showSuccessMessage('Payment plan created successfully! 🎉');
-            resetPaymentPlanForm();
-            loadExistingPaymentPlans(window.currentStudentData.student_nic, window.currentStudentData.course_id);
-        } else {
-            console.error('Failed to create payment plan:', data);
-            showErrorMessage(data.message || 'Failed to create payment plan.');
-        }
-    })
-    .catch((error) => {
-        console.error('Error creating payment plan:', error);
-        showErrorMessage(error.message || 'An error occurred while creating payment plan.');
-    })
-    .finally(() => showSpinner(false));
+
+    // totals
+    const totalAmount = installments.reduce((s, i) => s + (i.amount || 0), 0);
+    const finalTotal  = installments.reduce((s, i) => s + (i.final_amount || 0), 0);
+
+    const payload = {
+      student_id: window.currentStudentData.student_id,
+      course_id: parseInt(window.currentStudentData.course_id, 10),
+      payment_plan_type: planType,
+      discounts: selectedDiscounts,
+      slt_loan_applied: sltLoanApplied,
+      slt_loan_amount: sltLoanApplied === 'yes' ? sltLoanAmount : 0,
+      total_amount: totalAmount,
+      final_amount: finalTotal, // top-level summary after discount + loan
+      installments: installments
+    };
+
+    // 2) Create plan
+    return fetch('/payment/create-payment-plan', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+      body: JSON.stringify(payload)
+    });
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (!data.success) {
+      showErrorMessage(data.message || 'Failed to create payment plan.');
+      return;
+    }
+    showSuccessMessage('Payment plan created successfully! 🎉');
+    resetPaymentPlanForm();
+    loadExistingPaymentPlans(window.currentStudentData.student_nic, window.currentStudentData.course_id);
+  })
+  .catch(err => {
+    console.error('Error creating payment plan:', err);
+    showErrorMessage(err.message || 'An error occurred while creating payment plan.');
+  })
+  .finally(() => showSpinner(false));
 }
 
 // Reset payment plan form
@@ -1827,165 +1939,190 @@ function savePaymentPlans() {
     .finally(() => showSpinner(false));
 }
 
-// Generate payment slip for selected payment
-function generatePaymentSlip() {
-    const selectedPayment = document.querySelector('input[name="selectedPayment"]:checked');
-    
-    if (!selectedPayment) {
-        showWarningMessage('Please select a payment to generate slip for.');
-        return;
+async function generatePaymentSlip() {
+  const selected = document.querySelector('input[name="selectedPayment"]:checked');
+  if (!selected) return showWarningMessage('Please select a payment to generate a slip.');
+
+  const idx         = parseInt(selected.value, 10);
+  const row         = (window.paymentDetailsData || [])[idx];
+  const studentId   = (document.getElementById('slip-student-id').value || '').trim();
+  const paymentType = document.getElementById('slip-payment-type').value;
+  const courseId    = parseInt(document.getElementById('slip-course').value || '0', 10); // ✅ required by backend
+
+  if (!row)        return showErrorMessage('Selected payment data not found.');
+  if (!studentId)  return showErrorMessage('Please enter Student ID / NIC.');
+  if (!paymentType)return showErrorMessage('Please select a payment type.');
+  if (!courseId)   return showErrorMessage('Please select a course.');
+
+  // Payable amount we rendered (backend will recompute/validate anyway)
+  const rawAmount     = Number(row.amount || 0);
+  const installmentNo = row.installment_number ?? null;
+  const dueDate       = row.due_date ?? null;
+
+  // FX inputs (only franchise)
+  let conversionRate = null, currencyFrom = null;
+  if (paymentType === 'franchise_fee') {
+    conversionRate = Number(document.getElementById('currency-conversion-rate').value);
+    currencyFrom   = document.getElementById('currency-from').value;
+    if (!conversionRate || conversionRate <= 0) {
+      showErrorMessage('Please enter a valid currency conversion rate for franchise fee.');
+      return;
     }
-    
-    const studentId = document.getElementById('slip-student-id').value;
-    const paymentType = document.getElementById('slip-payment-type').value;
-    
-    // Get the selected payment data
-    const paymentIndex = selectedPayment.value;
-    const selectedPaymentData = window.paymentDetailsData[paymentIndex];
-    
-    if (!selectedPaymentData) {
-        showErrorMessage('Selected payment data not found.');
-        return;
+  }
+
+  showSpinner(true);
+
+  const payload = {
+    student_id:         studentId,
+    course_id:          courseId,       // ✅ send course_id
+    payment_type:       paymentType,
+    amount:             rawAmount,      // UI amount; backend derives real amount
+    installment_number: installmentNo,
+    due_date:           dueDate,
+    conversion_rate:    conversionRate, // null when not franchise
+    currency_from:      currencyFrom,   // null when not franchise
+    remarks:            ''
+  };
+
+  try {
+    const res  = await fetch('/payment/generate-slip', {
+      method:  'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN' : '{{ csrf_token() }}',
+        'Accept'       : 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const text = await res.text(); // guard HTML errors
+    let data; try { data = JSON.parse(text); } 
+    catch { throw new Error('Server returned an unexpected response. Check Network tab for details.'); }
+
+    if (!data.success) throw new Error(data.message || 'Failed to generate payment slip.');
+
+    // Cache for print/download
+    window.currentSlipData = data.slip_data;
+    const s = data.slip_data;
+
+    // ===== On-page preview =====
+    setText('slip-student-id-display',   s.student_id);
+    setText('slip-student-name-display', s.student_name);
+    setText('slip-course-display',       s.course_name);
+    setText('slip-intake-display',       s.intake);
+
+    setText('slip-payment-type-display', s.payment_type_display || s.payment_type);
+    setText('slip-installment-display',  installmentNo ?? '-');
+    setText('slip-due-date-display',     dueDate ? new Date(dueDate).toLocaleDateString() : '-');
+    setText('slip-date-display',         s.payment_date || '');
+    setText('slip-receipt-no-display',   s.receipt_no || '');
+
+    // Amount text (FX + LKR for franchise; LKR for others)
+    let amountDisplay;
+    if (paymentType === 'franchise_fee' && s.franchise_fee_currency) {
+      const fx  = Number(s.amount || 0);
+      const lkr = Number(s.lkr_amount || (fx * (conversionRate || 0)));
+      amountDisplay = `${s.franchise_fee_currency} ${fx.toLocaleString()} (LKR ${lkr.toLocaleString()})`;
+    } else {
+      amountDisplay = `LKR ${Number(s.amount || 0).toLocaleString()}`;
     }
-    
-    showSpinner(true);
-    
-    // Get conversion rate for franchise fees
-    let conversionRate = null;
-    let currencyFrom = null;
-    if (paymentType === 'franchise_fee') {
-        conversionRate = parseFloat(document.getElementById('currency-conversion-rate').value);
-        currencyFrom = document.getElementById('currency-from').value;
-        if (!conversionRate || conversionRate <= 0) {
-            showErrorMessage('Please enter a valid currency conversion rate.');
-            return;
-        }
+    setText('slip-amount-display', amountDisplay);
+
+    // Show preview
+    document.getElementById('slipPreviewSection').style.display = 'block';
+    document.getElementById('slipPreviewSection').scrollIntoView({ behavior: 'smooth' });
+
+    // ===== Fill print template =====
+    setText('print-student-id', s.student_id);
+    setText('print-student-name', s.student_name);
+    setText('print-course', s.course_name);
+    setText('print-intake', s.intake);
+    setText('print-location', s.location);
+    setText('print-registration-date', s.registration_date ? new Date(s.registration_date).toLocaleDateString() : 'N/A');
+    setText('print-payment-type', s.payment_type_display || s.payment_type);
+    setText('print-installment', installmentNo ?? '-');
+    setText('print-due-date', dueDate ? new Date(dueDate).toLocaleDateString() : '-');
+
+    if (paymentType === 'franchise_fee' && s.franchise_fee_currency) {
+      setText('print-amount', `${s.franchise_fee_currency} ${Number(s.amount||0).toLocaleString()}`);
+    } else {
+      setText('print-amount', `LKR ${Number(s.amount||0).toLocaleString()}`);
     }
-    
-    fetch('/payment/generate-slip', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
-        body: JSON.stringify({
-            student_id: studentId,
-            payment_type: paymentType,
-            amount: selectedPaymentData.amount,
-            installment_number: selectedPaymentData.installment_number,
-            due_date: selectedPaymentData.due_date,
-            conversion_rate: conversionRate,
-            currency_from: currencyFrom,
-            remarks: ''
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Store slip data for later use
-            window.currentSlipData = data.slip_data;
-            
-            // Display slip preview with improved formatting
-            document.getElementById('slip-student-id-display').textContent = data.slip_data.student_id;
-            document.getElementById('slip-student-name-display').textContent = data.slip_data.student_name;
-            document.getElementById('slip-course-display').textContent = data.slip_data.course_name;
-            document.getElementById('slip-intake-display').textContent = data.slip_data.intake;
-            document.getElementById('slip-payment-type-display').textContent = data.slip_data.payment_type_display || data.slip_data.payment_type;
-            
-            // Use correct currency for amount display
-            let currency = 'LKR';
-            let amountDisplay = '';
-            if (data.slip_data.payment_type === 'franchise_fee' && data.slip_data.franchise_fee_currency) {
-                currency = data.slip_data.franchise_fee_currency;
-                const originalAmount = parseFloat(data.slip_data.amount);
-                const conversionRate = parseFloat(document.getElementById('currency-conversion-rate').value);
-                const currencyFrom = document.getElementById('currency-from').value;
-                const lkrAmount = originalAmount * conversionRate;
-                amountDisplay = `${currency} ${originalAmount.toLocaleString()} (LKR ${lkrAmount.toLocaleString()})`;
-            } else {
-                amountDisplay = currency + ' ' + parseFloat(data.slip_data.amount).toLocaleString();
-            }
-            document.getElementById('slip-amount-display').textContent = amountDisplay;
-            
-            document.getElementById('slip-installment-display').textContent = selectedPaymentData.installment_number || '-';
-            document.getElementById('slip-due-date-display').textContent = selectedPaymentData.due_date ? new Date(selectedPaymentData.due_date).toLocaleDateString() : '-';
-            document.getElementById('slip-date-display').textContent = data.slip_data.payment_date;
-            document.getElementById('slip-receipt-no-display').textContent = data.slip_data.receipt_no;
-            
-            // Show slip preview section
-            document.getElementById('slipPreviewSection').style.display = 'block';
-            
-            // Scroll to slip preview
-            document.getElementById('slipPreviewSection').scrollIntoView({ behavior: 'smooth' });
-            
-            showSuccessMessage(data.message || 'Payment slip generated successfully! 🎉');
-        } else {
-            showErrorMessage(data.message || 'Failed to generate payment slip.');
-        }
-    })
-    .catch(() => {
-        showErrorMessage('An error occurred while generating payment slip.');
-    })
-    .finally(() => showSpinner(false));
+
+    setText('print-receipt-no', s.receipt_no);
+    setText('print-valid-until', s.valid_until ? new Date(s.valid_until).toLocaleDateString() : 'N/A');
+
+    // Breakdown rows (as returned by backend)
+    setText('print-course-fee',       Number(s.course_fee || 0).toLocaleString());
+    setText('print-franchise-fee',    Number(s.franchise_fee || 0).toLocaleString());
+    setText('print-registration-fee', Number(s.registration_fee || 0).toLocaleString());
+
+    // Total on slip (LKR if franchise with FX)
+    const totalForPrint = (paymentType === 'franchise_fee')
+      ? Number(s.lkr_amount || 0)
+      : Number(s.amount || 0);
+    setText('print-total-amount', totalForPrint.toLocaleString());
+
+    setText('print-generated-date', new Date().toLocaleString());
+
+    showSuccessMessage(data.message || 'Payment slip generated successfully! 🎉');
+  } catch (err) {
+    console.error(err);
+    showErrorMessage(err.message || 'An error occurred while generating payment slip.');
+  } finally {
+    showSpinner(false);
+  }
 }
 
-// Print payment slip
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = (val == null ? '' : String(val));
+}
+
+// ============ (Optional) Print remains same but uses cached slipData ============
 function printPaymentSlip() {
-    if (!window.currentSlipData) {
-        showErrorMessage('No slip data available for printing.');
-        return;
-    }
+  const s = window.currentSlipData;
+  if (!s) return showErrorMessage('No slip data available for printing.');
 
-    // Populate the print template
-    const slipData = window.currentSlipData;
-    
-    document.getElementById('print-generated-date').textContent = new Date().toLocaleDateString();
-    document.getElementById('print-student-id').textContent = slipData.student_id;
-    document.getElementById('print-student-name').textContent = slipData.student_name;
-    document.getElementById('print-course').textContent = slipData.course_name;
-    document.getElementById('print-intake').textContent = slipData.intake;
-    document.getElementById('print-location').textContent = slipData.location;
-    document.getElementById('print-registration-date').textContent = slipData.registration_date ? new Date(slipData.registration_date).toLocaleDateString() : 'N/A';
-    document.getElementById('print-payment-type').textContent = slipData.payment_type_display || slipData.payment_type;
-    document.getElementById('print-installment').textContent = slipData.installment_number || 'N/A';
-    document.getElementById('print-due-date').textContent = slipData.due_date ? new Date(slipData.due_date).toLocaleDateString() : 'N/A';
-    
-    // Use correct currency for amount display
-    let currency = 'LKR';
-    if (slipData.payment_type === 'franchise_fee' && slipData.franchise_fee_currency) {
-        currency = slipData.franchise_fee_currency;
-    }
-    document.getElementById('print-amount').textContent = currency + ' ' + parseFloat(slipData.amount).toLocaleString();
-    
-    document.getElementById('print-receipt-no').textContent = slipData.receipt_no;
-    document.getElementById('print-valid-until').textContent = slipData.valid_until ? new Date(slipData.valid_until).toLocaleDateString() : 'N/A';
-    
-    // Populate fee breakdown
-    document.getElementById('print-course-fee').textContent = parseFloat(slipData.course_fee || 0).toLocaleString() + '.00';
-    
-    // Use correct currency for franchise fee
-    let franchiseCurrency = 'LKR';
-    if (slipData.franchise_fee_currency) {
-        franchiseCurrency = slipData.franchise_fee_currency;
-    }
-    document.getElementById('print-franchise-fee').textContent = franchiseCurrency + ' ' + parseFloat(slipData.franchise_fee || 0).toLocaleString() + '.00';
-    
-    document.getElementById('print-registration-fee').textContent = parseFloat(slipData.registration_fee || 0).toLocaleString() + '.00';
-    document.getElementById('print-total-amount').textContent = parseFloat(slipData.amount).toLocaleString() + '.00';
+  setText('print-generated-date', new Date().toLocaleDateString());
+  setText('print-student-id', s.student_id);
+  setText('print-student-name', s.student_name);
+  setText('print-course', s.course_name);
+  setText('print-intake', s.intake);
+  setText('print-location', s.location);
+  setText('print-registration-date', s.registration_date ? new Date(s.registration_date).toLocaleDateString() : 'N/A');
+  setText('print-payment-type', s.payment_type_display || s.payment_type);
+  setText('print-installment', s.installment_number || 'N/A');
+  setText('print-due-date', s.due_date ? new Date(s.due_date).toLocaleDateString() : 'N/A');
 
-    // Show the printable slip
-    document.getElementById('printableSlip').style.display = 'block';
-    
-    // Hide other content temporarily
-    const mainContent = document.querySelector('.container-fluid');
-    const originalDisplay = mainContent.style.display;
-    mainContent.style.display = 'none';
-    
-    // Print
-    window.print();
-    
-    // Restore content
-    setTimeout(() => {
-        mainContent.style.display = originalDisplay;
-        document.getElementById('printableSlip').style.display = 'none';
-    }, 1000);
+  if (s.payment_type === 'franchise_fee' && s.franchise_fee_currency) {
+    setText('print-amount', `${s.franchise_fee_currency} ${Number(s.amount||0).toLocaleString()}`);
+  } else {
+    setText('print-amount', `LKR ${Number(s.amount||0).toLocaleString()}`);
+  }
+
+  setText('print-receipt-no', s.receipt_no);
+  setText('print-valid-until', s.valid_until ? new Date(s.valid_until).toLocaleDateString() : 'N/A');
+
+  setText('print-course-fee',       Number(s.course_fee || 0).toLocaleString() + '.00');
+  setText('print-franchise-fee',    Number(s.franchise_fee || 0).toLocaleString() + '.00');
+  setText('print-registration-fee', Number(s.registration_fee || 0).toLocaleString() + '.00');
+
+  const totalForPrint = (s.payment_type === 'franchise_fee')
+    ? Number(s.lkr_amount || 0)
+    : Number(s.amount || 0);
+  setText('print-total-amount', totalForPrint.toLocaleString() + '.00');
+
+  // Show print template and print
+  document.getElementById('printableSlip').style.display = 'block';
+  const main = document.querySelector('.container-fluid');
+  const prev = main.style.display;
+  main.style.display = 'none';
+  window.print();
+  setTimeout(() => {
+    main.style.display = prev;
+    document.getElementById('printableSlip').style.display = 'none';
+  }, 1000);
 }
 
 // Download payment slip
@@ -2538,72 +2675,80 @@ function checkStudentAndCourse() {
     }
 }
 
-// Load payment details when payment type is selected
-function loadPaymentDetails() {
-    const studentId = document.getElementById('slip-student-id').value;
-    const courseId = document.getElementById('slip-course').value;
-    const paymentType = document.getElementById('slip-payment-type').value;
-    
-    console.log('Loading payment details for:', { studentId, courseId, paymentType });
-    
-    // Show/hide currency conversion rate field based on payment type
-    const currencyConversionRow = document.getElementById('currencyConversionRow');
-    const lkrAmountHeader = document.getElementById('lkrAmountHeader');
-    
-    if (paymentType === 'franchise_fee') {
-        currencyConversionRow.style.display = 'flex';
-        lkrAmountHeader.style.display = 'table-cell';
-    } else {
-        currencyConversionRow.style.display = 'none';
-        lkrAmountHeader.style.display = 'none';
-    }
-    
-    if (!studentId || !courseId || !paymentType) {
-        console.log('Missing student ID, course ID, or payment type');
-        document.getElementById('paymentDetailsSection').style.display = 'none';
-        return;
-    }
-    
-    // Note: Currency conversion rate validation will be done when generating the slip
-    // This allows the table to load first for better user experience
-    
-    showSpinner(true);
-    
-    fetch('/payment/get-payment-details', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
-        body: JSON.stringify({
-            student_id: studentId,
-            course_id: courseId,
-            payment_type: paymentType
-        })
-    })
-    .then(response => {
-        console.log('Response status:', response.status);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('Payment details response:', data);
-        if (data.success) {
-            window.paymentDetailsData = data.payment_details; // Store globally
-            displayPaymentDetails(data.payment_details);
-            document.getElementById('paymentDetailsSection').style.display = 'block';
-        } else {
-            showErrorMessage(data.message || 'Failed to load payment details.');
-            document.getElementById('paymentDetailsSection').style.display = 'none';
-        }
-    })
-    .catch((error) => {
-        console.error('Error loading payment details:', error);
-        showErrorMessage('An error occurred while loading payment details.');
-        document.getElementById('paymentDetailsSection').style.display = 'none';
-    })
-    .finally(() => showSpinner(false));
-}
+async function loadPaymentDetails() {
+  const studentIdOrNic = document.getElementById('slip-student-id').value?.trim();
+  const courseId       = parseInt(document.getElementById('slip-course').value || '0', 10);
+  const paymentType    = document.getElementById('slip-payment-type').value;
 
+  if (!studentIdOrNic) {
+    showWarningMessage('Enter Student ID / NIC first.');
+    return;
+  }
+  if (!courseId) {
+    showWarningMessage('Select a course.');
+    return;
+  }
+  if (!paymentType) {
+    showWarningMessage('Select a payment type.');
+    return;
+  }
+
+  // Show the section
+  document.getElementById('paymentDetailsSection').style.display = '';
+
+  // Build request for backend's getPaymentDetails()
+  // (Your PaymentController::getPaymentDetails accepts student_id, course_id, payment_type)
+  const payload = {
+    student_id:   studentIdOrNic,   // can be Student ID or NIC (controller supports both)
+    course_id:    String(courseId),
+    payment_type: paymentType       // 'course_fee' | 'franchise_fee' | 'registration_fee'
+  };
+
+  try {
+    const res = await fetch('/payment/get-payment-details', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN' : '{{ csrf_token() }}',
+        'Accept'       : 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    // Guard against HTML error responses
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } 
+    catch { throw new Error('Unexpected server response while loading payment details.'); }
+
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to load payment details.');
+    }
+
+    // Map backend rows to what the table renderer expects.
+    // IMPORTANT: For course_fee we use the amounts coming from payment_installments table.
+    // If your install. rows already store final_amount (after discounts & SLT), prefer it.
+    const details = (data.payment_details || []).map(d => ({
+      installment_number: d.installment_number ?? null,
+      due_date:           d.due_date ?? null,
+      // prefer final_amount if backend includes it; fallback to amount
+      final_amount:       (d.final_amount != null) ? Number(d.final_amount) : Number(d.amount || 0),
+      amount:             Number(d.amount || 0),  // keep base for reference
+      status:             d.status || 'pending',
+      paid_date:          d.paid_date || null,
+      receipt_no:         d.receipt_no || null,
+      currency:           d.currency || 'LKR'
+    }));
+
+    // Save & render
+    renderPaymentDetailsTable(details, paymentType);
+
+  } catch (err) {
+    console.error(err);
+    const tbody = document.getElementById('paymentDetailsTableBody');
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">${err.message}</td></tr>`;
+  }
+}
 // Display payment details in the table
 function displayPaymentDetails(paymentDetails) {
     const tbody = document.getElementById('paymentDetailsTableBody');
@@ -2931,4 +3076,132 @@ function savePaymentRecordFromUpdate() {
     .finally(() => showSpinner(false));
 }
 </script>
+<script>
+// ---------- helpers ----------
+const money = (n) =>
+  (Number(n || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const dstr  = (d) => d ? new Date(d).toLocaleDateString() : '-';
+
+// Re-render when user changes FX rate for franchise fee
+function recalculateLKRAmounts() {
+  if (!window.paymentDetailsDataRaw) return;
+  // re-render with the last payment type used
+  renderPaymentDetailsTable(window.paymentDetailsDataRaw, window.paymentDetailsPaymentType || 'course_fee');
+}
+
+// ---------- main renderer ----------
+function renderPaymentDetailsTable(rows, paymentType) {
+  // keep originals so we can re-render on FX change
+  window.paymentDetailsDataRaw    = Array.isArray(rows) ? rows : [];
+  window.paymentDetailsPaymentType= paymentType;
+
+  const tbody         = document.getElementById('paymentDetailsTableBody');
+  const generateBtn   = document.getElementById('generateSlipBtn');
+  const amountHeader  = document.getElementById('amountHeader');
+  const lkrHeader     = document.getElementById('lkrAmountHeader');
+  const convRow       = document.getElementById('currencyConversionRow');
+  const convWarn      = document.getElementById('conversionRateWarning');
+  const convInfo      = document.getElementById('conversionRateInfo');
+  const currentRateEl = document.getElementById('currentConversionRate');
+  const currentCurEl  = document.getElementById('currentCurrency');
+
+  tbody.innerHTML = '';
+  generateBtn.disabled = true;
+
+  // toggle FX UI only for franchise fee
+  let showLkr = paymentType === 'franchise_fee';
+  convRow.style.display = showLkr ? '' : 'none';
+  lkrHeader.style.display = showLkr ? '' : 'none';
+  amountHeader.textContent = 'Amount';
+
+  // capture FX inputs (if needed)
+  let rate = null, ccy = null;
+  if (showLkr) {
+    rate = parseFloat(document.getElementById('currency-conversion-rate').value);
+    ccy  = document.getElementById('currency-from').value;
+    if (!rate || rate <= 0) {
+      convWarn.style.display = '';
+      convInfo.style.display = 'none';
+    } else {
+      convWarn.style.display = 'none';
+      convInfo.style.display = '';
+      currentRateEl.textContent = rate;
+      currentCurEl.textContent  = ccy;
+    }
+  } else {
+    convWarn.style.display = 'none';
+    convInfo.style.display = 'none';
+  }
+
+  if (!rows || !rows.length) {
+    tbody.innerHTML = `<tr><td colspan="${showLkr ? 8 : 7}" class="text-center text-muted">No records found.</td></tr>`;
+    window.paymentDetailsData = [];
+    return;
+  }
+
+  // Normalize rows into what the slip generator expects
+  const normalized = rows.map(r => {
+    // Prefer final_amount if backend provides it; otherwise use amount
+    const payable = (r.final_amount != null) ? Number(r.final_amount) : Number(r.amount || 0);
+    return {
+      installment_number: r.installment_number ?? null,
+      due_date:           r.due_date ?? null,
+      amount:             payable,              // <- the amount we will pay on slip
+      base_amount:        Number(r.amount || payable), // for display reference
+      status:             r.status || 'pending',
+      paid_date:          r.paid_date || null,
+      receipt_no:         r.receipt_no || null,
+      currency:           r.currency || (paymentType === 'franchise_fee' ? (ccy || 'USD') : 'LKR')
+    };
+  });
+
+  // Save globally for generatePaymentSlip()
+  window.paymentDetailsData = normalized;
+
+  // Build table rows
+  normalized.forEach((p, idx) => {
+    const disabled = p.status && p.status.toLowerCase() === 'paid' ? 'disabled' : '';
+    const checked  = ''; // none checked by default
+
+    // Amount column (use p.amount which is final payable)
+    const amountText = `${p.currency} ${money(p.amount)}`;
+
+    // LKR column for franchise (if rate provided)
+    let lkrCell = '';
+    if (showLkr) {
+      if (rate && rate > 0) {
+        lkrCell = `<td>LKR ${money(p.amount * rate)}</td>`;
+      } else {
+        lkrCell = `<td class="text-muted">—</td>`;
+      }
+    }
+
+    const row = `
+      <tr>
+        <td class="text-center">
+          <input type="radio" name="selectedPayment" value="${idx}" ${checked} ${disabled}>
+        </td>
+        <td>${p.installment_number ?? '-'}</td>
+        <td>${dstr(p.due_date)}</td>
+        <td>${amountText}</td>
+        ${showLkr ? lkrCell : ''}
+        <td>${p.paid_date ? dstr(p.paid_date) : '-'}</td>
+        <td>${p.status ?? '-'}</td>
+        <td>${p.receipt_no ?? '-'}</td>
+      </tr>
+    `;
+    tbody.insertAdjacentHTML('beforeend', row);
+  });
+
+  // enable "Generate" only when a selection is made
+  tbody.querySelectorAll('input[name="selectedPayment"]').forEach(r =>
+    r.addEventListener('change', () => { generateBtn.disabled = false; })
+  );
+}
+
+// If user changes FX inputs, recompute the LKR column live
+document.getElementById('currency-conversion-rate')?.addEventListener('input', recalculateLKRAmounts);
+document.getElementById('currency-from')?.addEventListener('change', recalculateLKRAmounts);
+</script>
+
 @endsection 
