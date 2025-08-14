@@ -137,16 +137,21 @@ class AllClearanceController extends Controller
         ]);
 
         try {
-            // Get all students registered for this course and intake
-            $students = CourseRegistration::where('course_id', $request->course_id)
+            // Get all students registered for this course and intake from semester registration
+            $students = \App\Models\SemesterRegistration::where('course_id', $request->course_id)
                 ->where('intake_id', $request->intake_id)
                 ->where('location', $request->location)
-                ->where(function($query) {
-                    $query->where('status', 'Registered')
-                          ->orWhere('approval_status', 'Approved by DGM');
-                })
+                ->where('status', 'registered') // Only get registered students
                 ->with('student')
                 ->get();
+
+            \Log::info('Sending clearance requests:', [
+                'type' => $request->type,
+                'location' => $request->location,
+                'course_id' => $request->course_id,
+                'intake_id' => $request->intake_id,
+                'students_found' => $students->count()
+            ]);
 
             $createdCount = 0;
             foreach ($students as $registration) {
@@ -168,14 +173,25 @@ class AllClearanceController extends Controller
                         'requested_at' => now(),
                     ]);
                     $createdCount++;
+                    \Log::info("Created clearance request for student: {$registration->student_id}");
+                } else {
+                    \Log::info("Clearance request already exists for student: {$registration->student_id}");
                 }
             }
+
+            \Log::info('Clearance requests completed:', ['created_count' => $createdCount]);
 
             return response()->json([
                 'success' => true, 
                 'message' => "Clearance requests sent successfully! {$createdCount} students notified."
             ]);
         } catch (\Exception $e) {
+            \Log::error('Error sending clearance requests:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+
             return response()->json([
                 'success' => false, 
                 'message' => 'Failed to send clearance requests: ' . $e->getMessage()
@@ -184,7 +200,7 @@ class AllClearanceController extends Controller
     }
 
     /**
-     * AJAX: Get registered courses for a student NIC
+     * AJAX: Get registered courses for a student NIC from semester registration
      */
     public function getRegisteredCourses(Request $request)
     {
@@ -193,7 +209,13 @@ class AllClearanceController extends Controller
         if (!$student) {
             return response()->json(['success' => false, 'courses' => [], 'message' => 'Student not found']);
         }
-        $registrations = \App\Models\CourseRegistration::where('student_id', $student->student_id)->get();
+        
+        // Get courses from semester registration instead of course registration
+        $registrations = \App\Models\SemesterRegistration::where('student_id', $student->student_id)
+            ->where('status', 'registered') // Only get registered students
+            ->with('course')
+            ->get();
+            
         $courses = [];
         foreach ($registrations as $reg) {
             if ($reg->course) {
@@ -203,6 +225,13 @@ class AllClearanceController extends Controller
                 ];
             }
         }
+        
+        \Log::info('Getting registered courses for student:', [
+            'student_id' => $student->student_id,
+            'nic' => $nic,
+            'courses_found' => count($courses)
+        ]);
+        
         return response()->json(['success' => true, 'courses' => $courses]);
     }
 
@@ -227,17 +256,57 @@ class AllClearanceController extends Controller
     }
 
     /**
-     * Handle AJAX request to get students for an intake (mock implementation)
+     * Handle AJAX request to get students for an intake from semester registration
      */
     public function getStudentsForIntake(Request $request)
     {
-        // TODO: Replace with real DB query for students in the intake
-        $students = [
-            ['student_id' => 'S001', 'name' => 'John Doe', 'clearance_status' => 'Pending'],
-            ['student_id' => 'S002', 'name' => 'Jane Smith', 'clearance_status' => 'Pending'],
-            ['student_id' => 'S003', 'name' => 'Alice Johnson', 'clearance_status' => 'Cleared'],
-        ];
-        return response()->json(['success' => true, 'data' => $students]);
+        $request->validate([
+            'intake_id' => 'required|exists:intakes,intake_id',
+        ]);
+
+        try {
+            // Get students from semester registration table who are registered for this intake
+            $students = \App\Models\SemesterRegistration::where('intake_id', $request->intake_id)
+                ->where('status', 'registered') // Only get registered students
+                ->with(['student', 'course', 'intake'])
+                ->get()
+                ->map(function($registration) {
+                    return [
+                        'student_id' => $registration->student->student_id,
+                        'name' => $registration->student->full_name,
+                        'clearance_status' => 'Pending', // Default status, can be enhanced later
+                        'registration_id' => $registration->student->courseRegistrations
+                            ->where('course_id', $registration->course_id)
+                            ->where('intake_id', $registration->intake_id)
+                            ->first()->course_registration_id ?? '',
+                        'course_name' => $registration->course->course_name,
+                        'intake_name' => $registration->intake->batch
+                    ];
+                });
+
+            \Log::info('Students found for intake clearance:', [
+                'intake_id' => $request->intake_id,
+                'count' => $students->count()
+            ]);
+
+            return response()->json([
+                'success' => true, 
+                'data' => $students,
+                'count' => $students->count()
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error getting students for intake clearance:', [
+                'intake_id' => $request->intake_id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load students: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

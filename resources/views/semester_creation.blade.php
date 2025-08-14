@@ -63,16 +63,6 @@
                     </div>
                 </div>
 
-                <div class="mb-3 row mx-3">
-                    <label for="status" class="col-sm-2 col-form-label">Status <span class="text-danger">*</span></label>
-                    <div class="col-sm-10">
-                        <select class="form-select" id="status" name="status" required>
-                            <option value="">Select Status</option>
-                            <option value="open">Open</option>
-                            <option value="closed">Closed</option>
-                        </select>
-                    </div>
-                </div>
                 <div class="mb-3 row mx-3" id="specializationRow" style="display:none;">
                     <label for="specialization_select" class="col-sm-2 col-form-label">Specialization <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
@@ -496,7 +486,7 @@ semesterForm.addEventListener('submit', function(e) {
     // Validate required fields
     const requiredFields = [
         'location', 'course_id', 'intake_id', 'semester',
-        'start_date', 'end_date', 'status'
+        'start_date', 'end_date'
     ];
     const missingFields = [];
     requiredFields.forEach(field => {
@@ -518,7 +508,6 @@ semesterForm.addEventListener('submit', function(e) {
         semester: document.getElementById('semester').value,
         start_date: document.getElementById('start_date').value,
         end_date: document.getElementById('end_date').value,
-        status: document.getElementById('status').value,
         _token: '{{ csrf_token() }}'
     };
     

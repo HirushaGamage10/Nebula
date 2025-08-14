@@ -668,8 +668,19 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(payload)
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return response.json();
+        })
         .then(data => {
+            console.log('Response data:', data);
+            
             if (data.success) {
                 showToast('Success', data.message, '#ccffcc');
                 setTimeout(function() {
@@ -691,7 +702,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 showToast('Error', errorMsg, 'bg-danger');
             }
         })
-        .catch(() => showToast('Error', 'An error occurred while saving results.', 'bg-danger'))
+        .catch(error => {
+            console.error('Error saving exam results:', error);
+            let errorMsg = 'An error occurred while saving results.';
+            
+            // Try to get more specific error information
+            if (error.message) {
+                errorMsg = error.message;
+            } else if (error.status) {
+                errorMsg = `Server error (${error.status}): ${error.statusText || 'Unknown error'}`;
+            }
+            
+            showToast('Error', errorMsg, 'bg-danger');
+        })
         .finally(() => showSpinner(false));
     }
     

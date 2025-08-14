@@ -75,6 +75,7 @@ class SemesterRegistrationController extends Controller
             $saFiles   = $request->file('sa_files', []);
 
             $messages = [];
+            $successfullyRegisteredStudents = [];
 
             foreach ($selectedStudents as $entry) {
                 $studentId = (int) $entry['student_id'];
@@ -160,6 +161,23 @@ class SemesterRegistrationController extends Controller
                         'updated_at'        => now(),
                     ]
                 );
+
+                // If student is being registered (not terminated), automatically register for core and special unit compulsory modules
+                if (($approvedToRegistered || $newStatus === 'registered') && !$wasTerminated) {
+                    $successfullyRegisteredStudents[] = $studentId;
+                }
+            }
+
+            // Automatically register students for core and special unit compulsory modules
+            if (!empty($successfullyRegisteredStudents)) {
+                $this->registerStudentsForCompulsoryModules(
+                    $successfullyRegisteredStudents,
+                    $request->course_id,
+                    $request->intake_id,
+                    $request->semester_id,
+                    $request->location,
+                    $request->specialization
+                );
             }
 
             $note = empty($messages) ? '' : (' ' . implode(' ', $messages));
@@ -167,6 +185,96 @@ class SemesterRegistrationController extends Controller
         } catch (\Throwable $e) {
             \Log::error('Error saving semester registrations: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return response()->json(['success' => false, 'message' => 'Server error occurred.'], 500);
+        }
+    }
+
+    /**
+     * Automatically register students for core and special unit compulsory modules
+     */
+    private function registerStudentsForCompulsoryModules($studentIds, $courseId, $intakeId, $semesterId, $location, $specialization = null)
+    {
+        try {
+            // Get the semester to get its name
+            $semester = Semester::find($semesterId);
+            if (!$semester) {
+                \Log::error('Semester not found for ID: ' . $semesterId);
+                return;
+            }
+
+            // Get all core and special unit compulsory modules for this semester
+            $compulsoryModules = \DB::table('semester_module')
+                ->join('modules', 'semester_module.module_id', '=', 'modules.module_id')
+                ->where('semester_module.semester_id', $semesterId)
+                ->whereIn('modules.module_type', ['core', 'special_unit_compulsory'])
+                ->select('semester_module.module_id', 'semester_module.specialization', 'modules.module_name')
+                ->get();
+
+            if ($compulsoryModules->isEmpty()) {
+                \Log::info('No compulsory modules found for semester: ' . $semester->name);
+                return;
+            }
+
+            $registeredModules = [];
+            $errors = [];
+
+            foreach ($studentIds as $studentId) {
+                foreach ($compulsoryModules as $module) {
+                    // Check if student is already registered for this module in this semester
+                    $existingRegistration = \App\Models\ModuleManagement::where('student_id', $studentId)
+                        ->where('module_id', $module->module_id)
+                        ->where('semester', $semester->name)
+                        ->where('course_id', $courseId)
+                        ->where('intake_id', $intakeId)
+                        ->where('location', $location)
+                        ->first();
+
+                    if (!$existingRegistration) {
+                        try {
+                            \App\Models\ModuleManagement::create([
+                                'student_id' => $studentId,
+                                'module_id' => $module->module_id,
+                                'semester' => $semester->name,
+                                'course_id' => $courseId,
+                                'intake_id' => $intakeId,
+                                'location' => $location,
+                                'specialization' => $module->specialization ?? $specialization ?? 'General',
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+
+                            $registeredModules[] = [
+                                'student_id' => $studentId,
+                                'module_id' => $module->module_id,
+                                'module_name' => $module->module_name
+                            ];
+
+                            \Log::info("Student {$studentId} automatically registered for module: {$module->module_name}");
+                        } catch (\Exception $e) {
+                            $errors[] = "Failed to register student {$studentId} for module {$module->module_name}: " . $e->getMessage();
+                            \Log::error("Module registration error for student {$studentId}, module {$module->module_id}: " . $e->getMessage());
+                        }
+                    }
+                }
+            }
+
+            if (!empty($registeredModules)) {
+                \Log::info('Automatic module registration completed', [
+                    'total_registrations' => count($registeredModules),
+                    'registrations' => $registeredModules
+                ]);
+            }
+
+            if (!empty($errors)) {
+                \Log::error('Errors during automatic module registration', ['errors' => $errors]);
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Error in registerStudentsForCompulsoryModules: ' . $e->getMessage(), [
+                'student_ids' => $studentIds,
+                'course_id' => $courseId,
+                'semester_id' => $semesterId,
+                'trace' => $e->getTraceAsString()
+            ]);
         }
     }
 
@@ -287,6 +395,71 @@ class SemesterRegistrationController extends Controller
         return response()->json(['success' => true, 'semesters' => $allPossibleSemesters]);
     }
 
+    // 6. Get compulsory modules for a semester (core and special unit compulsory)
+    public function getCompulsoryModulesForSemester(Request $request)
+    {
+        $request->validate([
+            'semester_id' => 'required|exists:semesters,id',
+        ]);
+
+        try {
+            $semester = Semester::find($request->semester_id);
+            if (!$semester) {
+                return response()->json(['success' => false, 'message' => 'Semester not found.'], 404);
+            }
+
+            // Get all core and special unit compulsory modules for this semester
+            $compulsoryModules = \DB::table('semester_module')
+                ->join('modules', 'semester_module.module_id', '=', 'modules.module_id')
+                ->where('semester_module.semester_id', $request->semester_id)
+                ->whereIn('modules.module_type', ['core', 'special_unit_compulsory'])
+                ->select(
+                    'semester_module.module_id',
+                    'semester_module.specialization',
+                    'modules.module_name',
+                    'modules.module_code',
+                    'modules.module_type',
+                    'modules.credits'
+                )
+                ->orderBy('modules.module_type')
+                ->orderBy('modules.module_name')
+                ->get();
+
+            $modulesByType = [
+                'core' => [],
+                'special_unit_compulsory' => []
+            ];
+
+            foreach ($compulsoryModules as $module) {
+                $modulesByType[$module->module_type][] = [
+                    'module_id' => $module->module_id,
+                    'module_name' => $module->module_name,
+                    'module_code' => $module->module_code,
+                    'module_type' => $module->module_type,
+                    'credits' => $module->credits,
+                    'specialization' => $module->specialization ?? 'General'
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'semester_name' => $semester->name,
+                'total_modules' => $compulsoryModules->count(),
+                'modules' => $modulesByType,
+                'message' => $compulsoryModules->count() > 0 
+                    ? "Found {$compulsoryModules->count()} compulsory modules for {$semester->name}"
+                    : "No compulsory modules found for {$semester->name}"
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error getting compulsory modules: ' . $e->getMessage(), [
+                'semester_id' => $request->semester_id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['success' => false, 'message' => 'Error retrieving compulsory modules.'], 500);
+        }
+    }
+
     // (Legacy small endpoint) Update a single student's status
     public function updateStatus(Request $request)
     {
@@ -349,7 +522,17 @@ class SemesterRegistrationController extends Controller
         $reg->desired_status       = null;
         $reg->save();
 
-        return response()->json(['success' => true, 'message' => 'Request approved and student registered.']);
+        // Automatically register the student for core and special unit compulsory modules
+        $this->registerStudentsForCompulsoryModules(
+            [$reg->student_id],
+            $reg->course_id,
+            $reg->intake_id,
+            $reg->semester_id,
+            $reg->location,
+            $reg->specialization
+        );
+
+        return response()->json(['success' => true, 'message' => 'Request approved and student registered with automatic module registration.']);
     }
 
 

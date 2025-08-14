@@ -137,6 +137,14 @@
                     </div>
                 </div>
 
+                <div class="mb-3 row mx-3">
+                    <label for="course_registration_id_pattern" class="col-sm-2 col-form-label">Course Registration ID Pattern <span class="text-danger">*</span></label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" id="course_registration_id_pattern" name="course_registration_id_pattern" placeholder="e.g., 2025/SE/HND/001" required>
+                        <small class="form-text text-muted">Pattern for generating student registration IDs. Must end with a number (e.g., 2025/SE/HND/001, 2025-BATCH-001)</small>
+                    </div>
+                </div>
+
                 <div class="d-grid mt-3">
                     <button type="submit" class="btn btn-primary">Create Intake</button>
                 </div>
@@ -160,6 +168,7 @@
                             <th style="position: sticky; top: 0; background: #fff;">Start Date</th>
                             <th style="position: sticky; top: 0; background: #fff;">End Date</th>
                             <th style="position: sticky; top: 0; background: #fff;">Enrollment End</th>
+                            <th style="position: sticky; top: 0; background: #fff;">ID Pattern</th>
                             <th style="position: sticky; top: 0; background: #fff;">Capacity</th>
                             <th style="position: sticky; top: 0; background: #fff;">Status</th>
                         </tr>
@@ -172,9 +181,10 @@
                             <td><?php echo e($intake->location); ?></td>
                             <td><?php echo e($intake->intake_mode); ?></td>
                             <td><?php echo e($intake->intake_type); ?></td>
-                            <td><?php echo e($intake->start_date ? $intake->start_date->format('Y-m-d') : ''); ?></td>
-                            <td><?php echo e($intake->end_date ? $intake->end_date->format('Y-m-d') : ''); ?></td>
-                            <td><?php echo e($intake->enrollment_end_date ? $intake->enrollment_end_date->format('Y-m-d') : '-'); ?></td>
+                            <td><?php echo e($intake->start_date ? (is_string($intake->start_date) ? \Carbon\Carbon::parse($intake->start_date)->format('Y-m-d') : $intake->start_date->format('Y-m-d')) : ''); ?></td>
+                            <td><?php echo e($intake->end_date ? (is_string($intake->end_date) ? \Carbon\Carbon::parse($intake->end_date)->format('Y-m-d') : $intake->end_date->format('Y-m-d')) : ''); ?></td>
+                            <td><?php echo e($intake->enrollment_end_date ? (is_string($intake->enrollment_end_date) ? \Carbon\Carbon::parse($intake->enrollment_end_date)->format('Y-m-d') : $intake->enrollment_end_date->format('Y-m-d')) : '-'); ?></td>
+                            <td><?php echo e($intake->course_registration_id_pattern); ?></td>
                             <td><?php echo e($intake->registrations->count()); ?> / <?php echo e($intake->batch_size); ?></td>
                             <td>
                                 <?php if($intake->isPast()): ?>
@@ -188,7 +198,7 @@
                         </tr>
                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <tr>
-                            <td colspan="10" class="text-center">No intakes found.</td>
+                            <td colspan="11" class="text-center">No intakes found.</td>
                         </tr>
                         <?php endif; ?>
                     </tbody>
@@ -230,6 +240,7 @@ $(document).ready(function() {
                             <td>${formatDate(intake.start_date)}</td>
                             <td>${formatDate(intake.end_date)}</td>
                             <td>${intake.enrollment_end_date ? formatDate(intake.enrollment_end_date) : '-'}</td>
+                            <td>${intake.course_registration_id_pattern}</td>
                             <td>${intake.registrations_count ?? 0} / ${intake.batch_size}</td>
                             <td>
                                 ${intake.isPast ? '<span class="badge bg-danger">Finished</span>' : (intake.isCurrent ? '<span class="badge bg-success">Ongoing</span>' : '<span class="badge bg-warning">Upcoming</span>')}
@@ -237,7 +248,7 @@ $(document).ready(function() {
                         </tr>
                     `;
 
-                    if ($('#intake-table-body').find('td[colspan="10"]').length) {
+                    if ($('#intake-table-body').find('td[colspan="11"]').length) {
                         $('#intake-table-body').html(newRow);
                     } else {
                         $('#intake-table-body').prepend(newRow);
@@ -325,7 +336,7 @@ $(document).ready(function() {
                     var c = response.course;
                     $('#cd_duration').text(c.duration_formatted ? c.duration_formatted : '-');
                     $('#cd_min_credits').text(c.min_credits ? c.min_credits : '-');
-                    $('#cd_training').text(c.training_period ? c.training_period : '-');
+                    $('#cd_training').text(c.training_period_formatted ? c.training_period_formatted : '-');
                     $('#cd_entry_qualification').html(c.entry_qualification ? c.entry_qualification.replace(/\n/g, '<br>') : '-');
                     $('#cd_medium').text(c.course_medium ? c.course_medium : '-');
                     $('#courseDetailsBox').show();

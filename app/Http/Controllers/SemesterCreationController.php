@@ -190,7 +190,7 @@ class SemesterCreationController extends Controller
                 'name', 'course_id', 'intake_id', 'start_date', 'end_date'
             ])->toArray();
 
-            // Determine status based on dates
+            // Determine status based on dates (ignore form status field)
             $today = now()->toDateString();
             if ($semesterData['start_date'] > $today) {
                 $status = 'upcoming';
@@ -217,19 +217,21 @@ class SemesterCreationController extends Controller
                         $semesterModuleData[] = [
                             'semester_id' => $semester->id,
                             'module_id' => $module['module_id'],
-                            'specialization' => $module['specialization'] ?? null
+                            'specialization' => $module['specialization'] ?? 'General'
                         ];
                     }
                 }
                 \Log::info('Semester module insert:', $semesterModuleData);
                 if (!empty($semesterModuleData)) {
                     \DB::table('semester_module')->insert($semesterModuleData);
+                    \Log::info('Modules inserted successfully:', ['count' => count($semesterModuleData)]);
                 }
             }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Semester created successfully.'
+                'message' => 'Semester created successfully.',
+                'semester' => $semester
             ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -240,7 +242,11 @@ class SemesterCreationController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
-            \Log::error('Error creating semester:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            \Log::error('Error creating semester:', [
+                'error' => $e->getMessage(), 
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred while creating the semester.',

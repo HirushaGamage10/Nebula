@@ -523,6 +523,9 @@ Route::middleware(['auth', 'role:Program Administrator (level 01),Program Admini
     Route::get('/semester-registration/get-all-semesters-for-course', [SemesterRegistrationController::class, 'getAllSemestersForCourse'])
         ->name('semester.registration.getAllSemestersForCourse');
 
+    Route::get('/semester-registration/get-compulsory-modules', [SemesterRegistrationController::class, 'getCompulsoryModulesForSemester'])
+        ->name('semester.registration.getCompulsoryModules');
+
     Route::post('/semester-registration/update-status', [SemesterRegistrationController::class, 'updateStatus'])
         ->name('semester.registration.updateStatus');
 
@@ -532,6 +535,16 @@ Route::middleware(['auth', 'role:Program Administrator (level 01),Program Admini
 
     Route::post('/semester-registration/reject-reenroll', [SemesterRegistrationController::class, 'rejectReRegister'])
         ->name('semester.registration.rejectReenroll');
+
+    // DGM approval actions for terminated students
+    Route::post('/semester-registration/approve-reregister', [SemesterRegistrationController::class, 'approveReRegister'])
+        ->name('semester.registration.approveReregister');
+
+    Route::post('/semester-registration/reject-reregister', [SemesterRegistrationController::class, 'rejectReRegister'])
+        ->name('semester.registration.rejectReregister');
+
+    Route::get('/semester-registration/terminated-requests', [SemesterRegistrationController::class, 'terminatedRequests'])
+        ->name('semester.registration.terminatedRequests');
 
 });
 

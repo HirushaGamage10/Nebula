@@ -303,11 +303,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const remarksInput = row.querySelector('input[name="remarks"]');
             
             if (resultId && marksInput && gradeInput) {
+                // Handle empty values properly - don't convert to 0 or empty string
+                const marksValue = marksInput.value.trim();
+                const gradeValue = gradeInput.value.trim();
+                const remarksValue = remarksInput ? remarksInput.value.trim() : '';
+                
                 updatedResults.push({
                     id: parseInt(resultId),
-                    marks: parseInt(marksInput.value) || 0,
-                    grade: gradeInput.value.trim(),
-                    remarks: remarksInput ? remarksInput.value.trim() : ''
+                    marks: marksValue === '' ? null : parseInt(marksValue),
+                    grade: gradeValue === '' ? null : gradeValue,
+                    remarks: remarksValue === '' ? null : remarksValue
                 });
             }
         });
@@ -319,14 +324,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const payload = { ...filterData, results: updatedResults };
         
+        console.log('Sending update payload:', payload);
         showSpinner(true);
         fetch('<?php echo e(route("update.result")); ?>', {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(payload)
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Update response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Update response data:', data);
+            
             if (data.success) {
                 showToast('Success', data.message, '#ccffcc');
                 // Refresh the results
@@ -341,7 +355,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 showToast('Error', errorMsg, 'bg-danger');
             }
         })
-        .catch(() => showToast('Error', 'An error occurred while updating results.', 'bg-danger'))
+        .catch(error => {
+            console.error('Error updating exam results:', error);
+            let errorMsg = 'An error occurred while updating results.';
+            
+            if (error.message) {
+                errorMsg = error.message;
+            }
+            
+            showToast('Error', errorMsg, 'bg-danger');
+        })
         .finally(() => showSpinner(false));
     }
     
@@ -349,7 +372,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = {
             location: document.getElementById('location').value,
             course_id: courseSelect.value,
-            intake_id: document.getElementById('intake').value,
+            intake_id: intakeSelect.value, // Fixed: use intakeSelect instead of document.getElementById('intake')
             semester: semesterSelect.value,
             module_id: moduleSelect.value,
         };
@@ -431,14 +454,24 @@ document.addEventListener('DOMContentLoaded', function() {
             semester: courseTypeSelect.value === 'degree' ? semesterSelect.value : null,
             module_id: moduleSelect.value
         };
+        
+        console.log('Sending request data:', data);
         showSpinner(true);
         fetch('<?php echo e(route("get.existing.exam.results")); ?>', {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Response data:', data);
+            
             if (data.success && data.results && data.results.length > 0) {
                 // Show results status
                 const statusAlert = document.getElementById('resultsStatusAlert');
@@ -468,8 +501,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 statusAlert.style.display = 'block';
             }
         })
-        .catch(() => {
-            showToast('Error', 'Failed to fetch exam results.', 'bg-danger');
+        .catch(error => {
+            console.error('Error fetching exam results:', error);
+            let errorMsg = 'Failed to fetch exam results.';
+            
+            if (error.message) {
+                errorMsg = error.message;
+            }
+            
+            showToast('Error', errorMsg, 'bg-danger');
             document.getElementById('resultsTableSection').style.display = 'none';
             document.getElementById('updateAllBtnSection').style.display = 'none';
             statisticsCards.style.display = 'none';
@@ -617,11 +657,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const remarksInput = row.querySelector('input[name="remarks"]');
             
             if (resultId && marksInput && gradeInput) {
+                // Handle empty values properly - don't convert to 0 or empty string
+                const marksValue = marksInput.value.trim();
+                const gradeValue = gradeInput.value.trim();
+                const remarksValue = remarksInput ? remarksInput.value.trim() : '';
+                
                 updatedResults.push({
                     id: parseInt(resultId),
-                    marks: parseInt(marksInput.value) || 0,
-                    grade: gradeInput.value.trim(),
-                    remarks: remarksInput ? remarksInput.value.trim() : ''
+                    marks: marksValue === '' ? null : parseInt(marksValue),
+                    grade: gradeValue === '' ? null : gradeValue,
+                    remarks: remarksValue === '' ? null : remarksValue
                 });
             }
         });
@@ -633,6 +678,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const payload = { ...filterData, results: updatedResults };
         
+        console.log('Sending update payload:', payload);
         showSpinner(true);
         fetch('<?php echo e(route("update.result")); ?>', {
             method: 'POST',

@@ -668,8 +668,19 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
             body: JSON.stringify(payload)
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return response.json();
+        })
         .then(data => {
+            console.log('Response data:', data);
+            
             if (data.success) {
                 showToast('Success', data.message, '#ccffcc');
                 setTimeout(function() {
@@ -677,7 +688,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 1500);
                 results = [];
                 renderTable();
-                document.getElementById('student_id').form.reset();
+                // Fix: Use the correct element ID and add null checks
+                const newStudentIdElement = document.getElementById('new_student_id');
+                const newStudentNameElement = document.getElementById('new_student_name');
+                
+                if (newStudentIdElement) {
+                    newStudentIdElement.value = '';
+                }
+                if (newStudentNameElement) {
+                    newStudentNameElement.value = '';
+                }
+                
                 resetAndDisable(courseSelect, 'Select a Course');
                 resetAndDisable(intakeSelect, 'Select an Intake');
                 resetAndDisable(semesterSelect, 'Select a Semester');
@@ -691,7 +712,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 showToast('Error', errorMsg, 'bg-danger');
             }
         })
-        .catch(() => showToast('Error', 'An error occurred while saving results.', 'bg-danger'))
+        .catch(error => {
+            console.error('Error saving exam results:', error);
+            let errorMsg = 'An error occurred while saving results.';
+            
+            // Try to get more specific error information
+            if (error.message) {
+                errorMsg = error.message;
+            } else if (error.status) {
+                errorMsg = `Server error (${error.status}): ${error.statusText || 'Unknown error'}`;
+            }
+            
+            showToast('Error', errorMsg, 'bg-danger');
+        })
         .finally(() => showSpinner(false));
     }
     
@@ -730,9 +763,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function clearInputFields() {
-        document.getElementById('new_student_id').value = '';
-        document.getElementById('new_student_name').value = '';
-        document.getElementById('new_student_id').focus();
+        const newStudentIdElement = document.getElementById('new_student_id');
+        const newStudentNameElement = document.getElementById('new_student_name');
+        
+        if (newStudentIdElement) {
+            newStudentIdElement.value = '';
+        }
+        if (newStudentNameElement) {
+            newStudentNameElement.value = '';
+        }
+        if (newStudentIdElement) {
+            newStudentIdElement.focus();
+        }
     }
 
     function updateResultsHeader() {
