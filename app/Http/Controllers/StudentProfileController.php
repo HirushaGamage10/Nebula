@@ -29,7 +29,6 @@ class StudentProfileController extends Controller
             }
             $studentId = $user->student_id;
         }
-        // If studentId is 0, show only the search UI (no student loaded)
         if ($studentId == 0) {
             return view('student_profile');
         }
@@ -37,7 +36,8 @@ class StudentProfileController extends Controller
         if (!$student) {
             return redirect()->back()->with('error', 'Student not found.');
         }
-        $student->parent = $student->parentGuardian; // Attach parent relationship for Blade and JS
+        $student->parent = $student->parentGuardian;
+        $student->other_information = StudentOtherInformation::where('student_id', $studentId)->first();
         Log::info('Student profile parent (Blade):', ['parent' => $student->parent]);
         return view('student_profile', compact('student'));
     }
@@ -383,12 +383,12 @@ class StudentProfileController extends Controller
         if (!$nic) {
             return response()->json(['success' => false, 'message' => 'NIC is required.'], 400);
         }
-        $student = \App\Models\Student::with('parentGuardian')->where('id_value', $nic)->first();
+        $student = \App\Models\Student::with(['parentGuardian', 'otherInformation'])->where('id_value', $nic)->first();
         if (!$student) {
             return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
         }
         $student->parent = $student->parentGuardian;
-        // Fetch all exams for this student
+        $student->other_information = $student->otherInformation; // <-- Ensure this is set
         $student->exams = \App\Models\StudentExam::where('student_id', $student->student_id)->get();
         return response()->json(['success' => true, 'student' => $student]);
     }
