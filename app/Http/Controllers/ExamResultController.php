@@ -89,9 +89,6 @@ class ExamResultController extends Controller
      */
     public function storeResult(Request $request)
     {
-        // Debug: Log the incoming request data
-        \Log::info('ExamResultController storeResult called with:', $request->all());
-
         try {
             $validatedData = $request->validate([
                 'course_id' => 'required|exists:courses,course_id',
@@ -106,28 +103,19 @@ class ExamResultController extends Controller
                 'results.*.remarks' => 'nullable|string|max:255',
             ]);
 
-            \Log::info('Validation passed, validated data:', $validatedData);
-
             // Get the semester to convert ID to name
             $semester = \App\Models\Semester::find($validatedData['semester']);
             if (!$semester) {
-                \Log::error('Semester not found for ID:', ['semester_id' => $validatedData['semester']]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Semester not found.'
                 ], 404);
             }
 
-            \Log::info('Semester found:', ['semester_id' => $semester->id, 'semester_name' => $semester->name]);
-
             DB::beginTransaction();
 
             $createdCount = 0;
-            $updatedCount = 0;
-            
-            foreach ($validatedData['results'] as $index => $result) {
-                \Log::info("Processing result {$index}:", $result);
-                
+            foreach ($validatedData['results'] as $result) {
                 // Check if result already exists
                 $existingResult = ExamResult::where('student_id', $result['student_id'])
                     ->where('course_id', $validatedData['course_id'])
@@ -144,11 +132,9 @@ class ExamResultController extends Controller
                         'grade' => $result['grade'] ?? null,
                         'remarks' => $result['remarks'] ?? null,
                     ]);
-                    $updatedCount++;
-                    \Log::info("Updated existing result for student {$result['student_id']}");
                 } else {
                     // Create new result
-                    $newResult = ExamResult::create([
+                    ExamResult::create([
                         'student_id' => $result['student_id'],
                         'course_id' => $validatedData['course_id'],
                         'module_id' => $validatedData['module_id'],
@@ -159,37 +145,27 @@ class ExamResultController extends Controller
                         'grade' => $result['grade'] ?? null,
                         'remarks' => $result['remarks'] ?? null,
                     ]);
-                    $createdCount++;
-                    \Log::info("Created new result for student {$result['student_id']} with ID: {$newResult->id}");
                 }
+                $createdCount++;
             }
 
             DB::commit();
 
-            \Log::info('Exam results saved successfully:', [
-                'created' => $createdCount,
-                'updated' => $updatedCount,
-                'total' => $createdCount + $updatedCount
-            ]);
-
             return response()->json([
                 'success' => true, 
-                'message' => "Exam results stored successfully for " . ($createdCount + $updatedCount) . " student(s)."
+                'message' => "Exam results stored successfully for {$createdCount} student(s)."
             ], Response::HTTP_CREATED);
 
         } catch (QueryException $e) {
             DB::rollBack();
             \Log::error('Database error storing exam result: ' . $e->getMessage(), [
-                'request_data' => $request->all(),
-                'sql' => $e->getSql(),
-                'bindings' => $e->getBindings()
+                'request_data' => $request->all()
             ]);
             return response()->json([
                 'success' => false, 
                 'message' => 'Database error: ' . $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Validation failed:', $e->errors());
             return response()->json([
                 'success' => false, 
                 'message' => 'Validation failed.', 
@@ -330,7 +306,7 @@ class ExamResultController extends Controller
             'course_id' => 'required|integer|exists:courses,course_id',
             'intake_id' => 'required|integer|exists:intakes,intake_id',
             'location' => 'required|string',
-            'semester' => 'required', // should be semester_id
+            'semester' => 'required',
             'module_id' => 'required|integer|exists:modules,module_id',
         ]);
 
@@ -340,48 +316,112 @@ class ExamResultController extends Controller
         $semesterId = $request->semester;
         $moduleId = $request->module_id;
 
-        // Get students registered for this course/intake/location/semester
-        $students = \App\Models\CourseRegistration::where('course_id', $courseId)
-            ->where('intake_id', $intakeId)
-            ->where('location', $location)
-            ->where('status', 'Registered')
-            // If you have semester_id in CourseRegistration, add:
-            // ->where('semester_id', $semesterId)
-            ->with('student')
-            ->get()
-            ->map(function($reg) use ($courseId, $intakeId, $location, $semesterId, $moduleId) {
-                $studentData = [
-                    'registration_id' => $reg->id,
-                    'student_id' => $reg->student->student_id,
-                    'name' => $reg->student->full_name,
-                ];
+        // Get the semester to determine if it's core or elective
+        $semester = \App\Models\Semester::find($semesterId);
+        if (!$semester) {
+            return response()->json(['error' => 'Semester not found.'], 404);
+        }
 
-                // Check if result exists for this student
-                $existingResult = \App\Models\ExamResult::where('course_id', $courseId)
-                    ->where('intake_id', $intakeId)
-                    ->where('location', $location)
-                    ->where('semester', $semesterId)
-                    ->where('module_id', $moduleId)
-                    ->where('student_id', $reg->student->student_id)
-                    ->first();
-
-                $studentData['marks'] = $existingResult ? $existingResult->marks : '';
-                $studentData['grade'] = $existingResult ? $existingResult->grade : '';
-
-                return $studentData;
-            });
-
-        $results_exist = \App\Models\ExamResult::where('course_id', $courseId)
-            ->where('intake_id', $intakeId)
-            ->where('location', $location)
-            ->where('semester', $semesterId)
+        // Check if this is a core module (assigned to semester) or elective module
+        $isCoreModule = \DB::table('semester_module')
+            ->where('semester_id', $semesterId)
             ->where('module_id', $moduleId)
             ->exists();
+
+        // Check if exam results already exist for this module
+        $existingResults = ExamResult::where('course_id', $courseId)
+            ->where('intake_id', $intakeId)
+            ->where('location', $location)
+            ->where('semester', $semester->name)
+            ->where('module_id', $moduleId)
+            ->exists();
+
+        if ($isCoreModule) {
+            // For core modules: Get students registered for the semester
+            $students = \App\Models\SemesterRegistration::where('semester_id', $semesterId)
+                ->where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('status', 'registered')
+                ->with('student')
+                ->get()
+                ->map(function($reg) use ($request, $existingResults, $semester) {
+                    $studentData = [
+                        'registration_id' => $reg->student->registration_id ?? $reg->student->student_id,
+                        'student_id' => $reg->student->student_id,
+                        'name' => $reg->student->full_name,
+                    ];
+
+                    // If results exist, fetch the existing marks and grade
+                    if ($existingResults) {
+                        $existingResult = ExamResult::where('course_id', $request->course_id)
+                            ->where('intake_id', $request->intake_id)
+                            ->where('location', $request->location)
+                            ->where('semester', $semester->name)
+                            ->where('module_id', $request->module_id)
+                            ->where('student_id', $reg->student->student_id)
+                            ->first();
+
+                        if ($existingResult) {
+                            $studentData['marks'] = $existingResult->marks;
+                            $studentData['grade'] = $existingResult->grade;
+                        } else {
+                            $studentData['marks'] = '';
+                            $studentData['grade'] = '';
+                        }
+                    } else {
+                        $studentData['marks'] = '';
+                        $studentData['grade'] = '';
+                    }
+
+                    return $studentData;
+                });
+        } else {
+            // For elective modules: Get students registered for the specific module
+            $students = \App\Models\ModuleManagement::where('module_id', $moduleId)
+                ->where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('semester', $semester->name)
+                ->with('student')
+                ->get()
+                ->map(function($reg) use ($request, $existingResults, $semester) {
+                    $studentData = [
+                        'registration_id' => $reg->student->registration_id ?? $reg->student->student_id,
+                        'student_id' => $reg->student->student_id,
+                        'name' => $reg->student->full_name,
+                    ];
+
+                    // If results exist, fetch the existing marks and grade
+                    if ($existingResults) {
+                        $existingResult = ExamResult::where('course_id', $request->course_id)
+                            ->where('intake_id', $request->intake_id)
+                            ->where('location', $request->location)
+                            ->where('semester', $semester->name)
+                            ->where('module_id', $request->module_id)
+                            ->where('student_id', $reg->student->student_id)
+                            ->first();
+
+                        if ($existingResult) {
+                            $studentData['marks'] = $existingResult->marks;
+                            $studentData['grade'] = $existingResult->grade;
+                        } else {
+                            $studentData['marks'] = '';
+                            $studentData['grade'] = '';
+                        }
+                    } else {
+                        $studentData['marks'] = '';
+                        $studentData['grade'] = '';
+                    }
+
+                    return $studentData;
+                });
+        }
 
         return response()->json([
             'success' => true,
             'students' => $students,
-            'results_exist' => $results_exist
+            'results_exist' => $existingResults
         ]);
     }
 
@@ -398,8 +438,6 @@ class ExamResultController extends Controller
      */
     public function getExistingExamResults(Request $request)
     {
-        \Log::info('getExistingExamResults called with:', $request->all());
-
         $request->validate([
             'course_id' => 'required|integer|exists:courses,course_id',
             'intake_id' => 'required|integer|exists:intakes,intake_id',
@@ -408,22 +446,10 @@ class ExamResultController extends Controller
             'module_id' => 'required|integer|exists:modules,module_id',
         ]);
 
-        // Get the semester to convert ID to name
-        $semester = \App\Models\Semester::find($request->semester);
-        if (!$semester) {
-            \Log::error('Semester not found for ID:', ['semester_id' => $request->semester]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Semester not found.'
-            ], 404);
-        }
-
-        \Log::info('Semester found:', ['semester_id' => $semester->id, 'semester_name' => $semester->name]);
-
         $results = ExamResult::where('course_id', $request->course_id)
             ->where('intake_id', $request->intake_id)
             ->where('location', $request->location)
-            ->where('semester', $semester->name) // Use semester name, not ID
+            ->where('semester', $request->semester)
             ->where('module_id', $request->module_id)
             ->with(['student.courseRegistrations', 'course', 'module', 'intake'])
             ->get()
@@ -446,17 +472,6 @@ class ExamResultController extends Controller
                 ];
             });
 
-        \Log::info('Exam results found:', [
-            'count' => $results->count(),
-            'filters' => [
-                'course_id' => $request->course_id,
-                'intake_id' => $request->intake_id,
-                'location' => $request->location,
-                'semester' => $semester->name,
-                'module_id' => $request->module_id
-            ]
-        ]);
-
         return response()->json([
             'success' => true,
             'results' => $results,
@@ -469,8 +484,6 @@ class ExamResultController extends Controller
      */
     public function updateResult(Request $request)
     {
-        \Log::info('updateResult called with:', $request->all());
-
         try {
             $validatedData = $request->validate([
                 'course_id' => 'required|exists:courses,course_id',
@@ -488,14 +501,11 @@ class ExamResultController extends Controller
             // Get the semester to convert ID to name
             $semester = \App\Models\Semester::find($validatedData['semester']);
             if (!$semester) {
-                \Log::error('Semester not found for ID:', ['semester_id' => $validatedData['semester']]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Semester not found.'
                 ], 404);
             }
-
-            \Log::info('Semester found:', ['semester_id' => $semester->id, 'semester_name' => $semester->name]);
 
             DB::beginTransaction();
 
@@ -509,13 +519,10 @@ class ExamResultController extends Controller
                         'remarks' => $result['remarks'] ?? null,
                     ]);
                     $updatedCount++;
-                    \Log::info("Updated exam result ID: {$result['id']}");
                 }
             }
 
             DB::commit();
-
-            \Log::info('Exam results updated successfully:', ['updated_count' => $updatedCount]);
 
             return response()->json([
                 'success' => true, 
@@ -525,16 +532,13 @@ class ExamResultController extends Controller
         } catch (QueryException $e) {
             DB::rollBack();
             \Log::error('Database error updating exam result: ' . $e->getMessage(), [
-                'request_data' => $request->all(),
-                'sql' => $e->getSql(),
-                'bindings' => $e->getBindings()
+                'request_data' => $request->all()
             ]);
             return response()->json([
                 'success' => false, 
                 'message' => 'Database error: ' . $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            \Log::error('Validation failed:', $e->errors());
             return response()->json([
                 'success' => false, 
                 'message' => 'Validation failed.', 

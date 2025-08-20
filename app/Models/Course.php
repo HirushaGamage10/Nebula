@@ -141,42 +141,6 @@ class Course extends Model
         return implode(', ', $durationParts);
     }
 
-    public function getTrainingPeriodFormattedAttribute()
-    {
-        if (!$this->training_period) {
-            return 'Not specified';
-        }
-        
-        $parts = explode('-', $this->training_period);
-        if (count($parts) !== 3) {
-            return $this->training_period; // Return as-is if format is unexpected
-        }
-        
-        $years = (int)$parts[0];
-        $months = (int)$parts[1];
-        $days = (int)$parts[2];
-        
-        $trainingParts = [];
-        
-        if ($years > 0) {
-            $trainingParts[] = $years . ' ' . ($years === 1 ? 'year' : 'years');
-        }
-        
-        if ($months > 0) {
-            $trainingParts[] = $months . ' ' . ($months === 1 ? 'month' : 'months');
-        }
-        
-        if ($days > 0) {
-            $trainingParts[] = $days . ' ' . ($days === 1 ? 'day' : 'days');
-        }
-        
-        if (empty($trainingParts)) {
-            return 'Not specified';
-        }
-        
-        return implode(', ', $trainingParts);
-    }
-
     public function getTotalFeeAttribute()
     {
         return $this->course_fee + $this->registration_fee;

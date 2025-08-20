@@ -450,9 +450,9 @@
                         // Populate the visible fields
                         if (course.course_type === 'degree') {
                             $('#course_name').val(course.course_name);
-                            $('#duration_years').val(course.duration_array.years);
-                            $('#duration_months').val(course.duration_array.months);
-                            $('#duration_days').val(course.duration_array.days);
+                            $('#duration_years').val(course.duration.years);
+                            $('#duration_months').val(course.duration.months);
+                            $('#duration_days').val(course.duration.days);
                             setSelectValue('#course_medium', course.course_medium);
 
                             const conductedBy = course.conducted_by;
@@ -466,16 +466,17 @@
                             }
 
                             $('#no_of_semesters').val(course.no_of_semesters).trigger('input');
-                            $('#training_years').val(course.training_period_array.years);
-                            $('#training_months').val(course.training_period_array.months);
-                            $('#training_days').val(course.training_period_array.days);
+                            $('#training_years').val(course.training_period.years);
+                            $('#training_months').val(course.training_period.months);
+                            $('#training_days').val(course.training_period.days);
                             $('#min_credits').val(course.min_credits);
                             $('#entry_qualification').val(course.entry_qualification);
                         } else if (course.course_type === 'certificate') {
+                            // Note: certificate fields have different IDs
                             $('#cert_course_name').val(course.course_name);
-                            $('#cert_duration_years').val(course.duration_array.years);
-                            $('#cert_duration_months').val(course.duration_array.months);
-                            $('#cert_duration_days').val(course.duration_array.days);
+                            $('#cert_duration_years').val(course.duration.years);
+                            $('#cert_duration_months').val(course.duration.months);
+                            $('#cert_duration_days').val(course.duration.days);
                             setSelectValue('#cert_course_medium', course.course_medium);
                             
                             const conductedBy = course.conducted_by;
@@ -488,9 +489,9 @@
                                 otherConductedByInput.val(conductedBy).show().prop('required', true);
                             }
                             
-                            $('#cert_training_years').val(course.training_period_array.years);
-                            $('#cert_training_months').val(course.training_period_array.months);
-                            $('#cert_training_days').val(course.training_period_array.days);
+                            $('#cert_training_years').val(course.training_period.years);
+                            $('#cert_training_months').val(course.training_period.months);
+                            $('#cert_training_days').val(course.training_period.days);
                             $('#course_content').val(course.course_content);
                             $('#cert_entry_qualification').val(course.entry_qualification);
                         }
