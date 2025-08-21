@@ -341,6 +341,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/student-list', [StudentListController::class, 'showStudentList'])->name('student.list');
         Route::post('/get-student-list-data', [StudentListController::class, 'getStudentListData'])->name('student.getListData');
         Route::post('/download-student-list', [StudentListController::class, 'downloadStudentList'])->name('student.downloadList');
+        Route::post('/download-student-list-excel', [StudentListController::class, 'downloadStudentListExcel'])->name('student.downloadList.excel');
 
         // Temporary test route for semester creation debugging
         Route::post('/test-semester-creation', function(Request $request) {
@@ -405,6 +406,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 Route::get('/get-specializations-for-course', [TimetableController::class, 'getSpecializationsForCourse'])->name('timetable.specializations.for.course');
 Route::post('/get-existing-timetable', [TimetableController::class, 'getExistingTimetable'])->name('timetable.get.existing');
 Route::get('/download-timetable-pdf', [TimetableController::class, 'downloadTimetablePDF'])->name('timetable.download.pdf');
+Route::get('/download-timetable-excel', [TimetableController::class, 'downloadTimetableExcel'])->name('timetable.download.excel');
 });
 
 // API routes - DGM, Program Administrator (level 01), Program Administrator (level 02), Student Counselor, Bursar, Developer
@@ -423,6 +425,7 @@ Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Ad
         return view('overall_attendance', compact('courses', 'intakes'));
     })->name('overall.attendance');
     Route::post('/get-overall-attendance', [\App\Http\Controllers\AttendanceController::class, 'getOverallAttendance'])->name('get.overall.attendance');
+    Route::post('/download-attendance-excel', [\App\Http\Controllers\AttendanceController::class, 'downloadAttendanceExcel'])->name('download.attendance.excel');
 });
 
 // Special Approval List - DGM and Developer only

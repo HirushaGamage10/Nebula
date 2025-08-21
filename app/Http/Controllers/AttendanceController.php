@@ -9,11 +9,13 @@ use App\Models\Intake;
 use App\Models\Module;
 use App\Models\Student;
 use App\Models\CourseRegistration;
+use App\Exports\AttendanceExport;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Maatwebsite\Excel\Facades\Excel;
 
 class AttendanceController extends Controller
 {
@@ -419,5 +421,102 @@ class AttendanceController extends Controller
             'success' => true,
             'attendance' => $attendanceData
         ]);
+    }
+
+    /**
+     * Download attendance report as Excel.
+     */
+    public function downloadAttendanceExcel(Request $request)
+    {
+        $request->validate([
+            'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
+            'course_id' => 'required|exists:courses,course_id',
+            'intake_id' => 'required|exists:intakes,intake_id',
+            'semester' => 'required',
+            'module_id' => 'required|exists:modules,module_id',
+        ]);
+
+        $courseId = $request->course_id;
+        $intakeId = $request->intake_id;
+        $location = $request->location;
+        $semesterId = $request->semester;
+        $moduleId = $request->module_id;
+
+        // Get the semester to determine if it's core or elective
+        $semester = \App\Models\Semester::find($semesterId);
+        if (!$semester) {
+            return response()->json(['error' => 'Semester not found.'], 404);
+        }
+
+        // Check if this is a core module (assigned to semester) or elective module
+        $isCoreModule = \DB::table('semester_module')
+            ->where('semester_id', $semesterId)
+            ->where('module_id', $moduleId)
+            ->exists();
+
+        // Get all attendance sessions for this filter (by module)
+        $attendanceSessions = \App\Models\Attendance::where('course_id', $courseId)
+            ->where('intake_id', $intakeId)
+            ->where('location', $location)
+            ->where('semester', $semester->name)
+            ->where('module_id', $moduleId)
+            ->select('date')
+            ->distinct()
+            ->get();
+        $totalSessions = $attendanceSessions->count();
+
+        if ($isCoreModule) {
+            // For core modules: Get students registered for the semester
+            $registrations = \App\Models\SemesterRegistration::where('semester_id', $semesterId)
+                ->where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('status', 'registered')
+                ->with('student')
+                ->get();
+        } else {
+            // For elective modules: Get students registered for the specific module
+            $registrations = \App\Models\ModuleManagement::where('module_id', $moduleId)
+                ->where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('semester', $semester->name)
+                ->with('student')
+                ->get();
+        }
+
+        $excelData = [];
+        foreach ($registrations as $reg) {
+            $attendedSessions = \App\Models\Attendance::where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('semester', $semester->name)
+                ->where('module_id', $moduleId)
+                ->where('student_id', $reg->student_id)
+                ->where('status', true)
+                ->count();
+            
+            $excelData[] = [
+                $reg->student->registration_id ?? $reg->student->student_id,
+                $reg->student->name_with_initials,
+                $totalSessions,
+                $attendedSessions,
+                $totalSessions > 0 ? round(($attendedSessions / $totalSessions) * 100, 2) . '%' : '0%'
+            ];
+        }
+
+        // Get course, intake, and module details for filename
+        $course = Course::find($courseId);
+        $intake = Intake::find($intakeId);
+        $module = Module::find($moduleId);
+
+        // Generate filename
+        $filename = 'attendance_report_' . date('Y-m-d_H-i-s') . '.xlsx';
+        
+        // Return Excel file as download
+        return Excel::download(
+            new AttendanceExport($excelData, $location, $course?->course_name ?? 'N/A', $intake?->batch ?? 'N/A', $semester->name, $module?->module_name ?? 'N/A'),
+            $filename
+        );
     }
 } 

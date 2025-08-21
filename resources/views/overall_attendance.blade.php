@@ -74,9 +74,14 @@
             <hr class="my-4">
             <div class="mt-4" id="overallAttendanceSection" style="display:none;">
                 <div class="mb-3 text-end">
-                    <button id="exportPdfBtn" class="btn btn-outline-primary" type="button">
-                        <i class="ti ti-download"></i> Export to PDF
-                    </button>
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button id="exportPdfBtn" class="btn btn-outline-primary" type="button">
+                            <i class="ti ti-download"></i> Export to PDF
+                        </button>
+                        <button id="exportExcelBtn" class="btn btn-outline-success" type="button">
+                            <i class="ti ti-file-spreadsheet"></i> Export to Excel
+                        </button>
+                    </div>
                 </div>
                 <h4 class="text-center mb-3">Attendance Summary</h4>
                 <div class="table-responsive">
@@ -216,6 +221,49 @@ document.addEventListener('DOMContentLoaded', function() {
             startY: y + 6
         });
         doc.save('attendance_report.pdf');
+    });
+
+    document.getElementById('exportExcelBtn').addEventListener('click', function() {
+        // Check if all required filters are selected
+        if (!locationSelect.value || !courseSelect.value || !intakeSelect.value || !semesterSelect.value || !moduleSelect.value) {
+            alert('Please select all filters before exporting to Excel.');
+            return;
+        }
+
+        // Create form data for Excel download
+        const formData = new FormData();
+        formData.append('location', locationSelect.value);
+        formData.append('course_id', courseSelect.value);
+        formData.append('intake_id', intakeSelect.value);
+        formData.append('semester', semesterSelect.value);
+        formData.append('module_id', moduleSelect.value);
+        formData.append('_token', '{{ csrf_token() }}');
+
+        // Send request to download Excel
+        fetch('/download-attendance-excel', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.blob();
+            }
+            throw new Error('Network response was not ok.');
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'attendance_report.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error downloading Excel file.');
+        });
     });
 
     function fetchCoursesByLocation(location, courseType) {

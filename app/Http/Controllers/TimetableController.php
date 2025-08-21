@@ -7,8 +7,10 @@ use App\Models\Course;
 use App\Models\Intake;
 use App\Models\Semester;
 use App\Models\Module;
+use App\Exports\TimetableExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
 
 class TimetableController extends Controller
 {
@@ -23,6 +25,19 @@ class TimetableController extends Controller
     public function store(Request $request)
     {
         try {
+            // Parse timetable_data if it's a JSON string
+            $timetableData = $request->input('timetable_data');
+            if (is_string($timetableData)) {
+                $timetableData = json_decode($timetableData, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Invalid timetable data format.'
+                    ], 422);
+                }
+                $request->merge(['timetable_data' => $timetableData]);
+            }
+
             $validatedData = $request->validate([
                 'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
                 'course_id' => 'required|exists:courses,course_id',
@@ -64,27 +79,33 @@ class TimetableController extends Controller
                 $startDate = $weekStartDate ? Carbon::parse($weekStartDate) : Carbon::now()->startOfWeek();
                 
                 foreach ($days as $index => $day) {
-                    if (!empty($row[$day])) {
+                    if (!empty($row[$day]) && trim($row[$day]) !== '') {
                         $date = $startDate->copy()->addDays($index);
+                        $moduleId = $this->getModuleIdByName($row[$day]);
                         
-                        $timetableEntry = [
-                            'location' => $validatedData['location'],
-                            'course_id' => $validatedData['course_id'],
-                            'intake_id' => $validatedData['intake_id'],
-                            'semester' => $validatedData['semester'],
-                            'module_id' => $this->getModuleIdByName($row[$day]),
-                            'date' => $date->format('Y-m-d'),
-                            'time' => $row['time'],
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ];
-                        
-                        // Add specialization if provided
-                        if (!empty($validatedData['specialization'])) {
-                            $timetableEntry['specialization'] = $validatedData['specialization'];
+                        // Only create entry if module was found
+                        if ($moduleId !== null) {
+                            $timetableEntry = [
+                                'location' => $validatedData['location'],
+                                'course_id' => $validatedData['course_id'],
+                                'intake_id' => $validatedData['intake_id'],
+                                'semester' => $validatedData['semester'],
+                                'module_id' => $moduleId,
+                                'date' => $date->format('Y-m-d'),
+                                'time' => $this->formatTimeForDatabase($row['time']),
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                            
+                            // Add specialization if provided
+                            if (!empty($validatedData['specialization'])) {
+                                $timetableEntry['specialization'] = $validatedData['specialization'];
+                            }
+                            
+                            $timetableEntries[] = $timetableEntry;
+                        } else {
+                            \Log::warning('Skipping timetable entry - module not found: ' . $row[$day]);
                         }
-                        
-                        $timetableEntries[] = $timetableEntry;
                     }
                 }
             }
@@ -93,19 +114,32 @@ class TimetableController extends Controller
                 \DB::table('timetable')->insert($timetableEntries);
             }
 
+            $message = 'Timetable saved successfully!';
+            if (count($timetableEntries) === 0) {
+                $message = 'No valid timetable entries found. Please check that modules are properly selected.';
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => 'Timetable saved successfully!'
+                'message' => $message,
+                'entries_saved' => count($timetableEntries)
             ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Timetable validation failed:', [
+                'errors' => $e->errors(),
+                'request_data' => $request->all()
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed.',
+                'message' => 'Validation failed. Please check your input.',
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
-            \Log::error('Error saving timetable: ' . $e->getMessage());
+            \Log::error('Error saving timetable: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred while saving the timetable.'
@@ -120,13 +154,13 @@ class TimetableController extends Controller
             return null;
         }
         
-        // Try to find module by name
+        // Try to find module by exact name first
         $module = \App\Models\Module::where('module_name', $moduleName)->first();
         if ($module) {
             return $module->module_id;
         }
         
-        // If not found by name, try to extract module code from the name
+        // If not found by exact name, try to extract module code from the name (e.g., "Programming (EC98735)")
         if (preg_match('/\(([^)]+)\)/', $moduleName, $matches)) {
             $moduleCode = $matches[1];
             $module = \App\Models\Module::where('module_code', $moduleCode)->first();
@@ -135,6 +169,17 @@ class TimetableController extends Controller
             }
         }
         
+        // If still not found, try to match by partial name (e.g., "Programming" from "Programming (EC98735)")
+        $baseName = trim(preg_replace('/\s*\([^)]*\)/', '', $moduleName));
+        if (!empty($baseName)) {
+            $module = \App\Models\Module::where('module_name', $baseName)->first();
+            if ($module) {
+                return $module->module_id;
+            }
+        }
+        
+        // Log the unmatched module name for debugging
+        \Log::warning('Module not found by name: ' . $moduleName);
         return null;
     }
 
@@ -165,6 +210,45 @@ class TimetableController extends Controller
         }
         
         return $moduleId; // Return as is if no match found
+    }
+
+    // Helper method to format time for database storage
+    private function formatTimeForDatabase($timeString)
+    {
+        if (empty($timeString)) {
+            return '00:00:00';
+        }
+
+        \Log::info('Formatting time for database:', ['input' => $timeString]);
+
+        // Handle formats like "8-9", "8.00-9.00", "08:00-09:00"
+        if (preg_match('/(\d+)[\.:-](\d+)[\.:-](\d+)[\.:-](\d+)/', $timeString, $matches)) {
+            // Format: "8.00-9.00" or "08:00-09:00"
+            $startHour = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+            $startMinute = str_pad($matches[2], 2, '0', STR_PAD_LEFT);
+            return $startHour . ':' . $startMinute . ':00';
+        } elseif (preg_match('/(\d+)[\.:-](\d+)/', $timeString, $matches)) {
+            // Format: "8-9" or "8.00-9.00"
+            $startHour = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+            $startMinute = isset($matches[2]) ? str_pad($matches[2], 2, '0', STR_PAD_LEFT) : '00';
+            return $startHour . ':' . $startMinute . ':00';
+        } elseif (preg_match('/(\d+):(\d+)/', $timeString, $matches)) {
+            // Format: "8:00" or "08:00"
+            $hour = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+            $minute = str_pad($matches[2], 2, '0', STR_PAD_LEFT);
+            return $hour . ':' . $minute . ':00';
+        }
+
+        // If no pattern matches, try to parse as a simple number
+        if (is_numeric($timeString)) {
+            $hour = str_pad($timeString, 2, '0', STR_PAD_LEFT);
+            return $hour . ':00:00';
+        }
+
+        // Default fallback
+        $formattedTime = '00:00:00';
+        \Log::warning('Could not parse time format, using default:', ['input' => $timeString, 'output' => $formattedTime]);
+        return $formattedTime;
     }
 
     // Method to get existing timetable data
@@ -300,8 +384,8 @@ class TimetableController extends Controller
                 return [
                     'id' => $semester->id,
                     'name' => $semester->name,
-                    'start_date' => $semester->start_date,
-                    'end_date' => $semester->end_date,
+                    'start_date' => Carbon::parse($semester->start_date)->format('Y-m-d'),
+                    'end_date' => Carbon::parse($semester->end_date)->format('Y-m-d'),
                     'status' => $semester->status
                 ];
             });
@@ -327,6 +411,11 @@ class TimetableController extends Controller
             $end = Carbon::parse($endDate);
             $weeks = [];
 
+            // Ensure we have a valid date range
+            if ($start->gt($end)) {
+                return response()->json(['weeks' => []]);
+            }
+
             // Generate weeks from start date to end date
             $currentWeekStart = $start->copy()->startOfWeek();
             $weekNumber = 1;
@@ -348,8 +437,24 @@ class TimetableController extends Controller
                 $currentWeekStart->addWeek();
             }
 
+            // If no weeks were generated, try a different approach
+            if (empty($weeks)) {
+                // Generate at least one week if the date range is valid
+                $weeks[] = [
+                    'week_number' => 1,
+                    'start_date' => $start->format('Y-m-d'),
+                    'end_date' => $end->format('Y-m-d'),
+                    'display_text' => "Week 1 (" . $start->format('M d') . " - " . $end->format('M d, Y') . ")"
+                ];
+            }
+
             return response()->json(['weeks' => $weeks]);
         } catch (\Exception $e) {
+            \Log::error('Error generating weeks:', [
+                'error' => $e->getMessage(),
+                'start_date' => $startDate,
+                'end_date' => $endDate
+            ]);
             return response()->json(['weeks' => []]);
         }
     }
@@ -565,6 +670,86 @@ class TimetableController extends Controller
             ]);
             
             return response()->json(['error' => 'Failed to generate PDF'], 500);
+        }
+    }
+
+    // Method to download timetable as Excel
+    public function downloadTimetableExcel(Request $request)
+    {
+        $courseType = $request->input('course_type');
+        $location = $request->input('location');
+        $courseId = $request->input('course_id');
+        $intakeId = $request->input('intake_id');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $semester = $request->input('semester');
+        $weekNumber = $request->input('week_number');
+        $timetableData = $request->input('timetable_data');
+        $weekStartDate = $request->input('week_start_date');
+
+        // Validate required parameters
+        if (!$courseType || !$location || !$courseId || !$intakeId || !$startDate || !$endDate) {
+            return response()->json(['error' => 'Missing required parameters'], 400);
+        }
+
+        // Parse timetable data if provided
+        $parsedTimetableData = null;
+        if ($timetableData) {
+            try {
+                $parsedTimetableData = json_decode($timetableData, true);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to parse timetable data:', ['error' => $e->getMessage()]);
+            }
+        }
+
+        try {
+            // Get course details
+            $course = Course::find($courseId);
+            if (!$course) {
+                return response()->json(['error' => 'Course not found'], 404);
+            }
+
+            // Get intake details
+            $intake = Intake::find($intakeId);
+            if (!$intake) {
+                return response()->json(['error' => 'Intake not found'], 404);
+            }
+
+            // Convert timetable data to show module names instead of IDs
+            $excelData = [];
+            if ($parsedTimetableData) {
+                foreach ($parsedTimetableData as $row) {
+                    $excelRow = [
+                        $row['time'],
+                        $this->getModuleNameById($row['monday']),
+                        $this->getModuleNameById($row['tuesday']),
+                        $this->getModuleNameById($row['wednesday']),
+                        $this->getModuleNameById($row['thursday']),
+                        $this->getModuleNameById($row['friday']),
+                        $this->getModuleNameById($row['saturday']),
+                        $this->getModuleNameById($row['sunday'])
+                    ];
+                    $excelData[] = $excelRow;
+                }
+            }
+
+            // Generate filename
+            $filename = strtolower($courseType) . '_timetable_week_' . $weekNumber . '_' . date('Y-m-d_H-i-s') . '.xlsx';
+            
+            // Return Excel file as download
+            return Excel::download(
+                new TimetableExport($excelData, $courseType, $course->course_name, $location, $intake->batch),
+                $filename
+            );
+
+        } catch (\Exception $e) {
+            \Log::error('Error generating timetable Excel:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+            
+            return response()->json(['error' => 'Failed to generate Excel'], 500);
         }
     }
 }

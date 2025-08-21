@@ -68,9 +68,14 @@
               </button>
             </li>
           </ul>
-          <button id="downloadListBtn" class="btn btn-primary" type="button">
-            <i class="bi bi-download"></i> Download PDF
-          </button>
+          <div class="d-flex gap-2">
+            <button id="downloadListBtn" class="btn btn-primary" type="button">
+              <i class="bi bi-download"></i> Download PDF
+            </button>
+            <button id="downloadListExcelBtn" class="btn btn-success" type="button">
+              <i class="bi bi-file-earmark-spreadsheet"></i> Download Excel
+            </button>
+          </div>
         </div>
 
         <h4 class="text-center mb-3" id="studentListHeader"></h4>
@@ -107,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const section        = document.getElementById('studentTableSection');
   const tbody          = document.getElementById('studentTableBody');
   const downloadBtn    = document.getElementById('downloadListBtn');
+  const downloadExcelBtn = document.getElementById('downloadListExcelBtn');
   const headerEl       = document.getElementById('studentListHeader');
 
   let allStudents = [];
@@ -272,6 +278,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const form = document.createElement('form');
     form.method='POST'; form.action='/download-student-list'; form.target='_blank'; form.style.display='none';
+    form.innerHTML = `
+      <input type="hidden" name="_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="location" value="${location}">
+      <input type="hidden" name="course_id" value="${courseId}">
+      <input type="hidden" name="intake_id" value="${intakeId}">
+      <input type="hidden" name="status" value="${currentStatus}">
+    `;
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+  });
+
+  // Excel Download matches active tab
+  downloadExcelBtn.addEventListener('click', ()=>{
+    const location = locationSelect.value;
+    const courseId = courseSelect.value;
+    const intakeId = intakeSelect.value;
+    if(!location || !courseId || !intakeId){
+      showToast('Error','Please select all filters before downloading.','bg-danger');
+      return;
+    }
+
+    const form = document.createElement('form');
+    form.method='POST'; form.action='/download-student-list-excel'; form.target='_blank'; form.style.display='none';
     form.innerHTML = `
       <input type="hidden" name="_token" value="{{ csrf_token() }}">
       <input type="hidden" name="location" value="${location}">
