@@ -380,4 +380,4 @@
         </ul>
     </nav>
 </div>
-<?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/components/sidebar.blade.php ENDPATH**/ ?>
+<?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/nebula fin/Nebula/resources/views/components/sidebar.blade.php ENDPATH**/ ?>

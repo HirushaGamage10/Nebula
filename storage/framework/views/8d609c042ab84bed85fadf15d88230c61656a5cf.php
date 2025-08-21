@@ -1,8 +1,6 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | Student Other Information'); ?>
 
-@section('title', 'NEBULA | Student Other Information')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
   <div class="row justify-content-center">
     <div class="col-md-11 mt-2">
@@ -11,7 +9,7 @@
           <h2 class="text-center mb-4">Student Other Information</h2>
           <hr class="mb-4">
 
-          {{-- Search --}}
+          
           <div class="card mb-4">
             <div class="card-body">
               <form id="nicSearchForm">
@@ -31,7 +29,7 @@
             </div>
           </div>
 
-          {{-- Toasts + Spinner + Generic Message Modal --}}
+          
           <div id="toastContainer" aria-live="polite" aria-atomic="true"
                style="position: fixed; top: 10px; right: 10px; z-index: 1000;"></div>
 
@@ -56,10 +54,10 @@
 
           <hr class="mt-4">
 
-          {{-- Main Form --}}
+          
           <div id="studentOtherInformationForm" style="display:none;">
             <form id="otherInformationForm" class="p-4 rounded w-100 bg-white mt-2" enctype="multipart/form-data">
-              {{-- Student Details --}}
+              
               <div class="mb-4">
                 <h5 class="mb-3">Student Details</h5>
                 <div class="mb-3 row mx-3 align-items-center">
@@ -76,7 +74,7 @@
                 </div>
               </div>
 
-              {{-- Disciplinary --}}
+              
               <div class="mb-4">
                 <div class="mb-3 row mx-3 align-items-center">
                   <label class="col-sm-3 col-form-label" for="disciplinaryIssues">Disciplinary Issues</label>
@@ -96,7 +94,7 @@
 
               <hr>
 
-              {{-- Higher Studies --}}
+              
               <div class="mb-4">
                 <div class="mb-3 row mx-3 align-items-center">
                   <label class="col-sm-3 col-form-label">Continue to Higher Studies?</label>
@@ -130,7 +128,7 @@
 
               <hr>
 
-              {{-- Employment --}}
+              
               <div class="mb-4">
                 <div class="mb-3 row mx-3 align-items-center">
                   <label class="col-sm-3 col-form-label">Currently an Employee?</label>
@@ -164,7 +162,7 @@
 
               <hr>
 
-              {{-- Other Information --}}
+              
               <div class="mb-4">
                 <div class="mb-3 row mx-3 align-items-center">
                   <label for="otherInformation" class="col-sm-3 col-form-label">Other Information</label>
@@ -175,12 +173,12 @@
                 </div>
               </div>
 
-              {{-- Actions --}}
+              
               <div class="text-center mt-4">
                 <button id="dataSubmit" type="button" class="btn btn-primary w-100 mt-3">SAVE</button>
               </div>
             </form>
-          </div> {{-- /#studentOtherInformationForm --}}
+          </div> 
         </div>
       </div>
     </div>
@@ -212,8 +210,8 @@
     document.getElementById('spinner-overlay').style.display = 'flex';
     $.ajax({
       type: 'POST',
-      url: '{{ route("retrieve.student.details") }}',
-      data: { _token: '{{ csrf_token() }}', identificationType: 'nic', idValue: nic },
+      url: '<?php echo e(route("retrieve.student.details")); ?>',
+      data: { _token: '<?php echo e(csrf_token()); ?>', identificationType: 'nic', idValue: nic },
       success: function (res) {
         document.getElementById('spinner-overlay').style.display = 'none';
         if (res.success) {
@@ -239,7 +237,7 @@
     document.getElementById('spinner-overlay').style.display = 'flex';
     $.ajax({
       type: 'POST',
-      url: '{{ route("store.other.informations") }}',
+      url: '<?php echo e(route("store.other.informations")); ?>',
       data: fd,
       processData: false,
       contentType: false,
@@ -340,4 +338,5 @@
             background-color: #f1f5f9 !important
         }
     </style>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/nebula fin/Nebula/resources/views/student_other_information.blade.php ENDPATH**/ ?>

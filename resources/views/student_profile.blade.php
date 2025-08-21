@@ -1648,5 +1648,147 @@ function showErrorMessage(message) {
     $(e.target).addClass('bg-primary text-white');
   });
 });
+// --- Status UI helpers ---
+function setStatusUI(status) {
+  const badge = $('#studentStatusBadge');
+  const termBtn = $('#terminateBtn');
+  const reinBtn = $('#reinstateBtn');
+  const isTerminated = (status || '').toLowerCase() === 'terminated';
+
+  badge.text((status || 'active').toUpperCase());
+  badge.toggleClass('bg-danger', isTerminated).toggleClass('bg-success', !isTerminated);
+
+  // Hide/Show action buttons
+  termBtn.toggle(!isTerminated);
+  reinBtn.toggle(isTerminated);
+
+  // Optional: lock editing when terminated
+  const readonly = isTerminated;
+  $('#showEditPersonalInfoBtn').prop('disabled', readonly);
+}
+
+$(document).on('click', '#terminateBtn', function () {
+  new bootstrap.Modal(document.getElementById('terminateModal')).show();
+});
+$(document).on('click', '#reinstateBtn', function () {
+  new bootstrap.Modal(document.getElementById('reinstateModal')).show();
+});
+
+$('#confirmTerminate').on('click', function () {
+  const studentId = $('#studentIdHidden').val();
+  const reason = $('#terminateReason').val().trim();
+  const doc = $('#terminateDocument')[0].files[0];
+  if (!studentId) return showErrorMessage('No student selected.');
+  if (!reason) return $('#terminateReason').focus();
+
+  const fd = new FormData();
+  fd.append('_token', '{{ csrf_token() }}');
+  fd.append('student_id', studentId);
+  fd.append('reason', reason);
+  if (doc) fd.append('document', doc);
+
+  $.ajax({
+    type: 'POST',
+    url: "{{ route('student.terminate') }}",
+    data: fd, processData: false, contentType: false,
+    success: function (res) {
+      if (res.success) {
+        showSuccessMessage(res.message || 'Student terminated.');
+        setStatusUI('terminated');
+        $('#terminateReason').val(''); $('#terminateDocument').val('');
+        bootstrap.Modal.getInstance(document.getElementById('terminateModal')).hide();
+      } else {
+        showErrorMessage(res.message || 'Failed to terminate.');
+      }
+    },
+    error: function () { showErrorMessage('Error while terminating student.'); }
+  });
+});
+
+$('#confirmReinstate').on('click', function () {
+  const studentId = $('#studentIdHidden').val();
+  const reason = $('#reinstateReason').val().trim();
+  const doc = $('#reinstateDocument')[0].files[0];
+  if (!studentId) return showErrorMessage('No student selected.');
+  if (!reason) return $('#reinstateReason').focus();
+
+  const fd = new FormData();
+  fd.append('_token', '{{ csrf_token() }}');
+  fd.append('student_id', studentId);
+  fd.append('reason', reason);
+  if (doc) fd.append('document', doc);
+
+  $.ajax({
+    type: 'POST',
+    url: "{{ route('student.reinstate') }}",
+    data: fd, processData: false, contentType: false,
+    success: function (res) {
+      if (res.success) {
+        showSuccessMessage(res.message || 'Student re‑registered.');
+        setStatusUI(res.academic_status || 'active');
+        $('#reinstateReason').val(''); $('#reinstateDocument').val('');
+        bootstrap.Modal.getInstance(document.getElementById('reinstateModal')).hide();
+      } else {
+        showErrorMessage(res.message || 'Failed to re‑register.');
+      }
+    },
+    error: function () { showErrorMessage('Error while re‑registering student.'); }
+  });
+});
+
+// Initialize on load (when $student is present)
+@php $status = $student->academic_status ?? 'active'; @endphp
+setStatusUI('{{ $status }}');
+
   </script>
+  {{-- Terminate Modal --}}
+<div class="modal fade" id="terminateModal" tabindex="-1" aria-labelledby="terminateModalLabel" aria-hidden="true">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title" id="terminateModalLabel">Terminate Student</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <div class="mb-3">
+        <label class="form-label">Reason <span class="text-danger">*</span></label>
+        <textarea id="terminateReason" class="form-control" rows="4" placeholder="Explain the reason"></textarea>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Attach document (optional)</label>
+        <input type="file" id="terminateDocument" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+      </div>
+      <small class="text-muted">This will set academic status to <b>terminated</b>.</small>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" id="confirmTerminate" class="btn btn-danger">Confirm</button>
+    </div>
+  </div></div>
+</div>
+
+{{-- Re‑Register Modal --}}
+<div class="modal fade" id="reinstateModal" tabindex="-1" aria-labelledby="reinstateModalLabel" aria-hidden="true">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title" id="reinstateModalLabel">Re‑Register Student</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+    <div class="modal-body">
+      <div class="mb-3">
+        <label class="form-label">Reason <span class="text-danger">*</span></label>
+        <textarea id="reinstateReason" class="form-control" rows="4" placeholder="Why reinstate?"></textarea>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Attach document (optional)</label>
+        <input type="file" id="reinstateDocument" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+      </div>
+      <small class="text-muted">This will set academic status to <b>active</b>.</small>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" id="confirmReinstate" class="btn btn-success">Confirm</button>
+    </div>
+  </div></div>
+</div>
+
   @endsection
