@@ -223,4 +223,9 @@ class Student extends Model
         // block if terminated or suspended; allow if active or graduated (adjust if needed)
         return in_array($this->academic_status, [self::ACADEMIC_ACTIVE], true);
     }
+
+    public function scopeNotTerminated($q)
+    {
+        return $q->where('academic_status', '!=', 'terminated');
+    }
 }

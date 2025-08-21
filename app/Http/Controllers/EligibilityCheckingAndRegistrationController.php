@@ -87,7 +87,7 @@ class EligibilityCheckingAndRegistrationController extends Controller
             ->where('location', $request->location)
             ->with('student')
             ->get()
-            ->map(function($reg) {
+            ->map(function ($reg) {
                 return [
                     'registration_number' => $reg->student->registration_id ?? $reg->student->student_id,
                     'student_id' => $reg->student->student_id,
@@ -102,24 +102,24 @@ class EligibilityCheckingAndRegistrationController extends Controller
     public function verifyEligibility(Request $request)
     {
         $request->validate(['student_id' => 'required|integer']);
-        
+
         $registration = CourseRegistration::where('student_id', $request->student_id)
             ->where('status', 'Special approval required')
             ->first();
-            
+
         if ($registration) {
             $registration->approval_status = 'Approved by manager';
             $registration->status = 'Registered';
             $registration->save();
-            
+
             return response()->json([
-                'success' => true, 
+                'success' => true,
                 'message' => 'Student approved successfully',
                 'registration_id' => $registration->id
             ]);
         } else {
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'No pending special approval registration found for this student'
             ]);
         }
@@ -129,28 +129,35 @@ class EligibilityCheckingAndRegistrationController extends Controller
     public function getRegisteredCoursesByNic(Request $request)
     {
         $nic = $request->query('nic');
-        Log::debug('Eligibility NIC search', ['nic' => $nic]);
+
         $student = \App\Models\Student::where('id_value', $nic)->first();
-        Log::debug('Found student', ['student_id' => $student->student_id, 'id_value' => $student->id_value]);
+
         if (!$student) {
-            Log::debug('No student found for NIC', ['nic' => $nic]);
-            return response()->json(['success' => false, 'courses' => []]);
+            return response()->json(['success' => false, 'courses' => [], 'message' => 'Student not found.']);
         }
+
+        // 🔒 Block terminated students
+        if (strtolower($student->academic_status ?? '') === 'terminated') {
+            return response()->json([
+                'success' => false,
+                'courses' => [],
+                'message' => 'This student is terminated. Please re‑register before proceeding.'
+            ], 200);
+        }
+
         $courseRegs = \App\Models\CourseRegistration::where('student_id', $student->student_id)
             ->with('course')
             ->get();
-        Log::debug('Course registrations', ['count' => $courseRegs->count(), 'ids' => $courseRegs->pluck('course_id')]);
-        $courses = $courseRegs->filter(function($reg) {
-            return $reg->course !== null;
-        })->map(function($reg) {
-            return [
-                'course_id' => $reg->course->course_id,
-                'course_name' => $reg->course->course_name
-            ];
-        })->values();
-        Log::debug('Returned courses', ['courses' => $courses]);
+
+        $courses = $courseRegs->filter(fn($reg) => $reg->course)
+            ->map(fn($reg) => [
+                'course_id'   => $reg->course->course_id,
+                'course_name' => $reg->course->course_name,
+            ])->values();
+
         return response()->json(['success' => true, 'courses' => $courses]);
     }
+
 
     // Get eligible students for a NIC and course
     public function getEligibleStudentsByNic(Request $request)
@@ -159,24 +166,51 @@ class EligibilityCheckingAndRegistrationController extends Controller
             'nic' => 'required',
             'course_id' => 'required|exists:courses,course_id',
         ]);
+
         $student = \App\Models\Student::where('id_value', $request->nic)->first();
+
         if (!$student) {
-            return response()->json(['success' => false, 'students' => []]);
+            return response()->json([
+                'success'  => false,
+                'students' => [],
+                'message'  => 'Student not found.',
+            ]);
         }
+
+        // 🚫 Block terminated students from eligibility flow
+        if (strtolower($student->academic_status ?? '') === 'terminated') {
+            return response()->json([
+                'success'  => false,
+                'students' => [],
+                'message'  => 'This student is terminated. Please re-register the student before proceeding.',
+            ]);
+        }
+
         $reg = \App\Models\CourseRegistration::where('student_id', $student->student_id)
             ->where('course_id', $request->course_id)
             ->first();
+
         if (!$reg) {
-            return response()->json(['success' => false, 'students' => []]);
+            return response()->json([
+                'success'  => false,
+                'students' => [],
+                'message'  => 'No registration found for this course.',
+            ]);
         }
+
         $students = [[
             'registration_number' => $student->registration_id ?? $student->student_id,
-            'student_id' => $student->student_id,
-            'name' => $student->full_name,
-            'approval_status' => $reg->approval_status,
+            'student_id'          => $student->student_id,
+            'name'                => $student->full_name,
+            'approval_status'     => $reg->approval_status,
         ]];
-        return response()->json(['success' => true, 'students' => $students]);
+
+        return response()->json([
+            'success'  => true,
+            'students' => $students,
+        ]);
     }
+
 
     public function getStudentExamDetailsByNicCourse(Request $request)
     {
@@ -237,14 +271,14 @@ class EligibilityCheckingAndRegistrationController extends Controller
         // Debug: Check if there are any special approval registrations
         $count = CourseRegistration::where('status', 'Special approval required')->count();
         Log::info('Special approval registrations count:', ['count' => $count]);
-        
+
         $registrations = CourseRegistration::where('status', 'Special approval required')
             ->with(['student', 'course', 'intake'])
             ->get();
-            
+
         Log::info('Found registrations:', ['count' => $registrations->count()]);
-        
-        $mappedData = $registrations->map(function($reg) {
+
+        $mappedData = $registrations->map(function ($reg) {
             // Debug: Log the student data
             Log::info('Student data for special approval:', [
                 'student_id' => $reg->student->student_id,
@@ -253,7 +287,7 @@ class EligibilityCheckingAndRegistrationController extends Controller
                 'full_name' => $reg->student->full_name,
                 'registration_id' => $reg->student->registration_id ?? 'not set',
             ]);
-            
+
             // Get document URL if available
             $documentUrl = null;
             if ($reg->special_approval_pdf) {
@@ -264,7 +298,7 @@ class EligibilityCheckingAndRegistrationController extends Controller
                     if (!str_starts_with($documentUrl, 'http')) {
                         $documentUrl = request()->getScheme() . '://' . request()->getHttpHost() . '/storage/' . $reg->special_approval_pdf;
                     }
-                    
+
                     // Log for debugging
                     Log::info('Document URL generated', [
                         'student_id' => $reg->student->student_id,
@@ -279,7 +313,7 @@ class EligibilityCheckingAndRegistrationController extends Controller
                     ]);
                 }
             }
-            
+
             return [
                 'registration_number' => $reg->student->registration_id ?? $reg->student->student_id,
                 'student_id' => $reg->student->student_id,
@@ -296,10 +330,10 @@ class EligibilityCheckingAndRegistrationController extends Controller
                 'dgm_comment' => $reg->dgm_comment,
             ];
         });
-        
+
         // Debug: Log the final response
         Log::info('Final response data:', $mappedData->toArray());
-        
+
         return response()->json(['success' => true, 'students' => $mappedData]);
     }
 
@@ -361,7 +395,7 @@ class EligibilityCheckingAndRegistrationController extends Controller
         $registration->remarks = 'Registered via eligibility page';
         $registration->save();
         return response()->json([
-            'success' => true, 
+            'success' => true,
             'message' => 'Student registered successfully.',
             'course_registration_id' => $registration->course_registration_id
         ]);
@@ -393,14 +427,14 @@ class EligibilityCheckingAndRegistrationController extends Controller
         if (!$course) {
             return response()->json(['success' => false, 'message' => 'Course not found.']);
         }
-        
+
         // Get the latest intake for this course
         $latestIntake = \App\Models\Intake::where('course_name', $course->course_name)
             ->orderBy('created_at', 'desc')
             ->first();
-        
+
         $intake = $latestIntake ? $latestIntake->batch : '2025-September';
-        
+
         return response()->json([
             'success' => true,
             'course' => [
@@ -424,34 +458,34 @@ class EligibilityCheckingAndRegistrationController extends Controller
             'files' => $request->allFiles(),
             'user' => auth()->user() ? auth()->user()->user_role : 'not authenticated'
         ]);
-        
+
         $request->validate([
             'nic' => 'required',
             'course_id' => 'required|exists:courses,course_id',
             'special_approval_document' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120', // 5MB max
             'remarks' => 'nullable|string|max:1000',
         ]);
-        
+
         $student = \App\Models\Student::where('id_value', $request->nic)->first();
         $course = \App\Models\Course::find($request->course_id);
-        
+
         if (!$student || !$course) {
             return response()->json(['success' => false, 'message' => 'Student or course not found.']);
         }
-        
+
         // Handle document upload
         $documentPath = null;
         if ($request->hasFile('special_approval_document')) {
             $file = $request->file('special_approval_document');
             $documentPath = $file->store('special_approvals', 'public');
         }
-        
+
         // Find or create registration with "Special approval required" status
         $registration = CourseRegistration::firstOrNew([
             'student_id' => $student->student_id,
             'course_id' => $course->course_id,
         ]);
-        
+
         $registration->status = 'Special approval required';
         $registration->approval_status = 'Pending';
         $registration->registration_date = now();
@@ -460,7 +494,7 @@ class EligibilityCheckingAndRegistrationController extends Controller
         $registration->special_approval_pdf = $documentPath;
         $registration->remarks = $request->input('remarks', 'Special approval requested via eligibility page');
         $registration->save();
-        
+
         // Find DGM user(s) and log the request
         $dgms = \App\Models\User::where('user_role', 'DGM')->get();
         if ($dgms->isEmpty()) {
@@ -482,9 +516,9 @@ class EligibilityCheckingAndRegistrationController extends Controller
                 ]);
             }
         }
-        
+
         return response()->json([
-            'success' => true, 
+            'success' => true,
             'message' => 'Special approval request with document uploaded successfully.',
             'registration_id' => $registration->id
         ]);
@@ -506,7 +540,7 @@ class EligibilityCheckingAndRegistrationController extends Controller
         if (!$pattern) {
             return response()->json(['success' => false, 'message' => 'No pattern set for this intake.']);
         }
-        
+
         // Extract prefix and numeric part from pattern
         if (preg_match('/^(.*?)(\d+)$/', $pattern, $matches)) {
             $prefix = $matches[1];
@@ -515,7 +549,7 @@ class EligibilityCheckingAndRegistrationController extends Controller
         } else {
             return response()->json(['success' => false, 'message' => 'Invalid pattern format. Pattern must end with numbers (e.g., 001, 01, 1).']);
         }
-        
+
         // Find the latest registration ID for this specific intake that matches the prefix
         // Exclude empty or null course_registration_id values
         $latest = \App\Models\CourseRegistration::where('intake_id', $intake->intake_id)
@@ -524,7 +558,7 @@ class EligibilityCheckingAndRegistrationController extends Controller
             ->where('course_registration_id', '!=', '')
             ->orderByDesc('course_registration_id')
             ->first();
-            
+
         // Log for debugging
         Log::info('Looking for existing registrations', [
             'intake_id' => $intake->intake_id,
@@ -533,7 +567,7 @@ class EligibilityCheckingAndRegistrationController extends Controller
             'latest_registration' => $latest ? $latest->course_registration_id : 'none',
             'total_registrations_for_intake' => \App\Models\CourseRegistration::where('intake_id', $intake->intake_id)->count()
         ]);
-            
+
         if ($latest && preg_match('/^(.*?)(\d+)$/', $latest->course_registration_id, $latestMatches)) {
             // If we have existing registrations, increment the number
             $nextNumber = str_pad(((int)$latestMatches[2]) + 1, $numberLength, '0', STR_PAD_LEFT);
@@ -541,9 +575,9 @@ class EligibilityCheckingAndRegistrationController extends Controller
             // If no existing registrations, use the start number from pattern
             $nextNumber = str_pad($startNumber, $numberLength, '0', STR_PAD_LEFT);
         }
-        
+
         $nextId = $prefix . $nextNumber;
-        
+
         // Log for debugging
         Log::info('Generated course registration ID', [
             'intake_id' => $intake_id,
@@ -555,7 +589,7 @@ class EligibilityCheckingAndRegistrationController extends Controller
             'next_id' => $nextId,
             'latest_registration' => $latest ? $latest->course_registration_id : 'none'
         ]);
-        
+
         return response()->json(['success' => true, 'next_id' => $nextId]);
     }
 
@@ -568,7 +602,7 @@ class EligibilityCheckingAndRegistrationController extends Controller
         ]);
 
         $registration = CourseRegistration::find($request->registration_id);
-        
+
         if (!$registration) {
             return response()->json(['success' => false, 'message' => 'Registration not found.']);
         }
@@ -581,7 +615,7 @@ class EligibilityCheckingAndRegistrationController extends Controller
         $registration->save();
 
         return response()->json([
-            'success' => true, 
+            'success' => true,
             'message' => 'DGM comment updated successfully.',
             'dgm_comment' => $registration->dgm_comment
         ]);
