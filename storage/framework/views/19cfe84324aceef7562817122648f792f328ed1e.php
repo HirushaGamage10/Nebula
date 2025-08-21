@@ -1,15 +1,13 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | Semester Registration'); ?>
 
-@section('title', 'NEBULA | Semester Registration')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
             <h2 class="text-center mb-4">Semester Registration Management</h2>
             <hr>
-            <form id="courseForm" method="POST" action="{{ route('semester.registration.store') }}">
-                @csrf
+            <form id="courseForm" method="POST" action="<?php echo e(route('semester.registration.store')); ?>">
+                <?php echo csrf_field(); ?>
                 <input type="hidden" name="location" id="location_hidden">
                 <input type="hidden" name="specialization" id="specialization_hidden">
                 <div class="mb-3 row mx-3">
@@ -94,7 +92,7 @@
         </div>
     </div>
 </div>
-@if(session('success'))
+<?php if(session('success')): ?>
 <div class="toast-container position-fixed bottom-0 end-0 p-3">
     <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="toast-header bg-success text-white">
@@ -102,11 +100,12 @@
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
         </div>
         <div class="toast-body">
-            {{ session('success') }}
+            <?php echo e(session('success')); ?>
+
         </div>
     </div>
 </div>
-@endif
+<?php endif; ?>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // --- Toast auto-hide ---
@@ -448,7 +447,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        fetch('{{ route("semester.registration.store") }}', {
+        fetch('<?php echo e(route("semester.registration.store")); ?>', {
             method: 'POST',
             body: formData,
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
@@ -541,4 +540,6 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Users/inazawaelectronics/Documents/SLT/Nebula/resources/views/semester_registration.blade.php ENDPATH**/ ?>
