@@ -16,6 +16,7 @@ use App\Models\StudentOtherInformation;
 use App\Models\Intake;
 use App\Models\Batch;
 use Illuminate\Support\Facades\Log;
+use App\Models\StudentStatusHistory;
 
 class StudentProfileController extends Controller
 {
@@ -142,7 +143,7 @@ class StudentProfileController extends Controller
     {
         $studentId = $request->input('student_id');
         $student = Student::find($studentId);
-        
+
         if (!$student) {
             return response()->json(['success' => false, 'message' => 'Student not found.']);
         }
@@ -169,12 +170,12 @@ class StudentProfileController extends Controller
             $student->save();
 
             return response()->json([
-                'success' => true, 
+                'success' => true,
                 'message' => 'Personal information updated successfully!'
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Failed to update personal information: ' . $e->getMessage()
             ]);
         }
@@ -185,7 +186,7 @@ class StudentProfileController extends Controller
     {
         $studentId = $request->input('student_id');
         $student = Student::find($studentId);
-        
+
         if (!$student) {
             return response()->json(['success' => false, 'message' => 'Student not found.']);
         }
@@ -193,7 +194,7 @@ class StudentProfileController extends Controller
         try {
             // Find or create parent/guardian record
             $parentGuardian = ParentGuardian::where('student_id', $studentId)->first();
-            
+
             if (!$parentGuardian) {
                 $parentGuardian = new ParentGuardian();
                 $parentGuardian->student_id = $studentId;
@@ -210,12 +211,12 @@ class StudentProfileController extends Controller
             $parentGuardian->save();
 
             return response()->json([
-                'success' => true, 
+                'success' => true,
                 'message' => 'Parent/Guardian information updated successfully!'
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Failed to update parent/guardian information: ' . $e->getMessage()
             ]);
         }
@@ -230,7 +231,7 @@ class StudentProfileController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            $history = $registrations->map(function($registration) {
+            $history = $registrations->map(function ($registration) {
                 return [
                     'course_name' => $registration->course->course_name ?? 'N/A',
                     'intake' => $registration->intake->batch ?? 'N/A',
@@ -400,7 +401,8 @@ class StudentProfileController extends Controller
     //show exam results 
     public function getRegisteredCourses($studentId)
     {
-        $courses = \App\Models\Course::whereIn('course_id',
+        $courses = \App\Models\Course::whereIn(
+            'course_id',
             \App\Models\CourseRegistration::where('student_id', $studentId)->pluck('course_id')
         )->get(['course_id', 'course_name']);
         return response()->json(['success' => true, 'courses' => $courses]);
@@ -424,7 +426,7 @@ class StudentProfileController extends Controller
             ->where('semester', $semester)
             ->with('module')
             ->get()
-            ->map(function($r) {
+            ->map(function ($r) {
                 return [
                     'module_name' => $r->module->module_name ?? 'N/A',
                     'marks' => $r->marks,
@@ -435,7 +437,7 @@ class StudentProfileController extends Controller
     }
 
 
-     // API: Get attendance records for a specific student, course, and semester
+    // API: Get attendance records for a specific student, course, and semester
     public function getAttendance($studentId, $courseId, $semester)
     {
         $attendance = \App\Models\Attendance::where('student_id', $studentId)
@@ -444,7 +446,7 @@ class StudentProfileController extends Controller
             ->with('module')
             ->get()
             ->groupBy('module_id')
-            ->map(function($records, $moduleId) {
+            ->map(function ($records, $moduleId) {
                 $moduleName = $records->first()->module->module_name ?? 'N/A';
                 $totalDays = $records->count();
                 $presentDays = $records->where('status', true)->count();
@@ -466,7 +468,7 @@ class StudentProfileController extends Controller
     {
         $clearances = \App\Models\ClearanceRequest::where('student_id', $studentId)
             ->get()
-            ->map(function($c) {
+            ->map(function ($c) {
                 return [
                     'label' => $c->getClearanceTypeTextAttribute(),
                     'status' => $c->status === \App\Models\ClearanceRequest::STATUS_APPROVED,
@@ -482,7 +484,7 @@ class StudentProfileController extends Controller
         ]);
     }
 
-    
+
     public function getStudentCertificates($studentId)
     {
         $student = \App\Models\Student::find($studentId);
@@ -512,6 +514,66 @@ class StudentProfileController extends Controller
             'ol_certificate' => $ol_cert,
             'al_certificate' => $al_cert,
             'disciplinary_issue_document' => $disciplinary_doc,
+        ]);
+    }
+
+    public function terminate(Request $request)
+    {
+        $request->validate([
+            'student_id' => 'required|exists:students,student_id',
+            'reason'     => 'required|string|max:2000',
+            'document'   => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
+        ]);
+
+        $student = \App\Models\Student::where('student_id', $request->student_id)->firstOrFail();
+
+        // optional: store doc
+        $path = $request->file('document')?->store('termination_docs', 'public');
+
+        // save history (create a model/table if you want an audit trail)
+        \App\Models\StudentStatusHistory::create([
+            'student_id' => $student->student_id,
+            'from_status' => $student->academic_status ?? 'active',
+            'to_status'  => 'terminated',
+            'reason'     => $request->reason,
+            'document'   => $path,
+            'changed_by' => auth()->id(),
+        ]);
+
+        $student->academic_status = 'terminated';
+        $student->save();
+
+        return response()->json(['success' => true, 'message' => 'Student terminated successfully.']);
+    }
+
+    public function reinstate(Request $request)
+    {
+        $request->validate([
+            'student_id' => 'required|exists:students,student_id',
+            'reason'     => 'required|string|max:2000',
+            'document'   => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120',
+        ]);
+
+        $student = \App\Models\Student::where('student_id', $request->student_id)->firstOrFail();
+
+        $path = $request->file('document')?->store('reinstate_docs', 'public');
+
+        \App\Models\StudentStatusHistory::create([
+            'student_id' => $student->student_id,
+            'from_status' => $student->academic_status ?? 'terminated',
+            'to_status'  => 'active',
+            'reason'     => $request->reason,
+            'document'   => $path,
+            'changed_by' => auth()->id(),
+        ]);
+
+        $student->academic_status = 'active';
+        $student->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Student re-registered successfully.',
+            'academic_status' => 'active',
         ]);
     }
 }

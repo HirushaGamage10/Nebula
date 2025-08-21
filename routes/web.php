@@ -390,6 +390,10 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/api/student/{studentId}/clearances', [StudentProfileController::class, 'getStudentClearances']);
 
         Route::get('/student/{studentId}/certificates', [StudentProfileController::class, 'getStudentCertificates']);
+
+        Route::post('/student/terminate', [StudentProfileController::class, 'terminate'])->name('student.terminate');
+        Route::post('/student/reinstate', [StudentProfileController::class, 'reinstate'])->name('student.reinstate');
+
     });
 
 
