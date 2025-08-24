@@ -544,9 +544,28 @@ Route::middleware(['auth', 'role:Program Administrator (level 01),Program Admini
 
 // Payment Plan - Marketing Manager and Developer only
 Route::middleware(['auth', 'role:Marketing Manager,Developer'])->group(function () {
-    Route::get('/payment-plan', [App\Http\Controllers\PaymentPlanController::class, 'index'])->name('payment.plan');
-    Route::post('/payment-plan/store', [App\Http\Controllers\PaymentPlanController::class, 'store'])->name('payment.plan.store');
+
+    // LIST page (new)
+    Route::get('/payment-plans', [App\Http\Controllers\PaymentPlanController::class, 'index'])
+        ->name('payment.plan.index');
+
+    // CREATE form (point your existing path to create())
+    Route::get('/payment-plan', [App\Http\Controllers\PaymentPlanController::class, 'create'])
+        ->name('payment.plan'); // keep your original route name for BC
+
+    // (Optional alias) /payment-plan/create → same create() action
+    Route::get('/payment-plan/create', [App\Http\Controllers\PaymentPlanController::class, 'create'])
+        ->name('payment.plan.create');
+
+    // STORE 
+    Route::post('/payment-plan/store', [App\Http\Controllers\PaymentPlanController::class, 'store'])
+        ->name('payment.plan.store');
+
+    // EDIT and UPDATE
+    Route::get('/payment-plan/{id}/edit', [App\Http\Controllers\PaymentPlanController::class, 'edit'])->name('payment.plan.edit');
+    Route::put('/payment-plan/{id}', [App\Http\Controllers\PaymentPlanController::class, 'update'])->name('payment.plan.update');
 });
+
 
 // Intake autofill for payment plan
 Route::post('/get-payment-plan-details', [App\Http\Controllers\IntakeCreationController::class, 'getPaymentPlanDetails'])->name('get.payment.plan.details');
@@ -627,6 +646,12 @@ Route::middleware(['auth', 'role:Bursar,Developer'])->group(function () {
     Route::post('/late-payment/get-paid-payments', [LatePaymentController::class, 'getPaidPaymentDetails'])->name('late.payment.get.paid.payments');
     Route::post('/late-payment/get-student-courses', [LatePaymentController::class, 'getStudentCourses'])->name('late.payment.get.student.courses');
 });
+Route::post('/intakes/by-course', function (Request $r) {
+    $courseName = Course::where('course_id', $r->course_id)->value('course_name');
+    $intakes = Intake::where('course_name', $courseName)->orderBy('batch')->get(['intake_id']);
+    return response()->json(['success'=>true, 'data'=>$intakes]);
+})->name('intakes.byCourse');
+
 
 Route::get('/courses/by-location', [App\Http\Controllers\SemesterCreationController::class, 'getCoursesByLocation'])->name('courses.byLocation');
 

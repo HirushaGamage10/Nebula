@@ -9,12 +9,40 @@ use App\Models\Intake;
 
 class PaymentPlanController extends Controller
 {
-    public function index()
+    // NEW: list all plans with filters/pagination
+    public function index(Request $request)
+    {
+        $locations = ['Welisara','Moratuwa','Peradeniya'];
+
+        $query = PaymentPlan::query()
+            ->with(['course','intake'])
+            ->when($request->filled('location'), fn($q) => $q->where('location', $request->location))
+            ->when($request->filled('course_id'), fn($q) => $q->where('course_id', $request->course_id))
+            ->when($request->filled('intake_id'), fn($q) => $q->where('intake_id', $request->intake_id))
+            ->orderByDesc('id');
+
+        $plans   = $query->paginate(10)->withQueryString();
+        $courses = Course::orderBy('course_name')->get(['course_id','course_name']);
+
+        $intakes = collect();
+        if ($request->filled('course_id')) {
+            $courseName = Course::where('course_id', $request->course_id)->value('course_name');
+            $intakes = Intake::where('course_name', $courseName)
+                ->orderBy('batch')
+                ->get(['intake_id','batch']);
+        }
+
+
+        return view('payment_plan_index', compact('plans','locations','courses','intakes'));
+    }
+
+    // Your original page now lives here, unchanged logic:
+    public function create()
     {
         $courses = Course::all();
-        
-        return view('payment_plan', compact('courses'));
+        return view('payment_plan', compact('courses')); // your create form view
     }
+
 
     public function store(Request $request)
     {
@@ -73,6 +101,103 @@ class PaymentPlanController extends Controller
                 ->withInput();
         }
     }
+    public function edit($id)
+    {
+        $plan = PaymentPlan::with('course','intake')->findOrFail($id);
+        $courses = Course::orderBy('course_name')->get(['course_id','course_name']);
+
+        $intakes = Intake::where('course_name', $plan->course->course_name ?? '')
+            ->orderBy('batch')
+            ->get(['intake_id','batch']);
+
+        // decode installments JSON (safe)
+        $installments = is_array($plan->installments) 
+            ? $plan->installments 
+            : (json_decode($plan->installments, true) ?? []);
+
+        return view('payment_plan_edit', compact('plan','courses','intakes','installments'));
+    }
+
+
+public function update(Request $request, $id)
+{
+    try {
+        $plan = PaymentPlan::findOrFail($id);
+
+        // Validate input
+        $request->validate([
+            'location'               => 'required|string',
+            'course_id'              => 'required|integer',
+            'intake_id'              => 'nullable|integer',
+            'registration_fee'       => 'required|numeric|min:0',
+            'local_fee'              => 'required|numeric|min:0',
+            'international_fee'      => 'required|numeric|min:0',
+            'international_currency' => 'required|string',
+            'sscl_tax'               => 'nullable|numeric|min:0',
+            'bank_charges'           => 'nullable|numeric|min:0',
+            'apply_discount'         => 'nullable|boolean',
+            'discount'               => 'nullable|numeric|min:0',
+            'installment_plan'       => 'nullable|boolean',
+            'installments'           => 'nullable|array',
+        ]);
+
+        // Assign values
+        $plan->location               = $request->location;
+        $plan->course_id              = $request->course_id;
+        $plan->intake_id              = $request->intake_id;
+        $plan->registration_fee       = $request->registration_fee;
+        $plan->local_fee              = $request->local_fee;
+        $plan->international_fee      = $request->international_fee;
+        $plan->international_currency = $request->international_currency;
+        $plan->sscl_tax               = $request->sscl_tax;
+        $plan->bank_charges           = $request->bank_charges;
+        $plan->apply_discount         = $request->apply_discount ? 1 : 0;
+        $plan->discount               = $request->discount;
+        $plan->installment_plan       = $request->installment_plan ? 1 : 0;
+
+        // Build installments
+        $installments = [];
+        if ($request->has('installments')) {
+            foreach ($request->installments as $i => $inst) {
+                $installments[] = [
+                    'installment_number'   => $i + 1,
+                    'due_date'             => $inst['due_date'] ?? null,
+                    'local_amount'         => (float) ($inst['local_amount'] ?? 0),
+                    'international_amount' => (float) ($inst['international_amount'] ?? 0),
+                    'apply_tax'            => isset($inst['apply_tax']),
+                ];
+            }
+        }
+
+        // Let Laravel cast array → JSON
+        $plan->installments = $installments;
+
+        // Save to DB
+        $plan->save();
+
+        return redirect()
+            ->route('payment.plan.index')
+            ->with('success', 'Payment plan updated successfully.');
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return redirect()
+            ->back()
+            ->withErrors($e->errors())
+            ->withInput();
+
+    } catch (\Exception $e) {
+        \Log::error('PaymentPlan update failed: '.$e->getMessage(), [
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return redirect()
+            ->back()
+            ->with('error', 'An unexpected error occurred while updating the payment plan.')
+            ->withInput();
+    }
+}
+
+
 
     /**
      * Validate that the sum of installment amounts matches the course fees

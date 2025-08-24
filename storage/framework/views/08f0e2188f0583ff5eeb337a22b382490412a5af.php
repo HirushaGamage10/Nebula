@@ -311,49 +311,80 @@
                 </li>
             <?php endif; ?>
 
-            
-            <?php if(
-                RoleHelper::hasPermission($role, 'payment') ||
-                RoleHelper::hasPermission($role, 'late.payment') ||
-                RoleHelper::hasPermission($role, 'payment.discounts') ||
-                RoleHelper::hasPermission($role, 'payment.plan')
-            ): ?>
-            <li class="nav-small-cap">
-                <span class="nav-small-cap-text">FINANCIAL</span>
-            </li>
-            <?php endif; ?>
-            <?php if(RoleHelper::hasPermission($role, 'payment.plan')): ?>
-                <li class="sidebar-item">
-                    <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'payment.plan' ? 'active' : ''); ?>" href="<?php echo e(route('payment.plan')); ?>">
-                        <span><i class="ti ti-currency-dollar"></i></span>
-                        <span class="hide-menu">Payment Plan</span>
-                    </a>
-                </li>
-            <?php endif; ?>
-            <?php if(auth()->user() && (auth()->user()->role === 'Developer' || (isset(auth()->user()->user_role) && auth()->user()->user_role === 'Developer'))): ?>
-                <li class="sidebar-item">
-                    <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'payment.discount.page' ? 'active' : ''); ?>" href="<?php echo e(route('payment.discount.page')); ?>">
-                        <span><i class="ti ti-discount"></i></span>
-                        <span class="hide-menu">Payment Discount</span>
-                    </a>
-                </li>
-            <?php endif; ?>
-            <?php if(RoleHelper::hasPermission($role, 'payment')): ?>
-                <li class="sidebar-item">
-                    <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'payment.index' ? 'active' : ''); ?>" href="<?php echo e(route('payment.index')); ?>">
-                        <span><i class="ti ti-credit-card"></i></span>
-                        <span class="hide-menu">Payment</span>
-                    </a>
-                </li>
-            <?php endif; ?>
-            <?php if(RoleHelper::hasPermission($role, 'late.payment')): ?>
-                <li class="sidebar-item">
-                    <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'late.payment.index' ? 'active' : ''); ?>" href="<?php echo e(route('late.payment.index')); ?>">
-                        <span><i class="ti ti-clock"></i></span>
-                        <span class="hide-menu">Late Payment</span>
-                    </a>
-                </li>
-            <?php endif; ?>
+            <?php
+    // Guard against nulls and keep conditions readable
+    $canPaymentPlan   = RoleHelper::hasPermission($role ?? null, 'payment.plan');
+    $canPayment       = RoleHelper::hasPermission($role ?? null, 'payment');
+    $canLatePayment   = RoleHelper::hasPermission($role ?? null, 'late.payment');
+    $canPaymentDisc   = RoleHelper::hasPermission($role ?? null, 'payment.discounts');
+
+    // Developer flag (supports both role fields)
+    $user = auth()->user();
+    $isDev = $user && (
+        ($user->role ?? null) === 'Developer' ||
+        ($user->user_role ?? null) === 'Developer'
+    );
+
+    $showFinancialCap = $canPaymentPlan || $canPayment || $canLatePayment || $canPaymentDisc || $isDev;
+?>
+
+
+<?php if($showFinancialCap): ?>
+    <li class="nav-small-cap">
+        <span class="nav-small-cap-text">FINANCIAL</span>
+    </li>
+<?php endif; ?>
+
+
+<?php if($canPaymentPlan): ?>
+    <li class="sidebar-item">
+        <a class="sidebar-link <?php echo e(request()->routeIs('payment.plan.index') ? 'active' : ''); ?>"
+           href="<?php echo e(route('payment.plan.index')); ?>">
+            <span><i class="ti ti-cash"></i></span>
+            <span class="hide-menu">Payment Plans</span>
+        </a>
+    </li>
+    <li class="sidebar-item">
+        <a class="sidebar-link <?php echo e(request()->routeIs('payment.plan') ? 'active' : ''); ?>"
+           href="<?php echo e(route('payment.plan')); ?>">
+            <span><i class="ti ti-plus"></i></span>
+            <span class="hide-menu">Create Payment Plan</span>
+        </a>
+    </li>
+<?php endif; ?>
+
+
+<?php if($isDev): ?>
+    <li class="sidebar-item">
+        <a class="sidebar-link <?php echo e(request()->routeIs('payment.discount.page') ? 'active' : ''); ?>"
+           href="<?php echo e(route('payment.discount.page')); ?>">
+            <span><i class="ti ti-discount"></i></span>
+            <span class="hide-menu">Payment Discount</span>
+        </a>
+    </li>
+<?php endif; ?>
+
+
+<?php if($canPayment): ?>
+    <li class="sidebar-item">
+        <a class="sidebar-link <?php echo e(request()->routeIs('payment.index') ? 'active' : ''); ?>"
+           href="<?php echo e(route('payment.index')); ?>">
+            <span><i class="ti ti-credit-card"></i></span>
+            <span class="hide-menu">Payment</span>
+        </a>
+    </li>
+<?php endif; ?>
+
+
+<?php if($canLatePayment): ?>
+    <li class="sidebar-item">
+        <a class="sidebar-link <?php echo e(request()->routeIs('late.payment.index') ? 'active' : ''); ?>"
+           href="<?php echo e(route('late.payment.index')); ?>">
+            <span><i class="ti ti-clock"></i></span>
+            <span class="hide-menu">Late Payment</span>
+        </a>
+    </li>
+<?php endif; ?>
 
             
 
