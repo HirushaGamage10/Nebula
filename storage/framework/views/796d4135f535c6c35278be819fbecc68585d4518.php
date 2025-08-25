@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Late Payment Management')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Late Payment Management'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -209,9 +209,9 @@
     </div>
 </div>
 
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('scripts')
+<?php $__env->startSection('scripts'); ?>
 <script>
 // Global variables
 let currentStudentData = null;
@@ -262,7 +262,7 @@ function loadPaymentPlan(studentNic, courseId) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify(requestData)
     })
@@ -307,7 +307,7 @@ function loadPaidPaymentDetails(studentNic, courseId) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({
             student_nic: studentNic,
@@ -563,7 +563,7 @@ function loadStudentCourses(studentNic) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({
             student_nic: studentNic
@@ -660,4 +660,5 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Event listeners set up successfully');
 });
 </script>
-@endsection 
+<?php $__env->stopSection(); ?> 
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/late_payment.blade.php ENDPATH**/ ?>

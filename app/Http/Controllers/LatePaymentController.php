@@ -111,23 +111,40 @@ class LatePaymentController extends Controller
                 'status' => $registration->status,
             ];
 
-            // Get installments with late payment status
+           // Get installments with late payment status
             $processedInstallments = $installments->map(function ($installment) {
-                $dueDate = \Carbon\Carbon::parse($installment->due_date);
-                $isLate = $dueDate->isPast() && $installment->status !== 'paid';
-                $daysLate = $isLate ? $dueDate->diffInDays(now()) : 0;
-                
-                return [
-                    'installment_number' => $installment->installment_number,
-                    'due_date' => $installment->due_date,
-                    'amount' => $installment->amount,
-                    'status' => $installment->status,
-                    'is_late' => $isLate,
-                    'days_late' => $daysLate,
-                    'late_fee' => $isLate ? $this->calculateLateFee($installment->amount, $daysLate) : 0,
-                    'total_due' => $installment->amount + ($isLate ? $this->calculateLateFee($installment->amount, $daysLate) : 0),
-                ];
-            });
+    $dueDate = \Carbon\Carbon::parse($installment->due_date);
+    $isLate  = $dueDate->isPast() && $installment->status !== 'paid';
+    $daysLate = $isLate ? $dueDate->diffInDays(now()) : 0;
+
+    $finalAmount = $installment->final_amount ?? $installment->amount;
+
+    // Calculate normal late fee
+    $calculatedLateFee = $isLate ? $this->calculateLateFee($finalAmount, $daysLate) : 0;
+
+    // ✅ If approved_late_fee exists, reduce it from calculated late fee
+    $approvedReduction = $installment->approved_late_fee ?? 0;
+    $effectiveLateFee  = max(0, $calculatedLateFee - $approvedReduction);
+
+    // Total due = base + effective late fee
+    $totalDue = $finalAmount + $effectiveLateFee;
+
+    return [
+        'installment_number'   => $installment->installment_number,
+        'due_date'             => $installment->due_date,
+        'amount'               => $finalAmount,
+        'status'               => $installment->status,
+        'is_late'              => $isLate,
+        'days_late'            => $daysLate,
+        'late_fee'             => $calculatedLateFee,
+        'approved_late_fee'    => $approvedReduction,
+        'effective_late_fee'   => $effectiveLateFee, // 👈 what’s actually applied
+        'approval_note'        => $installment->approval_note,
+        'total_due'            => $totalDue,
+    ];
+});
+
+
 
             return response()->json([
                 'success' => true,
@@ -250,14 +267,20 @@ class LatePaymentController extends Controller
      */
     private function calculateLateFee($amount, $daysLate)
     {
-        // Late fee calculation: 5% per month (approximately 0.167% per day)
-        $dailyRate = 0.00167; // 0.167% per day
+        // 5% monthly rate
+        $monthlyRate = 0.05;
+
+        // Convert to daily rate (5% / 30 days)
+        $dailyRate = $monthlyRate / 30;
+
+        // Apply formula: Installment Fee * 5/100/30 * Number of Late Days
         $lateFee = $amount * $dailyRate * $daysLate;
-        
+
         // Cap late fee at 25% of original amount
         $maxLateFee = $amount * 0.25;
-        
-        return min($lateFee, $maxLateFee);
+
+        // Return late fee rounded to 2 decimals
+        return round(min($lateFee, $maxLateFee), 2);
     }
 
     /**

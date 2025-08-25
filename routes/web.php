@@ -42,6 +42,7 @@ use App\Http\Controllers\{
     PaymentController,
     LatePaymentController,
     SemesterRegistrationController,
+    LateFeeApprovalController
 };
 
 // Default
@@ -648,7 +649,36 @@ Route::middleware(['auth', 'role:Bursar,Developer'])->group(function () {
     Route::post('/late-payment/get-payment-plan', [LatePaymentController::class, 'getPaymentPlan'])->name('late.payment.get.payment.plan');
     Route::post('/late-payment/get-paid-payments', [LatePaymentController::class, 'getPaidPaymentDetails'])->name('late.payment.get.paid.payments');
     Route::post('/late-payment/get-student-courses', [LatePaymentController::class, 'getStudentCourses'])->name('late.payment.get.student.courses');
+
+// Entry page
+Route::get('/late-fee/approval', [LateFeeApprovalController::class, 'index'])
+    ->name('latefee.approval.index');
+
+// Load installments for a student + course
+Route::post('/late-fee/get-payment-plan', [LateFeeApprovalController::class, 'getApprovalPaymentPlan'])
+    ->name('latefee.get.paymentplan');
+
+// Per-installment approval
+Route::post('/late-fee/approve-installment/{installmentId}', [LateFeeApprovalController::class, 'approveLateFeePerInstallment'])
+    ->name('latefee.approve.installment');
+
+// Global approval
+Route::post('/late-fee/approve-global', [LateFeeApprovalController::class, 'approveLateFeeGlobal'])
+    ->name('latefee.approve.global');
+
+// Get student courses by NIC
+Route::post('/late-fee/get-student-courses', 
+    [LateFeeApprovalController::class, 'getStudentCourses']
+)->name('latefee.get.courses');
+
+
+Route::get('/late-fee/approval/{studentNic}/{courseId}', 
+    [LateFeeApprovalController::class, 'approvalPage']
+)->name('latefee.approval.page');
+
+
 });
+
 Route::post('/intakes/by-course', function (Request $r) {
     $courseName = Course::where('course_id', $r->course_id)->value('course_name');
     $intakes = Intake::where('course_name', $courseName)->orderBy('batch')->get(['intake_id']);
