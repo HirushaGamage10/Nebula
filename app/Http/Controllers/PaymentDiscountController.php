@@ -59,6 +59,8 @@ class PaymentDiscountController extends Controller
     public function saveDiscount(Request $request)
     {
         try {
+            Log::info('Saving discount request:', $request->all());
+            
             $request->validate([
                 'name' => 'required|string|max:255',
                 'type' => 'required|in:percentage,amount',
@@ -75,6 +77,8 @@ class PaymentDiscountController extends Controller
                 'status' => 'active',
                 'description' => $request->description
             ]);
+
+            Log::info('Discount saved successfully:', $discount->toArray());
 
             return response()->json([
                 'success' => true, 
@@ -118,11 +122,14 @@ class PaymentDiscountController extends Controller
     {
         try {
             $category = $request->input('category');
+            Log::info('Fetching discounts by category:', ['category' => $category]);
             
             $discounts = Discount::where('status', 'active')
                 ->where('discount_category', $category)
                 ->orderBy('created_at', 'desc')
                 ->get();
+
+            Log::info('Found discounts:', ['count' => $discounts->count(), 'discounts' => $discounts->toArray()]);
 
             return response()->json([
                 'success' => true,

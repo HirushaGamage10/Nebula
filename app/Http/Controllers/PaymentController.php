@@ -34,12 +34,17 @@ class PaymentController extends Controller
     /**
      * Get available discounts.
      */
-    public function getDiscounts()
+    public function getDiscounts(Request $request)
     {
         try {
-            $discounts = \App\Models\Discount::where('status', 'active')
-                ->orderBy('created_at', 'desc')
-                ->get();
+            $query = \App\Models\Discount::where('status', 'active');
+            
+            // Filter by discount category if provided
+            if ($request->has('category') && $request->category) {
+                $query->where('discount_category', $request->category);
+            }
+            
+            $discounts = $query->orderBy('created_at', 'desc')->get();
 
             return response()->json([
                 'success' => true,
