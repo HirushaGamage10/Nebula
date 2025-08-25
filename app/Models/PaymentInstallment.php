@@ -11,7 +11,7 @@ class PaymentInstallment extends Model
 
     protected $table = 'payment_installments';
 
-    protected $fillable = [
+   protected $fillable = [
         'payment_plan_id',
         'installment_number',
         'due_date',
@@ -23,7 +23,11 @@ class PaymentInstallment extends Model
         'slt_loan_amount',
         'final_amount',
         'paid_date',
+
+        'approved_late_fee',
+        'calculated_late_fee',
     ];
+
 
     protected $casts = [
         'due_date'        => 'date',
@@ -33,6 +37,9 @@ class PaymentInstallment extends Model
         'discount_amount' => 'decimal:2',
         'slt_loan_amount' => 'decimal:2',
         'final_amount'    => 'decimal:2',
+
+        'approved_late_fee'  => 'float',
+        'calculated_late_fee'=> 'float',
     ];
 
     // Relationships

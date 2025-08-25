@@ -108,18 +108,24 @@ class PaymentController extends Controller
                     ->get();
 
                 foreach ($installments as $ins) {
-                    $final = $ins->final_amount ?? $ins->amount;
-                    $rows[] = [
-                        'installment_number' => $ins->installment_number,
-                        'due_date'           => optional($ins->due_date)->toDateString(),
-                        'amount'             => (float) $final,     // payable shown in UI
-                        'base_amount'        => (float) $ins->amount,
-                        'status'             => $ins->status ?? 'pending',
-                        'paid_date'          => optional($ins->paid_date)->toDateString(),
-                        'receipt_no'         => null,
-                        'currency'           => 'LKR',
-                    ];
-                }
+    $final = $ins->final_amount ?? $ins->amount;
+    $rows[] = [
+    'installment_number'  => $ins->installment_number,
+    'due_date'            => optional($ins->due_date)->toDateString(),
+    'amount'              => (float) $final,
+    'base_amount'         => (float) $ins->amount,
+    'status'              => $ins->status ?? 'pending',
+    'paid_date'           => optional($ins->paid_date)->toDateString(),
+    'receipt_no'          => null,
+    'currency'            => 'LKR',
+
+    // ✅ Add these fields
+    'approved_late_fee'   => (float) ($ins->approved_late_fee ?? 0),
+    'calculated_late_fee' => (float) ($ins->calculated_late_fee ?? 0),
+];
+
+}
+
                 break;
 
             case 'franchise_fee':

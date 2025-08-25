@@ -568,7 +568,8 @@
                                             <th>Installment #</th>
                                             <th>Due Date</th>
                                             <th id="amountHeader">Amount</th>
-                                            <th id="lkrAmountHeader" style="display: none;">Amount (LKR)</th>
+                                            <th id="lkrAmountHeader" style="display:none;">Amount (LKR)</th>
+                                            <th>Late Fee</th> <!-- ✅ New -->
                                             <th>Paid Date</th>
                                             <th>Status</th>
                                             <th>Receipt No</th>
@@ -3425,8 +3426,11 @@ function recalculateLKRAmounts() {
   renderPaymentDetailsTable(window.paymentDetailsDataRaw, window.paymentDetailsPaymentType || 'course_fee');
 }
 
+
 // ---------- main renderer ----------
 function renderPaymentDetailsTable(rows, paymentType) {
+    console.log('Payment rows from API:', rows);
+
   // keep originals so we can re-render on FX change
   window.paymentDetailsDataRaw    = Array.isArray(rows) ? rows : [];
   window.paymentDetailsPaymentType= paymentType;
@@ -3470,39 +3474,44 @@ function renderPaymentDetailsTable(rows, paymentType) {
   }
 
   if (!rows || !rows.length) {
-    tbody.innerHTML = `<tr><td colspan="${showLkr ? 8 : 7}" class="text-center text-muted">No records found.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${showLkr ? 9 : 8}" class="text-center text-muted">No records found.</td></tr>`;
     window.paymentDetailsData = [];
     return;
   }
 
-  // Normalize rows into what the slip generator expects
+  // ✅ Normalize rows into what the slip generator expects
   const normalized = rows.map(r => {
-    // Prefer final_amount if backend provides it; otherwise use amount
     const payable = (r.final_amount != null) ? Number(r.final_amount) : Number(r.amount || 0);
     return {
       installment_number: r.installment_number ?? null,
       due_date:           r.due_date ?? null,
-      amount:             payable,              // <- the amount we will pay on slip
-      base_amount:        Number(r.amount || payable), // for display reference
+      amount:             payable,
+      base_amount:        Number(r.amount || payable),
       status:             r.status || 'pending',
       paid_date:          r.paid_date || null,
       receipt_no:         r.receipt_no || null,
+      approved_late_fee:  Number(r.approved_late_fee ?? r.approvedLateFee ?? 0), // ✅ map both cases
       currency:           r.currency || (paymentType === 'franchise_fee' ? (ccy || 'USD') : 'LKR')
     };
   });
 
-  // Save globally for generatePaymentSlip()
   window.paymentDetailsData = normalized;
 
-  // Build table rows
+  // ✅ Helper to calculate late fee (same as PHP)
+  function calculateLateFee(amount, daysLate) {
+    const monthlyRate = 0.05;        // 5% monthly
+    const dailyRate   = monthlyRate / 30;
+    let lateFee       = amount * dailyRate * daysLate;
+    const maxLateFee  = amount * 0.25;     // cap at 25%
+    return Math.min(lateFee, maxLateFee);
+  }
+
+  // ✅ Build table rows
   normalized.forEach((p, idx) => {
     const disabled = p.status && p.status.toLowerCase() === 'paid' ? 'disabled' : '';
-    const checked  = ''; // none checked by default
-
-    // Amount column (use p.amount which is final payable)
     const amountText = `${p.currency} ${money(p.amount)}`;
 
-    // LKR column for franchise (if rate provided)
+    // LKR column for franchise
     let lkrCell = '';
     if (showLkr) {
       if (rate && rate > 0) {
@@ -3512,15 +3521,39 @@ function renderPaymentDetailsTable(rows, paymentType) {
       }
     }
 
+    // ---- ✅ Late Fee Calculation ----
+    let lateFee = 0, lateFeeNote = '';
+    if (p.due_date) {
+      const due = new Date(p.due_date);
+      const today = new Date();
+      if (today > due && (!p.status || p.status.toLowerCase() !== 'paid')) {
+        const diffDays = Math.ceil((today - due) / (1000 * 60 * 60 * 24));
+        let rawLateFee = calculateLateFee(p.amount, diffDays);
+
+        const approved = p.approved_late_fee;
+        if (approved > 0) {
+          lateFee = Math.max(0, rawLateFee - approved);
+          lateFeeNote = `<small class="text-success">Reduced by Approval: LKR ${money(approved)}</small>`;
+        } else {
+          lateFee = rawLateFee;
+          lateFeeNote = `<small class="text-muted">No special approval</small>`;
+        }
+      }
+    }
+
     const row = `
       <tr>
         <td class="text-center">
-          <input type="radio" name="selectedPayment" value="${idx}" ${checked} ${disabled}>
+          <input type="radio" name="selectedPayment" value="${idx}" ${disabled}>
         </td>
         <td>${p.installment_number ?? '-'}</td>
         <td>${dstr(p.due_date)}</td>
         <td>${amountText}</td>
         ${showLkr ? lkrCell : ''}
+        <td>
+          LKR ${money(lateFee)} <br>
+          ${lateFeeNote}
+        </td>
         <td>${p.paid_date ? dstr(p.paid_date) : '-'}</td>
         <td>${p.status ?? '-'}</td>
         <td>${p.receipt_no ?? '-'}</td>
