@@ -668,8 +668,19 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
             body: JSON.stringify(payload)
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return response.json();
+        })
         .then(data => {
+            console.log('Response data:', data);
+            
             if (data.success) {
                 showToast('Success', data.message, '#ccffcc');
                 setTimeout(function() {
@@ -677,7 +688,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 1500);
                 results = [];
                 renderTable();
-                document.getElementById('student_id').form.reset();
+                // Clear the form fields manually since the element doesn't exist
+                document.getElementById('new_student_id').value = '';
+                document.getElementById('new_student_name').value = '';
                 resetAndDisable(courseSelect, 'Select a Course');
                 resetAndDisable(intakeSelect, 'Select an Intake');
                 resetAndDisable(semesterSelect, 'Select a Semester');
@@ -691,7 +704,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 showToast('Error', errorMsg, 'bg-danger');
             }
         })
-        .catch(() => showToast('Error', 'An error occurred while saving results.', 'bg-danger'))
+        .catch(error => {
+            console.error('Save error:', error);
+            console.error('Error details:', error.message);
+            showToast('Error', 'An error occurred while saving results. Please check the console for details.', 'bg-danger');
+        })
         .finally(() => showSpinner(false));
     }
     

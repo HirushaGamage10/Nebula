@@ -90,6 +90,8 @@ class ExamResultController extends Controller
     public function storeResult(Request $request)
     {
         try {
+            \Log::info('storeResult called with data:', $request->all());
+            
             $validatedData = $request->validate([
                 'course_id' => 'required|exists:courses,course_id',
                 'intake_id' => 'required|exists:intakes,intake_id',
@@ -102,6 +104,8 @@ class ExamResultController extends Controller
                 'results.*.grade' => 'nullable|string|max:5',
                 'results.*.remarks' => 'nullable|string|max:255',
             ]);
+            
+            \Log::info('Validation passed, validated data:', $validatedData);
 
             // Get the semester to convert ID to name
             $semester = \App\Models\Semester::find($validatedData['semester']);
@@ -113,9 +117,14 @@ class ExamResultController extends Controller
             }
 
             DB::beginTransaction();
+            \Log::info('Database transaction started');
 
             $createdCount = 0;
-            foreach ($validatedData['results'] as $result) {
+            $updatedCount = 0;
+            
+            foreach ($validatedData['results'] as $index => $result) {
+                \Log::info("Processing result {$index}:", $result);
+                
                 // Check if result already exists
                 $existingResult = ExamResult::where('student_id', $result['student_id'])
                     ->where('course_id', $validatedData['course_id'])
@@ -127,13 +136,16 @@ class ExamResultController extends Controller
 
                 if ($existingResult) {
                     // Update existing result
+                    \Log::info("Updating existing result for student {$result['student_id']}");
                     $existingResult->update([
                         'marks' => $result['marks'] ?? null,
                         'grade' => $result['grade'] ?? null,
                         'remarks' => $result['remarks'] ?? null,
                     ]);
+                    $updatedCount++;
                 } else {
                     // Create new result
+                    \Log::info("Creating new result for student {$result['student_id']}");
                     ExamResult::create([
                         'student_id' => $result['student_id'],
                         'course_id' => $validatedData['course_id'],
@@ -145,15 +157,17 @@ class ExamResultController extends Controller
                         'grade' => $result['grade'] ?? null,
                         'remarks' => $result['remarks'] ?? null,
                     ]);
+                    $createdCount++;
                 }
-                $createdCount++;
             }
 
             DB::commit();
+            \Log::info("Database transaction committed. Created: {$createdCount}, Updated: {$updatedCount}");
 
+            $totalCount = $createdCount + $updatedCount;
             return response()->json([
                 'success' => true, 
-                'message' => "Exam results stored successfully for {$createdCount} student(s)."
+                'message' => "Exam results stored successfully for {$totalCount} student(s)."
             ], Response::HTTP_CREATED);
 
         } catch (QueryException $e) {
@@ -446,10 +460,19 @@ class ExamResultController extends Controller
             'module_id' => 'required|integer|exists:modules,module_id',
         ]);
 
+        // Get the semester to convert ID to name
+        $semester = \App\Models\Semester::find($request->semester);
+        if (!$semester) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Semester not found.'
+            ], 404);
+        }
+
         $results = ExamResult::where('course_id', $request->course_id)
             ->where('intake_id', $request->intake_id)
             ->where('location', $request->location)
-            ->where('semester', $request->semester)
+            ->where('semester', $semester->name)
             ->where('module_id', $request->module_id)
             ->with(['student.courseRegistrations', 'course', 'module', 'intake'])
             ->get()

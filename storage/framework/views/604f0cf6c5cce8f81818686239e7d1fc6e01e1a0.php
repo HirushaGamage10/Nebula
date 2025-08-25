@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | View & Edit Exam Results')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | View & Edit Exam Results'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -320,9 +320,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const payload = { ...filterData, results: updatedResults };
         
         showSpinner(true);
-        fetch('{{ route("update.result") }}', {
+        fetch('<?php echo e(route("update.result")); ?>', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(payload)
         })
         .then(response => response.json())
@@ -434,9 +434,9 @@ document.addEventListener('DOMContentLoaded', function() {
             module_id: moduleSelect.value
         };
         showSpinner(true);
-        fetch('{{ route("get.existing.exam.results") }}', {
+        fetch('<?php echo e(route("get.existing.exam.results")); ?>', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -636,9 +636,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const payload = { ...filterData, results: updatedResults };
         
         showSpinner(true);
-        fetch('{{ route("update.result") }}', {
+        fetch('<?php echo e(route("update.result")); ?>', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(payload)
         })
         .then(response => response.json())
@@ -763,9 +763,9 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         showSpinner(true);
-        fetch('{{ route('exam.results.get.filtered.modules') }}', {
+        fetch('<?php echo e(route('exam.results.get.filtered.modules')); ?>', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -884,4 +884,5 @@ document.addEventListener('DOMContentLoaded', function() {
         box-shadow: 0 0 0 2px #e0e7ff;
     }
 </style>
-@endsection 
+<?php $__env->stopSection(); ?> 
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/exam_results_view_edit.blade.php ENDPATH**/ ?>
