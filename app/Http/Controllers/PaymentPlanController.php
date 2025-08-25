@@ -1,271 +1,182 @@
-<?php
+@extends('inc.app')
+@section('title','Edit Payment Plan')
+@section('content')
 
-namespace App\Http\Controllers;
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-body">
+            <h2 class="text-center mb-4">Edit Payment Plan</h2>
 
-use Illuminate\Http\Request;
-use App\Models\Course;
-use App\Models\PaymentPlan;
-use App\Models\Intake;
+            {{-- Validation errors --}}
+            @if($errors->any())
+                <div class="alert alert-danger">
+                    <ul class="mb-0">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
-class PaymentPlanController extends Controller
-{
-    // NEW: list all plans with filters/pagination
-    public function index(Request $request)
-    {
-        $locations = ['Welisara','Moratuwa','Peradeniya'];
+            <form method="POST" action="{{ route('payment.plan.update', $plan->id) }}">
+                @csrf
+                @method('PUT')
 
-        $query = PaymentPlan::query()
-            ->with(['course','intake'])
-            ->when($request->filled('location'), fn($q) => $q->where('location', $request->location))
-            ->when($request->filled('course_id'), fn($q) => $q->where('course_id', $request->course_id))
-            ->when($request->filled('intake_id'), fn($q) => $q->where('intake_id', $request->intake_id))
-            ->orderByDesc('id');
+                {{-- Location --}}
+                <div class="mb-3">
+                    <label class="form-label">Location</label>
+                    <select name="location" class="form-select" required>
+                        @foreach(['Welisara','Moratuwa','Peradeniya'] as $loc)
+                            <option value="{{ $loc }}" @selected($plan->location==$loc)>{{ $loc }}</option>
+                        @endforeach
+                    </select>
+                </div>
 
-        $plans   = $query->paginate(10)->withQueryString();
-        $courses = Course::orderBy('course_name')->get(['course_id','course_name']);
+                {{-- Course --}}
+                <div class="mb-3">
+                    <label class="form-label">Course</label>
+                    <select name="course_id" class="form-select" required>
+                        @foreach($courses as $c)
+                            <option value="{{ $c->course_id }}" @selected($plan->course_id==$c->course_id)>{{ $c->course_name }}</option>
+                        @endforeach
+                    </select>
+                </div>
 
-        $intakes = collect();
-        if ($request->filled('course_id')) {
-            $courseName = Course::where('course_id', $request->course_id)->value('course_name');
-            $intakes = Intake::where('course_name', $courseName)
-                ->orderBy('batch')
-                ->get(['intake_id','batch']);
-        }
+                {{-- Intake --}}
+                <div class="mb-3">
+                    <label class="form-label">Intake</label>
+                    <select name="intake_id" class="form-select">
+                        <option value="">None</option>
+                        @foreach($intakes as $i)
+                            <option value="{{ $i->intake_id }}" @selected($plan->intake_id==$i->intake_id)>{{ $i->intake_id }}</option>
+                        @endforeach
+                    </select>
+                </div>
 
+                {{-- Registration Fee --}}
+                <div class="mb-3">
+                    <label class="form-label">Registration Fee</label>
+                    <input type="number" name="registration_fee" class="form-control" value="{{ $plan->registration_fee }}" required min="0" step="0.01">
+                </div>
 
-        return view('payment_plan_index', compact('plans','locations','courses','intakes'));
-    }
+                {{-- Local Fee --}}
+                <div class="mb-3">
+                    <label class="form-label">Local Fee</label>
+                    <input type="number" name="local_fee" class="form-control" value="{{ $plan->local_fee }}" required min="0" step="0.01">
+                </div>
 
-    // Your original page now lives here, unchanged logic:
-    public function create()
-    {
-        $courses = Course::all();
-        return view('payment_plan', compact('courses')); // your create form view
-    }
+                {{-- Franchise Fee --}}
+                <div class="mb-3">
+                    <label class="form-label">Franchise Fee</label>
+                    <input type="number" name="international_fee" class="form-control" value="{{ $plan->international_fee }}" required min="0" step="0.01">
+                </div>
 
+                {{-- Currency --}}
+                <div class="mb-3">
+                    <label class="form-label">Currency</label>
+                    <input type="text" name="international_currency" class="form-control" value="{{ $plan->international_currency }}" required>
+                </div>
 
-    public function store(Request $request)
-    {
-        try {
-            $validated = $request->validate([
-                'location' => 'required|string',
-                'course' => 'required|exists:courses,course_id',
-                'intake' => 'required|exists:intakes,intake_id',
-                'registrationFee' => 'required|numeric|min:0',
-                'localFee' => 'required|numeric|min:0',
-                'internationalFee' => 'required|numeric|min:0',
-                'currency' => 'required|string',
-                'ssclTax' => 'required|numeric|min:0',
-                'bankCharges' => 'nullable|numeric|min:0',
-                'applyDiscount' => 'required|string',
-                'fullPaymentDiscount' => 'nullable|numeric|min:0',
-                'installmentPlan' => 'nullable|string',
-                'installments' => 'nullable', // Will be handled as JSON
-            ]);
+                {{-- SSCL Tax --}}
+                <div class="mb-3">
+                    <label class="form-label">SSCL Tax</label>
+                    <input type="number" name="sscl_tax" class="form-control" value="{{ $plan->sscl_tax }}" min="0" step="0.01">
+                </div>
 
-            $installments = $request->input('installments');
-            if (is_string($installments)) {
-                $installments = json_decode($installments, true);
-            }
+                {{-- Bank Charges --}}
+                <div class="mb-3">
+                    <label class="form-label">Bank Charges</label>
+                    <input type="number" name="bank_charges" class="form-control" value="{{ $plan->bank_charges }}" min="0" step="0.01">
+                </div>
 
-            // Validate installment amounts if installment plan is enabled
-            if ($request->input('franchisePayment') === 'yes' && $installments) {
-                $this->validateInstallmentAmounts($installments, $validated['localFee'], $validated['internationalFee']);
-            }
+                {{-- Apply Discount --}}
+                <div class="mb-3 form-check">
+                    <input type="checkbox" name="apply_discount" value="1" class="form-check-input" id="applyDiscountCheckbox"
+                           {{ $plan->apply_discount ? 'checked' : '' }}>
+                    <label class="form-check-label" for="applyDiscountCheckbox">Apply Full Payment Discount</label>
+                </div>
 
-            $plan = PaymentPlan::create([
-                'location' => $validated['location'],
-                'course_id' => $validated['course'],
-                'intake_id' => $validated['intake'],
-                'registration_fee' => $validated['registrationFee'],
-                'local_fee' => $validated['localFee'],
-                'international_fee' => $validated['internationalFee'],
-                'international_currency' => $validated['currency'],
-                'sscl_tax' => $validated['ssclTax'],
-                'bank_charges' => $validated['bankCharges'] ?? null,
-                'apply_discount' => $validated['applyDiscount'] === 'yes',
-                'discount' => $validated['fullPaymentDiscount'] ?? null,
-                'installment_plan' => $request->input('franchisePayment') === 'yes',
-                'installments' => $installments ? json_encode($installments) : null,
-            ]);
+                {{-- Discount --}}
+                <div class="mb-3">
+                    <label class="form-label">Discount (%)</label>
+                    <input type="number" class="form-control" name="discount" value="{{ $plan->discount }}" min="0" step="0.01">
+                </div>
 
-            return redirect()->back()->with('success', 'Payment plan created successfully!');
-            
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return redirect()->back()
-                ->withErrors($e->errors())
-                ->withInput();
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', 'An error occurred while creating the payment plan. Please try again.')
-                ->withInput();
-        }
-    }
-    public function edit($id)
-    {
-        $plan = PaymentPlan::with('course','intake')->findOrFail($id);
-        $courses = Course::orderBy('course_name')->get(['course_id','course_name']);
+                {{-- Installment Plan --}}
+                <div class="mb-3 form-check">
+                    <input type="checkbox" name="installment_plan" value="1" class="form-check-input" id="installmentPlanCheckbox"
+                           {{ $plan->installment_plan ? 'checked' : '' }}>
+                    <label class="form-check-label" for="installmentPlanCheckbox">Enable Installment Plan</label>
+                </div>
 
-        $intakes = Intake::where('course_name', $plan->course->course_name ?? '')
-            ->orderBy('batch')
-            ->get(['intake_id','batch']);
+                {{-- Installments --}}
+                <div class="mb-3">
+                    <label class="form-label">Installments</label>
 
-        // decode installments JSON (safe)
-        $installments = is_array($plan->installments) 
-            ? $plan->installments 
-            : (json_decode($plan->installments, true) ?? []);
+                    <table class="table table-bordered bg-white">
+                        <thead class="table-light">
+                            <tr>
+                                <th>No.</th>
+                                <th>Due Date</th>
+                                <th>Local (LKR)</th>
+                                <th>International ({{ $plan->international_currency }})</th>
+                                <th>Tax?</th>
+                            </tr>
+                        </thead>
+                        <tbody id="installmentsTableBody">
+                            @forelse($installments as $i => $inst)
+                                <tr>
+                                    <td>{{ $i+1 }}</td>
+                                    <td><input type="date" name="installments[{{ $i }}][due_date]" value="{{ $inst['due_date'] ?? '' }}" class="form-control"></td>
+                                    <td><input type="number" step="0.01" name="installments[{{ $i }}][local_amount]" value="{{ $inst['local_amount'] ?? '' }}" class="form-control"></td>
+                                    <td><input type="number" step="0.01" name="installments[{{ $i }}][international_amount]" value="{{ $inst['international_amount'] ?? '' }}" class="form-control"></td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="installments[{{ $i }}][apply_tax]" value="1" @checked(!empty($inst['apply_tax']))>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">No installments defined</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
 
-        return view('payment_plan_edit', compact('plan','courses','intakes','installments'));
-    }
+                    <div class="d-flex justify-content-between">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="addInstallmentRow()">+ Add Row</button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeLastRow()">Remove Last</button>
+                    </div>
+                </div>
 
+                {{-- Submit --}}
+                <button type="submit" class="btn btn-primary">Update</button>
+            </form>
+        </div>
+    </div>
+</div>
 
-public function update(Request $request, $id)
-{
-    try {
-        $plan = PaymentPlan::findOrFail($id);
+{{-- JS for dynamic rows --}}
+<script>
+function addInstallmentRow() {
+    let tbody = document.getElementById('installmentsTableBody');
+    let index = tbody.rows.length;
+    let row = tbody.insertRow();
 
-        // Validate input
-        $request->validate([
-            'location'               => 'required|string',
-            'course_id'              => 'required|integer',
-            'intake_id'              => 'nullable|integer',
-            'registration_fee'       => 'required|numeric|min:0',
-            'local_fee'              => 'required|numeric|min:0',
-            'international_fee'      => 'required|numeric|min:0',
-            'international_currency' => 'required|string',
-            'sscl_tax'               => 'nullable|numeric|min:0',
-            'bank_charges'           => 'nullable|numeric|min:0',
-            'apply_discount'         => 'nullable|boolean',
-            'discount'               => 'nullable|numeric|min:0',
-            'installment_plan'       => 'nullable|boolean',
-            'installments'           => 'nullable|array',
-        ]);
-
-        // Assign values
-        $plan->location               = $request->location;
-        $plan->course_id              = $request->course_id;
-        $plan->intake_id              = $request->intake_id;
-        $plan->registration_fee       = $request->registration_fee;
-        $plan->local_fee              = $request->local_fee;
-        $plan->international_fee      = $request->international_fee;
-        $plan->international_currency = $request->international_currency;
-        $plan->sscl_tax               = $request->sscl_tax;
-        $plan->bank_charges           = $request->bank_charges;
-        $plan->apply_discount         = $request->apply_discount ? 1 : 0;
-        $plan->discount               = $request->discount;
-        $plan->installment_plan       = $request->installment_plan ? 1 : 0;
-
-        // Build installments
-        $installments = [];
-        if ($request->has('installments')) {
-            foreach ($request->installments as $i => $inst) {
-                $installments[] = [
-                    'installment_number'   => $i + 1,
-                    'due_date'             => $inst['due_date'] ?? null,
-                    'local_amount'         => (float) ($inst['local_amount'] ?? 0),
-                    'international_amount' => (float) ($inst['international_amount'] ?? 0),
-                    'apply_tax'            => isset($inst['apply_tax']),
-                ];
-            }
-        }
-
-        // Let Laravel cast array → JSON
-        $plan->installments = $installments;
-
-        // Save to DB
-        $plan->save();
-
-        return redirect()
-            ->route('payment.plan.index')
-            ->with('success', 'Payment plan updated successfully.');
-
-    } catch (\Illuminate\Validation\ValidationException $e) {
-        return redirect()
-            ->back()
-            ->withErrors($e->errors())
-            ->withInput();
-
-    } catch (\Exception $e) {
-        \Log::error('PaymentPlan update failed: '.$e->getMessage(), [
-            'trace' => $e->getTraceAsString()
-        ]);
-
-        return redirect()
-            ->back()
-            ->with('error', 'An unexpected error occurred while updating the payment plan.')
-            ->withInput();
-    }
+    row.innerHTML = `
+        <td>${index+1}</td>
+        <td><input type="date" name="installments[${index}][due_date]" class="form-control"></td>
+        <td><input type="number" step="0.01" name="installments[${index}][local_amount]" class="form-control"></td>
+        <td><input type="number" step="0.01" name="installments[${index}][international_amount]" class="form-control"></td>
+        <td class="text-center"><input type="checkbox" name="installments[${index}][apply_tax]" value="1"></td>
+    `;
 }
 
-
-
-    /**
-     * Validate that the sum of installment amounts matches the course fees
-     */
-    private function validateInstallmentAmounts($installments, $localFee, $internationalFee)
-    {
-        $totalLocalAmount = 0;
-        $totalInternationalAmount = 0;
-
-        foreach ($installments as $installment) {
-            $totalLocalAmount += floatval($installment['local_amount'] ?? 0);
-            $totalInternationalAmount += floatval($installment['international_amount'] ?? 0);
-        }
-
-        $errors = [];
-
-        // Check if local amounts sum equals local course fee
-        if (abs($totalLocalAmount - $localFee) > 0.01) { // Using small tolerance for floating point comparison
-            $errors[] = "The sum of local installment amounts (Rs. " . number_format($totalLocalAmount, 2) . ") must equal the local course fee (Rs. " . number_format($localFee, 2) . "). Difference: Rs. " . number_format(abs($totalLocalAmount - $localFee), 2);
-        }
-
-        // Check if international amounts sum equals franchise payment amount
-        if (abs($totalInternationalAmount - $internationalFee) > 0.01) { // Using small tolerance for floating point comparison
-            $errors[] = "The sum of international installment amounts (" . number_format($totalInternationalAmount, 2) . ") must equal the franchise payment amount (" . number_format($internationalFee, 2) . "). Difference: " . number_format(abs($totalInternationalAmount - $internationalFee), 2);
-        }
-
-        if (!empty($errors)) {
-            // Create a custom validation exception with detailed messages
-            $validator = validator([], []);
-            $validator->errors()->add('installments', $errors);
-            
-            throw new \Illuminate\Validation\ValidationException($validator);
-        }
+function removeLastRow() {
+    let tbody = document.getElementById('installmentsTableBody');
+    if (tbody.rows.length > 0) {
+        tbody.deleteRow(tbody.rows.length - 1);
     }
+}
+</script>
 
-    /**
-     * API endpoint to fetch intake fee details for autofill in payment plan page.
-     */
-    public function getIntakeFees(Request $request)
-    {
-        $request->validate([
-            'course_id' => 'required|integer',
-            'location' => 'required|string',
-            'intake_id' => 'required|integer',
-        ]);
-
-        $course = \App\Models\Course::find($request->course_id);
-        if (!$course) {
-            return response()->json(['success' => false, 'message' => 'Course not found.'], 404);
-        }
-
-        $intake = \App\Models\Intake::where('intake_id', $request->intake_id)
-            ->where('course_name', $course->course_name)
-            ->where('location', $request->location)
-            ->first();
-
-        if (!$intake) {
-            return response()->json(['success' => false, 'message' => 'No intake found for this course/location.'], 404);
-        }
-
-        return response()->json([
-            'success' => true,
-            'registration_fee' => $intake->registration_fee,
-            'course_fee' => $intake->course_fee,
-            'franchise_payment' => $intake->franchise_payment,
-            'franchise_payment_currency' => $intake->franchise_payment_currency ?? 'LKR',
-            'sscl_tax' => $intake->sscl_tax ?? 0.00,
-            'bank_charges' => $intake->bank_charges ?? 0.00,
-        ]);
-    }
-} 
+@endsection
