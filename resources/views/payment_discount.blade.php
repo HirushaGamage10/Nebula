@@ -309,17 +309,6 @@
                     <div class="row mb-3">
                         <div class="col-sm-12">
                             <h5>Created Discounts for Registration Fee</h5>
-                            <div class="mb-2">
-                                <button type="button" class="btn btn-sm btn-info" onclick="testRegistrationDiscounts()">
-                                    <i class="ti ti-refresh"></i> Refresh Table
-                                </button>
-                                <button type="button" class="btn btn-sm btn-warning" onclick="debugRegistrationDiscount()">
-                                    <i class="ti ti-bug"></i> Debug
-                                </button>
-                                <button type="button" class="btn btn-sm btn-success" onclick="loadRegistrationDiscountsFromDatabase()">
-                                    <i class="ti ti-database"></i> Load from DB
-                                </button>
-                            </div>
                             <div class="table-responsive">
                                 <table class="table table-bordered table-hover" id="registrationDiscountsTable">
                                     <thead class="table-light">
@@ -345,6 +334,7 @@
         </div>
     </div>
 </div>
+
 <script>
 $(document).ready(function() {
     // Auto-calculate when both fields are filled
@@ -420,19 +410,39 @@ $(document).ready(function() {
     loadLocalCourseDiscountsFromDatabase();
     loadRegistrationDiscountsFromDatabase();
     
-    // Test function to manually trigger registration discounts loading
-    window.testRegistrationDiscounts = function() {
-        console.log('Testing registration discounts loading...');
-        loadRegistrationDiscountsFromDatabase();
-    };
+    // Load local course discounts from database
+    function loadLocalCourseDiscountsFromDatabase() {
+        console.log('Loading local course discounts from database...');
+        
+        fetch('/payment-discount/get-discounts-by-category', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            body: JSON.stringify({
+                category: 'local_course_fee'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Local course discounts API response:', data);
+            if (data.success) {
+                updateLocalCourseDiscountsTable(data.discounts);
+            } else {
+                console.error('Failed to load local course discounts:', data.message);
+                showErrorMessage('Failed to load local course discounts: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading local course discounts:', error);
+            showErrorMessage('Error loading local course discounts. Please try again.');
+        });
+    }
     
-    // Debug function to test the entire flow
-    window.debugRegistrationDiscount = function() {
-        console.log('=== DEBUGGING REGISTRATION DISCOUNT FLOW ===');
-        console.log('1. Checking if table exists:', $('#registrationDiscountsTable').length > 0);
-        console.log('2. Checking if tbody exists:', $('#registrationDiscountsTable tbody').length > 0);
-        console.log('3. Current table content:', $('#registrationDiscountsTable tbody').html());
-        console.log('4. Testing API call...');
+    // Load registration discounts from database
+    function loadRegistrationDiscountsFromDatabase() {
+        console.log('Loading registration discounts from database...');
         
         fetch('/payment-discount/get-discounts-by-category', {
             method: 'POST',
@@ -446,38 +456,19 @@ $(document).ready(function() {
         })
         .then(response => response.json())
         .then(data => {
-            console.log('5. API Response:', data);
+            console.log('Registration discounts API response:', data);
             if (data.success) {
-                console.log('6. Found discounts:', data.discounts.length);
                 updateRegistrationDiscountsTable(data.discounts);
+            } else {
+                console.error('Failed to load registration discounts:', data.message);
+                showErrorMessage('Failed to load registration discounts: ' + data.message);
             }
         })
         .catch(error => {
-            console.error('7. API Error:', error);
+            console.error('Error loading registration discounts:', error);
+            showErrorMessage('Error loading registration discounts. Please try again.');
         });
-    };
-    
-    // Reload registration discounts when tab is shown
-    $('button[data-bs-target="#registration-discounts"]').on('click', function() {
-        console.log('Registration discounts tab clicked, reloading data...');
-        setTimeout(function() {
-            loadRegistrationDiscountsFromDatabase();
-        }, 100);
-    });
-    
-    // Also listen for tab shown event using Bootstrap's tab events
-    $('#registration-discounts').on('shown.bs.tab', function() {
-        console.log('Registration discounts tab shown, reloading data...');
-        loadRegistrationDiscountsFromDatabase();
-    });
-    
-    // Alternative approach: listen for tab content shown
-    $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function(e) {
-        if (e.target.getAttribute('data-bs-target') === '#registration-discounts') {
-            console.log('Registration discounts tab shown via data-bs-toggle, reloading data...');
-            loadRegistrationDiscountsFromDatabase();
-        }
-    });
+    }
 
     // Add/Update Local Course Fee discount functionality
     $('#addLocalCourseDiscount').on('click', function() {
@@ -541,81 +532,32 @@ $(document).ready(function() {
         }
     });
 
-    // Load Local Course Fee discounts from database
-    function loadLocalCourseDiscountsFromDatabase() {
-        fetch('/payment-discount/get-discounts-by-category', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-            },
-            body: JSON.stringify({
-                category: 'local_course_fee'
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                updateLocalCourseDiscountsTable(data.discounts);
-            } else {
-                console.error('Failed to load local course fee discounts:', data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error loading local course fee discounts:', error);
-        });
-    }
-
-    // Load Registration Fee discounts from database
-    window.loadRegistrationDiscountsFromDatabase = function() {
-        console.log('Loading registration discounts from database...');
-        console.log('CSRF Token:', $('meta[name="csrf-token"]').attr('content'));
-        
-        fetch('/payment-discount/get-discounts-by-category', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-            },
-            body: JSON.stringify({
-                category: 'registration_fee'
-            })
-        })
-        .then(response => {
-            console.log('Response status:', response.status);
-            return response.json();
-        })
-        .then(data => {
-            console.log('Load registration discounts response:', data);
-            if (data.success) {
-                console.log('Successfully loaded discounts, updating table...');
-                updateRegistrationDiscountsTable(data.discounts);
-            } else {
-                console.error('Failed to load registration fee discounts:', data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error loading registration fee discounts:', error);
-        });
-    }
-
     // Save discount to database
     function saveDiscountToDatabase(name, type, value, category, tabType) {
         console.log('Saving discount:', { name, type, value, category, tabType });
+        console.log('CSRF Token:', $('meta[name="csrf-token"]').attr('content'));
+        
+        const requestData = {
+            name: name,
+            type: type,
+            discount_category: category,
+            value: value
+        };
+        
+        console.log('Request data:', requestData);
+        
         fetch('/payment-discount/save-discount', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
-            body: JSON.stringify({
-                name: name,
-                type: type,
-                discount_category: category,
-                value: value
-            })
+            body: JSON.stringify(requestData)
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
         .then(data => {
             console.log('Save discount response:', data);
             if (data.success) {
@@ -625,11 +567,7 @@ $(document).ready(function() {
                     $('#local-course-discount-form')[0].reset();
                     $('#localCourseDiscountValueLabel').text('Amount');
                 } else {
-                    console.log('Reloading registration discounts table...');
-                    // Force reload after a short delay to ensure the save is complete
-                    setTimeout(function() {
-                        loadRegistrationDiscountsFromDatabase();
-                    }, 500);
+                    loadRegistrationDiscountsFromDatabase();
                     $('#registration-discount-form')[0].reset();
                     $('#registrationDiscountValueLabel').text('Amount');
                 }
@@ -686,81 +624,70 @@ $(document).ready(function() {
 
     function updateLocalCourseDiscountsTable(discounts) {
         let tableRows = '';
-        discounts.forEach((discount, index) => {
-            const valueDisplay = discount.type === 'percentage' ? 
-                `${discount.value}%` : 
-                `LKR ${discount.value.toFixed(2)}`;
-            
-            tableRows += `<tr>
-                <td>${index + 1}</td>
-                <td>${discount.name}</td>
-                <td><span class="badge bg-${discount.type === 'percentage' ? 'info' : 'primary'}">${discount.type}</span></td>
-                <td>${valueDisplay}</td>
-                <td>${new Date(discount.created_at).toLocaleDateString()}</td>
-                <td><span class="badge bg-success">${discount.status}</span></td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-warning edit-local-course-discount" data-id="${discount.id}">
-                        <i class="ti ti-edit"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-danger delete-local-course-discount" data-id="${discount.id}">
-                        <i class="ti ti-trash"></i>
-                    </button>
-                </td>
-            </tr>`;
-        });
+        if (discounts.length === 0) {
+            tableRows = '<tr><td colspan="7" class="text-center text-muted">No discounts found</td></tr>';
+        } else {
+            discounts.forEach((discount, index) => {
+                // Ensure value is a number before calling toFixed
+                const numericValue = parseFloat(discount.value) || 0;
+                const valueDisplay = discount.type === 'percentage' ? 
+                    `${numericValue}%` : 
+                    `LKR ${numericValue.toFixed(2)}`;
+                
+                tableRows += `<tr>
+                    <td>${index + 1}</td>
+                    <td>${discount.name}</td>
+                    <td><span class="badge bg-${discount.type === 'percentage' ? 'info' : 'primary'}">${discount.type}</span></td>
+                    <td>${valueDisplay}</td>
+                    <td>${new Date(discount.created_at).toLocaleDateString()}</td>
+                    <td><span class="badge bg-success">${discount.status}</span></td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-warning edit-local-course-discount" data-id="${discount.id}">
+                            <i class="ti ti-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger delete-local-course-discount" data-id="${discount.id}">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            });
+        }
         $('#localCourseDiscountsTable tbody').html(tableRows);
     }
 
     function updateRegistrationDiscountsTable(discounts) {
         console.log('Updating registration discounts table with:', discounts);
         
-        // Check if table exists
-        const table = $('#registrationDiscountsTable');
-        if (table.length === 0) {
-            console.error('Registration discounts table not found!');
-            return;
-        }
-        
-        const tbody = table.find('tbody');
-        if (tbody.length === 0) {
-            console.error('Registration discounts table tbody not found!');
-            return;
-        }
-        
-        // Clear existing content first
-        tbody.empty();
-        
-        if (discounts.length === 0) {
-            tbody.html('<tr><td colspan="7" class="text-center text-muted">No discounts found</td></tr>');
-            console.log('No discounts to display');
-            return;
-        }
-        
         let tableRows = '';
-        discounts.forEach((discount, index) => {
-            const valueDisplay = discount.type === 'percentage' ? 
-                `${discount.value}%` : 
-                `LKR ${discount.value.toFixed(2)}`;
-            
-            tableRows += `<tr>
-                <td>${index + 1}</td>
-                <td>${discount.name}</td>
-                <td><span class="badge bg-${discount.type === 'percentage' ? 'info' : 'primary'}">${discount.type}</span></td>
-                <td>${valueDisplay}</td>
-                <td>${new Date(discount.created_at).toLocaleDateString()}</td>
-                <td><span class="badge bg-success">${discount.status}</span></td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-warning edit-registration-discount" data-id="${discount.id}">
-                        <i class="ti ti-edit"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-danger delete-registration-discount" data-id="${discount.id}">
-                        <i class="ti ti-trash"></i>
-                    </button>
-                </td>
-            </tr>`;
-        });
-        console.log('Generated table rows:', tableRows);
-        tbody.html(tableRows);
+        if (discounts.length === 0) {
+            tableRows = '<tr><td colspan="7" class="text-center text-muted">No discounts found</td></tr>';
+        } else {
+            discounts.forEach((discount, index) => {
+                // Ensure value is a number before calling toFixed
+                const numericValue = parseFloat(discount.value) || 0;
+                const valueDisplay = discount.type === 'percentage' ? 
+                    `${numericValue}%` : 
+                    `LKR ${numericValue.toFixed(2)}`;
+                
+                tableRows += `<tr>
+                    <td>${index + 1}</td>
+                    <td>${discount.name}</td>
+                    <td><span class="badge bg-${discount.type === 'percentage' ? 'info' : 'primary'}">${discount.type}</span></td>
+                    <td>${valueDisplay}</td>
+                    <td>${new Date(discount.created_at).toLocaleDateString()}</td>
+                    <td><span class="badge bg-success">${discount.status}</span></td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-warning edit-registration-discount" data-id="${discount.id}">
+                            <i class="ti ti-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger delete-registration-discount" data-id="${discount.id}">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            });
+        }
+        $('#registrationDiscountsTable tbody').html(tableRows);
         console.log('Table updated successfully. Rows added:', discounts.length);
     }
 
@@ -935,7 +862,8 @@ $(document).ready(function() {
         }, 5000);
     }
 
-    function removeToast(toastId) {
+    // Make removeToast globally accessible
+    window.removeToast = function(toastId) {
         const toast = document.getElementById(toastId);
         if (toast) {
             toast.classList.add('slide-out');
@@ -945,7 +873,7 @@ $(document).ready(function() {
                 }
             }, 300);
         }
-    }
+    };
 });
 </script>
 @endsection 

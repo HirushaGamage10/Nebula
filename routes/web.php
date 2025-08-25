@@ -605,16 +605,19 @@ Route::post('/uh-index/students', [App\Http\Controllers\UhIndexController::class
 Route::post('/uh-index/save', [App\Http\Controllers\UhIndexController::class, 'saveUhIndexNumbers'])->name('uh.index.save');
 Route::post('/uh-index/terminate', [UhIndexController::class, 'terminateStudent'])->name('uh.index.terminate');
 
-Route::get('/payment-discount', [App\Http\Controllers\PaymentDiscountController::class, 'showPage'])->name('payment.discount.page');
-Route::post('/payment-discount/courses', [App\Http\Controllers\PaymentDiscountController::class, 'getCoursesByLocation'])->name('payment.discount.courses');
-Route::post('/payment-discount/intakes', [App\Http\Controllers\PaymentDiscountController::class, 'getIntakesByCourse'])->name('payment.discount.intakes');
-Route::post('/payment-discount/payment-plan', [App\Http\Controllers\PaymentDiscountController::class, 'getPaymentPlan'])->name('payment.discount.paymentplan');
-Route::post('/payment-discount/save-slt-loan', [App\Http\Controllers\PaymentDiscountController::class, 'saveSltLoan'])->name('payment.discount.save.sltloan');
-Route::post('/payment-discount/save-discount', [App\Http\Controllers\PaymentDiscountController::class, 'saveDiscount'])->name('payment.discount.save.discount');
-Route::get('/payment-discount/get-discounts', [App\Http\Controllers\PaymentDiscountController::class, 'getDiscounts'])->name('payment.discount.get.discounts');
-Route::post('/payment-discount/get-discounts-by-category', [App\Http\Controllers\PaymentDiscountController::class, 'getDiscountsByCategory'])->name('payment.discount.get.discounts.by.category');
-Route::post('/payment-discount/update-discount', [App\Http\Controllers\PaymentDiscountController::class, 'updateDiscount'])->name('payment.discount.update.discount');
-Route::post('/payment-discount/delete-discount', [App\Http\Controllers\PaymentDiscountController::class, 'deleteDiscount'])->name('payment.discount.delete.discount');
+// Payment Discount - Marketing Manager and Developer only
+Route::middleware(['auth', 'role:Marketing Manager,Developer'])->group(function () {
+    Route::get('/payment-discount', [App\Http\Controllers\PaymentDiscountController::class, 'showPage'])->name('payment.discount.page');
+    Route::post('/payment-discount/courses', [App\Http\Controllers\PaymentDiscountController::class, 'getCoursesByLocation'])->name('payment.discount.courses');
+    Route::post('/payment-discount/intakes', [App\Http\Controllers\PaymentDiscountController::class, 'getIntakesByCourse'])->name('payment.discount.intakes');
+    Route::post('/payment-discount/payment-plan', [App\Http\Controllers\PaymentDiscountController::class, 'getPaymentPlan'])->name('payment.discount.paymentplan');
+    Route::post('/payment-discount/save-slt-loan', [App\Http\Controllers\PaymentDiscountController::class, 'saveSltLoan'])->name('payment.discount.save.sltloan');
+    Route::post('/payment-discount/save-discount', [App\Http\Controllers\PaymentDiscountController::class, 'saveDiscount'])->name('payment.discount.save.discount');
+    Route::get('/payment-discount/get-discounts', [App\Http\Controllers\PaymentDiscountController::class, 'getDiscounts'])->name('payment.discount.get.discounts');
+    Route::post('/payment-discount/get-discounts-by-category', [App\Http\Controllers\PaymentDiscountController::class, 'getDiscountsByCategory'])->name('payment.discount.get.discounts.by.category');
+    Route::post('/payment-discount/update-discount', [App\Http\Controllers\PaymentDiscountController::class, 'updateDiscount'])->name('payment.discount.update.discount');
+    Route::post('/payment-discount/delete-discount', [App\Http\Controllers\PaymentDiscountController::class, 'deleteDiscount'])->name('payment.discount.delete.discount');
+});
 
 Route::get('/payment', [PaymentController::class, 'index'])->name('payment.index');
 Route::post('/payment/get-plans', [PaymentController::class, 'getPaymentPlans'])->name('payment.get.plans');

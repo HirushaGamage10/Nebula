@@ -60,6 +60,7 @@ class PaymentDiscountController extends Controller
     {
         try {
             Log::info('Saving discount request:', $request->all());
+            Log::info('Request headers:', $request->headers->all());
             
             $request->validate([
                 'name' => 'required|string|max:255',
@@ -69,13 +70,15 @@ class PaymentDiscountController extends Controller
                 'description' => 'nullable|string'
             ]);
 
+            Log::info('Validation passed, creating discount...');
+
             $discount = Discount::create([
                 'name' => $request->name,
                 'type' => $request->type,
                 'discount_category' => $request->discount_category,
                 'value' => $request->value,
                 'status' => 'active',
-                'description' => $request->description
+                'description' => $request->description ?? null
             ]);
 
             Log::info('Discount saved successfully:', $discount->toArray());
@@ -88,6 +91,7 @@ class PaymentDiscountController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error saving discount: ' . $e->getMessage());
+            Log::error('Error trace: ' . $e->getTraceAsString());
             return response()->json([
                 'success' => false, 
                 'message' => 'Error saving discount: ' . $e->getMessage()
