@@ -11,6 +11,9 @@ use App\Models\Module;
 use App\Models\ExamResult;
 use App\Models\StudentExam;
 use App\Models\Attendance;
+use App\Models\PaymentDetail;
+use App\Models\PaymentPlan;
+use App\Models\StudentPaymentPlan;
 use App\Models\StudentClearance;
 use App\Models\StudentOtherInformation;
 use App\Models\Intake;
@@ -434,6 +437,197 @@ class StudentProfileController extends Controller
                 ];
             });
         return response()->json(['success' => true, 'results' => $results]);
+    }
+
+    public function getPaymentSummary($studentId, $courseId)
+    {
+        try {
+            // Find student by ID
+            $student = Student::find($studentId);
+            if (!$student) {
+                return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+            }
+
+            // Get course registration for this student and course
+            $registration = CourseRegistration::where('student_id', $student->student_id)
+                ->where('course_id', $courseId)
+                ->with(['course', 'intake'])
+                ->first();
+            if (!$registration) {
+                return response()->json(['success' => false, 'message' => 'Student is not registered for this course.'], 404);
+            }
+
+            // Get all payment records for this student and course registration
+            $payments = \App\Models\PaymentDetail::where('student_id', $student->student_id)
+                ->where('course_registration_id', $registration->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            // Get student-specific payment plan (with discounts and loans applied)
+            $studentPaymentPlan = \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
+                ->where('course_id', $registration->course_id)
+                ->with(['installments', 'discounts'])
+                ->first();
+
+            // Calculate course fees from student payment plan
+            $courseFee = 0;
+            $franchiseFee = 0;
+            $registrationFee = $registration->intake->registration_fee ?? 0;
+
+            if ($studentPaymentPlan) {
+                $totalCourseAmount = $studentPaymentPlan->final_amount;
+                foreach ($studentPaymentPlan->installments as $installment) {
+                    $courseFee += $installment->final_amount ?? $installment->amount ?? 0;
+                }
+            } else {
+                $paymentPlan = \App\Models\PaymentPlan::where('course_id', $registration->course_id)
+                    ->where('intake_id', $registration->intake_id)
+                    ->first();
+                if ($paymentPlan && $paymentPlan->installments) {
+                    $installmentsData = $paymentPlan->installments;
+                    if (is_string($installmentsData)) {
+                        $installmentsData = json_decode($installmentsData, true);
+                    }
+                    if (is_array($installmentsData)) {
+                        foreach ($installmentsData as $installment) {
+                            $courseFee += $installment['local_amount'] ?? 0;
+                            $franchiseFee += $installment['international_amount'] ?? 0;
+                        }
+                    }
+                }
+                $totalCourseAmount = $courseFee + $franchiseFee + $registrationFee;
+            }
+
+            // Group payments by type
+            $paymentTypes = [
+                'course_fee' => ['name' => 'Course Fee', 'total' => $courseFee, 'paid' => 0, 'payments' => []],
+                'franchise_fee' => ['name' => 'Franchise Fee', 'total' => $franchiseFee, 'paid' => 0, 'payments' => []],
+                'registration_fee' => ['name' => 'Registration Fee', 'total' => $registrationFee, 'paid' => 0, 'payments' => []],
+                'library_fee' => ['name' => 'Library Fee', 'total' => 0, 'paid' => 0, 'payments' => []],
+                'hostel_fee' => ['name' => 'Hostel Fee', 'total' => 0, 'paid' => 0, 'payments' => []],
+                'other' => ['name' => 'Other', 'total' => 0, 'paid' => 0, 'payments' => []],
+            ];
+
+            // Process payments
+            $totalPaid = 0;
+            $paymentHistory = [];
+            foreach ($payments as $payment) {
+                $paymentType = $payment->payment_type ?? 'course_fee';
+                $amount = $payment->amount;
+                $categorizedType = $this->categorizePaymentType($paymentType);
+                if (isset($paymentTypes[$categorizedType])) {
+                    $paymentTypes[$categorizedType]['paid'] += $amount;
+                    $paymentTypes[$categorizedType]['payments'][] = $payment;
+                } else {
+                    $paymentTypes['other']['paid'] += $amount;
+                    $paymentTypes['other']['payments'][] = $payment;
+                }
+                $totalPaid += $amount;
+                $paymentHistory[] = [
+                    'payment_date' => $payment->created_at->format('Y-m-d'),
+                    'payment_type' => $this->getPaymentTypeDisplay($paymentType),
+                    'amount' => $amount,
+                    'payment_method' => $payment->payment_method,
+                    'receipt_no' => $payment->transaction_id,
+                    'status' => $payment->status === 'paid' ? 'Paid' : 'Pending'
+                ];
+            }
+
+            // Calculate summary for each payment type
+            $paymentDetails = [];
+            foreach ($paymentTypes as $type => $data) {
+                if ($data['total'] > 0 || $data['paid'] > 0) {
+                    $outstanding = $data['total'] - $data['paid'];
+                    $paymentRate = $data['total'] > 0 ? round(($data['paid'] / $data['total']) * 100, 2) : 0;
+                    $installmentCount = count(array_filter($data['payments'], function($p) {
+                        return !empty($p->installment_number);
+                    }));
+                    $lastPayment = collect($data['payments'])->sortByDesc('created_at')->first();
+                    $lastPaymentDate = $lastPayment ? $lastPayment->created_at->format('Y-m-d') : null;
+
+                    $detailedPayments = [];
+                    foreach ($data['payments'] as $payment) {
+                        $detailedPayments[] = [
+                            'total_amount' => $data['total'],
+                            'paid_amount' => $payment->amount,
+                            'outstanding' => $data['total'] - $data['paid'],
+                            'payment_date' => $payment->created_at->format('Y-m-d'),
+                            'due_date' => $payment->due_date ? $payment->due_date->format('Y-m-d') : null,
+                            'receipt_no' => $payment->transaction_id,
+                            'uploaded_receipt' => $payment->paid_slip_path ? asset('storage/' . $payment->paid_slip_path) : null,
+                            'installment_number' => $payment->installment_number,
+                            'payment_method' => $payment->payment_method,
+                            'status' => $payment->status === 'paid' ? 'Paid' : 'Pending'
+                        ];
+                    }
+
+                    $paymentDetails[] = [
+                        'payment_type' => strtolower($type),
+                        'total_amount' => $data['total'],
+                        'paid_amount' => $data['paid'],
+                        'outstanding' => $outstanding,
+                        'payment_rate' => $paymentRate,
+                        'installment_count' => $installmentCount,
+                        'last_payment_date' => $lastPaymentDate,
+                        'payments' => $detailedPayments
+                    ];
+                }
+            }
+
+            $totalOutstanding = $totalCourseAmount - $totalPaid;
+            $overallPaymentRate = $totalCourseAmount > 0 ? round(($totalPaid / $totalCourseAmount) * 100, 2) : 0;
+
+            $summary = [
+                'student' => [
+                    'student_id' => $student->student_id,
+                    'student_name' => $student->full_name,
+                    'course_name' => $registration->course->course_name,
+                    'registration_date' => $registration->registration_date ? $registration->registration_date->format('Y-m-d') : '',
+                    'total_amount' => $totalCourseAmount
+                ],
+                'total_amount' => $totalCourseAmount,
+                'total_paid' => $totalPaid,
+                'total_outstanding' => $totalOutstanding,
+                'payment_rate' => $overallPaymentRate,
+                'payment_details' => $paymentDetails,
+                'payment_history' => $paymentHistory
+            ];
+
+            return response()->json([
+                'success' => true,
+                'summary' => $summary
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // Helper: categorize payment type
+    private function categorizePaymentType($paymentType)
+    {
+        $types = [
+            'course_fee' => 'course_fee',
+            'franchise_fee' => 'franchise_fee',
+            'registration_fee' => 'registration_fee',
+            'library_fee' => 'library_fee',
+            'hostel_fee' => 'hostel_fee',
+            'other' => 'other',
+        ];
+        return $types[$paymentType] ?? 'other';
+    }
+
+    // Helper: display name for payment type
+    private function getPaymentTypeDisplay($paymentType)
+    {
+        $types = [
+            'course_fee' => 'Course Fee',
+            'franchise_fee' => 'Franchise Fee',
+            'registration_fee' => 'Registration Fee',
+            'library_fee' => 'Library Fee',
+            'hostel_fee' => 'Hostel Fee',
+            'other' => 'Other',
+        ];
+        return $types[$paymentType] ?? ucfirst(str_replace('_', ' ', $paymentType));
     }
 
 
