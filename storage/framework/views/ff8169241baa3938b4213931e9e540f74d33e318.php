@@ -384,7 +384,16 @@
             <span class="hide-menu">Late Payment</span>
         </a>
     </li>
+
+    <li class="sidebar-item">
+        <a class="sidebar-link <?php echo e(request()->routeIs('latefee.approval.index') ? 'active' : ''); ?>"
+           href="<?php echo e(route('latefee.approval.index')); ?>">
+            <span><i class="ti ti-currency-dollar"></i></span>
+            <span class="hide-menu">Late Fee Approval</span>
+        </a>
+    </li>
 <?php endif; ?>
+
 
             
 

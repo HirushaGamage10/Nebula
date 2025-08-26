@@ -1143,7 +1143,7 @@ $(function(){
   }
   $('a[data-bs-toggle="tab"][href="#clearance"]').on('shown.bs.tab', function(){ fetchStudentClearances(); });
 
-  
+  //-- payment summary tab --
   function fetchCoursesForPaymentSummary() {
     const sid = $('#studentIdHidden').val();
     if (!sid) return;
@@ -1241,6 +1241,22 @@ $(function(){
   $('a[data-bs-toggle="tab"][href="#history"]').on('shown.bs.tab', function(){
     fetchCourseRegistrationHistory();
   });
+
+
+  //-- Fetch Module Results --
+ function fetchModuleResults(courseId, sem){
+    const sid=getStudentId(); if(!sid||!courseId||!sem) return;
+    $.get('/api/student/'+sid+'/course/'+courseId+'/semester/'+sem+'/results', res=>{
+      const $tb=$('#examResultsTableBody').empty();
+      if(res.success && res.results.length){
+        res.results.forEach(r=>$tb.append(`<tr><td>${r.module_name}</td><td>${r.marks}</td><td>${r.grade}</td></tr>`));
+      }
+      else{
+        $tb.append('<tr><td colspan="3" class="text-center">No results found.</td></tr>');
+      }
+      $('#examResultsTableWrapper').show();
+    });
+  }
 
   
   // Certificates tab (lazy load)
