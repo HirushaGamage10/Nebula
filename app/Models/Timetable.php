@@ -19,6 +19,8 @@ class Timetable extends Model
         'semester',
         'date',
         'time',
+        'duration',
+        'module_id',
         'created_at',
         'updated_at'
     ];
@@ -27,8 +29,10 @@ class Timetable extends Model
         'id' => 'int',
         'course_id' => 'int',
         'intake_id' => 'int',
+        'module_id' => 'int',
         'date' => 'date',
         'time' => 'datetime:H:i',
+        'duration' => 'int',
     ];
 
     // Constants for location

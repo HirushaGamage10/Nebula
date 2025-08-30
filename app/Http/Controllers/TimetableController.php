@@ -11,6 +11,9 @@ use App\Exports\TimetableExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
 
 class TimetableController extends Controller
 {
@@ -487,25 +490,26 @@ class TimetableController extends Controller
 
         if (!$semesterId) {
             \Log::warning('No semester_id provided');
-            return response()->json(['modules' => []]);
+            return response()->json(['modules' => [], 'message' => 'Semester ID is required']);
         }
 
         try {
+            // Find the semester and eager load modules
             $semester = Semester::with('modules')->find($semesterId);
 
             \Log::info('Semester found:', ['semester' => $semester ? $semester->toArray() : null]);
 
             if (!$semester) {
                 \Log::warning('Semester not found for ID:', ['semester_id' => $semesterId]);
-                return response()->json(['modules' => []]);
+                return response()->json(['modules' => [], 'message' => 'Semester not found']);
             }
 
             $modules = $semester->modules;
 
-            // Filter modules by specialization if provided
+            // If specialization is provided, filter modules by specialization
             if ($specialization) {
                 $modules = $modules->filter(function ($module) use ($specialization) {
-                    // Check if module has specialization field and matches
+                    // Check if the module has specialization field and matches
                     if (isset($module->specialization)) {
                         return $module->specialization === $specialization;
                     }
@@ -514,6 +518,15 @@ class TimetableController extends Controller
                 });
             }
 
+            // If no modules found, log the warning
+            if ($modules->isEmpty()) {
+                \Log::warning('No modules found for semester with specialization:', [
+                    'semester_id' => $semesterId,
+                    'specialization' => $specialization
+                ]);
+            }
+
+            // Map the modules into a response-friendly format
             $formattedModules = $modules->map(function ($module) {
                 return [
                     'module_id' => $module->module_id,
@@ -528,9 +541,10 @@ class TimetableController extends Controller
             return response()->json(['modules' => $formattedModules]);
         } catch (\Exception $e) {
             \Log::error('Error in getModulesBySemester:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            return response()->json(['modules' => []]);
+            return response()->json(['modules' => [], 'message' => 'An error occurred while fetching modules']);
         }
     }
+
 
     // Method to download timetable as PDF
     public function downloadTimetablePDF(Request $request)
@@ -810,30 +824,132 @@ class TimetableController extends Controller
         }
     }
     public function assignSubjectToTimeslot(Request $request)
-    {
-        $date = $request->input('date');
-        $subjectId = $request->input('subject_id');
+{
+    // Validate the inputs
+    $validated = $request->validate([
+        'date' => 'required|date',
+        'subject_ids' => 'required|array|min:1',
+        'subject_ids.*' => 'exists:modules,module_id', // Validate that each subject exists
+        'durations' => 'required|array|min:1',
+        'durations.*' => 'numeric|min:1', // Ensure durations are valid
+        'times' => 'required|array|min:1', // Ensure times are provided
+        'times.*' => 'date_format:H:i', // Validate time format
+        'location' => 'required|string',
+        'course_id' => 'required|exists:courses,course_id',
+        'intake_id' => 'required|exists:intakes,intake_id',
+        'semester' => 'required|string',
+    ]);
 
-        // Validate the inputs
-        $subject = \App\Models\Module::find($subjectId);
-        if (!$subject) {
-            return response()->json(['success' => false, 'message' => 'Subject not found']);
+    // Check if subject_ids, durations, and times arrays match in length
+    if (count($validated['subject_ids']) !== count($validated['durations']) || count($validated['subject_ids']) !== count($validated['times'])) {
+        return response()->json(['success' => false, 'message' => 'Subjects, durations, and times mismatch']);
+    }
+
+    try {
+        // Start a database transaction for integrity
+        \DB::beginTransaction();
+
+        foreach ($validated['subject_ids'] as $index => $subjectId) {
+            // Check if the subject exists
+            $subject = \App\Models\Module::find($subjectId);
+            if (!$subject) {
+                return response()->json(['success' => false, 'message' => 'Subject not found']);
+            }
+
+            // Log the assignment details
+            \Log::info('Assigning subject to timeslot', [
+                'subject_id' => $subjectId,
+                'date' => $validated['date'],
+                'location' => $validated['location'],
+                'course_id' => $validated['course_id'],
+                'intake_id' => $validated['intake_id'],
+                'semester' => $validated['semester'],
+                'duration' => $validated['durations'][$index],
+                'time' => $validated['times'][$index],
+            ]);
+
+            // Create a new timetable entry
+            $assignment = new \App\Models\Timetable();
+            $assignment->date = $validated['date'];
+            $assignment->module_id = $subjectId;
+            $assignment->subject_id = $subjectId;
+            $assignment->time = $validated['times'][$index]; // Save the time for each subject
+            $assignment->location = $validated['location'];
+            $assignment->course_id = $validated['course_id'];
+            $assignment->intake_id = $validated['intake_id'];
+            $assignment->semester = $validated['semester'];
+            $assignment->duration = $validated['durations'][$index];
+            $assignment->save();
+        }
+
+        \DB::commit();
+        return response()->json(['success' => true, 'message' => 'Subjects assigned successfully']);
+    } catch (\Exception $e) {
+        \DB::rollBack();
+        return response()->json(['success' => false, 'message' => 'Error assigning subjects']);
+    }
+}
+
+
+
+
+    public function assignSubjects(Request $request)
+    {
+        // Validate incoming request data
+        $validatedData = $request->validate([
+            'date' => 'required|date',
+            'module_id' => 'required|exists:modules,module_id',
+            'subject_ids' => 'required|array|min:1',
+            'subject_ids.*' => 'exists:modules,module_id', // Validate that each subject exists in the module table
+            'durations' => 'required|array|min:1',
+            'durations.*' => 'numeric|min:1', // Validate that durations are numeric and at least 1 minute
+            'location' => 'required|string',
+            'course_id' => 'required|exists:courses,course_id',
+            'intake_id' => 'required|exists:intakes,intake_id',
+            'semester' => 'required|string',
+        ]);
+
+        // Check if the number of subjects matches the number of durations
+        if (count($validatedData['subject_ids']) !== count($validatedData['durations'])) {
+            return response()->json(['success' => false, 'message' => 'The number of subjects and durations do not match.'], 422);
         }
 
         try {
-            $assignment = new \App\Models\Timetable();
-            $assignment->date = $date;
-            $assignment->subject_id = $subjectId;
-            $assignment->location = $request->input('location');
-            $assignment->course_id = $request->input('course_id');
-            $assignment->intake_id = $request->input('intake_id');
-            $assignment->semester = $request->input('semester');
-            $assignment->time = $request->input('time'); // Ensure time field is included
-            $assignment->save();
+            // Begin a transaction to ensure data integrity
+            \DB::beginTransaction();
 
-            return response()->json(['success' => true, 'message' => 'Subject assigned successfully']);
+            // Loop through each subject and its corresponding duration
+            foreach ($validatedData['subject_ids'] as $index => $subjectId) {
+                $subject = \App\Models\Module::find($subjectId);
+
+                if (!$subject) {
+                    return response()->json(['success' => false, 'message' => 'Subject not found.'], 404);
+                }
+
+                // Create a new timetable entry for each subject and duration
+                $assignment = new \App\Models\Timetable();
+                $assignment->date = $validatedData['date'];
+                $assignment->module_id = $subjectId;  // Correctly assign module_id
+                $assignment->location = $validatedData['location'];
+                $assignment->course_id = $validatedData['course_id'];
+                $assignment->intake_id = $validatedData['intake_id'];
+                $assignment->semester = $validatedData['semester'];
+                $assignment->duration = $validatedData['durations'][$index];  // Save the duration for each subject
+                $assignment->save();
+            }
+
+            // Commit the transaction after all subjects are assigned
+            \DB::commit();
+
+            return response()->json(['success' => true, 'message' => 'Subjects assigned successfully.']);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Error assigning subject']);
+            // If something goes wrong, rollback the transaction and return an error message
+            \DB::rollBack();
+            \Log::error('Error assigning subjects: ' . $e->getMessage(), [
+                'request_data' => $request->all(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['success' => false, 'message' => 'An error occurred while assigning subjects.'], 500);
         }
     }
 }
