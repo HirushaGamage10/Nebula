@@ -1,8 +1,6 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | Timetable Management'); ?>
 
-@section('title', 'NEBULA | Timetable Management')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
     <div class="container-fluid">
         <div class="card">
             <div class="card-body">
@@ -156,7 +154,7 @@
     <!-- FullCalendar JS -->
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@3.0.1/dist/fullcalendar.min.js"></script>
 
-    @push('scripts')
+    <?php $__env->startPush('scripts'); ?>
         <script>
             $(document).ready(function () {
                 // Fetch courses based on location
@@ -297,7 +295,7 @@
                             course_id: $('#degree_course').val(),  // Pass course ID
                             intake_id: $('#degree_intake').val(),  // Pass intake ID
                             semester: $('#degree_semester').val(),  // Pass semester
-                            _token: '{{ csrf_token() }}'
+                            _token: '<?php echo e(csrf_token()); ?>'
                         },
                         success: function (response) {
                             if (response.success) {
@@ -342,5 +340,6 @@
             });
 
         </script>
-    @endpush
-@endsection
+    <?php $__env->stopPush(); ?>
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/nebula/Nebula/resources/views/timetable.blade.php ENDPATH**/ ?>

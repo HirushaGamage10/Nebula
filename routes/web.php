@@ -409,11 +409,16 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     Route::get('/get-courses-by-location', [TimetableController::class, 'getCoursesByLocation'])->name('timetable.courses.by.location');
     Route::get('/timetable/get-semesters', [TimetableController::class, 'getSemesters'])->name('timetable.semesters');
     Route::get('/get-weeks', [TimetableController::class, 'getWeeks'])->name('timetable.weeks');
+    Route::get('/get-semester-dates/{semesterId}', [TimetableController::class, 'getSemesterDates'])->name('get-semester-dates');
     Route::get('/get-modules-by-semester', [TimetableController::class, 'getModulesBySemester'])->name('timetable.modules.by.semester');
-Route::get('/get-specializations-for-course', [TimetableController::class, 'getSpecializationsForCourse'])->name('timetable.specializations.for.course');
-Route::post('/get-existing-timetable', [TimetableController::class, 'getExistingTimetable'])->name('timetable.get.existing');
-Route::get('/download-timetable-pdf', [TimetableController::class, 'downloadTimetablePDF'])->name('timetable.download.pdf');
-Route::get('/download-timetable-excel', [TimetableController::class, 'downloadTimetableExcel'])->name('timetable.download.excel');
+    Route::get('/get-specializations-for-course', [TimetableController::class, 'getSpecializationsForCourse'])->name('timetable.specializations.for.course');
+    Route::post('/get-existing-timetable', [TimetableController::class, 'getExistingTimetable'])->name('timetable.get.existing');
+    Route::get('/download-timetable-pdf', [TimetableController::class, 'downloadTimetablePDF'])->name('timetable.download.pdf');
+    Route::get('/download-timetable-excel', [TimetableController::class, 'downloadTimetableExcel'])->name('timetable.download.excel');
+    Route::get('/get-timetable-events', [TimetableController::class, 'getTimetableEvents'])->name('timetable.events');
+    Route::get('/get-available-subjects', [TimetableController::class, 'getAvailableSubjects']);
+    Route::post('/assign-subject-to-timeslot', [TimetableController::class, 'assignSubjectToTimeslot']);
+
 });
 
 // API routes - DGM, Program Administrator (level 01), Program Administrator (level 02), Student Counselor, Bursar, Developer

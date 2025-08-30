@@ -62,27 +62,27 @@ class TimetableController extends Controller
                 'intake_id' => $validatedData['intake_id'],
                 'semester' => $validatedData['semester']
             ];
-            
+
             // Add specialization to delete conditions if provided
             if (!empty($validatedData['specialization'])) {
                 $deleteConditions['specialization'] = $validatedData['specialization'];
             }
-            
+
             \DB::table('timetable')->where($deleteConditions)->delete();
 
             // Insert new timetable entries
             $timetableEntries = [];
             $weekStartDate = $request->input('week_start_date');
-            
+
             foreach ($validatedData['timetable_data'] as $row) {
                 $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
                 $startDate = $weekStartDate ? Carbon::parse($weekStartDate) : Carbon::now()->startOfWeek();
-                
+
                 foreach ($days as $index => $day) {
                     if (!empty($row[$day]) && trim($row[$day]) !== '') {
                         $date = $startDate->copy()->addDays($index);
                         $moduleId = $this->getModuleIdByName($row[$day]);
-                        
+
                         // Only create entry if module was found
                         if ($moduleId !== null) {
                             $timetableEntry = [
@@ -96,12 +96,12 @@ class TimetableController extends Controller
                                 'created_at' => now(),
                                 'updated_at' => now(),
                             ];
-                            
+
                             // Add specialization if provided
                             if (!empty($validatedData['specialization'])) {
                                 $timetableEntry['specialization'] = $validatedData['specialization'];
                             }
-                            
+
                             $timetableEntries[] = $timetableEntry;
                         } else {
                             \Log::warning('Skipping timetable entry - module not found: ' . $row[$day]);
@@ -124,7 +124,6 @@ class TimetableController extends Controller
                 'message' => $message,
                 'entries_saved' => count($timetableEntries)
             ]);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Timetable validation failed:', [
                 'errors' => $e->errors(),
@@ -153,13 +152,13 @@ class TimetableController extends Controller
         if (empty($moduleName)) {
             return null;
         }
-        
+
         // Try to find module by exact name first
         $module = \App\Models\Module::where('module_name', $moduleName)->first();
         if ($module) {
             return $module->module_id;
         }
-        
+
         // If not found by exact name, try to extract module code from the name (e.g., "Programming (EC98735)")
         if (preg_match('/\(([^)]+)\)/', $moduleName, $matches)) {
             $moduleCode = $matches[1];
@@ -168,7 +167,7 @@ class TimetableController extends Controller
                 return $module->module_id;
             }
         }
-        
+
         // If still not found, try to match by partial name (e.g., "Programming" from "Programming (EC98735)")
         $baseName = trim(preg_replace('/\s*\([^)]*\)/', '', $moduleName));
         if (!empty($baseName)) {
@@ -177,7 +176,7 @@ class TimetableController extends Controller
                 return $module->module_id;
             }
         }
-        
+
         // Log the unmatched module name for debugging
         \Log::warning('Module not found by name: ' . $moduleName);
         return null;
@@ -189,12 +188,12 @@ class TimetableController extends Controller
         if (empty($moduleId)) {
             return '';
         }
-        
+
         // If it's already a module name (contains parentheses), return as is
         if (strpos($moduleId, '(') !== false) {
             return $moduleId;
         }
-        
+
         // If it's numeric, treat as module ID
         if (is_numeric($moduleId)) {
             $module = \App\Models\Module::find($moduleId);
@@ -202,13 +201,13 @@ class TimetableController extends Controller
                 return $module->module_name . ' (' . $module->module_code . ')';
             }
         }
-        
+
         // If it's a module name without code, try to find the module
         $module = \App\Models\Module::where('module_name', $moduleId)->first();
         if ($module) {
             return $module->module_name . ' (' . $module->module_code . ')';
         }
-        
+
         return $moduleId; // Return as is if no match found
     }
 
@@ -269,7 +268,7 @@ class TimetableController extends Controller
                 'timetable.intake_id' => $validatedData['intake_id'],
                 'timetable.semester' => $validatedData['semester']
             ];
-            
+
             // Add specialization filter if provided
             if (!empty($validatedData['specialization'])) {
                 $whereConditions['timetable.specialization'] = $validatedData['specialization'];
@@ -289,7 +288,7 @@ class TimetableController extends Controller
                 $time = $entry->time;
                 $dayOfWeek = strtolower(Carbon::parse($entry->date)->format('l'));
                 $moduleName = $entry->module_name . ' (' . $entry->module_code . ')';
-                
+
                 if (!isset($groupedData[$time])) {
                     $groupedData[$time] = [
                         'time' => $time,
@@ -302,7 +301,7 @@ class TimetableController extends Controller
                         'sunday' => ''
                     ];
                 }
-                
+
                 $groupedData[$time][$dayOfWeek] = $moduleName;
             }
 
@@ -310,7 +309,6 @@ class TimetableController extends Controller
                 'success' => true,
                 'timetable_data' => array_values($groupedData)
             ]);
-
         } catch (\Exception $e) {
             \Log::error('Error retrieving timetable data: ' . $e->getMessage());
             return response()->json([
@@ -337,15 +335,12 @@ class TimetableController extends Controller
     public function getCoursesByLocation(Request $request)
     {
         $location = $request->input('location');
-        $courseType = $request->input('course_type');
-
-        if (!$location || !$courseType) {
+        if (!$location) {
             return response()->json(['success' => false, 'courses' => []]);
         }
 
         try {
             $courses = Course::where('location', $location)
-                ->where('course_type', $courseType)
                 ->orderBy('course_name')
                 ->get(['course_id', 'course_name']);
 
@@ -362,40 +357,26 @@ class TimetableController extends Controller
         }
     }
 
+
     // Method to get active and upcoming semesters for a course and intake
-    public function getSemesters(Request $request)
+    public function getSemesterDates($semesterId)
     {
-        $courseId = $request->input('course_id');
-        $intakeId = $request->input('intake_id');
-
-        if (!$courseId || !$intakeId) {
-            return response()->json(['semesters' => []]);
-        }
-
         try {
-            // Get only active and upcoming semesters
-            $semesters = Semester::where('course_id', $courseId)
-                ->where('intake_id', $intakeId)
-                ->whereIn('status', ['active', 'upcoming'])
-                ->orderBy('start_date')
-                ->get(['id', 'name', 'start_date', 'end_date', 'status']);
+            $semester = Semester::find($semesterId);
+            if (!$semester) {
+                return response()->json(['success' => false, 'message' => 'Semester not found']);
+            }
 
-            $formattedSemesters = $semesters->map(function($semester) {
-                return [
-                    'id' => $semester->id,
-                    'name' => $semester->name,
-                    'start_date' => Carbon::parse($semester->start_date)->format('Y-m-d'),
-                    'end_date' => Carbon::parse($semester->end_date)->format('Y-m-d'),
-                    'status' => $semester->status
-                ];
-            });
-            
-            return response()->json(['semesters' => $formattedSemesters]);
+            return response()->json([
+                'success' => true,
+                'start_date' => Carbon::parse($semester->start_date)->format('Y-m-d'),
+                'end_date' => Carbon::parse($semester->end_date)->format('Y-m-d')
+            ]);
         } catch (\Exception $e) {
-            return response()->json(['semesters' => []]);
+            \Log::error('Error fetching semester dates:', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'An error occurred']);
         }
     }
-
     // New method to generate weeks from start date to end date
     public function getWeeks(Request $request)
     {
@@ -422,7 +403,7 @@ class TimetableController extends Controller
 
             while ($currentWeekStart <= $end) {
                 $currentWeekEnd = $currentWeekStart->copy()->endOfWeek();
-                
+
                 // Only include weeks that overlap with the semester period
                 if ($currentWeekEnd >= $start && $currentWeekStart <= $end) {
                     $weeks[] = [
@@ -433,7 +414,7 @@ class TimetableController extends Controller
                     ];
                     $weekNumber++;
                 }
-                
+
                 $currentWeekStart->addWeek();
             }
 
@@ -463,14 +444,14 @@ class TimetableController extends Controller
     public function getSpecializationsForCourse(Request $request)
     {
         $courseId = $request->input('course_id');
-        
+
         if (!$courseId) {
             return response()->json(['specializations' => []]);
         }
 
         try {
             $course = Course::find($courseId);
-            
+
             if (!$course) {
                 return response()->json(['specializations' => []]);
             }
@@ -485,7 +466,7 @@ class TimetableController extends Controller
             }
 
             // Filter out empty specializations
-            $specializations = array_filter($specializations, function($spec) {
+            $specializations = array_filter($specializations, function ($spec) {
                 return !empty($spec) && trim($spec) !== '';
             });
 
@@ -501,7 +482,7 @@ class TimetableController extends Controller
     {
         $semesterId = $request->input('semester_id');
         $specialization = $request->input('specialization');
-        
+
         \Log::info('getModulesBySemester called with semester_id:', ['semester_id' => $semesterId, 'specialization' => $specialization]);
 
         if (!$semesterId) {
@@ -511,9 +492,9 @@ class TimetableController extends Controller
 
         try {
             $semester = Semester::with('modules')->find($semesterId);
-            
+
             \Log::info('Semester found:', ['semester' => $semester ? $semester->toArray() : null]);
-            
+
             if (!$semester) {
                 \Log::warning('Semester not found for ID:', ['semester_id' => $semesterId]);
                 return response()->json(['modules' => []]);
@@ -523,7 +504,7 @@ class TimetableController extends Controller
 
             // Filter modules by specialization if provided
             if ($specialization) {
-                $modules = $modules->filter(function($module) use ($specialization) {
+                $modules = $modules->filter(function ($module) use ($specialization) {
                     // Check if module has specialization field and matches
                     if (isset($module->specialization)) {
                         return $module->specialization === $specialization;
@@ -533,7 +514,7 @@ class TimetableController extends Controller
                 });
             }
 
-            $formattedModules = $modules->map(function($module) {
+            $formattedModules = $modules->map(function ($module) {
                 return [
                     'module_id' => $module->module_id,
                     'module_code' => $module->module_code,
@@ -618,10 +599,10 @@ class TimetableController extends Controller
                 if ($semesterModel) {
                     $data['semesterName'] = $semesterModel->name;
                     $data['semesterStatus'] = $semesterModel->status;
-                    
+
                     // Get modules for this semester
                     $modules = $semesterModel->modules;
-                    $data['modules'] = $modules->map(function($module) {
+                    $data['modules'] = $modules->map(function ($module) {
                         return [
                             'code' => $module->module_code,
                             'name' => $module->module_name,
@@ -652,23 +633,22 @@ class TimetableController extends Controller
 
             // Generate PDF
             $pdf = PDF::loadView('pdf.timetable', $data);
-            
+
             // Set PDF options
             $pdf->setPaper('A4', 'landscape');
-            
+
             // Generate filename
             $filename = strtolower($courseType) . '_timetable_week_' . $weekNumber . '_' . date('Y-m-d_H-i-s') . '.pdf';
-            
+
             // Return PDF as download
             return $pdf->download($filename);
-
         } catch (\Exception $e) {
             \Log::error('Error generating timetable PDF:', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'request_data' => $request->all()
             ]);
-            
+
             return response()->json(['error' => 'Failed to generate PDF'], 500);
         }
     }
@@ -735,21 +715,125 @@ class TimetableController extends Controller
 
             // Generate filename
             $filename = strtolower($courseType) . '_timetable_week_' . $weekNumber . '_' . date('Y-m-d_H-i-s') . '.xlsx';
-            
+
             // Return Excel file as download
             return Excel::download(
                 new TimetableExport($excelData, $courseType, $course->course_name, $location, $intake->batch),
                 $filename
             );
-
         } catch (\Exception $e) {
             \Log::error('Error generating timetable Excel:', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'request_data' => $request->all()
             ]);
-            
+
             return response()->json(['error' => 'Failed to generate Excel'], 500);
+        }
+    }
+
+    public function getTimetableEvents(Request $request)
+    {
+        // Validate incoming filters
+        $validatedData = $request->validate([
+            'location' => 'required|string',
+            'course_id' => 'required|integer',
+            'intake_id' => 'required|integer',
+            'semester' => 'required|string',
+        ]);
+
+        // Retrieve timetable data based on filters
+        $events = \DB::table('timetable')
+            ->join('modules', 'timetable.module_id', '=', 'modules.module_id')
+            ->where([
+                ['timetable.location', '=', $validatedData['location']],
+                ['timetable.course_id', '=', $validatedData['course_id']],
+                ['timetable.intake_id', '=', $validatedData['intake_id']],
+                ['timetable.semester', '=', $validatedData['semester']],
+            ])
+            ->get();
+
+        // Map data to FullCalendar format
+        $calendarEvents = $events->map(function ($event) {
+            return [
+                'title' => $event->module_name,
+                'start' => $event->date . 'T' . $event->time,
+                'end' => $event->date . 'T' . $event->time, // Use same time for both start and end
+            ];
+        });
+
+        return response()->json([
+            'events' => $calendarEvents
+        ]);
+    }
+
+
+    public function getSemesters(Request $request)
+    {
+        try {
+            $courseId = $request->input('course_id');
+            $intakeId = $request->input('intake_id');
+
+            // Fetch the semesters based on course and intake
+            $semesters = Semester::where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'semesters' => $semesters
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()]);
+        }
+    }
+
+    public function getAvailableSubjects(Request $request)
+    {
+        // Validate the incoming request
+        $validated = $request->validate([
+            'date' => 'required|date',
+        ]);
+
+        try {
+            $date = Carbon::parse($validated['date']);
+
+            // Fetch subjects available for the specific date (You may have a specific model to do this)
+            // Example fetch from `modules` table, or adjust according to your DB structure
+            $subjects = \App\Models\Module::where('available_on', $date->format('Y-m-d'))
+                ->get(['module_name', 'module_code']);
+
+            // Return subjects as JSON response
+            return response()->json(['success' => true, 'subjects' => $subjects]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error fetching subjects']);
+        }
+    }
+    public function assignSubjectToTimeslot(Request $request)
+    {
+        $date = $request->input('date');
+        $subjectId = $request->input('subject_id');
+
+        // Validate the inputs
+        $subject = \App\Models\Module::find($subjectId);
+        if (!$subject) {
+            return response()->json(['success' => false, 'message' => 'Subject not found']);
+        }
+
+        try {
+            $assignment = new \App\Models\Timetable();
+            $assignment->date = $date;
+            $assignment->subject_id = $subjectId;
+            $assignment->location = $request->input('location');
+            $assignment->course_id = $request->input('course_id');
+            $assignment->intake_id = $request->input('intake_id');
+            $assignment->semester = $request->input('semester');
+            $assignment->time = $request->input('time'); // Ensure time field is included
+            $assignment->save();
+
+            return response()->json(['success' => true, 'message' => 'Subject assigned successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error assigning subject']);
         }
     }
 }
