@@ -752,13 +752,25 @@ class TimetableController extends Controller
 
     public function getTimetableEvents(Request $request)
     {
+        \Log::info('getTimetableEvents called', $request->all());
+
         // Validate incoming filters
         $validatedData = $request->validate([
             'location' => 'required|string',
             'course_id' => 'required|integer',
             'intake_id' => 'required|integer',
-            'semester' => 'required|string',
+            'semester' => 'required', // accept id or name
         ]);
+
+        \Log::info('getTimetableEvents validated', $validatedData);
+
+        // If semester is an ID, convert to semester name/value stored in timetable
+        if (is_numeric($validatedData['semester'])) {
+            $sem = Semester::find((int)$validatedData['semester']);
+            if ($sem) {
+                $validatedData['semester'] = (string) $sem->name;
+            }
+        }
 
         // Retrieve timetable data based on filters
         $events = \DB::table('timetable')
@@ -771,17 +783,36 @@ class TimetableController extends Controller
             ])
             ->get();
 
+        \Log::info('getTimetableEvents DB rows count: ' . $events->count(), ['rows' => $events->toArray()]);
+
         // Map data to FullCalendar format
         $calendarEvents = $events->map(function ($event) {
+            // ensure proper ISO datetimes (add seconds if needed)
+            $time = $event->time;
+            if (strpos($time, ':') && substr_count($time, ':') === 1) {
+                $time .= ':00';
+            }
+            $startIso = $event->date . 'T' . $time;
+            $endTime = $event->end_time ?? $time;
+            if (strpos($endTime, ':') && substr_count($endTime, ':') === 1) {
+                $endTime .= ':00';
+            }
+            $endIso = $event->date . 'T' . $endTime;
+
             return [
+                'id' => $event->id ?? null,
                 'title' => $event->module_name,
-                'start' => $event->date . 'T' . $event->time,
-                'end' => $event->date . 'T' . $event->time, // Use same time for both start and end
+                'date' => $event->date,
+                'time' => $time,
+                'end_time' => $endTime,
+                'start' => $startIso,
+                'end' => $endIso,
             ];
         });
 
         return response()->json([
-            'events' => $calendarEvents
+            'events' => $calendarEvents,
+            'raw_rows' => $events // temporary debug payload
         ]);
     }
 

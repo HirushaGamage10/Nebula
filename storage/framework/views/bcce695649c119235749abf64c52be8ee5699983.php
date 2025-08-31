@@ -445,14 +445,87 @@
                         type: 'GET',
                         data: data,
                         success: function (response) {
-                            console.log("Timetable events received:", response); // Debug response
-                            if (response && response.events) {
-                                $('#calendar').fullCalendar('removeEvents');
-                                $('#calendar').fullCalendar('addEventSource', response.events);
-                                $('#degreeTimetableSection').show();
-                            } else {
-                                alert('No events available for the selected time period.');
+                            console.log("Timetable events received (raw):", response);
+
+                            // Support several possible response shapes
+                            var eventsArray = [];
+                            if (Array.isArray(response)) {
+                                eventsArray = response;
+                            } else if (response && Array.isArray(response.events)) {
+                                eventsArray = response.events;
+                            } else if (response && response.data && Array.isArray(response.data.events)) {
+                                eventsArray = response.data.events;
+                            } else if (response && response.data && Array.isArray(response.data)) {
+                                eventsArray = response.data;
                             }
+
+                            // always show calendar section first so fullcalendar can create scrollers
+                            $('#degreeTimetableSection').show();
+
+                            // clear old events / sources
+                            try {
+                                // only call if calendar has been initialised/rendered
+                                if ($('#calendar').hasClass('fc')) {
+                                    $('#calendar').fullCalendar('removeEvents');
+                                    $('#calendar').fullCalendar('removeEventSource', 'localSource');
+                                } else {
+                                    console.warn('FullCalendar not initialised yet, skipping removeEvents.');
+                                }
+                            } catch (err) {
+                                console.warn('FullCalendar removeEvents error (safe to ignore if first load):', err);
+                            }
+
+                            if (!eventsArray || !eventsArray.length) {
+                                console.info('No events array found or it is empty.', response);
+                                // still force a render to ensure scrollers are created
+                                setTimeout(function () { $('#calendar').fullCalendar('render'); }, 50);
+                                return;
+                            }
+
+                            var fcEvents = eventsArray.map(function (e) {
+                                var title = e.module_name || e.subject_name || e.title || 'Class';
+                                var startTime = e.time || '00:00';
+                                var endTime = e.end_time || '';
+
+                                if (!endTime && e.duration) {
+                                    var mStart = moment(startTime, ['HH:mm:ss','HH:mm','h:mm A']);
+                                    if (mStart.isValid()) {
+                                        endTime = mStart.clone().add(parseInt(e.duration, 10) || 0, 'minutes').format('HH:mm');
+                                    } else {
+                                        endTime = startTime;
+                                    }
+                                }
+
+                                // Build robust ISO datetimes (include seconds) and guard missing date
+                                var datePart = e.date || e.day || '';
+                                var startIso = datePart && startTime ? moment(datePart + ' ' + startTime, ['YYYY-MM-DD HH:mm:ss','YYYY-MM-DD HH:mm','YYYY-MM-DD h:mm A']).format('YYYY-MM-DDTHH:mm:ss') : null;
+                                var endIso = datePart && endTime ? moment(datePart + ' ' + endTime, ['YYYY-MM-DD HH:mm:ss','YYYY-MM-DD HH:mm','YYYY-MM-DD h:mm A']).format('YYYY-MM-DDTHH:mm:ss') : null;
+
+                                // Fallback to date only if parsing failed
+                                if (!startIso && datePart) {
+                                    startIso = datePart + 'T00:00:00';
+                                }
+                                if (!endIso && datePart) {
+                                    endIso = datePart + 'T00:00:00';
+                                }
+
+                                return {
+                                    id: e.id || undefined,
+                                    title: title,
+                                    start: startIso,
+                                    end: endIso,
+                                    allDay: false,
+                                    extendedProps: e
+                                };
+                            });
+
+                            // add events after a short timeout so FullCalendar's layout exists (prevents scrollTop null)
+                            setTimeout(function () {
+                                // add as a local source so we can remove later if needed
+                                $('#calendar').fullCalendar('addEventSource', fcEvents);
+                                // force redraw
+                                $('#calendar').fullCalendar('rerenderEvents');
+                            }, 80);
                         },
                         error: function (xhr, status, error) {
                             alert('Error occurred while fetching the timetable');
