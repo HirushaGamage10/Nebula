@@ -272,7 +272,8 @@
 
                                 if (data.semesters && data.semesters.length > 0) {
                                     $.each(data.semesters, function (index, semester) {
-                                        $('#degree_semester').append('<option value="' + semester.id + '">' + semester.name + '</option>');
+                                        // include start/end dates in option attributes so we can auto-fill date inputs
+                                        $('#degree_semester').append('<option value="' + semester.id + '" data-start="' + (semester.start_date || '') + '" data-end="' + (semester.end_date || '') + '">' + semester.name + '</option>');
                                     });
                                     $('#degree_semester').prop('disabled', false);
                                 } else {
@@ -285,6 +286,18 @@
                             }
                         });
                     }
+                });
+
+                // Auto-fill semester start/end date when semester selected (uses data attributes above)
+                $(document).on('change', '#degree_semester', function () {
+                    var selected = $(this).find('option:selected');
+                    var start = selected.data('start') || '';
+                    var end = selected.data('end') || '';
+                    // normalize to yyyy-mm-dd if moment can parse it
+                    if (start && moment(start).isValid()) start = moment(start).format('YYYY-MM-DD');
+                    if (end && moment(end).isValid()) end = moment(end).format('YYYY-MM-DD');
+                    $('#degree_start_date').val(start);
+                    $('#degree_end_date').val(end);
                 });
 
                 // Fetch available subjects based on semester
@@ -327,9 +340,18 @@
                         center: 'title',
                         right: 'month,agendaWeek,agendaDay'
                     },
-                    events: [],
+                    defaultView: 'agendaWeek',           // show weekly timetable by default
+                    allDaySlot: false,
                     editable: true,
                     droppable: true,
+                    slotDuration: '00:15:00',
+                    minTime: "00:00:00",
+                    maxTime: "24:00:00",
+                    // allow overlapping events in time-grid and control stacking
+                    slotEventOverlap: true,
+                    eventOverlap: true,
+                    eventOrder: "start,-duration,title", // prefer earlier starts, longer events second
+                    events: [],
                     dayClick: function (date, jsEvent, view) {
                         $('#selectedDate').val(date.format('YYYY-MM-DD'));
                         $('#selected_date_display').val(date.format('MMMM Do YYYY'));
@@ -484,7 +506,7 @@
                                 return;
                             }
 
-                            var fcEvents = eventsArray.map(function (e) {
+                            var fcEvents = eventsArray.map(function (e, idx) {
                                 var title = e.module_name || e.subject_name || e.title || 'Class';
                                 var startTime = e.time || '00:00';
                                 var endTime = e.end_time || '';
@@ -512,7 +534,8 @@
                                 }
 
                                 return {
-                                    id: e.id || undefined,
+                                    // ensure id is unique (prevents replacement when two events share same start)
+                                    id: 't' + (e.id || idx) + '-' + idx,
                                     title: title,
                                     start: startIso,
                                     end: endIso,
@@ -523,6 +546,7 @@
 
                             // add events after a short timeout so FullCalendar's layout exists (prevents scrollTop null)
                             setTimeout(function () {
+                                console.log('Adding events to FullCalendar, count:', fcEvents.length, fcEvents.map(function(ev){ return ev.id; }));
                                 // add as a local source so we can remove later if needed
                                 $('#calendar').fullCalendar('addEventSource', fcEvents);
                                 // force redraw
