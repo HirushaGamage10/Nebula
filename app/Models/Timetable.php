@@ -13,17 +13,20 @@ class Timetable extends Model
     protected $primaryKey = 'id';
 
     protected $fillable = [
-        'location',
-        'course_id',
-        'intake_id',
-        'semester',
-        'date',
-        'time',
-        'duration',
-        'module_id',
-        'created_at',
-        'updated_at'
-    ];
+    'location',
+    'course_id',
+    'intake_id',
+    'semester',
+    'date',
+    'time',
+    'end_time',
+    'duration',
+    'module_id',
+    'subject_id',
+    'created_at',
+    'updated_at',
+];
+
 
     protected $casts = [
         'id' => 'int',
@@ -32,6 +35,7 @@ class Timetable extends Model
         'module_id' => 'int',
         'date' => 'date',
         'time' => 'datetime:H:i',
+        'end_time' => 'datetime:H:i',
         'duration' => 'int',
     ];
 
@@ -300,4 +304,4 @@ class Timetable extends Model
 
         return $query->get();
     }
-} 
+}

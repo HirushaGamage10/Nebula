@@ -158,7 +158,8 @@
                             <label for="degree_time_0" class="col-sm-3 col-form-label fw-bold">Time <span
                                     class="text-danger">*</span></label>
                             <div class="col-sm-9">
-                                <input type="time" class="form-control" id="degree_time_0" name="times[]" required>
+                                <input type="time" class="form-control time-input" id="degree_time_0" name="times[]"
+                                    required>
                             </div>
                         </div>
                     </div>
@@ -186,215 +187,281 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@3.0.1/dist/fullcalendar.min.js"></script>
 
     <?php $__env->startPush('scripts'); ?>
-<script>
-    $(document).ready(function () {
-        // Fetch courses based on location
-        $('#degree_location').change(function () {
-            var location = $(this).val();
-            if (location) {
-                $.ajax({
-                    url: '/get-courses-by-location',
-                    type: 'GET',
-                    data: { location: location },
-                    success: function (data) {
-                        if (data.success) {
-                            $('#degree_course').empty();
-                            $('#degree_course').append('<option selected disabled value="">Select Course</option>');
-                            $.each(data.courses, function (index, course) {
-                                $('#degree_course').append('<option value="' + course.course_id + '">' + course.course_name + '</option>');
-                            });
-                            $('#degree_course').prop('disabled', false);
-                        } else {
-                            console.error('No courses available for the selected location.');
-                        }
-                    },
-                    error: function (xhr, status, error) {
-                        console.error('Error fetching courses:', error);
-                    }
-                });
-            }
-        });
-
-        // Fetch intakes based on course and location
-        $('#degree_course').change(function () {
-            var courseId = $(this).val();
-            var location = $('#degree_location').val();
-            if (courseId && location) {
-                $.ajax({
-                    url: '/get-intakes/' + courseId + '/' + location,
-                    type: 'GET',
-                    success: function (data) {
-                        $('#degree_intake').empty();
-                        $('#degree_intake').append('<option value="" disabled selected>Select Intake</option>');
-                        $.each(data.intakes, function (index, intake) {
-                            $('#degree_intake').append('<option value="' + intake.intake_id + '">' + intake.batch + '</option>');
+        <script>
+            $(document).ready(function () {
+                // Fetch courses based on location
+                $('#degree_location').change(function () {
+                    var location = $(this).val();
+                    if (location) {
+                        $.ajax({
+                            url: '/get-courses-by-location',
+                            type: 'GET',
+                            data: { location: location },
+                            success: function (data) {
+                                console.log("Courses data received:", data);
+                                if (data.success) {
+                                    $('#degree_course').empty();
+                                    $('#degree_course').append('<option selected disabled value="">Select Course</option>');
+                                    if (data.courses && data.courses.length > 0) {
+                                        $.each(data.courses, function (index, course) {
+                                            $('#degree_course').append('<option value="' + course.course_id + '">' + course.course_name + '</option>');
+                                        });
+                                        $('#degree_course').prop('disabled', false);
+                                    } else {
+                                        $('#degree_course').append('<option disabled>No courses found</option>');
+                                        $('#degree_course').prop('disabled', true);
+                                    }
+                                } else {
+                                    console.error('No courses available for the selected location.');
+                                }
+                            },
+                            error: function (xhr, status, error) {
+                                console.error('Error fetching courses:', error);
+                            }
                         });
-                        $('#degree_intake').prop('disabled', false);
-                    },
-                    error: function (xhr, status, error) {
-                        console.error('Error fetching intakes:', error);
                     }
                 });
-            }
-        });
 
-        // Fetch semesters based on course and intake
-        $('#degree_intake').change(function () {
-            var intakeId = $(this).val();
-            var courseId = $('#degree_course').val();
-            if (intakeId && courseId) {
-                $.ajax({
-                    url: '/timetable/get-semesters',
-                    type: 'GET',
-                    data: { course_id: courseId, intake_id: intakeId },
-                    success: function (data) {
-                        $('#degree_semester').empty();
-                        $('#degree_semester').append('<option value="" disabled selected>Select Semester</option>');
-                        $.each(data.semesters, function (index, semester) {
-                            $('#degree_semester').append('<option value="' + semester.id + '">' + semester.name + '</option>');
+                // Fetch intakes based on course and location
+                $('#degree_course').change(function () {
+                    var courseId = $(this).val();
+                    var location = $('#degree_location').val();
+                    if (courseId && location) {
+                        $.ajax({
+                            url: '/get-intakes/' + courseId + '/' + location,
+                            type: 'GET',
+                            success: function (data) {
+                                console.log("Intakes data received:", data); // Debug log for intakes
+
+                                $('#degree_intake').empty();
+                                $('#degree_intake').append('<option selected disabled value="">Select Intake</option>');
+
+                                if (data.intakes && data.intakes.length > 0) {
+                                    $.each(data.intakes, function (index, intake) {
+                                        $('#degree_intake').append('<option value="' + intake.intake_id + '">' + intake.batch + '</option>');
+                                    });
+                                    $('#degree_intake').prop('disabled', false);
+                                } else {
+                                    $('#degree_intake').append('<option disabled>No intakes found</option>');
+                                    $('#degree_intake').prop('disabled', true);
+                                }
+                            },
+                            error: function (xhr, status, error) {
+                                console.error('Error fetching intakes:', error);
+                            }
                         });
-                        $('#degree_semester').prop('disabled', false);
-                    },
-                    error: function (xhr, status, error) {
-                        console.error('Error fetching semesters:', error);
                     }
                 });
-            }
-        });
 
-        // Fetch available subjects based on semester
-        $('#degree_semester').change(function () {
-            var semesterId = $(this).val();
-            var courseId = $('#degree_course').val();
-            if (semesterId && courseId) {
-                $.ajax({
-                    url: '/get-modules-by-semester',
-                    type: 'GET',
-                    data: { semester_id: semesterId, course_id: courseId },
-                    success: function (data) {
-                        if (data.modules && data.modules.length > 0) {
-                            $('#degree_subject_0').empty();
-                            $('#degree_subject_0').append('<option selected disabled value="">Select Subject</option>');
-                            $.each(data.modules, function (index, module) {
-                                $('#degree_subject_0').append('<option value="' + module.module_id + '">' + module.module_name + ' (' + module.module_code + ')</option>');
-                            });
-                        } else {
-                            $('#degree_subject_0').empty();
-                            $('#degree_subject_0').append('<option value="" disabled>No subjects found</option>');
+                // Fetch semesters based on course and intake
+                $('#degree_intake').change(function () {
+                    var intakeId = $(this).val();
+                    var courseId = $('#degree_course').val();
+                    if (intakeId && courseId) {
+                        $.ajax({
+                            url: '/timetable/get-semesters',
+                            type: 'GET',
+                            data: { course_id: courseId, intake_id: intakeId },
+                            success: function (data) {
+                                console.log("Semesters data received:", data); // Debug log for semesters
+
+                                $('#degree_semester').empty();
+                                $('#degree_semester').append('<option selected disabled value="">Select Semester</option>');
+
+                                if (data.semesters && data.semesters.length > 0) {
+                                    $.each(data.semesters, function (index, semester) {
+                                        $('#degree_semester').append('<option value="' + semester.id + '">' + semester.name + '</option>');
+                                    });
+                                    $('#degree_semester').prop('disabled', false);
+                                } else {
+                                    $('#degree_semester').append('<option disabled>No semesters found</option>');
+                                    $('#degree_semester').prop('disabled', true);
+                                }
+                            },
+                            error: function (xhr, status, error) {
+                                console.error('Error fetching semesters:', error);
+                            }
+                        });
+                    }
+                });
+
+                // Fetch available subjects based on semester
+                $('#degree_semester').change(function () {
+                    var semesterId = $(this).val();
+                    var courseId = $('#degree_course').val();
+                    if (semesterId && courseId) {
+                        $.ajax({
+                            url: '/get-modules-by-semester',
+                            type: 'GET',
+                            data: { semester_id: semesterId, course_id: courseId },
+                            success: function (data) {
+                                console.log("Modules data received:", data); // Debug log for modules
+
+                                if (data.modules && data.modules.length > 0) {
+                                    $('#degree_subject_0').empty();
+                                    $('#degree_subject_0').append('<option selected disabled value="">Select Subject</option>');
+                                    $.each(data.modules, function (index, module) {
+                                        console.log("Appending subject:", module); // Debug log for each module being added
+                                        $('#degree_subject_0').append('<option value="' + module.module_id + '">' + module.module_name + ' (' + module.module_code + ')</option>');
+                                    });
+                                    $('#degree_subject_0').prop('disabled', false);
+                                } else {
+                                    $('#degree_subject_0').empty();
+                                    $('#degree_subject_0').append('<option value="" disabled>No subjects found</option>');
+                                    $('#degree_subject_0').prop('disabled', true);
+                                }
+                            },
+                            error: function (xhr, status, error) {
+                                console.error('Error fetching subjects:', error);
+                            }
+                        });
+                    }
+                });
+
+                // Initialize FullCalendar
+                $('#calendar').fullCalendar({
+                    header: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'month,agendaWeek,agendaDay'
+                    },
+                    events: [],
+                    editable: true,
+                    droppable: true,
+                    dayClick: function (date, jsEvent, view) {
+                        $('#selectedDate').val(date.format('YYYY-MM-DD'));
+                        $('#selected_date_display').val(date.format('MMMM Do YYYY'));
+                        $('#subjectSelectionModal').modal('show');
+                    },
+                    eventClick: function (event, jsEvent, view) {
+                        var eventTime = event.start.format('HH:mm');
+                        $('#degree_time_0').val(eventTime);
+                    }
+                });
+
+                // Handle Subject Assignment
+                $(document).on('click', '#assignSubjectBtn', function (e) {
+                    e.preventDefault();
+
+                    // collect arrays by name so markup structure changes won't break collection
+                    var subjectIds = $('select[name="subject_ids[]"]').map(function () { return $(this).val(); }).get();
+                    var durations = $('input[name="durations[]"]').map(function () { return $(this).val(); }).get();
+                    var times = $('input[name="times[]"]').map(function () { return $(this).val(); }).get();
+
+                    // Basic client validation
+                    if (!subjectIds.length || !durations.length || !times.length) {
+                        alert('Please add at least one subject, duration and time.');
+                        return;
+                    }
+
+                    // Ensure no empty subject
+                    for (var i = 0; i < subjectIds.length; i++) {
+                        if (!subjectIds[i]) {
+                            alert('Please select a subject for each row.');
+                            return;
                         }
-                    },
-                    error: function (xhr, status, error) {
-                        console.error('Error fetching subjects:', error);
                     }
+
+                    // Normalize times and compute end_times using moment
+                    var endTimes = [];
+                    for (var i = 0; i < times.length; i++) {
+                        var raw = times[i] || '';
+                        var dur = parseInt(durations[i], 10) || 0;
+                        var m = null;
+
+                        if (/^\d{1,2}:\d{2}\s?(AM|PM)$/i.test(raw)) {
+                            m = moment(raw, 'h:mm A');
+                        } else if (/^\d{1,2}:\d{2}$/.test(raw)) {
+                            m = moment(raw, 'HH:mm');
+                        } else {
+                            m = moment(raw);
+                        }
+
+                        if (!m.isValid()) {
+                            alert('Invalid time format for one of the rows.');
+                            return;
+                        }
+
+                        var end = m.clone().add(dur, 'minutes');
+                        times[i] = m.format('HH:mm');     // normalized start
+                        endTimes.push(end.format('HH:mm'));
+                    }
+
+                    // Gather other fields from the correct inputs
+                    var payload = {
+                        _token: $('meta[name="csrf-token"]').attr('content') || $('input[name="_token"]').val(),
+                        date: $('#selectedDate').val() || $('#selected_date_display').val() || '',
+                        subject_ids: subjectIds,
+                        durations: durations,
+                        times: times,
+                        end_times: endTimes,
+                        location: $('#degree_location').val(),
+                        course_id: $('#degree_course').val(),
+                        intake_id: $('#degree_intake').val(),
+                        semester: $('#degree_semester').val()
+                    };
+
+                    console.log('Timetable data being sent:', payload);
+
+                    $.ajax({
+                        url: '/assign-subject-to-timeslot',
+                        method: 'POST',
+                        data: payload,
+                        success: function (res) {
+                            console.log('Response:', res);
+                            if (res.success) {
+                                alert(res.message || 'Subjects assigned successfully');
+                                $('#subjectSelectionModal').modal('hide');
+                            } else {
+                                alert(res.message || 'There was an error assigning subjects');
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('AJAX error - status:', status, 'error:', error);
+                            console.error('xhr.status:', xhr.status);
+                            console.error('xhr.responseJSON:', xhr.responseJSON);
+                            console.error('xhr.responseText:', xhr.responseText);
+                            var msg = (xhr.responseJSON && (xhr.responseJSON.message || xhr.responseJSON.errors)) ?
+                                (xhr.responseJSON.message || JSON.stringify(xhr.responseJSON.errors)) :
+                                xhr.responseText || 'There was an error. Check server logs.';
+                            alert(msg);
+                        }
+                    });
                 });
-            }
-        });
+                // Show Timetable button click event to load events
+                $('#showTimetableBtn').click(function () {
+                    var data = {
+                        location: $('#degree_location').val(),
+                        course_id: $('#degree_course').val(),
+                        intake_id: $('#degree_intake').val(),
+                        semester: $('#degree_semester').val(),
+                        start_date: $('#degree_start_date').val(),
+                        end_date: $('#degree_end_date').val()
+                    };
+                    console.log("Timetable data being sent:", data); // Debug the data
 
-        // Initialize FullCalendar
-        $('#calendar').fullCalendar({
-            header: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'month,agendaWeek,agendaDay'
-            },
-            events: [], // Initially empty events
-            editable: true,
-            droppable: true,
-            dayClick: function (date, jsEvent, view) {
-                // Set the selected date in the hidden input and display it in the modal
-                $('#selectedDate').val(date.format('YYYY-MM-DD'));
-                $('#selected_date_display').val(date.format('MMMM Do YYYY'));  // Display date in readable format
-
-                // Set the default time to the selected day (e.g., start at 9:00 AM)
-                var defaultTime = "09:00";
-                $('#degree_time_0').val(defaultTime);
-
-                // Show the subject selection modal
-                $('#subjectSelectionModal').modal('show');
-            }
-        });
-
-        // Handle Subject Assignment
-        $(document).on('click', '#assignSubjectBtn', function (e) {
-            e.preventDefault();
-
-            var subjectIds = [];
-            var durations = [];
-            var times = [];
-            $('#subjectList .subject-select').each(function () {
-                subjectIds.push($(this).val());
+                    $.ajax({
+                        url: '/get-timetable-events',
+                        type: 'GET',
+                        data: data,
+                        success: function (response) {
+                            console.log("Timetable events received:", response); // Debug response
+                            if (response && response.events) {
+                                $('#calendar').fullCalendar('removeEvents');
+                                $('#calendar').fullCalendar('addEventSource', response.events);
+                                $('#degreeTimetableSection').show();
+                            } else {
+                                alert('No events available for the selected time period.');
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            alert('Error occurred while fetching the timetable');
+                        }
+                    });
+                });
             });
-            $('#subjectList .duration-input').each(function () {
-                durations.push($(this).val());
-            });
-            $('#subjectList .time-input').each(function () {
-                times.push($(this).val());
-            });
-
-            // Ensure at least one subject and duration are selected
-            if (subjectIds.length === 0 || durations.length === 0 || times.length === 0) {
-                alert('Please select at least one subject, duration, and time');
-                return;
-            }
-
-            // Send the data to the server via AJAX
-            $.ajax({
-                url: '/assign-subject-to-timeslot',
-                type: 'POST',
-                data: {
-                    date: $('#selectedDate').val(), // Selected date from FullCalendar
-                    subject_ids: subjectIds,
-                    durations: durations,
-                    times: times,
-                    location: $('#degree_location').val(),
-                    course_id: $('#degree_course').val(),
-                    intake_id: $('#degree_intake').val(),
-                    semester: $('#degree_semester').val(),
-                    _token: '<?php echo e(csrf_token()); ?>'
-                },
-                success: function (response) {
-                    if (response.success) {
-                        alert('Subjects assigned successfully!');
-                        $('#subjectSelectionModal').modal('hide');
-                    } else {
-                        alert('Error assigning subjects');
-                    }
-                },
-                error: function (xhr, status, error) {
-                    console.error('Error assigning subjects:', error);
-                    alert('Error occurred while assigning subjects.');
-                }
-            });
-        });
-
-        // Show Timetable button click event to load events
-        $('#showTimetableBtn').click(function () {
-            var data = {
-                location: $('#degree_location').val(),
-                course_id: $('#degree_course').val(),
-                intake_id: $('#degree_intake').val(),
-                semester: $('#degree_semester').val(),
-                start_date: $('#degree_start_date').val(),
-                end_date: $('#degree_end_date').val()
-            };
-
-            $.ajax({
-                url: '/get-timetable-events',
-                type: 'GET',
-                data: data,
-                success: function (response) {
-                    $('#calendar').fullCalendar('removeEvents');
-                    $('#calendar').fullCalendar('addEventSource', response.events);
-                    $('#degreeTimetableSection').show();
-                },
-                error: function (xhr, status, error) {
-                    alert('Error occurred while fetching the timetable');
-                }
-            });
-        });
-    });
-</script>
-<?php $__env->stopPush(); ?>
+        </script>
+    <?php $__env->stopPush(); ?>
 
 <?php $__env->stopSection(); ?>
 <?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/nebula/Nebula/resources/views/timetable.blade.php ENDPATH**/ ?>
