@@ -27,7 +27,7 @@ class StudentStatusHistory extends Model
 
     public function user()
     {
-        // adjust foreign/local keys if your users PK isn’t "id"
-        return $this->belongsTo(User::class, 'changed_by', 'id');
+    // users table uses 'user_id' as primary key in this project
+    return $this->belongsTo(User::class, 'changed_by', 'user_id');
     }
 }

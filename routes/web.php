@@ -390,7 +390,9 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
         Route::get('/api/student/{studentId}/course/{courseId}/semester/{semester}/attendance', [StudentProfileController::class, 'getAttendance']);
 
-        Route::get('/api/student/{studentId}/clearances', [StudentProfileController::class, 'getStudentClearances']);
+    Route::get('/api/student/{studentId}/clearances', [StudentProfileController::class, 'getStudentClearances']);
+    // Student status history (terminate/reinstate records)
+    Route::get('/api/student/{studentId}/status-history', [App\Http\Controllers\StudentProfileController::class, 'getStudentStatusHistory']);
 
         Route::get('/student/{studentId}/certificates', [StudentProfileController::class, 'getStudentCertificates']);
         

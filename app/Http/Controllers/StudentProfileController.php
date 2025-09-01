@@ -761,6 +761,28 @@ class StudentProfileController extends Controller
         ]);
     }
 
+    // API: Get student status history (terminate / reinstate logs)
+    public function getStudentStatusHistory($studentId)
+    {
+        $history = \App\Models\StudentStatusHistory::where('student_id', $studentId)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($h) {
+                return [
+                    'id' => $h->id,
+                    'from_status' => $h->from_status,
+                    'to_status' => $h->to_status,
+                    'reason' => $h->reason,
+                    'document' => $h->document,
+                    'changed_by' => $h->changed_by,
+                    'changed_by_name' => $h->user ? ($h->user->name ?? null) : null,
+                    'created_at' => $h->created_at ? $h->created_at->format('d/m/Y H:i') : null,
+                ];
+            });
+
+        return response()->json(['success' => true, 'history' => $history]);
+    }
+
     public function terminate(Request $request)
     {
         $request->validate([
