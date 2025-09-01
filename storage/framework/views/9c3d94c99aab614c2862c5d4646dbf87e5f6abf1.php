@@ -1,8 +1,6 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | Timetable Management'); ?>
 
-@section('title', 'NEBULA | Timetable Management')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
     <div class="container-fluid">
         <div class="card">
             <div class="card-body">
@@ -245,7 +243,7 @@
                             </div>
                         </div>
                     </div>
-                    {{-- <button type="button" class="btn btn-secondary" id="addSubjectBtn">Add Another Subject</button> --}}
+                    
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Close</button>
@@ -317,7 +315,7 @@
     <!-- html2canvas (needed to snapshot table) -->
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
     <script>
         $(document).ready(function () {
             var latestEventsRaw = []; // raw server rows
@@ -1865,7 +1863,7 @@
 
         });
     </script>
-@endpush
+<?php $__env->stopPush(); ?>
 
     <style>
         /* Allow FullCalendar to handle positioning for agendaWeek/agendaDay.
@@ -1874,4 +1872,5 @@
             width: auto !important;
         }
     </style>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/Nebula finish/Nebula/resources/views/timetable.blade.php ENDPATH**/ ?>
