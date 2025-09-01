@@ -108,23 +108,23 @@ class PaymentController extends Controller
                     ->get();
 
                 foreach ($installments as $ins) {
-    $final = $ins->final_amount ?? $ins->amount;
-    $rows[] = [
-    'installment_number'  => $ins->installment_number,
-    'due_date'            => optional($ins->due_date)->toDateString(),
-    'amount'              => (float) $final,
-    'base_amount'         => (float) $ins->amount,
-    'status'              => $ins->status ?? 'pending',
-    'paid_date'           => optional($ins->paid_date)->toDateString(),
-    'receipt_no'          => null,
-    'currency'            => 'LKR',
+                    $final = $ins->final_amount ?? $ins->amount;
+                    $rows[] = [
+                    'installment_number'  => $ins->installment_number,
+                    'due_date'            => optional($ins->due_date)->toDateString(),
+                    'amount'              => (float) $final,
+                    'base_amount'         => (float) $ins->amount,
+                    'status'              => $ins->status ?? 'pending',
+                    'paid_date'           => optional($ins->paid_date)->toDateString(),
+                    'receipt_no'          => null,
+                    'currency'            => 'LKR',
 
-    // ✅ Add these fields
-    'approved_late_fee'   => (float) ($ins->approved_late_fee ?? 0),
-    'calculated_late_fee' => (float) ($ins->calculated_late_fee ?? 0),
-];
+                    // ✅ Add these fields
+                    'approved_late_fee'   => (float) ($ins->approved_late_fee ?? 0),
+                    'calculated_late_fee' => (float) ($ins->calculated_late_fee ?? 0),
+                ];
 
-}
+                }
 
                 break;
 
@@ -768,6 +768,33 @@ public function getExistingPaymentPlans(\Illuminate\Http\Request $request)
         return response()->json(['success' => false, 'message' => 'An error occurred: '.$e->getMessage()], 500);
     }
 }
+public function deletePaymentPlan($id)
+{
+    try {
+        $plan = \App\Models\StudentPaymentPlan::find($id);
+
+        if (!$plan) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment plan not found'
+            ], 404);
+        }
+
+        $plan->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment plan deleted successfully'
+        ], 200);
+
+    } catch (\Throwable $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error deleting payment plan: '.$e->getMessage()
+        ], 500);
+    }
+}
+
 // Teleshop constants (from Teleshop Payment slip)
 private const TS_PAYMENT_TYPE = 'Miscellaneous';
 private const TS_COST_CENTRE  = '5212';

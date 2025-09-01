@@ -641,6 +641,9 @@ Route::get('/payment/get-discounts', [PaymentController::class, 'getDiscounts'])
 Route::post('/payment/get-installments', [PaymentController::class, 'getPaymentPlanInstallments'])->name('payment.get.installments');
 Route::post('/payment/get-payment-details', [PaymentController::class, 'getPaymentDetails'])->name('payment.get.payment.details');
 Route::post('/payment/save-plans', [PaymentController::class, 'savePaymentPlans'])->name('payment.save.plans');
+Route::delete('/payment/delete-plan/{id}', [PaymentController::class, 'deletePaymentPlan'])
+    ->name('payment.delete.plan');
+
 
 Route::post('/payment/existing-plans', [PaymentController::class, 'getExistingPaymentPlans'])
     ->name('payment.existingPlans'); // keep behind same middleware as the page if needed
