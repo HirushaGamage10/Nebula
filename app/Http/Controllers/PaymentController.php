@@ -854,16 +854,30 @@ private function ordinal(int $n): string
     }
     return $n . $suf;
 }
+//Late Fee 
+private function calculateLateFee($amount, $daysLate)
+{
+    if ($daysLate <= 0) return 0;
 
-    /**
-     * Generate payment slip for pending payments.
-     */
-   public function generatePaymentSlip(Request $request)
+    $dailyRate = (0.05 / 30); // 5% monthly → daily
+    $lateFee   = $amount * $dailyRate * $daysLate;
+
+    return round(min($lateFee, $amount * 0.25), 2);
+}
+
+
+/**
+ * Generate payment slip for pending payments.
+ */
+/**
+ * Generate payment slip for pending payments.
+ */
+public function generatePaymentSlip(Request $request)
 {
     try {
         $request->validate([
             'student_id'         => 'required|string',
-            'course_id'          => 'required|integer|exists:courses,course_id', // ✅ now required
+            'course_id'          => 'required|integer|exists:courses,course_id',
             'payment_type'       => 'required|string', // 'course_fee' | 'franchise_fee' | 'registration_fee'
             'amount'             => 'required|numeric|min:0',
             'installment_number' => 'nullable|integer',
@@ -873,7 +887,7 @@ private function ordinal(int $n): string
             'remarks'            => 'nullable|string',
         ]);
 
-        // Find student by Student ID or NIC
+        // 🔹 Find Student
         $student = \App\Models\Student::where('student_id', $request->student_id)
             ->orWhere('id_value', $request->student_id)
             ->first();
@@ -882,7 +896,7 @@ private function ordinal(int $n): string
             return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
         }
 
-        // Registration for THIS course
+        // 🔹 Check Registration
         $registration = \App\Models\CourseRegistration::where('student_id', $student->student_id)
             ->where('course_id', $request->course_id)
             ->with(['course', 'intake'])
@@ -892,7 +906,49 @@ private function ordinal(int $n): string
             return response()->json(['success' => false, 'message' => 'Student is not registered for this course.'], 404);
         }
 
-        // --- Prevent duplicate pending slips (NO payment_type filter; that column doesn't exist) ---
+        $course      = $registration->course;
+        $intake      = $registration->intake;
+        $paymentType = $request->payment_type;
+        $amount      = (float) $request->amount;
+
+        // 🔹 Breakdown by payment type
+        $courseFee       = $paymentType === 'course_fee'       ? $amount : 0;
+        $franchiseFee    = $paymentType === 'franchise_fee'    ? $amount : 0;
+        $registrationFee = $paymentType === 'registration_fee' ? ($intake->registration_fee ?? 0) : 0;
+
+        // 🔹 Calculate late fee (ONLY for course_fee installments)
+        $lateFee = 0;
+        $approvedLateFee = 0;
+        if ($paymentType === 'course_fee' && $request->installment_number) {
+            $plan = \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
+                ->where('course_id', $request->course_id)
+                ->first();
+
+            if ($plan) {
+                $inst = \App\Models\PaymentInstallment::where('payment_plan_id', $plan->id)
+                    ->where('installment_number', $request->installment_number)
+                    ->first();
+
+                if ($inst) {
+                    $dueDate  = \Carbon\Carbon::parse($inst->due_date);
+                    $daysLate = $dueDate->isPast() ? $dueDate->diffInDays(now()) : 0;
+                    $baseAmt  = $inst->final_amount ?? $inst->amount ?? 0;
+
+                    // 🔹 Calculate late fee and update installment
+                    $calcFee = $this->calculateLateFee($baseAmt, $daysLate);
+                    $inst->calculated_late_fee = $calcFee;
+                    $inst->save();
+
+                    $lateFee         = $calcFee;
+                    $approvedLateFee = $inst->approved_late_fee ?? 0;
+                }
+            }
+        }
+
+        // 🔹 Total Fee = base fee + late fee - approved late fee
+        $totalFee = $courseFee + $franchiseFee + $registrationFee + $lateFee - $approvedLateFee;
+
+        // --- Prevent duplicate pending slips ---
         $existingPayment = \App\Models\PaymentDetail::where('student_id', $student->student_id)
             ->where('course_registration_id', $registration->id)
             ->when($request->installment_number, fn($q) => $q->where('installment_number', $request->installment_number))
@@ -900,76 +956,30 @@ private function ordinal(int $n): string
             ->where('status', 'pending')
             ->first();
 
-        // Common slip fields
-        $course      = $registration->course;
-        $intake      = $registration->intake;
-        $paymentType = $request->payment_type;
-        $amount      = (float) $request->amount;
-
-        // For franchise FX display
-        $fxRate   = $request->conversion_rate;
-        $fxFrom   = $request->currency_from;
-        $fxLkrAmt = ($paymentType === 'franchise_fee' && $fxRate) ? $amount * (float) $fxRate : null;
-        $fxCcy    = $intake->franchise_payment_currency ?? ($registration->intake->franchise_payment_currency ?? 'USD');
-
-        // Basic breakdown (kept simple and consistent with UI)
-        $courseFee       = $paymentType === 'course_fee'       ? $amount : 0;
-        $franchiseFee    = $paymentType === 'franchise_fee'    ? $amount : 0;
-        $registrationFee = $paymentType === 'registration_fee' ? ($intake->registration_fee ?? 0) : 0;
-
-        // If a pending slip already exists, return it
         if ($existingPayment) {
-            $slipData = [
-                'receipt_no'             => $existingPayment->transaction_id,
-                'student_id'             => $student->student_id,
-                'student_name'           => $student->full_name,
-                'student_nic'            => $student->id_value,
-                'course_name'            => $course->course_name ?? 'N/A',
-                'course_code'            => $course->course_code ?? 'N/A',
-                'intake'                 => $intake->batch ?? 'N/A',
-                'intake_id'              => $intake->intake_id ?? null,
+            // ✅ Update with latest late fee data
+            $existingPayment->update([
+                'late_fee'          => $lateFee,
+                'approved_late_fee' => $approvedLateFee,
+                'total_fee'         => $totalFee,
+            ]);
 
-                // we echo the requested type for display (column not in DB)
-                'payment_type'           => $paymentType,
-                'payment_type_display'   => $this->getPaymentTypeDisplay($paymentType),
+            $slipData = $this->buildSlipArray(
+                $existingPayment, $student, $course, $intake,
+                $courseFee, $franchiseFee, $registrationFee,
+                $lateFee, $approvedLateFee, $totalFee
+            );
 
-                // Amount shown = the amount stored on the existing pending record
-                'amount'                 => (float) $existingPayment->amount,
-                'lkr_amount'             => $fxLkrAmt, // only used for franchise
-                'franchise_fee_currency' => $fxCcy,
-
-                'installment_number'     => $existingPayment->installment_number,
-                'due_date'               => optional($existingPayment->due_date)->format('Y-m-d'),
-                'payment_date'           => optional($existingPayment->created_at)->format('Y-m-d'),
-                'payment_method'         => $existingPayment->payment_method ?? 'Cash',
-                'remarks'                => $existingPayment->remarks,
-                'status'                 => $existingPayment->status,
-
-                'location'               => $registration->location ?? 'N/A',
-                'registration_date'      => optional($registration->registration_date)->format('Y-m-d'),
-
-                // simple breakdown
-                'course_fee'             => $courseFee,
-                'franchise_fee'          => $franchiseFee,
-                'registration_fee'       => $registrationFee,
-
-                'conversion_rate'        => $fxRate,
-                'currency_from'          => $fxFrom,
-                'generated_at'           => optional($existingPayment->created_at)->format('Y-m-d H:i:s'),
-                'valid_until'            => optional($existingPayment->created_at)->addDays(7)->format('Y-m-d'),
-            ];
-
-            // keep for PDF download path (session)
             session(['generated_slip_' . $existingPayment->transaction_id => $slipData]);
 
             return response()->json([
                 'success'  => true,
                 'slip_data'=> $slipData,
-                'message'  => 'Existing payment slip found.'
+                'message'  => 'Existing payment slip found & updated with late fee.',
             ]);
         }
 
-        // --- Create a new pending slip ---
+        // --- Generate New Receipt Number ---
         $today      = date('Ymd');
         $latest     = \App\Models\PaymentDetail::where('transaction_id', 'like', "RCP{$today}%")
                         ->orderBy('transaction_id', 'desc')->first();
@@ -977,71 +987,91 @@ private function ordinal(int $n): string
         $nextNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
         $receiptNo  = 'RCP' . $today . $nextNumber;
 
-        $payment = \App\Models\PaymentDetail::create([
-            'student_id'          => $student->student_id,
-            'course_registration_id' => $registration->id,
-            'amount'              => $amount,         // for franchise, this is FX amount; UI shows FX+LKR
-            'payment_method'      => 'Cash',
-            'transaction_id'      => $receiptNo,
-            'status'              => 'pending',
-            'remarks'             => $request->remarks,  // you can prefix with [$paymentType] if you want
-            'installment_number'  => $request->installment_number,
-            'due_date'            => $request->due_date,
-        ]);
+        // --- Create new Payment record ---
+        // --- Create new Payment record ---
+$payment = \App\Models\PaymentDetail::create([
+    'student_id'             => $student->student_id,
+    'course_registration_id' => $registration->id,
+    'amount'                 => $amount,
+    'payment_method'         => 'Cash',
+    'transaction_id'         => $receiptNo,
+    'status'                 => 'pending',
+    'remarks'                => $request->remarks,
+    'due_date'               => $request->due_date,
 
-        $slipData = [
-            'receipt_no'             => $receiptNo,
-            'student_id'             => $student->student_id,
-            'student_name'           => $student->full_name,
-            'student_nic'            => $student->id_value,
-            'course_name'            => $course->course_name ?? 'N/A',
-            'course_code'            => $course->course_code ?? 'N/A',
-            'intake'                 => $intake->batch ?? 'N/A',
-            'intake_id'              => $intake->intake_id ?? null,
+    // 👇 Fix: Only course_fee/franchise_fee should store installment_number
+    'installment_number'     => in_array($paymentType, ['course_fee','franchise_fee']) 
+                                    ? $request->installment_number 
+                                    : null,
 
-            'payment_type'           => $paymentType,
-            'payment_type_display'   => $this->getPaymentTypeDisplay($paymentType),
+    // ✅ New fields
+    'late_fee'          => $lateFee,
+    'approved_late_fee' => $approvedLateFee,
+    'total_fee'         => $totalFee,
+]);
 
-            'amount'                 => $amount,
-            'lkr_amount'             => $fxLkrAmt,  // only for franchise
-            'franchise_fee_currency' => $fxCcy,
 
-            'installment_number'     => $request->installment_number,
-            'due_date'               => $request->due_date,
-            'payment_date'           => now()->toDateString(),
-            'payment_method'         => 'Cash',
-            'remarks'                => $request->remarks,
-            'status'                 => 'pending',
-            'location'               => $registration->location ?? 'N/A',
-            'registration_date'      => optional($registration->registration_date)->format('Y-m-d'),
+        $slipData = $this->buildSlipArray(
+            $payment, $student, $course, $intake,
+            $courseFee, $franchiseFee, $registrationFee,
+            $lateFee, $approvedLateFee, $totalFee
+        );
 
-            // simple breakdown
-            'course_fee'             => $courseFee,
-            'franchise_fee'          => $franchiseFee,
-            'registration_fee'       => $registrationFee,
-
-            'conversion_rate'        => $fxRate,
-            'currency_from'          => $fxFrom,
-            'generated_at'           => now()->format('Y-m-d H:i:s'),
-            'valid_until'            => now()->addDays(7)->format('Y-m-d'),
-        ];
-
-        // store for PDF download
         session(['generated_slip_' . $receiptNo => $slipData]);
 
         return response()->json([
             'success'   => true,
             'slip_data' => $slipData,
-            'message'   => 'New payment slip generated.'
+            'message'   => 'New payment slip generated.',
         ]);
 
     } catch (\Exception $e) {
         return response()->json([
             'success' => false,
-            'message' => 'An error occurred: ' . $e->getMessage()
+            'message' => 'An error occurred: ' . $e->getMessage(),
         ], 500);
     }
 }
+
+
+/**
+ * Helper: Build slip array
+ */
+private function buildSlipArray($payment, $student, $course, $intake, $courseFee, $franchiseFee, $registrationFee, $lateFee, $approvedLateFee, $totalFee)
+{
+    return [
+        'receipt_no'             => $payment->transaction_id,
+        'student_id'             => $student->student_id,
+        'student_name'           => $student->full_name,
+        'student_nic'            => $student->id_value,
+        'course_name'            => $course->course_name ?? 'N/A',
+        'course_code'            => $course->course_code ?? 'N/A',
+        'intake'                 => $intake->batch ?? 'N/A',
+        'intake_id'              => $intake->intake_id ?? null,
+        'payment_type'           => $payment->payment_type ?? '',
+        'payment_type_display'   => $this->getPaymentTypeDisplay($payment->payment_type ?? ''),
+        'amount'                 => (float) $payment->amount,
+        'installment_number'     => $payment->installment_number,
+        'due_date'               => optional($payment->due_date)->format('Y-m-d'),
+        'payment_date'           => optional($payment->created_at)->format('Y-m-d'),
+        'payment_method'         => $payment->payment_method ?? 'Cash',
+        'remarks'                => $payment->remarks,
+        'status'                 => $payment->status,
+        'location'               => $intake->location ?? 'N/A',
+        'registration_date'      => optional($intake->registration_date)->format('Y-m-d'),
+        'course_fee'             => $courseFee,
+        'franchise_fee'          => $franchiseFee,
+        'registration_fee'       => $registrationFee,
+        'late_fee'               => $lateFee,
+        'approved_late_fee'      => $approvedLateFee,
+        'total_fee'              => $totalFee,
+        'generated_at'           => now()->format('Y-m-d H:i:s'),
+        'valid_until'            => now()->addDays(7)->format('Y-m-d'),
+    ];
+}
+
+
+
 
 
 

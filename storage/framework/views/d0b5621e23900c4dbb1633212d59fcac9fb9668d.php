@@ -1,4 +1,4 @@
-@php
+<?php
     // Helpers
     $get = fn($key, $default = null) => data_get($slipData ?? [], $key, $default);
     $fmt = function ($n, $dec = 2) {
@@ -61,7 +61,7 @@
         'reference_1',
         trim($courseName) . ' / ' . ($installment ? ($installment . ' Installment') : 'Payment')
     );
-@endphp
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -142,40 +142,41 @@
 <body>
 
 <div class="page">
-  @for ($i=0; $i<1; $i++) {{-- Print 4 slips per page --}}
+  <?php for($i=0; $i<1; $i++): ?> 
   <div class="receipt-strip">
 
     <div class="header">
       <div class="title">SLTMOBITEL NEBULA INSTITUTE OF TECHNOLOGY</div>
       <div class="sub">Teleshop Payment Slip</div>
       <div class="meta">
-        Receipt No: <span class="mono">{{ $receiptNo }}</span> |
-        Generated: <span class="mono">{{ $generatedAt }}</span>
+        Receipt No: <span class="mono"><?php echo e($receiptNo); ?></span> |
+        Generated: <span class="mono"><?php echo e($generatedAt); ?></span>
       </div>
     </div>
-    {{-- Teleshop Payment --}}
+    
     <div class="section">
       <div class="section-title">Teleshop Payment</div>
-      <div class="row"><span class="label">Payment Type:</span> {{ $paymentType }}</div>
-      <div class="row"><span class="label">Cost Centre:</span> {{ $costCentre }}</div>
-      <div class="row"><span class="label">Account Code:</span> {{ $accountCode }}</div>
-      <div class="row"><span class="label">Payment Code:</span> {{ $paymentCode }}</div>
+      <div class="row"><span class="label">Payment Type:</span> <?php echo e($paymentType); ?></div>
+      <div class="row"><span class="label">Cost Centre:</span> <?php echo e($costCentre); ?></div>
+      <div class="row"><span class="label">Account Code:</span> <?php echo e($accountCode); ?></div>
+      <div class="row"><span class="label">Payment Code:</span> <?php echo e($paymentCode); ?></div>
     </div>
 
     <div class="section">
       <div class="section-title">Customer Details</div>
       <table class="details-table">
-        <tr><td class="label">Student Number:</td><td>{{ $studentId }}</td></tr>
-        <tr><td class="label">Name:</td><td>{{ $studentName }}</td></tr>
-        <tr><td class="label">Course Name:</td><td>{{ $courseName }}</td></tr>
-        <tr><td class="label">Intake:</td><td>{{ $intake }}</td></tr>
-        <tr><td class="label">Installment #:</td><td>{{ $installment ?? '-' }}</td></tr>
-        <tr><td class="label">Due Date:</td><td>{{ $dateOr($dueDate) }}</td></tr>
-        <!-- <tr><td class="label">Reference:</td><td>{{ $reference1 }}</td></tr> -->
+        <tr><td class="label">Student Number:</td><td><?php echo e($studentId); ?></td></tr>
+        <tr><td class="label">Name:</td><td><?php echo e($studentName); ?></td></tr>
+        <tr><td class="label">Course Name:</td><td><?php echo e($courseName); ?></td></tr>
+        <tr><td class="label">Intake:</td><td><?php echo e($intake); ?></td></tr>
+        <tr><td class="label">Installment #:</td><td><?php echo e($installment ?? '-'); ?></td></tr>
+        <tr><td class="label">Due Date:</td><td><?php echo e($dateOr($dueDate)); ?></td></tr>
+        <!-- <tr><td class="label">Reference:</td><td><?php echo e($reference1); ?></td></tr> -->
       </table>
       <div class="ref-box">
-    {{ $intake }} / REF-{{ $studentId }} / 
-    INST-{{ $installment !== null ? $installment : 'REG-FEE' }}
+    <?php echo e($intake); ?> / REF-<?php echo e($studentId); ?> / 
+    INST-<?php echo e($installment !== null ? $installment : 'REG-FEE'); ?>
+
 </div>
 
     </div>
@@ -184,27 +185,28 @@
   <table>
     <tr>
       <td class="label">Course / Installment (Rs.):</td>
-      <td class="right">{{ $fmt($amount) }}</td>
+      <td class="right"><?php echo e($fmt($amount)); ?></td>
     </tr>
     <tr>
       <td class="label">Late Fee (Rs.):</td>
-      <td class="right">{{ $fmt($lateFee) }}</td>
+      <td class="right"><?php echo e($fmt($lateFee)); ?></td>
     </tr>
     <tr>
       <td class="label">Approved Reduction (Rs.):</td>
-      <td class="right">{{ $fmt($approvedLate) }}</td>
+      <td class="right"><?php echo e($fmt($approvedLate)); ?></td>
     </tr>
     <tr>
       <td class="label total">Total Payment (Rs.):</td>
-      <td class="right total">{{ $fmt($totalFee) }}</td>
+      <td class="right total"><?php echo e($fmt($totalFee)); ?></td>
     </tr>
   </table>
 </div>
 
 
   </div>
-  @endfor
+  <?php endfor; ?>
 </div>
 
 </body>
 </html>
+<?php /**PATH D:\SLT\Welisara\Nebula\resources\views/pdf/payment_slip.blade.php ENDPATH**/ ?>

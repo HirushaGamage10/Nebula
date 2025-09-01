@@ -24,6 +24,9 @@ class PaymentDetail extends Model
         'paid_slip_path',
         'installment_number',
         'due_date',
+        'late_fee',           
+        'approved_late_fee',  
+        'total_fee',   
         'status',
         'created_at',
         'updated_at'

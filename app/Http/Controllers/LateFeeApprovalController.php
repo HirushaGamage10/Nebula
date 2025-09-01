@@ -142,7 +142,7 @@ public function approveLateFeePerInstallment(Request $request, $installmentId)
     $inst->calculated_late_fee = $isLate ? $this->calculateLateFee($finalAmt, $daysLate) : 0;
 
     // 🔹 Append to history
-    $history = $inst->approval_history ?? [];
+    $history = is_array($inst->approval_history) ? $inst->approval_history : [];
     $history[] = [
         'calculated_late_fee' => $inst->calculated_late_fee,
         'approved_late_fee'   => (float)$request->approved_late_fee,
@@ -158,8 +158,32 @@ public function approveLateFeePerInstallment(Request $request, $installmentId)
     $inst->approval_history  = $history;
     $inst->save();
 
+    // 🔹 Update related payment_details if exists
+    $registrationId = \App\Models\CourseRegistration::where('student_id', $inst->paymentPlan->student_id)
+    ->where('course_id', $inst->paymentPlan->course_id)
+    ->value('id');
+
+    $paymentDetail = \App\Models\PaymentDetail::where('student_id', $inst->paymentPlan->student_id)
+        ->where('course_registration_id', $registrationId)
+        ->where('installment_number', $inst->installment_number)
+        ->where('status', 'pending')
+        ->first();
+
+
+    if ($paymentDetail) {
+        $baseAmt  = $inst->final_amount ?? $inst->amount ?? 0;
+        $lateFee  = $inst->calculated_late_fee;
+        $approved = $inst->approved_late_fee ?? 0;
+
+        $paymentDetail->late_fee          = $lateFee;
+        $paymentDetail->approved_late_fee = $approved;
+        $paymentDetail->total_fee         = $baseAmt + $lateFee - $approved;
+        $paymentDetail->save();
+    }
+
     return back()->with('success', 'Late fee approved for installment.');
 }
+
 
 
 /**
