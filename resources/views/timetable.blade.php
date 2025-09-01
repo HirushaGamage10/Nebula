@@ -733,39 +733,33 @@
                                parsedEnd: mEnd.format('YYYY-MM-DD HH:mm:ss')
                            });
 +
-+                            // push safe, validated event objects (use Date instances for FullCalendar v3)
-+                            var evObj = {
-+                                id: (e.id !== undefined && e.id !== null) ? 't' + e.id : 't' + idx,
-+                                title: title || 'Class',
-+                                start: mStart.toDate(),
-+                                end: mEnd.toDate(),
-+                                allDay: false,
-+                                extendedProps: e,
-+                                overlap: true
-+                            };
-+                            fcEvents.push(evObj);
+                            // use local-formatted datetimes (no trailing Z) so FullCalendar places events correctly in week/day views
+                            // use Date objects to avoid ISO parsing/timezone edge-cases in agendaWeek/Day
+                            fcEvents.push({
+                                id: (e.id !== undefined && e.id !== null) ? 't' + e.id : 't' + idx,
+                                title: title,
+                                // give FullCalendar local ISO datetimes (no trailing Z) to avoid UTC shifts
+                                start: mStart.format('YYYY-MM-DDTHH:mm:ss'),
+                                end: mEnd.format('YYYY-MM-DDTHH:mm:ss'),
+                                allDay: false,
+                                extendedProps: e,
+                                overlap: true
+                            });
                         });
 
                         // add events after short delay so calendar layout is ready (fix scrollTop errors)
                         setTimeout(function () {
-                            // sanity-check events array and remove bad items before adding
-                            console.log('Adding events to FullCalendar, pre-filter count:', fcEvents.length, fcEvents);
-                            var bad = fcEvents.filter(function(i){ return !i || !i.start || !(moment(i.start).isValid() || i.start instanceof Date); });
-                            if (bad.length) {
-                                console.warn('Removing invalid events before addEventSource:', bad);
-                            }
-                            fcEvents = fcEvents.filter(function(i){ return i && i.start && (moment(i.start).isValid() || i.start instanceof Date); });
-                            console.log('Adding events to FullCalendar, final count:', fcEvents.length, fcEvents);
-                             try {
-                                 // remove previous events/sources safely before adding new ones
-                                 if ($('#calendar').hasClass('fc')) {
-                                     $('#calendar').fullCalendar('removeEvents');
-                                     $('#calendar').fullCalendar('removeEventSources');
-                                 }
-                             } catch (ex) { console.warn('Error clearing previous events:', ex); }
- 
-                             $('#calendar').fullCalendar('addEventSource', fcEvents);
-                             $('#calendar').fullCalendar('rerenderEvents');
+                            console.log('Adding events to FullCalendar, count:', fcEvents.length, fcEvents);
+                            try {
+                                // remove previous events/sources safely before adding new ones
+                                if ($('#calendar').hasClass('fc')) {
+                                    $('#calendar').fullCalendar('removeEvents');
+                                    $('#calendar').fullCalendar('removeEventSources');
+                                }
+                            } catch (ex) { console.warn('Error clearing previous events:', ex); }
+
+                            $('#calendar').fullCalendar('addEventSource', fcEvents);
+                            $('#calendar').fullCalendar('rerenderEvents');
                         }, 120);
 
                         // keep raw server data
