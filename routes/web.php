@@ -409,6 +409,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
 
     // Timetable Management - Program Administrator (level 02) and Developer only
+    // Timetable Management - Program Administrator (level 02) and Developer only
     Route::get('/timetable', [TimetableController::class, 'showTimetable'])->name('timetable.show');
     Route::post('/timetable', [TimetableController::class, 'store'])->name('timetable.store');
     Route::get('/get-intakes/{courseId}/{location}', [App\Http\Controllers\TimetableController::class, 'getIntakesForCourseAndLocation']);
@@ -425,6 +426,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     Route::get('/get-available-subjects', [TimetableController::class, 'getAvailableSubjects']);
     Route::post('/assign-subject-to-timeslot', [TimetableController::class, 'assignSubjectToTimeslot']);
     Route::post('/timetable/assign-subjects', [TimetableController::class, 'assignSubjects'])->name('timetable.assignSubjects');
+    // Delete single timetable event
+    Route::post('/timetable/delete-event', [TimetableController::class, 'deleteEvent'])->name('timetable.deleteEvent');
 });
 
 // API routes - DGM, Program Administrator (level 01), Program Administrator (level 02), Student Counselor, Bursar, Developer

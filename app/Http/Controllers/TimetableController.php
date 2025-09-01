@@ -1050,4 +1050,25 @@ class TimetableController extends Controller
             return response()->json(['success' => false, 'message' => 'Server error'], 500);
         }
     }
+
+    // Delete a single timetable event by id
+    public function deleteEvent(Request $request)
+    {
+        $id = $request->input('id');
+        if (!$id) {
+            return response()->json(['success' => false, 'message' => 'No id provided'], 422);
+        }
+
+        try {
+            $row = Timetable::find($id);
+            if (!$row) {
+                return response()->json(['success' => false, 'message' => 'Event not found'], 404);
+            }
+            $row->delete();
+            return response()->json(['success' => true, 'message' => 'Event deleted']);
+        } catch (\Exception $e) {
+            \Log::error('Error deleting timetable event: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error'], 500);
+        }
+    }
 }

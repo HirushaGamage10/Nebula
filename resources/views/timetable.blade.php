@@ -225,17 +225,17 @@
       </div>
     </div>
 
-    <!-- FullCalendar CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@3.0.1/dist/fullcalendar.min.css" rel="stylesheet" />
+    <!-- FullCalendar v5 (modern build) -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
 
-    <!-- jQuery (Required by FullCalendar) -->
+    <!-- jQuery (kept for other UI code) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    <!-- Moment.js (Required by FullCalendar) -->
+    <!-- Moment.js (used in other parts of this page) -->
     <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
 
-    <!-- FullCalendar JS -->
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@3.0.1/dist/fullcalendar.min.js"></script>
+    <!-- FullCalendar v5 bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
 
     <!-- jsPDF for PDF export -->
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -563,66 +563,93 @@
                 }
             });
 
-            // Initialize FullCalendar
-            $('#calendar').fullCalendar({
-                header: {
+            // Initialize FullCalendar v5
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                headerToolbar: {
                     left: 'prev,next today',
                     center: 'title',
-                    right: 'month,agendaWeek,agendaDay'
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 },
-                defaultView: 'agendaWeek',
                 allDaySlot: false,
                 editable: true,
-                droppable: true,
                 selectable: true,
-                selectHelper: true,
                 slotDuration: '00:15:00',
-                minTime: "00:00:00",
-                maxTime: "24:00:00",
-                slotEventOverlap: true,
-                eventOverlap: true,
-                timezone: false,    // use local datetimes as-is (prevents UTC conversion)
+                nowIndicator: true,
+                expandRows: true,
+                firstDay: 0, // Sunday
                 events: [],
-                eventRender: function (event, element) {
-                    element.css({
-                        'background-color': '#007bff',
-                        'border-color': '#0056b3',
-                        'color': '#fff',
-                        'opacity': '0.95'
-                    });
-                    element.find('.fc-title').css({
-                        'font-weight': '600',
-                        'font-size': '0.85em'
-                    });
+                eventDidMount: function(info) {
+                    // custom styling similar to previous implementation
+                    info.el.style.backgroundColor = '#007bff';
+                    info.el.style.borderColor = '#0056b3';
+                    info.el.style.color = '#fff';
+                    info.el.style.opacity = '0.95';
+                    info.el.querySelector('.fc-event-title')?.style && (info.el.querySelector('.fc-event-title').style.fontWeight = '600');
                 },
-                eventClick: function (event, jsEvent, view) {
+                eventClick: function(info) {
+                    var event = info.event;
                     if (event && event.start) {
                         var eventTime = moment(event.start).format('HH:mm');
                         $('#degree_time_0').val(eventTime);
                     }
+
+                    if (confirm('Do you want to delete this timetable event?')) {
+                        var id = event.id;
+                        if (!id) { alert('Unable to determine event id to delete'); return; }
+
+                        // remove visually first
+                        try { event.remove(); } catch(e) { console.warn('client remove failed', e); }
+
+                        $.ajax({
+                            url: '/timetable/delete-event',
+                            type: 'POST',
+                            data: { id: id },
+                            headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') || '' },
+                            success: function (res) {
+                                if (res && res.success) {
+                                    calendar.refetchEvents();
+                                } else {
+                                    alert('Delete failed: ' + (res.message || 'unknown'));
+                                    calendar.refetchEvents();
+                                }
+                            },
+                            error: function (xhr) {
+                                alert('Delete failed');
+                                console.error('delete error', xhr);
+                                calendar.refetchEvents();
+                            }
+                        });
+                    }
                 },
-                select: function (start, end, jsEvent, view) {
-                    var startDate = start.format('YYYY-MM-DD');
-                    var startTime = start.format('HH:mm');
+                select: function(selectionInfo) {
+                    var startDate = moment(selectionInfo.start).format('YYYY-MM-DD');
+                    var startTime = moment(selectionInfo.start).format('HH:mm');
                     $('#selectedDate').val(startDate);
                     $('#selected_date_display').val(startDate);
                     $('#degree_time_0').val(startTime);
                     $('#degree_duration_0').val('');
                     $('#degree_subject_0').val('');
                     $('#subjectSelectionModal').modal('show');
-                    $('#calendar').fullCalendar('unselect');
+                    calendar.unselect();
                 },
-                dayClick: function (date, jsEvent, view) {
-                    var d = date.format('YYYY-MM-DD');
-                    var t = date.format('HH:mm');
+                dateClick: function(info) {
+                    var d = moment(info.date).format('YYYY-MM-DD');
+                    var t = moment(info.date).format('HH:mm');
                     $('#selectedDate').val(d);
                     $('#selected_date_display').val(d);
                     $('#degree_time_0').val(t);
                     $('#degree_duration_0').val('');
                     $('#degree_subject_0').val('');
                     $('#subjectSelectionModal').modal('show');
-                }
+                },
+                eventOverlap: true,
             });
+
+            // attach calendar instance to window for debug access
+            window.__nebulaCalendar = calendar;
+            calendar.render();
 
             // Populate PDF modal course select when course list loads (reuse degree_course change)
             $('#degree_course').on('change', function () {
@@ -671,20 +698,20 @@
                         // show calendar section first so layout/scroll exists
                         $('#degreeTimetableSection').show();
                         // ensure calendar re-render (important when it was hidden)
-                        setTimeout(function () { $('#calendar').fullCalendar('render'); }, 40);
+                        setTimeout(function () { if (window.__nebulaCalendar) window.__nebulaCalendar.render(); }, 40);
 
                         // remove previous events safely
                         try {
-                            if ($('#calendar').hasClass('fc')) {
-                                $('#calendar').fullCalendar('removeEvents');
+                            if (window.__nebulaCalendar) {
+                                try { window.__nebulaCalendar.removeAllEvents(); } catch(e) { console.warn('removeAllEvents failed', e); }
                             }
                         } catch (err) {
-                            console.warn('Safe removeEvents error:', err);
+                            console.warn('Safe removeAllEvents error:', err);
                         }
 
                         if (!eventsArray || !eventsArray.length) {
                             console.info('No events returned.');
-                            setTimeout(function () { $('#calendar').fullCalendar('render'); }, 50);
+                            setTimeout(function () { if (window.__nebulaCalendar) window.__nebulaCalendar.render(); }, 50);
                             return;
                         }
 
@@ -736,11 +763,11 @@
                             // use local-formatted datetimes (no trailing Z) so FullCalendar places events correctly in week/day views
                             // use Date objects to avoid ISO parsing/timezone edge-cases in agendaWeek/Day
                             fcEvents.push({
-                                id: (e.id !== undefined && e.id !== null) ? 't' + e.id : 't' + idx,
+                                id: (e.id !== undefined && e.id !== null) ? e.id : idx,
                                 title: title,
-                                // give FullCalendar local ISO datetimes (no trailing Z) to avoid UTC shifts
-                                start: mStart.format('YYYY-MM-DDTHH:mm:ss'),
-                                end: mEnd.format('YYYY-MM-DDTHH:mm:ss'),
+                                // pass native Date objects to avoid parsing ambiguity
+                                start: mStart.toDate(),
+                                end: mEnd.toDate(),
                                 allDay: false,
                                 extendedProps: e,
                                 overlap: true
@@ -750,16 +777,40 @@
                         // add events after short delay so calendar layout is ready (fix scrollTop errors)
                         setTimeout(function () {
                             console.log('Adding events to FullCalendar, count:', fcEvents.length, fcEvents);
+                            // dedupe events by id (server may accidentally return duplicates)
+                            var seen = {};
+                            var uniqueFc = [];
+                            fcEvents.forEach(function(ev){
+                                var key = ev.id || (ev.start && ev.start.toString()) || JSON.stringify(ev);
+                                if (!seen[key]) { seen[key] = true; uniqueFc.push(ev); }
+                            });
+                            console.log('Unique events after dedupe:', uniqueFc.length, uniqueFc);
                             try {
-                                // remove previous events/sources safely before adding new ones
-                                if ($('#calendar').hasClass('fc')) {
-                                    $('#calendar').fullCalendar('removeEvents');
-                                    $('#calendar').fullCalendar('removeEventSources');
+                                if (window.__nebulaCalendar) {
+                                    try { window.__nebulaCalendar.removeAllEvents(); } catch(e) { console.warn('removeAllEvents failed', e); }
+                                    try { var sources = window.__nebulaCalendar.getEventSources(); sources.forEach(function(s){ try { s.remove(); } catch(e){} }); } catch(e) { /* ignore */ }
                                 }
                             } catch (ex) { console.warn('Error clearing previous events:', ex); }
 
-                            $('#calendar').fullCalendar('addEventSource', fcEvents);
-                            $('#calendar').fullCalendar('rerenderEvents');
+                            try { if (window.__nebulaCalendar) window.__nebulaCalendar.addEventSource(uniqueFc); } catch(e) { console.warn('addEventSource failed', e); }
+                            try { if (window.__nebulaCalendar) window.__nebulaCalendar.refetchEvents(); } catch(e) { /* ignore */ }
+
+                            // debug: inspect what FullCalendar actually stored
+                            setTimeout(function () {
+                                try {
+                                    var stored = (window.__nebulaCalendar) ? window.__nebulaCalendar.getEvents() : [];
+                                    console.log('Client events in calendar (count):', stored.length);
+                                    stored.forEach(function (ev, i) {
+                                        try {
+                                            var stType = ev.start ? Object.prototype.toString.call(ev.start) : 'null';
+                                            var enType = ev.end ? Object.prototype.toString.call(ev.end) : 'null';
+                                            var stStr = ev.start ? (moment(ev.start).isValid() ? moment(ev.start).format('YYYY-MM-DD HH:mm:ss') : ev.start.toString()) : 'null';
+                                            var enStr = ev.end ? (moment(ev.end).isValid() ? moment(ev.end).format('YYYY-MM-DD HH:mm:ss') : ev.end.toString()) : 'null';
+                                            console.log('Stored event', i, 'id:', ev.id, 'title:', ev.title, 'startType:', stType, 'endType:', enType, 'start:', stStr, 'end:', enStr, ev);
+                                        } catch (inner) { console.warn('Error inspecting event', inner); }
+                                    });
+                                } catch (e) { console.warn('Failed to read client events', e); }
+                            }, 150);
                         }, 120);
 
                         // keep raw server data
@@ -1024,21 +1075,117 @@
                 });
             }
 
+                // Build a generic grid HTML for an arbitrary date range (start..end inclusive)
+                // This replaces the fixed-week/month builders for the PDF download so we can
+                // export the calendar's visible range (next/selected week or month).
+                function buildGridHtmlForRange(startMoment, endMoment, title) {
+                    if (!startMoment || !endMoment || !startMoment.isValid() || !endMoment.isValid()) return '';
+                    // build list of days from start to end (inclusive)
+                    var days = [];
+                    var cursor = startMoment.clone().startOf('day');
+                    var last = endMoment.clone().startOf('day');
+                    while (cursor.isSameOrBefore(last)) { days.push(cursor.clone()); cursor.add(1, 'day'); }
+
+                    // compute dynamic hour range from latestFcEvents
+                    var minHour = 23, maxHour = 0;
+                    if (latestFcEvents && latestFcEvents.length) {
+                        latestFcEvents.forEach(function(ev) {
+                            try {
+                                var ms = moment(ev.start);
+                                var me = ev.end ? moment(ev.end) : null;
+                                if (ms.isValid()) minHour = Math.min(minHour, ms.hour());
+                                if (me && me.isValid()) maxHour = Math.max(maxHour, me.hour());
+                            } catch (e) {}
+                        });
+                    }
+                    // fallback default if no events or hours out of expected range
+                    if (minHour > maxHour) { minHour = 8; maxHour = 18; }
+                    // add padding rows for readability
+                    minHour = Math.max(0, minHour - 1);
+                    maxHour = Math.min(23, maxHour + 1);
+
+                    var html = '<div style="padding:10px;font-family:Helvetica,Arial,sans-serif;"><h3 style="margin:0 0 10px 0;">' + (title || '') + '</h3>';
+                    html += '<table style="width:100%;border-collapse:collapse;font-size:10pt;"><thead><tr>';
+                    html += '<th style="width:90px;border:1px solid #000;padding:6px;background:#f7f7f7;">Time</th>';
+                    days.forEach(function(dt){ html += '<th style="border:1px solid #000;padding:6px;background:#f7f7f7;text-align:center;">' + dt.format('ddd DD/MM') + '</th>'; });
+                    html += '</tr></thead><tbody>';
+
+                    for (var h = minHour; h <= maxHour; h++) {
+                        html += '<tr>';
+                        html += '<td style="border:1px solid #000;padding:6px;font-weight:600;">' + moment({ hour: h }).format('HH:mm') + '</td>';
+                        for (var c = 0; c < days.length; c++) {
+                            var day = days[c];
+                            // Only include events that start on this day and in this hour row
+                            var cellEvents = latestFcEvents.filter(function(ev){
+                                try {
+                                    var ms = moment(ev.start);
+                                    if (!ms.isValid()) return false;
+                                    return ms.isSame(day, 'day') && ms.hour() === h;
+                                } catch (e) { return false; }
+                            });
+                            html += '<td style="border:1px solid #000;padding:6px;vertical-align:top;min-height:40px;">';
+                            if (cellEvents.length) {
+                                cellEvents.forEach(function(ce){
+                                    var st = moment(ce.start).format('HH:mm');
+                                    var en = ce.end ? moment(ce.end).format('HH:mm') : '';
+                                    html += '<div style="background:#2b8cff;color:#fff;padding:4px 6px;margin-bottom:4px;font-weight:600;">' + ce.title + '</div>';
+                                    html += '<div style="font-size:9pt;color:#222;margin-bottom:6px;">' + st + (en ? ' - ' + en : '') + '</div>';
+                                });
+                            } else {
+                                html += '&nbsp;';
+                            }
+                            html += '</td>';
+                        }
+                        html += '</tr>';
+                    }
+
+                    html += '</tbody></table></div>';
+                    return html;
+                }
+
             // click handlers
             $('#downloadWeekPdfBtn').on('click', function () {
                 if (!latestFcEvents || !latestFcEvents.length) { alert('Please load timetable first.'); return; }
-                var today = moment();
-                var weekIndex = computeWeekIndexForDate(today);
-                var html = buildWeekHtml(weekIndex);
-                downloadHtmlAsA4Pdf(html, 'Week_' + weekIndex + '_Timetable.pdf');
+                try {
+                    var start = null, end = null, title = 'Week Timetable';
+                    if (window.__nebulaCalendar && window.__nebulaCalendar.view) {
+                        // calendar.view.activeStart and activeEnd are Dates
+                        start = moment(window.__nebulaCalendar.view.activeStart);
+                        // activeEnd is exclusive; subtract 1ms to include previous day
+                        end = moment(new Date(window.__nebulaCalendar.view.activeEnd.getTime() - 1));
+                        title = 'Week ' + start.format('YYYY-MM-DD') + ' - ' + end.format('YYYY-MM-DD');
+                    } else {
+                        var today = moment();
+                        start = today.clone().startOf('week');
+                        end = today.clone().endOf('week');
+                    }
+                    var html = buildGridHtmlForRange(start, end, title);
+                    downloadHtmlAsA4Pdf(html, 'Week_' + start.format('YYYY-MM-DD') + '_Timetable.pdf');
+                } catch (e) {
+                    console.error('Week PDF generation failed', e);
+                    alert('Failed to generate week PDF');
+                }
             });
 
             $('#downloadMonthPdfBtn').on('click', function () {
                 if (!latestFcEvents || !latestFcEvents.length) { alert('Please load timetable first.'); return; }
-                var today = moment();
-                var monthIndex = computeMonthIndexForDate(today);
-                var html = buildMonthHtml(monthIndex);
-                downloadHtmlAsA4Pdf(html, 'Month_' + monthIndex + '_Timetable.pdf');
+                try {
+                    var start = null, end = null, title = 'Month Timetable';
+                    if (window.__nebulaCalendar && window.__nebulaCalendar.view) {
+                        start = moment(window.__nebulaCalendar.view.activeStart);
+                        end = moment(new Date(window.__nebulaCalendar.view.activeEnd.getTime() - 1));
+                        title = 'Month ' + start.format('YYYY-MM');
+                    } else {
+                        var today = moment();
+                        start = today.clone().startOf('month');
+                        end = today.clone().endOf('month');
+                    }
+                    var html = buildGridHtmlForRange(start, end, title);
+                    downloadHtmlAsA4Pdf(html, 'Month_' + start.format('YYYY-MM') + '_Timetable.pdf');
+                } catch (e) {
+                    console.error('Month PDF generation failed', e);
+                    alert('Failed to generate month PDF');
+                }
             });
             // --- end simplified download functions ---
 
