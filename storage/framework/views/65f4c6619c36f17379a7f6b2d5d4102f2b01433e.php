@@ -4,10 +4,7 @@
 
 <?php $__env->startSection('content'); ?>
 <div class="container mt-4">
-
-
-
-
+    
     
 <div class="card mb-4">
     <div class="card shadow-sm mb-4">
@@ -18,6 +15,7 @@
         </h4>
     </div>
 </div>
+
     <div class="card-header bg-secondary text-white">Select Student & Course</div>
     <div class="card-body">
         <form method="GET" onsubmit="event.preventDefault(); goToApprovalPage();">

@@ -4,11 +4,18 @@
 
 @section('content')
 <div class="container mt-4">
-    <h2>Late Fee Approval</h2>
-    <hr>
-
+    
     {{-- Student & Course Selection --}}
 <div class="card mb-4">
+    <div class="card shadow-sm mb-4">
+    <div class="card-header bg-white text-center">
+        <h4 class="mb-0 fw-bold text-dark">
+            <i class="bi bi-cash-stack me-2 text-primary"></i>
+            Late Fee Approval
+        </h4>
+    </div>
+</div>
+
     <div class="card-header bg-secondary text-white">Select Student & Course</div>
     <div class="card-body">
         <form method="GET" onsubmit="event.preventDefault(); goToApprovalPage();">
