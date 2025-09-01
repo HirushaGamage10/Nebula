@@ -949,35 +949,36 @@ public function generatePaymentSlip(Request $request)
         $totalFee = $courseFee + $franchiseFee + $registrationFee + $lateFee - $approvedLateFee;
 
         // --- Prevent duplicate pending slips ---
-        $existingPayment = \App\Models\PaymentDetail::where('student_id', $student->student_id)
-            ->where('course_registration_id', $registration->id)
-            ->when($request->installment_number, fn($q) => $q->where('installment_number', $request->installment_number))
-            ->when($request->due_date, fn($q) => $q->whereDate('due_date', $request->due_date))
-            ->where('status', 'pending')
-            ->first();
+$existingPayment = \App\Models\PaymentDetail::where('student_id', $student->student_id)
+    ->where('course_registration_id', $registration->id)
+    ->when($request->installment_number, fn($q) => $q->where('installment_number', $request->installment_number))
+    ->when($request->due_date, fn($q) => $q->whereDate('due_date', $request->due_date))
+    ->where('status', 'pending')
+    ->first();
 
-        if ($existingPayment) {
-            // ✅ Update with latest late fee data
-            $existingPayment->update([
-                'late_fee'          => $lateFee,
-                'approved_late_fee' => $approvedLateFee,
-                'total_fee'         => $totalFee,
-            ]);
+if ($existingPayment) {
+    // Build slip array with existing record
+    $slipData = $this->buildSlipArray(
+        $existingPayment, $student, $course, $intake,
+        $courseFee, $franchiseFee, $registrationFee,
+        $existingPayment->late_fee, 
+        $existingPayment->approved_late_fee,
+        $existingPayment->total_fee
+    );
 
-            $slipData = $this->buildSlipArray(
-                $existingPayment, $student, $course, $intake,
-                $courseFee, $franchiseFee, $registrationFee,
-                $lateFee, $approvedLateFee, $totalFee
-            );
+    // add extra flags for frontend
+    $slipData['id'] = $existingPayment->id;
+    $slipData['can_delete'] = true;
 
-            session(['generated_slip_' . $existingPayment->transaction_id => $slipData]);
+    session(['generated_slip_' . $existingPayment->transaction_id => $slipData]);
 
-            return response()->json([
-                'success'  => true,
-                'slip_data'=> $slipData,
-                'message'  => 'Existing payment slip found & updated with late fee.',
-            ]);
-        }
+    return response()->json([
+        'success'   => true,
+        'slip_data' => $slipData,
+        'message'   => 'Existing payment slip found. You can delete it if you want to regenerate.'
+    ]);
+}
+
 
         // --- Generate New Receipt Number ---
         $today      = date('Ymd');
@@ -987,7 +988,7 @@ public function generatePaymentSlip(Request $request)
         $nextNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
         $receiptNo  = 'RCP' . $today . $nextNumber;
 
-        // --- Create new Payment record ---
+
         // --- Create new Payment record ---
 $payment = \App\Models\PaymentDetail::create([
     'student_id'             => $student->student_id,
@@ -1070,6 +1071,31 @@ private function buildSlipArray($payment, $student, $course, $intake, $courseFee
     ];
 }
 
+public function deletePaymentSlip($id)
+{
+    try {
+        $payment = \App\Models\PaymentDetail::findOrFail($id);
+
+        if ($payment->status !== 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only pending slips can be deleted.'
+            ], 400);
+        }
+
+        $payment->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment slip deleted successfully. You can now generate a new one.'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error deleting slip: ' . $e->getMessage()
+        ], 500);
+    }
+}
 
 
 

@@ -604,13 +604,18 @@
                                         </div>
                                     </div>
                                     <div class="text-center mt-3">
-                                        <button type="button" class="btn btn-success me-2" onclick="printPaymentSlip()">
-                                            <i class="ti ti-printer me-2"></i>Print Slip
-                                        </button>
-                                        <button type="button" class="btn btn-info me-2" onclick="downloadPaymentSlip()">
-                                            <i class="ti ti-download me-2"></i>Download PDF
-                                        </button>
-                                    </div>
+    <button type="button" class="btn btn-success me-2" onclick="printPaymentSlip()">
+        <i class="ti ti-printer me-2"></i>Print Slip
+    </button>
+    <button type="button" class="btn btn-info me-2" onclick="downloadPaymentSlip()">
+        <i class="ti ti-download me-2"></i>Download PDF
+    </button>
+
+    <button type="button" class="btn btn-danger btn-sm" id="delete-slip-btn" style="display:none;">
+        <i class="ti ti-trash me-2"></i>Delete Slip
+    </button>
+</div>
+
                                 </div>
                             </div>
                         </div>
@@ -2392,6 +2397,18 @@ async function generatePaymentSlip() {
     window.currentSlipData = data.slip_data;
     const s = data.slip_data;
 
+    // ===== Delete button setup =====
+const deleteBtn = document.getElementById('delete-slip-btn');
+if (s && s.id) {
+  deleteBtn.style.display = "inline-block"; // show the button
+  deleteBtn.onclick = function () {
+    deleteSlip(s.id);
+  };
+} else {
+  deleteBtn.style.display = "none"; // hide if no slip id
+}
+
+
     // ===== On-page preview =====
     setText('slip-student-id-display',   s.student_id);
     setText('slip-student-name-display', s.student_name);
@@ -3697,6 +3714,31 @@ function renderPaymentDetailsTable(rows, paymentType) {
 // If user changes FX inputs, recompute the LKR column live
 document.getElementById('currency-conversion-rate')?.addEventListener('input', recalculateLKRAmounts);
 document.getElementById('currency-from')?.addEventListener('change', recalculateLKRAmounts);
+
+function deleteSlip(id) {
+  if (!confirm("Are you sure you want to delete this slip?")) return;
+
+  fetch(`/payment/delete-slip/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+      'Accept': 'application/json'
+    }
+  })
+    .then(res => res.json())
+    .then(data => {
+      alert(data.message);
+      if (data.success) {
+        // Hide preview & reset button
+        document.getElementById('slipPreviewSection').style.display = 'none';
+        document.getElementById('delete-slip-btn').style.display = 'none';
+        window.currentSlipData = null;
+      }
+    })
+    .catch(err => console.error("Delete failed", err));
+}
+
+
 </script>
 
 <?php $__env->stopSection(); ?> 
