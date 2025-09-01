@@ -527,7 +527,7 @@ Route::middleware(['auth', 'role:Program Administrator (level 01),Program Admini
         ->name('semester.registration');
 
     Route::post('/semester-registration/store', [SemesterRegistrationController::class, 'store'])
-        ->name('semester.registration.store'); // ✅ This fixes your Blade error
+        ->name('semester.registration.store');// ✅ This fixes your Blade error
 
     Route::get('/semester-registration/get-courses-by-location', [SemesterRegistrationController::class, 'getCoursesByLocation'])
         ->name('semester.registration.getCoursesByLocation');

@@ -10,6 +10,9 @@ use App\Models\Semester;
 use App\Models\Student;
 use App\Models\CourseRegistration;
 use App\Models\SemesterRegistration;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
 
 class SemesterRegistrationController extends Controller
 {
@@ -31,8 +34,9 @@ class SemesterRegistrationController extends Controller
      */
     public function store(Request $request)
     {
-        \Log::info('Semester registration store method called', $request->all());
+        Log::info('Semester registration store method called', $request->all());
 
+        // Enhanced validation: Explicitly allow 'holding'
         $request->validate([
             'course_id'         => 'required|exists:courses,course_id',
             'intake_id'         => 'required|exists:intakes,intake_id',
@@ -52,18 +56,29 @@ class SemesterRegistrationController extends Controller
             $selectedStudents = json_decode($request->input('register_students'), true);
 
             if (!is_array($selectedStudents) || empty($selectedStudents)) {
+                Log::warning('No students selected for registration.');
                 return response()->json([
                     'success' => false,
                     'message' => 'No students selected for registration.'
                 ], 400);
             }
 
-            // Validate payload entries
+            // Validate payload entries and allowed statuses
             foreach ($selectedStudents as $entry) {
                 if (!isset($entry['student_id']) || !isset($entry['status'])) {
+                    Log::warning('Invalid student entry format.', $entry);
                     return response()->json([
                         'success' => false,
                         'message' => 'Invalid student entry format.'
+                    ], 400);
+                }
+                // Ensure status is one of the allowed values
+                $allowedStatuses = ['registered', 'holding', 'terminated'];
+                if (!in_array(strtolower($entry['status']), $allowedStatuses)) {
+                    Log::warning('Invalid status provided.', ['status' => $entry['status']]);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Invalid status. Allowed: registered, holding, terminated.'
                     ], 400);
                 }
             }
@@ -73,6 +88,7 @@ class SemesterRegistrationController extends Controller
             $validStudentIds   = Student::whereIn('student_id', $studentIds)->pluck('student_id')->toArray();
             $invalidStudentIds = array_diff($studentIds, $validStudentIds);
             if (!empty($invalidStudentIds)) {
+                Log::warning('Invalid student IDs.', ['invalid' => $invalidStudentIds]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Some selected students do not exist in the system.'
@@ -85,32 +101,95 @@ class SemesterRegistrationController extends Controller
 
             $messages = [];
 
-            foreach ($selectedStudents as $entry) {
-                $studentId    = (int) $entry['student_id'];
-                $newStatus    = strtolower($entry['status']); // 'registered' | 'holding' | 'terminated'
-                $origFromUI   = strtolower($entry['original_status'] ?? '');
+            // Use DB transaction for atomicity
+            DB::transaction(function () use ($selectedStudents, $request, $saReasons, $saFiles, &$messages) {
+                foreach ($selectedStudents as $entry) {
+                    $studentId    = (int) $entry['student_id'];
+                    $newStatus    = strtolower($entry['status']); // 'registered' | 'holding' | 'terminated'
+                    $origFromUI   = strtolower($entry['original_status'] ?? '');
 
-                // Current semester registration (if any) for this student/intake/semester
-                $current = SemesterRegistration::where('student_id', $studentId)
-                    ->where('intake_id',  $request->intake_id)
-                    ->where('semester_id', $request->semester_id)
-                    ->latest('id')
-                    ->first();
+                    // Current semester registration (if any) for this student/intake/semester
+                    $current = SemesterRegistration::where('student_id', $studentId)
+                        ->where('intake_id',  $request->intake_id)
+                        ->where('semester_id', $request->semester_id)
+                        ->latest('id')
+                        ->first();
 
-                // Consider terminated if DB says so; fall back to UI-provided original status
-                $wasTerminated = $current
-                    ? ($current->status === 'terminated')
-                    : ($origFromUI === 'terminated');
+                    // Consider terminated if DB says so; fall back to UI-provided original status
+                    $wasTerminated = $current
+                        ? ($current->status === 'terminated')
+                        : ($origFromUI === 'terminated');
 
-                // Special-approval payload
-                $reason = $saReasons[$studentId] ?? null;
-                $hasSA  = $reason && trim($reason) !== '';
+                    // Special-approval payload
+                    $reason = $saReasons[$studentId] ?? null;
+                    $hasSA  = $reason && trim($reason) !== '';
 
-                // === CASE A: re-registering a TERMINATED student → create/refresh a PENDING approval ===
-                if ($newStatus === 'registered' && ($wasTerminated || $hasSA)) {
-                    $filePath = null;
-                    if (isset($saFiles[$studentId]) && $saFiles[$studentId]->isValid()) {
-                        $filePath = $saFiles[$studentId]->store('semester_special_approvals', 'public');
+                    // === CASE A: re-registering a TERMINATED student → create/refresh a PENDING approval ===
+                    if ($newStatus === 'registered' && ($wasTerminated || $hasSA)) {
+                        $filePath = null;
+                        if (isset($saFiles[$studentId]) && $saFiles[$studentId]->isValid()) {
+                            try {
+                                $filePath = $saFiles[$studentId]->store('semester_special_approvals', 'public');
+                            } catch (\Exception $e) {
+                                Log::error('File upload failed for student ' . $studentId, ['error' => $e->getMessage()]);
+                                throw new \Exception('File upload failed for student ' . $studentId);
+                            }
+                        }
+
+                        SemesterRegistration::updateOrCreate(
+                            [
+                                'student_id'  => $studentId,
+                                'intake_id'   => $request->intake_id,
+                                'semester_id' => $request->semester_id,
+                            ],
+                            [
+                                'course_id'             => $request->course_id,
+                                'location'              => $request->location,
+                                'specialization'        => $request->specialization,
+
+                                // keep status TERMINATED until DGM approves
+                                'status'                => 'terminated',
+                                'desired_status'        => 'registered',
+                                'approval_status'       => 'pending',
+                                'approval_reason'       => $reason ?: '—',
+                                'approval_file_path'    => $filePath,
+                                'approval_requested_at' => now(),
+
+                                'registration_date'     => $current?->registration_date ?? now()->toDateString(),
+                                'updated_at'            => now(),
+                            ]
+                        );
+
+                        $messages[] = "Student {$studentId}: Special approval requested (pending DGM).";
+                        continue; // IMPORTANT: do not fall through and overwrite approval_* fields
+                    }
+
+                    // === CASE B: There is an already-approved SA to move to registered → finalize ===
+                    $approvedToRegistered = $current
+                        && $current->approval_status === 'approved'
+                        && $current->desired_status  === 'registered'
+                        && $newStatus === 'registered';
+
+                    // === CASE C: Normal update (no SA involved) ===
+                    $update = [
+                        'course_id'         => $request->course_id,
+                        'location'          => $request->location,
+                        'specialization'    => $request->specialization,
+                        'status'            => $approvedToRegistered ? 'registered' : $newStatus, // Handles 'holding' here
+                        'registration_date' => now()->toDateString(),
+                        'updated_at'        => now(),
+                    ];
+
+                    // Only clear approval flags if we actually consumed an approved request
+                    if ($approvedToRegistered) {
+                        $update['desired_status']         = null;
+                        $update['approval_status']        = 'none';
+                        $update['approval_reason']        = null;
+                        $update['approval_file_path']     = null;
+                        $update['approval_requested_at']  = null;
+                        $update['approval_decided_at']    = now();
+                        $update['approval_decided_by']    = auth()->id();
+                        // $update['approval_dgm_comment'] = $request->input('comment'); // set if you pass one
                     }
 
                     SemesterRegistration::updateOrCreate(
@@ -119,82 +198,32 @@ class SemesterRegistrationController extends Controller
                             'intake_id'   => $request->intake_id,
                             'semester_id' => $request->semester_id,
                         ],
-                        [
-                            'course_id'             => $request->course_id,
-                            'location'              => $request->location,
-                            'specialization'        => $request->specialization,
-
-                            // keep status TERMINATED until DGM approves
-                            'status'                => 'terminated',
-                            'desired_status'        => 'registered',
-                            'approval_status'       => 'pending',
-                            'approval_reason'       => $reason ?: '—',
-                            'approval_file_path'    => $filePath,
-                            'approval_requested_at' => now(),
-
-                            'registration_date'     => $current?->registration_date ?? now()->toDateString(),
-                            'updated_at'            => now(),
-                        ]
+                        $update
                     );
-
-                    $messages[] = "Student {$studentId}: Special approval requested (pending DGM).";
-                    continue; // IMPORTANT: do not fall through and overwrite approval_* fields
                 }
-
-                // === CASE B: There is an already-approved SA to move to registered → finalize ===
-                $approvedToRegistered = $current
-                    && $current->approval_status === 'approved'
-                    && $current->desired_status  === 'registered'
-                    && $newStatus === 'registered';
-
-                // === CASE C: Normal update (no SA involved) ===
-                $update = [
-                    'course_id'         => $request->course_id,
-                    'location'          => $request->location,
-                    'specialization'    => $request->specialization,
-                    'status'            => $approvedToRegistered ? 'registered' : $newStatus,
-                    'registration_date' => now()->toDateString(),
-                    'updated_at'        => now(),
-                ];
-
-                // Only clear approval flags if we actually consumed an approved request
-                if ($approvedToRegistered) {
-                    $update['desired_status']         = null;
-                    $update['approval_status']        = 'none';
-                    $update['approval_reason']        = null;
-                    $update['approval_file_path']     = null;
-                    $update['approval_requested_at']  = null;
-                    $update['approval_decided_at']    = now();
-                    $update['approval_decided_by']    = auth()->id();
-                    // $update['approval_dgm_comment'] = $request->input('comment'); // set if you pass one
-                }
-
-                SemesterRegistration::updateOrCreate(
-                    [
-                        'student_id'  => $studentId,
-                        'intake_id'   => $request->intake_id,
-                        'semester_id' => $request->semester_id,
-                    ],
-                    $update
-                );
-            }
+            });
 
             $note = empty($messages) ? '' : (' ' . implode(' ', $messages));
             return response()->json([
                 'success' => true,
                 'message' => 'Student registration statuses processed.' . $note
             ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation error in semester registration: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed: ' . $e->getMessage()
+            ], 422);
         } catch (\Throwable $e) {
-            \Log::error('Error saving semester registrations: ' . $e->getMessage(), [
+            Log::error('Error saving semester registrations: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Server error occurred.'
+                'message' => 'Server error occurred: ' . $e->getMessage() // More specific for debugging
             ], 500);
         }
     }
-
 
     // 1. Get courses by location (degree programs only)
     public function getCoursesByLocation(Request $request)

@@ -296,24 +296,24 @@ document.addEventListener('DOMContentLoaded', function() {
                         let rows = '';
                         filtered.forEach(student => {
                             rows += `
-                           <tr 
-                                data-student-id="${student.student_id}" 
-                                data-status="${student.status}" 
-                                data-original-status="${student.status}"
-                                class="${student.status === 'terminated' ? 'table-danger' : student.status === 'holding' ? 'table-warning' : ''}">
-                                <td>${student.student_id}</td>
-                                <td>${student.name}</td>
-                                <td>${student.email}</td>
-                                <td>${student.nic}</td>
-                                <td class="student-status">${student.status}</td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <button type="button" class="btn btn-outline-success btn-sm toggle-selection ${student.status === 'registered' ? 'active' : ''}" data-action="registered">Register</button>
-                                        <button type="button" class="btn btn-outline-warning btn-sm toggle-selection ${student.status === 'holding' ? 'active' : ''}" data-action="holding">Hold</button>
-                                        <button type="button" class="btn btn-outline-danger btn-sm toggle-selection ${student.status === 'terminated' ? 'active' : ''}" data-action="terminated">Terminate</button>
-                                    </div>
-                                </td>
-                            </tr>`;
+                                <tr 
+                                    data-student-id="${student.student_id}" 
+                                    data-status="${student.status}" 
+                                    data-original-status="${student.status}"
+                                    class="${student.status === 'terminated' ? 'table-danger' : student.status === 'holding' ? 'table-warning' : ''}">
+                                    <td>${student.student_id}</td>
+                                    <td>${student.name}</td>
+                                    <td>${student.email}</td>
+                                    <td>${student.nic}</td>
+                                    <td class="student-status">${student.status}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-outline-success btn-sm toggle-selection ${student.status === 'registered' ? 'active' : ''}" data-action="registered">Register</button>
+                                            <button type="button" class="btn btn-outline-warning btn-sm toggle-selection ${student.status === 'holding' ? 'active' : ''}" data-action="holding">Hold</button>
+                                            <button type="button" class="btn btn-outline-danger btn-sm toggle-selection ${student.status === 'terminated' ? 'active' : ''}" data-action="terminated">Terminate</button>
+                                        </div>
+                                    </td>
+                                </tr>`;
                         });
                         studentsTableBody.innerHTML = rows;
                         document.getElementById('students_table_row').style.display = '';
@@ -352,8 +352,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const btn = e.target;
         const row = btn.closest('tr');
         const action = btn.dataset.action;
-        const originalStatus = row.dataset.originalStatus; // from initial load
-        const currentStatus  = row.dataset.status;         // current UI state
+        const originalStatus = row.dataset.originalStatus;
+        const currentStatus  = row.dataset.status;
         const studentId = row.dataset.studentId;
 
         // If originally terminated and trying to set to registered → require SA
@@ -364,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (saFileEl) saFileEl.value = '';
                 saModal.show();
             }
-            return; // don't toggle yet; toggle after SA submit
+            return;
         }
 
         // Normal toggle
@@ -372,9 +372,9 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.classList.add('active');
         row.dataset.status = action;
         row.querySelector('.student-status').textContent = action;
-        // Optional: update row styling
+        // Update row styling
         row.classList.toggle('table-danger', action === 'terminated');
-        row.classList.toggle('table-warning', false);
+        row.classList.toggle('table-warning', action === 'holding');
     });
 
     // --- Special Approval modal submit ---
