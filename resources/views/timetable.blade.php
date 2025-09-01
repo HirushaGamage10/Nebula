@@ -1417,6 +1417,93 @@
                     return html;
                 }
 
+                // build a month-grid calendar HTML (month grid with day boxes)
+                function buildMonthGridHtml(monthStartMoment, title) {
+                    if (!monthStartMoment || !monthStartMoment.isValid()) return '';
+                    var monthStart = monthStartMoment.clone().startOf('month');
+                    var monthEnd = monthStart.clone().endOf('month');
+                    var gridStart = monthStart.clone().startOf('week');
+                    var gridEnd = monthEnd.clone().endOf('week');
+
+                    var days = [];
+                    var cursor = gridStart.clone();
+                    while (cursor.isSameOrBefore(gridEnd)) { days.push(cursor.clone()); cursor.add(1, 'day'); }
+
+                    // map events to day index (relative to gridStart)
+                    var eventsByDay = {};
+                    for (var i = 0; i < days.length; i++) eventsByDay[i] = [];
+                    if (latestFcEvents && latestFcEvents.length) {
+                        latestFcEvents.forEach(function(ev) {
+                            try {
+                                var es = moment(ev.start);
+                                var ee = ev.end ? moment(ev.end) : es.clone();
+                                if (!es.isValid() || !ee.isValid()) return;
+                                // iterate days and push if event intersects the day
+                                for (var di = 0; di < days.length; di++) {
+                                    var day = days[di].clone().startOf('day');
+                                    var dayStart = day.clone().startOf('day');
+                                    var dayEnd = day.clone().endOf('day');
+                                    if (ee.isBefore(dayStart) || es.isAfter(dayEnd)) continue;
+                                    // event intersects this day
+                                    eventsByDay[di].push({
+                                        id: ev.id || Math.random().toString(36).substr(2,6),
+                                        title: ev.title || (ev.extendedProps && (ev.extendedProps.module_name || ev.extendedProps.subject_name)) || 'Event',
+                                        start: es.clone(),
+                                        end: ee.clone()
+                                    });
+                                }
+                            } catch (e) { /* ignore */ }
+                        });
+                    }
+
+                    // sort events in each day by start time
+                    for (var k = 0; k < days.length; k++) {
+                        eventsByDay[k].sort(function(a,b){ return a.start.isBefore(b.start) ? -1 : (a.start.isAfter(b.start) ? 1 : 0); });
+                    }
+
+                    var html = '<div style="padding:10px;font-family:Helvetica,Arial,sans-serif;">';
+                    html += '<h3 style="margin:0 0 10px 0;">' + (title || monthStart.format('MMMM YYYY')) + '</h3>';
+                    html += '<table style="width:100%;border-collapse:collapse;font-size:9pt;table-layout:fixed;">';
+                    html += '<thead><tr>';
+                    var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+                    dayNames.forEach(function(d){ html += '<th style="border:1px solid #000;padding:6px;background:#f7f7f7;text-align:center;">' + d + '</th>'; });
+                    html += '</tr></thead><tbody>';
+
+                    for (var r = 0; r < days.length / 7; r++) {
+                        html += '<tr>';
+                        for (var c = 0; c < 7; c++) {
+                            var idx = r * 7 + c;
+                            var cellDate = days[idx].clone();
+                            var inMonth = cellDate.isSame(monthStart, 'month');
+                            var cellEvents = eventsByDay[idx] || [];
+                            html += '<td style="vertical-align:top;border:1px solid #000;padding:6px;min-height:90px;overflow:hidden;background:' + (inMonth ? '#fff' : '#f5f5f5') + ';">';
+                            // day number
+                            html += '<div style="font-size:10pt;font-weight:700;text-align:right;color:#333;">' + cellDate.date() + '</div>';
+                            // list events (compact badges). show up to 4 items; collapse the rest with +n more
+                            var maxShow = 4;
+                            for (var ei = 0; ei < Math.min(cellEvents.length, maxShow); ei++) {
+                                var ev = cellEvents[ei];
+                                var st = ev.start ? ev.start.format('HH:mm') : '';
+                                var en = ev.end ? ev.end.format('HH:mm') : '';
+                                html += '<div style="display:block;background:#2b8cff;color:#fff;padding:4px 6px;margin-top:6px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">';
+                                html += '<div style="font-size:9pt;font-weight:700;">' + ev.title + '</div>';
+                                html += '<div style="font-size:8pt;color:#fff;opacity:0.9;">' + (st || '') + (en ? ' - ' + en : '') + '</div>';
+                                html += '</div>';
+                            }
+                            if (cellEvents.length > maxShow) {
+                                html += '<div style="margin-top:4px;color:#666;font-size:9pt;">+' + (cellEvents.length - maxShow) + ' more</div>';
+                            }
+                            // empty filler
+                            if (!cellEvents.length) html += '<div style="height:6px;">&nbsp;</div>';
+                            html += '</td>';
+                        }
+                        html += '</tr>';
+                    }
+
+                    html += '</tbody></table></div>';
+                    return html;
+                }
+
             // click handlers
             $('#downloadWeekPdfBtn').on('click', function () {
                 if (!latestFcEvents || !latestFcEvents.length) { alert('Please load timetable first.'); return; }
@@ -1446,16 +1533,36 @@
                 try {
                     var start = null, end = null, title = 'Month Timetable';
                     if (window.__nebulaCalendar && window.__nebulaCalendar.view) {
-                        start = moment(window.__nebulaCalendar.view.activeStart);
-                        end = moment(new Date(window.__nebulaCalendar.view.activeEnd.getTime() - 1));
-                        title = 'Month ' + start.format('YYYY-MM');
+                        // Prefer calendar.getDate() which returns the calendar's current date/focus.
+                        // That date belongs to the canonical month the user is viewing (regardless of leading/trailing grid days).
+                        try {
+                            var focused = null;
+                            if (typeof window.__nebulaCalendar.getDate === 'function') {
+                                focused = moment(window.__nebulaCalendar.getDate());
+                            } else {
+                                // fallback to view.activeStart (may be outside month)
+                                focused = moment(window.__nebulaCalendar.view.currentStart || window.__nebulaCalendar.view.activeStart);
+                            }
+                            var monthAnchor = focused.clone().startOf('month');
+                            start = monthAnchor.clone();
+                            end = monthAnchor.clone().endOf('month');
+                            title = 'Month ' + monthAnchor.format('YYYY-MM');
+                        } catch (e) {
+                            // last-resort fallback
+                            var today = moment();
+                            start = today.clone().startOf('month');
+                            end = today.clone().endOf('month');
+                            title = 'Month ' + start.format('YYYY-MM');
+                        }
                     } else {
                         var today = moment();
                         start = today.clone().startOf('month');
                         end = today.clone().endOf('month');
                     }
-                    var html = buildGridHtmlForRange(start, end, title);
-                    downloadHtmlAsA4Pdf(html, 'Month_' + start.format('YYYY-MM') + '_Timetable.pdf');
+
+                    // Build a month-grid calendar (single month layout)
+                    var monthHtml = buildMonthGridHtml(start, title);
+                    downloadHtmlAsA4Pdf(monthHtml, 'Month_' + start.format('YYYY-MM') + '_Timetable.pdf');
                 } catch (e) {
                     console.error('Month PDF generation failed', e);
                     alert('Failed to generate month PDF');
