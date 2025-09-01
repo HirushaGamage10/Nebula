@@ -13,10 +13,11 @@ use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-
+use App\Models\Timetable;
+use Illuminate\Support\Facades\Validator;
 
 class TimetableController extends Controller
-    {
+{
     // Method to show the timetable view
     public function showTimetable()
     {
@@ -971,74 +972,82 @@ class TimetableController extends Controller
     }
 
 
+    // Accepts arrays: subject_ids, durations, times, end_times and a semester (id or label).
     public function assignSubjects(Request $request)
     {
-        // Validate incoming request data
-        $validatedData = $request->validate([
+        $validator = Validator::make($request->all(), [
             'date' => 'required|date',
-            'subject_ids' => 'required|array|min:1',
-            'subject_ids.*' => 'exists:modules,module_id',
-            'durations' => 'required|array|min:1',
-            'durations.*' => 'numeric|min:1',
-            'times' => 'required|array|min:1',
-            'times.*' => 'date_format:h:i A', // <-- Change here
-            'end_times' => 'required|array|min:1',
-            'end_times.*' => 'date_format:h:i A', // <-- Change here
-            'location' => 'required|string',
-            'course_id' => 'required|exists:courses,course_id',
-            'intake_id' => 'required|exists:intakes,intake_id',
-            'semester' => 'required|string',
+            'subject_ids' => 'required|array',
+            'subject_ids.*' => 'required',
+            'durations' => 'required|array',
+            'durations.*' => 'required|integer|min:1',
+            'times' => 'required|array',
+            'times.*' => 'required|string',
+            'end_times' => 'required|array',
+            'end_times.*' => 'required|string',
+            'location' => 'nullable|string',
+            'course_id' => 'nullable|integer',
+            'intake_id' => 'nullable|integer',
+            'semester' => 'nullable' // can be semester id or label
         ]);
 
-        // Check if the number of subjects matches the number of durations, times, and end times
-        if (
-            count($validatedData['subject_ids']) !== count($validatedData['durations']) ||
-            count($validatedData['subject_ids']) !== count($validatedData['times']) ||
-            count($validatedData['subject_ids']) !== count($validatedData['end_times'])
-        ) {
-            return response()->json(['success' => false, 'message' => 'The number of subjects, durations, times, and end times do not match.'], 422);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
+        // Normalize semester: if numeric => lookup Semester.name, otherwise use as-is (string)
+        $semesterInput = $request->input('semester');
+        $semesterValue = null;
+        if (!is_null($semesterInput) && $semesterInput !== '') {
+            if (is_numeric($semesterInput)) {
+                $sem = Semester::find((int) $semesterInput);
+                $semesterValue = $sem ? (string)$sem->name : (string)$semesterInput;
+            } else {
+                $semesterValue = (string)$semesterInput;
+            }
+            // ensure safe length (column in DB may be tiny)
+            $semesterValue = substr($semesterValue, 0, 10);
+        }
+
+        $date = Carbon::parse($request->input('date'))->format('Y-m-d');
+        $subjectIds = $request->input('subject_ids', []);
+        $durations = $request->input('durations', []);
+        $times = $request->input('times', []);
+        $endTimes = $request->input('end_times', []);
+
+        $created = [];
+        \DB::beginTransaction();
         try {
-            // Begin a transaction to ensure data integrity
-            \DB::beginTransaction();
+            foreach ($subjectIds as $i => $subId) {
+                $startRaw = $times[$i] ?? null;
+                $endRaw = $endTimes[$i] ?? null;
+                $duration = intval($durations[$i] ?? 0);
 
-            // Loop through each subject and its corresponding duration, time, and end time
-            foreach ($validatedData['subject_ids'] as $index => $subjectId) {
-                $subject = \App\Models\Module::find($subjectId);
+                $start = $startRaw ? Carbon::parse($startRaw)->format('H:i:s') : null;
+                $end = $endRaw ? Carbon::parse($endRaw)->format('H:i:s') : null;
 
-                if (!$subject) {
-                    return response()->json(['success' => false, 'message' => 'Subject not found.'], 404);
-                }
+                $row = Timetable::create([
+                    'location'   => $request->input('location'),
+                    'course_id'  => $request->input('course_id'),
+                    'intake_id'  => $request->input('intake_id'),
+                    'semester'   => $semesterValue,
+                    'date'       => $date,
+                    'time'       => $start,
+                    'end_time'   => $end,
+                    'duration'   => $duration,
+                    'module_id'  => $subId,
+                    'subject_id' => $subId, // changed: save subject_id instead of null
+                ]);
 
-                // Create a new timetable entry for each subject and its details
-                $assignment = new \App\Models\Timetable();
-                $assignment->date = $validatedData['date'];
-                $assignment->module_id = $subjectId;  // Correctly assign module_id
-                // ensure DB has subject_id if column exists / non-nullable
-                $assignment->subject_id = $subjectId;
-                $assignment->location = $validatedData['location'];
-                $assignment->course_id = $validatedData['course_id'];
-                $assignment->intake_id = $validatedData['intake_id'];
-                $assignment->semester = $validatedData['semester'];
-                $assignment->duration = $validatedData['durations'][$index];  // Save the duration for each subject
-                $assignment->time = $validatedData['times'][$index];  // Save the start time
-                $assignment->end_time = $validatedData['end_times'][$index];  // Save the end time
-                $assignment->save();
+                $created[] = $row;
             }
 
-            // Commit the transaction after all subjects are assigned
             \DB::commit();
-
-            return response()->json(['success' => true, 'message' => 'Subjects assigned successfully.']);
+            return response()->json(['success' => true, 'created' => $created], 201);
         } catch (\Exception $e) {
-            // If something goes wrong, rollback the transaction and return an error message
             \DB::rollBack();
-            \Log::error('Error assigning subjects: ' . $e->getMessage(), [
-                'request_data' => $request->all(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            return response()->json(['success' => false, 'message' => 'An error occurred while assigning subjects.'], 500);
+            \Log::error('assignSubjects error: '.$e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Server error'], 500);
         }
     }
 }

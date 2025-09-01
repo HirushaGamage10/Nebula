@@ -424,7 +424,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     Route::get('/get-timetable-events', [TimetableController::class, 'getTimetableEvents'])->name('timetable.events');
     Route::get('/get-available-subjects', [TimetableController::class, 'getAvailableSubjects']);
     Route::post('/assign-subject-to-timeslot', [TimetableController::class, 'assignSubjectToTimeslot']);
-
+    Route::post('/timetable/assign-subjects', [TimetableController::class, 'assignSubjects'])->name('timetable.assignSubjects');
 });
 
 // API routes - DGM, Program Administrator (level 01), Program Administrator (level 02), Student Counselor, Bursar, Developer

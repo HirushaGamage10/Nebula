@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 
 class Timetable extends Model
 {
@@ -33,11 +34,12 @@ class Timetable extends Model
         'course_id' => 'int',
         'intake_id' => 'int',
         'module_id' => 'int',
-        'date' => 'date',
-        'time' => 'datetime:H:i',
-        'end_time' => 'datetime:H:i',
+        'date' => 'date',         // keep as date (Carbon)
         'duration' => 'int',
     ];
+
+    // Add appended attributes so JSON includes start/end for FullCalendar
+    protected $appends = ['start', 'end'];
 
     // Constants for location
     const LOCATION_WELISARA = 'Welisara';
@@ -303,5 +305,80 @@ class Timetable extends Model
         }
 
         return $query->get();
+    }
+
+    // Parse time into Carbon (returns null if no time)
+    public function getTimeAttribute($value)
+    {
+        if ($value instanceof Carbon) {
+            return $value;
+        }
+
+        if (is_null($value) || $value === '') {
+            return null;
+        }
+
+        // allow 'H:i' or 'H:i:s' or any time parseable by Carbon
+        try {
+            $c = Carbon::parse($value);
+            return $c;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    public function getEndTimeAttribute($value)
+    {
+        if ($value instanceof Carbon) {
+            return $value;
+        }
+
+        if (is_null($value) || $value === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    // Provide start and end datetimes for FullCalendar and JSON output
+    public function getStartAttribute()
+    {
+        if (!$this->date) {
+            return null;
+        }
+
+        // if time exists use it, otherwise start is the date only (all-day)
+        if ($this->time) {
+            return $this->date->format('Y-m-d') . ' ' . $this->time->format('H:i:s');
+        }
+
+        return $this->date->format('Y-m-d');
+    }
+
+    public function getEndAttribute()
+    {
+        if (!$this->date) {
+            return null;
+        }
+
+        if ($this->end_time) {
+            return $this->date->format('Y-m-d') . ' ' . $this->end_time->format('H:i:s');
+        }
+
+        if ($this->duration && $this->time) {
+            try {
+                $start = Carbon::parse($this->start);
+                return $start->copy()->addMinutes($this->duration)->format('Y-m-d H:i:s');
+            } catch (\Exception $e) {
+                // fallthrough
+            }
+        }
+
+        // fallback to date (all-day)
+        return $this->date->format('Y-m-d');
     }
 }
