@@ -225,37 +225,87 @@ class StudentProfileController extends Controller
         }
     }
 
+    
+
     // API: Get course registration history for a student
-    public function getCourseRegistrationHistory($studentId)
+   public function getCourseRegistrationHistory($studentId)
     {
-        try {
-            $registrations = CourseRegistration::where('student_id', $studentId)
-                ->with(['course', 'intake'])
-                ->orderBy('created_at', 'desc')
-                ->get();
+        $registrations = \App\Models\CourseRegistration::where('student_id', $studentId)
+            ->with(['course', 'intake'])
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-            $history = $registrations->map(function ($registration) {
-                return [
-                    'course_name' => $registration->course->course_name ?? 'N/A',
-                    'intake' => $registration->intake->batch ?? 'N/A',
-                    'start_date' => $registration->created_at ? $registration->created_at->format('d/m/Y') : 'N/A',
-                    'end_date' => $registration->end_date ? $registration->end_date->format('d/m/Y') : 'N/A',
-                    'status' => $registration->status ?? 'N/A'
-                ];
-            });
+        $history = $registrations->map(function ($registration) {
+            $semesterReg = \App\Models\SemesterRegistration::where('student_id', $registration->student_id)
+                ->where('course_id', $registration->course_id)
+                ->where('intake_id', $registration->intake_id)
+                ->first();
 
-            return response()->json([
-                'success' => true,
-                'history' => $history
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch course registration history: ' . $e->getMessage()
-            ], 500);
-        }
+            return [
+                'id' => $registration->id,
+                'course_id' => $registration->course_id,
+                'course_name' => $registration->course->course_name ?? 'N/A',
+                'intake' => $registration->intake->batch ?? 'N/A',
+                'status' => $registration->status ?? 'N/A',
+                'full_grade' => $registration->full_grade ?? '',
+                'specialization' => $semesterReg ? $semesterReg->specialization : ($registration->specialization ?? ''),
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'history' => $history
+        ]);
     }
 
+    public function getCourseSpecializations($courseId)
+    {
+        $course = \App\Models\Course::find($courseId);
+        if (!$course) {
+            return response()->json(['success' => false, 'message' => 'Course not found.'], 404);
+        }
+        $specializations = [];
+        if ($course->specializations) {
+            if (is_string($course->specializations)) {
+                try {
+                    $specializations = json_decode($course->specializations, true);
+                } catch (\Exception $e) {
+                    $specializations = [];
+                }
+            } elseif (is_array($course->specializations)) {
+                $specializations = $course->specializations;
+            }
+        }
+        // Remove empty/null values
+        $specializations = array_filter($specializations, function($s){ return $s && trim($s) !== ''; });
+        return response()->json(['success' => true, 'specializations' => array_values($specializations)]);
+    }
+
+    // API: Update course registration grade and specialization
+    public function updateCourseRegistrationGrade(Request $request, $id)
+    {
+        $registration = \App\Models\CourseRegistration::find($id);
+        if (!$registration) {
+            return response()->json(['success' => false, 'message' => 'Registration not found.'], 404);
+        }
+
+        // Update only full_grade in course_registration
+        $registration->full_grade = $request->input('full_grade');
+        $registration->save();
+
+        // Update only specialization in semester_registration
+        $semesterReg = \App\Models\SemesterRegistration::where('student_id', $registration->student_id)
+            ->where('course_id', $registration->course_id)
+            ->where('intake_id', $registration->intake_id)
+            ->first();
+        if ($semesterReg) {
+            $semesterReg->specialization = $request->input('specialization');
+            $semesterReg->save();
+        }
+
+        return response()->json(['success' => true]);
+    }
+    
     // API: Get intakes for a specific course
     public function getIntakesForCourse($studentId, $courseId)
     {

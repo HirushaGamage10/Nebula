@@ -32,7 +32,8 @@ class CourseRegistration extends Model
         'remarks',
         'special_approval_pdf',
         'dgm_comment',
-        'uh_index_number'
+        'uh_index_number',
+        'full_grade'
     ];
 
     protected $casts = [
