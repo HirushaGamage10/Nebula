@@ -1,15 +1,15 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Late Fee Approval')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Late Fee Approval'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
             <h2 class="text-center mb-4">Late Fee Approval</h2>
             <hr>
 
-            {{-- Student & Course Selection --}}
+            
             <div class="card mb-4">
                 <div class="card-header bg-secondary text-white">
                     <h5 class="mb-0">
@@ -40,9 +40,9 @@
             </div>
 
 
-    @isset($installments)
+    <?php if(isset($installments)): ?>
 
-            {{-- Global Reduction Form --}}
+            
             <div class="card mb-4">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">
@@ -50,8 +50,8 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('latefee.approve.global', [$student->id_value ?? $studentId, $courseId]) }}">
-                        @csrf
+                    <form method="POST" action="<?php echo e(route('latefee.approve.global', [$student->id_value ?? $studentId, $courseId])); ?>">
+                        <?php echo csrf_field(); ?>
                         <div class="row mb-3">
                             <div class="col-md-4">
                                 <label class="form-label fw-bold">Reduction Amount</label>
@@ -67,7 +67,7 @@
                 </div>
             </div>
 
-            {{-- Installment-wise Table --}}
+            
             <div class="card">
                 <div class="card-header bg-dark text-white">
                     <h5 class="mb-0">
@@ -89,54 +89,55 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($installments as $installment)
+                                <?php $__empty_1 = true; $__currentLoopData = $installments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $installment): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                                     <tr>
-                                        <td class="text-center">{{ $installment->installment_number }}</td>
-                                        <td class="text-center">{{ $installment->formatted_due_date }}</td>
-                                        <td class="text-center fw-bold">{{ $installment->formatted_amount }}</td>
-                                        <td class="text-center">LKR {{ number_format($installment->calculated_late_fee ?? 0, 2) }}</td>
+                                        <td class="text-center"><?php echo e($installment->installment_number); ?></td>
+                                        <td class="text-center"><?php echo e($installment->formatted_due_date); ?></td>
+                                        <td class="text-center fw-bold"><?php echo e($installment->formatted_amount); ?></td>
+                                        <td class="text-center">LKR <?php echo e(number_format($installment->calculated_late_fee ?? 0, 2)); ?></td>
                                         <td class="text-center">
-                                            @if($installment->approved_late_fee !== null)
+                                            <?php if($installment->approved_late_fee !== null): ?>
                                                 <span class="text-success fw-bold">
-                                                    LKR {{ number_format($installment->approved_late_fee, 2) }}
+                                                    LKR <?php echo e(number_format($installment->approved_late_fee, 2)); ?>
+
                                                 </span>
-                                            @else
+                                            <?php else: ?>
                                                 <span class="text-muted">Not approved</span>
-                                            @endif
+                                            <?php endif; ?>
                                         </td>
-                                        <td class="text-center">{{ $installment->approval_note ?? '-' }}</td>
+                                        <td class="text-center"><?php echo e($installment->approval_note ?? '-'); ?></td>
                                         <td class="text-center">
-                                            <form method="POST" action="{{ route('latefee.approve.installment', $installment->id) }}">
-                                                @csrf
+                                            <form method="POST" action="<?php echo e(route('latefee.approve.installment', $installment->id)); ?>">
+                                                <?php echo csrf_field(); ?>
                                                 <div class="row">
                                                     <div class="col-md-6 mb-1">
                                                         <input type="number" step="0.01" name="approved_late_fee" 
                                                                class="form-control" placeholder="Approved Fee"
-                                                               value="{{ $installment->approved_late_fee ?? '' }}">
+                                                               value="<?php echo e($installment->approved_late_fee ?? ''); ?>">
                                                     </div>
                                                     <div class="col-md-6 mb-1">
                                                         <input type="text" name="approval_note" class="form-control" 
-                                                               placeholder="Note" value="{{ $installment->approval_note ?? '' }}">
+                                                               placeholder="Note" value="<?php echo e($installment->approval_note ?? ''); ?>">
                                                     </div>
                                                 </div>
                                                 <button class="btn btn-sm btn-primary mt-1">Approve</button>
                                             </form>
                                         </td>
                                     </tr>
-                                @empty
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                                     <tr>
                                         <td colspan="7" class="text-center text-muted py-4">
                                             <i class="ti ti-inbox" style="font-size: 2rem;"></i>
                                             <p class="mt-2 mb-0">No installments found for this student & course.</p>
                                         </td>
                                     </tr>
-                                @endforelse
+                                <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
-            @endisset
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -146,11 +147,11 @@ document.getElementById("student-nic").addEventListener("blur", function() {
     let nic = this.value;
     if (!nic) return;
 
-    fetch("{{ route('latefee.get.courses') }}", {
+    fetch("<?php echo e(route('latefee.get.courses')); ?>", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "X-CSRF-TOKEN": "{{ csrf_token() }}"
+            "X-CSRF-TOKEN": "<?php echo e(csrf_token()); ?>"
         },
         body: JSON.stringify({ student_nic: nic })
     })
@@ -182,7 +183,7 @@ function goToApprovalPage() {
         return;
     }
 
-    let url = "{{ url('/late-fee/approval') }}/" + nic + "/" + courseId;
+    let url = "<?php echo e(url('/late-fee/approval')); ?>/" + nic + "/" + courseId;
     window.location.href = url;
 }
 
@@ -198,7 +199,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // Clear old options
         courseSelect.innerHTML = '<option value="">-- Select Course --</option>';
 
-        fetch("{{ route('latefee.get.courses') }}", {
+        fetch("<?php echo e(route('latefee.get.courses')); ?>", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -224,4 +225,6 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/late_fee/approval.blade.php ENDPATH**/ ?>

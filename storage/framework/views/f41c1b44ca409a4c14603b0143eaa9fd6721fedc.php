@@ -1,5 +1,3 @@
-
-
 <?php $__env->startSection('title', 'NEBULA | Payment Management'); ?>
 
 <?php $__env->startSection('content'); ?>
@@ -374,7 +372,7 @@
                                         <hr>
                                         
                                         <div class="row mb-3">
-                                            <div class="col-md-6">
+                                            <div class="col-md-4">
                                                 <label class="form-label fw-bold">Payment Plan Type <span class="text-danger">*</span></label>
                                                 <select class="form-select" id="payment-plan-type" name="payment_plan_type" required>
                                                     <option value="">Select Payment Plan</option>
@@ -382,7 +380,7 @@
                                                     <option value="full">Full Payment</option>
                                                 </select>
                                             </div>
-                                            <div class="col-md-6">
+                                            <div class="col-md-4">
                                                 <label class="form-label fw-bold">Discounts</label>
                                                 <div id="discounts-container">
                                                     <div class="discount-item mb-2">
@@ -396,36 +394,28 @@
                                                     <i class="ti ti-plus"></i> Add Another Discount
                                                 </button>
                                             </div>
-                                        </div>
-
-                    <!-- Registration Fee Discount Section -->
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Registration Fee Discount</label>
-                            <select class="form-select" id="registration-fee-discount" name="registration_fee_discount">
-                                <option value="">No Registration Fee Discount</option>
-                                <!-- Registration fee discounts will be loaded dynamically -->
-                            </select>
-                        </div>
-                    </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-bold">Registration Fee Discount</label>
+                                                <select class="form-select" id="registration-fee-discount" name="registration_fee_discount">
+                                                    <option value="">No Registration Fee Discount</option>
+                                                    <!-- Registration fee discounts will be loaded dynamically -->
+                                                </select>
+                                            </div>
                                         </div>
                                         
                                         <div class="row mb-3">
-                                            <div class="col-md-6">
+                                            <div class="col-md-4">
                                                 <label class="form-label fw-bold">SLT Loan Applied</label>
                                                 <select class="form-select" id="slt-loan-applied" name="slt_loan_applied">
                                                     <option value="">No SLT Loan</option>
                                                     <option value="yes">Yes - SLT Loan Applied</option>
                                                 </select>
                                             </div>
-                                            <div class="col-md-6">
+                                            <div class="col-md-4">
                                                 <label class="form-label fw-bold">SLT Loan Amount</label>
                                                 <input type="number" class="form-control" id="slt-loan-amount" name="slt_loan_amount" min="0" step="0.01" placeholder="Enter SLT loan amount" disabled>
                                             </div>
-                                        </div>
-                                        
-                                        <div class="row mb-3">
-                                            <div class="col-md-6">
+                                            <div class="col-md-4">
                                                 <label class="form-label fw-bold">Final Amount After Discount & Loan</label>
                                                 <input type="text" class="form-control" id="final-amount" name="final_amount" readonly>
                                             </div>
