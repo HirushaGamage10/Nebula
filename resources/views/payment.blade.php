@@ -1671,7 +1671,38 @@ function loadExistingPaymentPlans(studentNic, courseId) {
       </button>
     </td>
   </tr>
+  <tr class="collapse" id="plan-${p.payment_plan_id}-inst">
+    <td colspan="9">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Due Date</th>
+            <th>Amount</th>
+            <th>Discount</th>
+            <th>SLT Loan</th>
+            <th>Final</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${inst.map(i => `
+            <tr>
+              <td>${i.installment_number}</td>
+              <td>${i.due_date || '-'}</td>
+              <td>LKR ${(i.amount ?? 0).toLocaleString()}</td>
+              <td>LKR ${(i.discount_amount ?? 0).toLocaleString()}</td>
+              <td>LKR ${(i.slt_loan_amount ?? 0).toLocaleString()}</td>
+              <td>LKR ${(i.final_amount ?? 0).toLocaleString()}</td>
+              <td>${i.status}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </td>
+  </tr>
 `);
+
 
     });
 
