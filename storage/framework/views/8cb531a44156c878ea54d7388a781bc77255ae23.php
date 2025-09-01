@@ -392,10 +392,11 @@
                                                         </select>
                                                     </div>
                                                 </div>
-                                                                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-discount-btn">
-                            <i class="ti ti-plus"></i> Add Another Discount
-                        </button>
-                    </div>
+                                                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-discount-btn">
+                                                    <i class="ti ti-plus"></i> Add Another Discount
+                                                </button>
+                                            </div>
+                                        </div>
 
                     <!-- Registration Fee Discount Section -->
                     <div class="row mb-3">
@@ -455,7 +456,7 @@
                                         
                                         <div class="row">
                                             <div class="col-12 text-center">
-                                                <button type="button" class="btn btn-primary" onclick="createPaymentPlan()">
+                                                <button type="button" class="btn btn-primary" onclick="console.log('Submit button clicked'); createPaymentPlan();">
                                                     <i class="ti ti-check me-2"></i>Submit
                                                 </button>
                                                 <button type="button" class="btn btn-secondary" onclick="resetPaymentPlanForm()">
@@ -1177,6 +1178,15 @@ function showSpinner(show) {
 
 // Load discounts from backend
 function loadDiscounts() {
+    // Prevent multiple simultaneous calls
+    if (window.isLoadingDiscounts) {
+        console.log('loadDiscounts already in progress, skipping...');
+        return;
+    }
+    
+    window.isLoadingDiscounts = true;
+    console.log('Loading discounts...');
+    
     // Load local course fee discounts for the first discount dropdown
     fetch('/payment/get-discounts?category=local_course_fee', {
         method: 'GET',
@@ -1188,14 +1198,25 @@ function loadDiscounts() {
             // Update all discount selects with local course fee discounts only
             const discountSelects = document.querySelectorAll('.discount-select');
             discountSelects.forEach(select => {
-                select.innerHTML = '<option value="">No Discount</option>';
+                // Store current selection before resetting
+                const currentValue = select.value;
                 
-                data.discounts.forEach(discount => {
-                    const valueDisplay = discount.type === 'percentage' ? 
-                        `${discount.name} (${discount.value}%)` : 
-                        `${discount.name} (LKR ${discount.value.toLocaleString()})`;
-                    select.innerHTML += `<option value="${discount.id}" data-type="${discount.type}" data-value="${discount.value}">${valueDisplay}</option>`;
-                });
+                // Only reset if the select is empty or has no options (first time loading)
+                if (!select.value || select.options.length <= 1) {
+                    select.innerHTML = '<option value="">No Discount</option>';
+                    
+                    data.discounts.forEach(discount => {
+                        const valueDisplay = discount.type === 'percentage' ? 
+                            `${discount.name} (${discount.value}%)` : 
+                            `${discount.name} (LKR ${discount.value.toLocaleString()})`;
+                        select.innerHTML += `<option value="${discount.id}" data-type="${discount.type}" data-value="${discount.value}">${valueDisplay}</option>`;
+                    });
+                    
+                    // Restore previous selection if it exists
+                    if (currentValue) {
+                        select.value = currentValue;
+                    }
+                }
             });
         } else {
             console.error('Failed to load local course fee discounts:', data.message);
@@ -1203,6 +1224,9 @@ function loadDiscounts() {
     })
     .catch(error => {
         console.error('Error loading local course fee discounts:', error);
+    })
+    .finally(() => {
+        window.isLoadingDiscounts = false;
     });
 
     // Load registration fee discounts for the registration fee dropdown
@@ -1216,18 +1240,29 @@ function loadDiscounts() {
             // Load registration fee discounts
             const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
             if (registrationFeeDiscountSelect) {
-                registrationFeeDiscountSelect.innerHTML = '<option value="">No Registration Fee Discount</option>';
-                data.discounts.forEach(discount => {
-                    const valueDisplay = discount.type === 'percentage' ? 
-                        `${discount.name} (${discount.value}%)` : 
-                        `${discount.name} (LKR ${discount.value.toLocaleString()})`;
-                    const option = document.createElement('option');
-                    option.value = discount.id;
-                    option.textContent = valueDisplay;
-                    option.dataset.type = discount.type;
-                    option.dataset.value = discount.value;
-                    registrationFeeDiscountSelect.appendChild(option);
-                });
+                // Store current selection before resetting
+                const currentValue = registrationFeeDiscountSelect.value;
+                
+                // Only reset if the select is empty or has no options (first time loading)
+                if (!registrationFeeDiscountSelect.value || registrationFeeDiscountSelect.options.length <= 1) {
+                    registrationFeeDiscountSelect.innerHTML = '<option value="">No Registration Fee Discount</option>';
+                    data.discounts.forEach(discount => {
+                        const valueDisplay = discount.type === 'percentage' ? 
+                            `${discount.name} (${discount.value}%)` : 
+                            `${discount.name} (LKR ${discount.value.toLocaleString()})`;
+                        const option = document.createElement('option');
+                        option.value = discount.id;
+                        option.textContent = valueDisplay;
+                        option.dataset.type = discount.type;
+                        option.dataset.value = discount.value;
+                        registrationFeeDiscountSelect.appendChild(option);
+                    });
+                    
+                    // Restore previous selection if it exists
+                    if (currentValue) {
+                        registrationFeeDiscountSelect.value = currentValue;
+                    }
+                }
             }
         } else {
             console.error('Failed to load registration fee discounts:', data.message);
@@ -1235,6 +1270,9 @@ function loadDiscounts() {
     })
     .catch(error => {
         console.error('Error loading registration fee discounts:', error);
+    })
+    .finally(() => {
+        window.isLoadingDiscounts = false;
     });
 }
 
@@ -1422,7 +1460,7 @@ function displayInstallments(installments) {
 
   // collect all discounts
   let pct = 0, fixed = 0;
-  discountSelects.forEach(select => {
+  discountSelects.forEach((select, index) => {
     if (!select.value) return;
     const opt  = select.options[select.selectedIndex];
     const type = opt.dataset.type;
@@ -1440,8 +1478,15 @@ function displayInstallments(installments) {
     let applied = 0;
 
     if (idx === arr.length - 1) {
-      if (pct > 0) { const p = (originalLocalTotal * pct) / 100; dAmt -= p; applied += p; }
-      if (fixed > 0) { dAmt -= fixed; applied += fixed; }
+      if (pct > 0) { 
+        const p = (originalLocalTotal * pct) / 100; 
+        dAmt -= p; 
+        applied += p; 
+      }
+      if (fixed > 0) { 
+        dAmt -= fixed; 
+        applied += fixed; 
+      }
     }
 
     dAmt = Math.max(0, dAmt);
@@ -1921,7 +1966,7 @@ function calculateFinalAmount() {
     let totalDiscountPercentage = 0;
     
     // Calculate total discounts
-    discountSelects.forEach(select => {
+    discountSelects.forEach((select, index) => {
         if (select.value) {
             const selectedOption = select.options[select.selectedIndex];
             const discountType = selectedOption.dataset.type;
@@ -1973,7 +2018,9 @@ function calculateFinalAmount() {
     // Ensure final amount is not negative
     finalAmount = Math.max(0, finalAmount);
     
-    finalAmountField.value = 'LKR ' + finalAmount.toLocaleString();
+    if (finalAmountField) {
+        finalAmountField.value = 'LKR ' + finalAmount.toLocaleString();
+    }
     
     // Update window.currentStudentData with final amount
     if (window.currentStudentData) {
@@ -2001,6 +2048,8 @@ function calculateInstallments() {
 
 // Create payment plan
 function createPaymentPlan() {
+  console.log('createPaymentPlan function called');
+  
   // Prevent multiple simultaneous requests
   if (window.isCreatingPaymentPlan) {
     console.log('Payment plan creation already in progress...');
@@ -2013,14 +2062,21 @@ function createPaymentPlan() {
   const sltLoanApplied = document.getElementById('slt-loan-applied').value;
   const sltLoanAmount  = parseFloat(document.getElementById('slt-loan-amount').value || '0');
 
+  console.log('Form validation - currentStudentData:', window.currentStudentData);
+  console.log('Form validation - planType:', planType);
+  
   if (!window.currentStudentData || !window.currentStudentData.student_nic) {
+    console.log('Validation failed: No student data');
     showErrorMessage('Please load student details first before creating a payment plan.');
     return;
   }
   if (!planType) {
+    console.log('Validation failed: No plan type selected');
     showErrorMessage('Please select a payment plan type.');
     return;
   }
+  
+  console.log('Form validation passed, proceeding with submission...');
 
   // Set flag to prevent multiple requests
   window.isCreatingPaymentPlan = true;
@@ -2115,6 +2171,8 @@ function createPaymentPlan() {
       final_amount: finalTotal, // top-level summary after discount + loan
       installments: installments
     };
+    
+    console.log('Payload being sent:', payload);
 
     // 2) Create plan
     return fetchWithTimeout('/payment/create-payment-plan', {
@@ -2124,12 +2182,14 @@ function createPaymentPlan() {
     }, 15000);
   })
   .then(r => {
+    console.log('Response status:', r.status);
     if (!r.ok) {
       throw new Error(`HTTP error! status: ${r.status}`);
     }
     return r.json();
   })
   .then(data => {
+    console.log('Response data:', data);
     if (!data.success) {
       throw new Error(data.message || 'Failed to create payment plan.');
     }
@@ -2912,14 +2972,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load discounts when page loads
     loadDiscounts();
     
-    // Add event listener for payment plans tab to load correct discounts
-    const paymentPlansTab = document.getElementById('payment-plans-tab');
-    if (paymentPlansTab) {
-        paymentPlansTab.addEventListener('click', function() {
-            // Load discounts when payment plans tab is activated
-            loadDiscounts();
-        });
-    }
+    // Note: loadDiscounts() is called when bootstrapping a new plan, no need to call it on tab click
     
     // Add event listener for discount type
     const discountTypeField = document.getElementById('discount-type');
@@ -2975,9 +3028,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Add discount functionality
-    document.getElementById('add-discount-btn').addEventListener('click', function() {
-        addDiscountField();
-    });
+    const addDiscountBtn = document.getElementById('add-discount-btn');
+    if (addDiscountBtn) {
+        addDiscountBtn.addEventListener('click', function() {
+            addDiscountField();
+        });
+    }
 
     // Add event listeners for form changes
     document.addEventListener('change', function(e) {
@@ -3008,6 +3064,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add discount field function
     function addDiscountField() {
         const container = document.getElementById('discounts-container');
+        if (!container) {
+            return;
+        }
         const discountItem = document.createElement('div');
         discountItem.className = 'discount-item mb-2 d-flex align-items-center';
         

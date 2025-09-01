@@ -684,8 +684,10 @@ Route::post('/late-fee/approve-installment/{installmentId}', [LateFeeApprovalCon
     ->name('latefee.approve.installment');
 
 // Global approval
-Route::post('/late-fee/approve-global', [LateFeeApprovalController::class, 'approveLateFeeGlobal'])
-    ->name('latefee.approve.global');
+Route::post('/late-fee/approve-global/{studentNic}/{courseId}', 
+    [LateFeeApprovalController::class, 'approveLateFeeGlobal']
+)->name('latefee.approve.global');
+
 
 // Get student courses by NIC
 Route::post('/late-fee/get-student-courses', 

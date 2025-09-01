@@ -26,6 +26,8 @@ class PaymentInstallment extends Model
 
         'approved_late_fee',
         'calculated_late_fee',
+        'approval_history',   
+
     ];
 
 
@@ -40,6 +42,9 @@ class PaymentInstallment extends Model
 
         'approved_late_fee'  => 'float',
         'calculated_late_fee'=> 'float',
+
+        'approval_history'    => 'array', 
+
     ];
 
     // Relationships

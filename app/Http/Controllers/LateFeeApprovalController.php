@@ -117,64 +117,117 @@ class LateFeeApprovalController extends Controller
     }
 
     /**
-     * Approve/reduce per installment
-     */
-    public function approveLateFeePerInstallment(Request $request, $installmentId)
-    {
-        $request->validate([
-            'approved_late_fee' => 'required|numeric|min:0',
-            'approval_note'     => 'nullable|string'
-        ]);
+ * Approve/reduce per installment
+ */
+public function approveLateFeePerInstallment(Request $request, $installmentId)
+{
+    $request->validate([
+        'approved_late_fee' => 'required|numeric|gt:0', // must be > 0
+        'approval_note'     => 'nullable|string'
+    ]);
 
-        $inst = PaymentInstallment::findOrFail($installmentId);
-        $inst->approved_late_fee = $request->approved_late_fee;
-        $inst->approval_note     = $request->approval_note;
-        $inst->approved_by       = auth()->id();
-        $inst->save();
+    $inst = PaymentInstallment::findOrFail($installmentId);
 
-        return back()->with('success', 'Late fee approved for installment.');
+    // 🔹 Check due date (only allow after due date passed)
+    $dueDate = \Carbon\Carbon::parse($inst->due_date);
+    if ($dueDate->isFuture()) {
+        return back()->with('error', 'You can only approve late fees after the due date has passed.');
     }
 
-    /**
-     * Approve/reduce global late fee across installments
-     */
-    public function approveLateFeeGlobal(Request $request)
-    {
-        $request->validate([
-            'student_nic'      => 'required|string',
-            'course_id'        => 'required|integer|exists:courses,course_id',
-            'reduction_amount' => 'required|numeric|min:0',
-            'approval_note'    => 'nullable|string'
-        ]);
+    // 🔹 Always recalc late fee at the time of approval
+    $isLate   = $dueDate->isPast() && $inst->status !== 'paid';
+    $daysLate = $isLate ? $dueDate->diffInDays(now()) : 0;
+    $finalAmt = $inst->final_amount ?? $inst->amount ?? 0;
 
-        $student = Student::where('id_value', $request->student_nic)->firstOrFail();
+    $inst->calculated_late_fee = $isLate ? $this->calculateLateFee($finalAmt, $daysLate) : 0;
 
-        $installments = PaymentInstallment::whereHas('paymentPlan', function ($q) use ($student, $request) {
-                $q->where('student_id', $student->student_id)
-                  ->where('course_id', $request->course_id);
-            })
-            ->orderBy('due_date', 'asc')
-            ->get();
+    // 🔹 Append to history
+    $history = $inst->approval_history ?? [];
+    $history[] = [
+        'calculated_late_fee' => $inst->calculated_late_fee,
+        'approved_late_fee'   => (float)$request->approved_late_fee,
+        'approval_note'       => $request->approval_note,
+        'approved_by'         => auth()->user()->name ?? 'System',
+        'approved_at'         => now()->toDateTimeString(),
+    ];
 
-        $remainingReduction = $request->reduction_amount;
+    // 🔹 Save latest approval
+    $inst->approved_late_fee = $request->approved_late_fee;
+    $inst->approval_note     = $request->approval_note;
+    $inst->approved_by       = auth()->id();
+    $inst->approval_history  = $history;
+    $inst->save();
 
-        foreach ($installments as $inst) {
-            if ($remainingReduction <= 0) break;
+    return back()->with('success', 'Late fee approved for installment.');
+}
 
-            $calcFee        = $inst->calculated_late_fee ?? 0;
-            $alreadyApproved= $inst->approved_late_fee ?? $calcFee;
-            $canReduce      = min($remainingReduction, $alreadyApproved);
 
-            $inst->approved_late_fee = $alreadyApproved - $canReduce;
-            $inst->approval_note     = $request->approval_note;
-            $inst->approved_by       = auth()->id();
+/**
+ * Approve/reduce global late fee across installments
+ */
+public function approveLateFeeGlobal(Request $request, $studentNic, $courseId)
+{
+    $request->validate([
+        'reduction_amount' => 'required|numeric|gt:0', // total approved pool
+        'approval_note'    => 'nullable|string'
+    ]);
+
+    $student = Student::where('id_value', $studentNic)->firstOrFail();
+
+    $installments = PaymentInstallment::whereHas('paymentPlan', function ($q) use ($student, $courseId) {
+            $q->where('student_id', $student->student_id)
+              ->where('course_id', $courseId);
+        })
+        ->orderBy('due_date', 'asc')
+        ->get();
+
+    $remaining = $request->reduction_amount;
+
+    foreach ($installments as $inst) {
+        // 🔹 Recalc fee
+        $dueDate  = \Carbon\Carbon::parse($inst->due_date);
+        $isLate   = $dueDate->isPast() && $inst->status !== 'paid';
+        $daysLate = $isLate ? $dueDate->diffInDays(now()) : 0;
+        $finalAmt = $inst->final_amount ?? $inst->amount ?? 0;
+        $calcFee  = $isLate ? $this->calculateLateFee($finalAmt, $daysLate) : 0;
+
+        $inst->calculated_late_fee = $calcFee;
+
+        if ($remaining <= 0) {
             $inst->save();
-
-            $remainingReduction -= $canReduce;
+            continue;
         }
 
-        return back()->with('success', 'Global late fee reduction applied.');
+        if ($remaining >= $calcFee) {
+            // Approve full fee
+            $inst->approved_late_fee = $calcFee;
+            $remaining -= $calcFee;
+        } else {
+            // Approve partial fee
+            $inst->approved_late_fee = $remaining;
+            $remaining = 0;
+        }
+
+        // 🔹 Append to history
+        $history = $inst->approval_history ?? [];
+        $history[] = [
+            'calculated_late_fee' => $inst->calculated_late_fee,
+            'approved_late_fee'   => (float)$inst->approved_late_fee,
+            'approval_note'       => $request->approval_note,
+            'approved_by'         => auth()->user()->name ?? 'System',
+            'approved_at'         => now()->toDateTimeString(),
+        ];
+
+        $inst->approval_note    = $request->approval_note;
+        $inst->approved_by      = auth()->id();
+        $inst->approval_history = $history;
+        $inst->save();
     }
+
+    return back()->with('success', 'Global late fee approved successfully.');
+}
+
+
 
     /**
      * Helper: Calculate late fee

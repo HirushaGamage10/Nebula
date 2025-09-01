@@ -1,14 +1,14 @@
-@extends('inc.app')
 
-@section('title', 'Late Fee Approval')
 
-@section('content')
+<?php $__env->startSection('title', 'Late Fee Approval'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container mt-4">
 
 
 
 
-    {{-- Student & Course Selection --}}
+    
 <div class="card mb-4">
     <div class="card shadow-sm mb-4">
     <div class="card-header bg-white text-center">
@@ -44,14 +44,14 @@
 </div>
 
 
-    @isset($installments)
+    <?php if(isset($installments)): ?>
 
-    {{-- Global Reduction Form --}}
+    
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">Global Reduction - Feature Coming Soon</div>
         <div class="card-body">
-            <form method="POST" action="{{ route('latefee.approve.global', [$student->id_value ?? $studentId, $courseId]) }}">
-                @csrf
+            <form method="POST" action="<?php echo e(route('latefee.approve.global', [$student->id_value ?? $studentId, $courseId])); ?>">
+                <?php echo csrf_field(); ?>
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label>Reduction Amount</label>
@@ -67,7 +67,7 @@
         </div>
     </div>
 
-    {{-- Installment-wise Table --}}
+    
 <div class="card shadow-lg rounded-3 border-0">
     <div class="card-header bg-dark text-white fw-bold">
         <i class="bi bi-cash-coin me-2"></i> Installment-wise Approval
@@ -90,122 +90,125 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($installments as $installment)
+                    <?php $__empty_1 = true; $__currentLoopData = $installments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $installment): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                         <tr>
-                            <td class="fw-bold">{{ $installment->installment_number }}</td>
-                            <td>{{ $installment->formatted_due_date }}</td>
-                            <td class="text-primary fw-semibold">{{ $installment->formatted_amount }}</td>
+                            <td class="fw-bold"><?php echo e($installment->installment_number); ?></td>
+                            <td><?php echo e($installment->formatted_due_date); ?></td>
+                            <td class="text-primary fw-semibold"><?php echo e($installment->formatted_amount); ?></td>
                             <td class="text-warning fw-semibold">
-                                LKR {{ number_format($installment->calculated_late_fee ?? 0, 2) }}
+                                LKR <?php echo e(number_format($installment->calculated_late_fee ?? 0, 2)); ?>
+
                             </td>
                             <td>
-                                @if($installment->approved_late_fee !== null)
+                                <?php if($installment->approved_late_fee !== null): ?>
                                     <span class="badge bg-success p-2">
-                                        LKR {{ number_format($installment->approved_late_fee, 2) }}
+                                        LKR <?php echo e(number_format($installment->approved_late_fee, 2)); ?>
+
                                     </span>
-                                @else
+                                <?php else: ?>
                                     <span class="badge bg-secondary">Not approved</span>
-                                @endif
+                                <?php endif; ?>
                             </td>
                             <td>
-                                @php
+                                <?php
                                     $calcFee = $installment->calculated_late_fee ?? 0;
                                     $approvedFee = $installment->approved_late_fee ?? 0;
                                     $overdue = $calcFee - $approvedFee;
-                                @endphp
+                                ?>
 
-                                @if($overdue > 0)
+                                <?php if($overdue > 0): ?>
                                     <span class="text-danger fw-bold">
-                                        LKR {{ number_format($overdue, 2) }}
+                                        LKR <?php echo e(number_format($overdue, 2)); ?>
+
                                     </span>
-                                @else
+                                <?php else: ?>
                                     <span class="text-success fw-bold">LKR 0.00</span>
-                                @endif
+                                <?php endif; ?>
                             </td>
-                            <td>{{ $installment->approval_note ?? '-' }}</td>
+                            <td><?php echo e($installment->approval_note ?? '-'); ?></td>
                             <td>
                                 <button class="btn btn-sm btn-outline-info" 
                                         data-bs-toggle="collapse" 
-                                        data-bs-target="#history-{{ $installment->id }}">
+                                        data-bs-target="#history-<?php echo e($installment->id); ?>">
                                     View History
                                 </button>
 
-                                <div id="history-{{ $installment->id }}" class="collapse mt-2 text-start">
-                                    @php
+                                <div id="history-<?php echo e($installment->id); ?>" class="collapse mt-2 text-start">
+                                    <?php
                                         $histories = is_array($installment->approval_history)
                                             ? $installment->approval_history
                                             : json_decode($installment->approval_history ?? '[]', true);
-                                    @endphp
+                                    ?>
 
-                                    @if(empty($histories))
+                                    <?php if(empty($histories)): ?>
                                         <small class="text-muted fst-italic">No history yet</small>
-                                    @else
+                                    <?php else: ?>
                                         <ul class="list-group list-group-flush small">
-                                            @foreach($histories as $h)
+                                            <?php $__currentLoopData = $histories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $h): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                 <li class="list-group-item py-1">
-                                                    <strong>LKR {{ number_format($h['approved_late_fee'], 2) }}</strong>
-                                                    ({{ $h['approval_note'] ?? 'No note' }}) 
-                                                    by <span class="fw-semibold">{{ $h['approved_by'] ?? 'System' }}</span>
-                                                    <small class="text-muted d-block">on {{ $h['approved_at'] ?? '-' }}</small>
+                                                    <strong>LKR <?php echo e(number_format($h['approved_late_fee'], 2)); ?></strong>
+                                                    (<?php echo e($h['approval_note'] ?? 'No note'); ?>) 
+                                                    by <span class="fw-semibold"><?php echo e($h['approved_by'] ?? 'System'); ?></span>
+                                                    <small class="text-muted d-block">on <?php echo e($h['approved_at'] ?? '-'); ?></small>
                                                 </li>
-                                            @endforeach
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                         </ul>
-                                    @endif
+                                    <?php endif; ?>
                                 </div>
                             </td>
                             <td>
-                                <form method="POST" action="{{ route('latefee.approve.installment', $installment->id) }}">
-                                    @csrf
+                                <form method="POST" action="<?php echo e(route('latefee.approve.installment', $installment->id)); ?>">
+                                    <?php echo csrf_field(); ?>
                                     <div class="row g-2">
-                                        @php
+                                        <?php
                                             $isPast = \Carbon\Carbon::parse($installment->due_date)->isPast();
-                                        @endphp
+                                        ?>
 
                                         <div class="col-md-6">
                                             <input type="number" step="0.01" min="0.01" name="approved_late_fee" 
                                                 class="form-control form-control-sm"
                                                 placeholder="Approved Fee"
-                                                value="{{ $installment->approved_late_fee ?? '' }}"
-                                                {{ $isPast ? '' : 'disabled' }}>
+                                                value="<?php echo e($installment->approved_late_fee ?? ''); ?>"
+                                                <?php echo e($isPast ? '' : 'disabled'); ?>>
                                         </div>
                                         <div class="col-md-6">
                                             <input type="text" name="approval_note" 
                                                 class="form-control form-control-sm"
                                                 placeholder="Note"
-                                                value="{{ $installment->approval_note ?? '' }}"
-                                                {{ $isPast ? '' : 'disabled' }}>
+                                                value="<?php echo e($installment->approval_note ?? ''); ?>"
+                                                <?php echo e($isPast ? '' : 'disabled'); ?>>
                                         </div>
 
                                         <div class="col-12">
-                                            @if($isPast)
+                                            <?php if($isPast): ?>
                                                 <button class="btn btn-sm btn-primary w-100">
                                                     Approve
                                                 </button>
-                                            @else
+                                            <?php else: ?>
                                                 <button class="btn btn-sm btn-secondary w-100" disabled
                                                         title="Approval only allowed after due date">
                                                     Approve
                                                 </button>
-                                            @endif
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </form>
                             </td>
                         </tr>
-                    @empty
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <tr>
                             <td colspan="9" class="text-center text-muted py-3">
                                 No installments found for this student & course.
                             </td>
                         </tr>
-                    @endforelse
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 
-    @endisset
+    <?php endif; ?>
 </div>
 
 <script>
@@ -213,11 +216,11 @@ document.getElementById("student-nic").addEventListener("blur", function() {
     let nic = this.value;
     if (!nic) return;
 
-    fetch("{{ route('latefee.get.courses') }}", {
+    fetch("<?php echo e(route('latefee.get.courses')); ?>", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "X-CSRF-TOKEN": "{{ csrf_token() }}"
+            "X-CSRF-TOKEN": "<?php echo e(csrf_token()); ?>"
         },
         body: JSON.stringify({ student_nic: nic })
     })
@@ -249,7 +252,7 @@ function goToApprovalPage() {
         return;
     }
 
-    let url = "{{ url('/late-fee/approval') }}/" + nic + "/" + courseId;
+    let url = "<?php echo e(url('/late-fee/approval')); ?>/" + nic + "/" + courseId;
     window.location.href = url;
 }
 
@@ -265,7 +268,7 @@ document.addEventListener("DOMContentLoaded", function () {
         // Clear old options
         courseSelect.innerHTML = '<option value="">-- Select Course --</option>';
 
-        fetch("{{ route('latefee.get.courses') }}", {
+        fetch("<?php echo e(route('latefee.get.courses')); ?>", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -293,8 +296,10 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
 <script>
     if (performance.navigation.type === performance.navigation.TYPE_RELOAD) {
-        window.location.href = "{{ url('/late-fee/approval') }}";
+        window.location.href = "<?php echo e(url('/late-fee/approval')); ?>";
     }
 </script>
 
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/late_fee/approval.blade.php ENDPATH**/ ?>
