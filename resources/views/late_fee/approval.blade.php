@@ -1,23 +1,14 @@
 @extends('inc.app')
 
-@section('title', 'Late Fee Approval')
+@section('title', 'NEBULA | Late Fee Approval')
 
 @section('content')
 <div class="container mt-4">
-
-
-
+    <h2>Late Fee Approval</h2>
+    <hr>
 
     {{-- Student & Course Selection --}}
 <div class="card mb-4">
-    <div class="card shadow-sm mb-4">
-    <div class="card-header bg-white text-center">
-        <h4 class="mb-0 fw-bold text-dark">
-            <i class="bi bi-cash-stack me-2 text-primary"></i>
-            Late Fee Approval
-        </h4>
-    </div>
-</div>
     <div class="card-header bg-secondary text-white">Select Student & Course</div>
     <div class="card-body">
         <form method="GET" onsubmit="event.preventDefault(); goToApprovalPage();">
@@ -27,21 +18,20 @@
             <input type="text" id="student-nic" name="student_nic" class="form-control" placeholder="Enter NIC" required>
         </div>
 
-        <div class="col-md-5">
-            <label for="course_id">Course</label>
-            <select id="course_id" class="form-control" required>
-                <option value="">-- Select Course --</option>
-            </select>
-        </div>
+                            <div class="col-md-5">
+                                <label for="course_id" class="form-label fw-bold">Course <span class="text-danger">*</span></label>
+                                <select id="course_id" class="form-control" required>
+                                    <option value="">-- Select Course --</option>
+                                </select>
+                            </div>
 
-        <div class="col-md-2 d-flex align-items-end">
-            <button type="submit" class="btn btn-primary w-100">Load</button>
-        </div>
-    </div>
-</form>
-
-    </div>
-</div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">Load</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
 
 
     @isset($installments)
@@ -55,26 +45,23 @@
                 <div class="row mb-3">
                     <div class="col-md-4">
                         <label>Reduction Amount</label>
-                        <input type="number" step="0.01" min="0.01" name="reduction_amount" class="form-control" required>
+                        <input type="number" step="0.01" name="reduction_amount" class="form-control" required disabled>
                     </div>
                     <div class="col-md-8">
                         <label>Approval Note</label>
-                        <input type="text" name="approval_note" class="form-control">
+                        <input type="text" name="approval_note" class="form-control" disabled>
                     </div>
                 </div>
-                <button class="btn btn-success" >Apply Global Reduction</button>
+                <button class="btn btn-success" disabled>Apply Global Reduction</button>
             </form>
         </div>
     </div>
 
     {{-- Installment-wise Table --}}
-<div class="card shadow-lg rounded-3 border-0">
-    <div class="card-header bg-dark text-white fw-bold">
-        <i class="bi bi-cash-coin me-2"></i> Installment-wise Approval
-    </div>
-    <div class="card-body p-3">
-        <div class="table-responsive">
-            <table class="table table-bordered align-middle text-center">
+    <div class="card">
+        <div class="card-header bg-dark text-white">Installment-wise Approval</div>
+        <div class="card-body">
+            <table class="table table-bordered table-striped">
                 <thead class="table-dark">
                     <tr>
                         <th>Installment #</th>
@@ -82,119 +69,48 @@
                         <th>Final Amount</th>
                         <th>Calculated Late Fee</th>
                         <th>Approved Late Fee</th>
-                        <th>Overdue (Calc - Approved)</th>
                         <th>Approval Note</th>
-                        <th>History</th>
-                        <th style="width: 220px;">Action</th>
-
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($installments as $installment)
                         <tr>
-                            <td class="fw-bold">{{ $installment->installment_number }}</td>
+                            <td>{{ $installment->installment_number }}</td>
                             <td>{{ $installment->formatted_due_date }}</td>
-                            <td class="text-primary fw-semibold">{{ $installment->formatted_amount }}</td>
-                            <td class="text-warning fw-semibold">
-                                LKR {{ number_format($installment->calculated_late_fee ?? 0, 2) }}
-                            </td>
+                            <td>{{ $installment->formatted_amount }}</td>
+                            <td>LKR {{ number_format($installment->calculated_late_fee ?? 0, 2) }}</td>
                             <td>
                                 @if($installment->approved_late_fee !== null)
-                                    <span class="badge bg-success p-2">
+                                    <span class="text-success fw-bold">
                                         LKR {{ number_format($installment->approved_late_fee, 2) }}
                                     </span>
                                 @else
-                                    <span class="badge bg-secondary">Not approved</span>
-                                @endif
-                            </td>
-                            <td>
-                                @php
-                                    $calcFee = $installment->calculated_late_fee ?? 0;
-                                    $approvedFee = $installment->approved_late_fee ?? 0;
-                                    $overdue = $calcFee - $approvedFee;
-                                @endphp
-
-                                @if($overdue > 0)
-                                    <span class="text-danger fw-bold">
-                                        LKR {{ number_format($overdue, 2) }}
-                                    </span>
-                                @else
-                                    <span class="text-success fw-bold">LKR 0.00</span>
+                                    <span class="text-muted">Not approved</span>
                                 @endif
                             </td>
                             <td>{{ $installment->approval_note ?? '-' }}</td>
                             <td>
-                                <button class="btn btn-sm btn-outline-info" 
-                                        data-bs-toggle="collapse" 
-                                        data-bs-target="#history-{{ $installment->id }}">
-                                    View History
-                                </button>
-
-                                <div id="history-{{ $installment->id }}" class="collapse mt-2 text-start">
-                                    @php
-                                        $histories = is_array($installment->approval_history)
-                                            ? $installment->approval_history
-                                            : json_decode($installment->approval_history ?? '[]', true);
-                                    @endphp
-
-                                    @if(empty($histories))
-                                        <small class="text-muted fst-italic">No history yet</small>
-                                    @else
-                                        <ul class="list-group list-group-flush small">
-                                            @foreach($histories as $h)
-                                                <li class="list-group-item py-1">
-                                                    <strong>LKR {{ number_format($h['approved_late_fee'], 2) }}</strong>
-                                                    ({{ $h['approval_note'] ?? 'No note' }}) 
-                                                    by <span class="fw-semibold">{{ $h['approved_by'] ?? 'System' }}</span>
-                                                    <small class="text-muted d-block">on {{ $h['approved_at'] ?? '-' }}</small>
-                                                </li>
-                                            @endforeach
-                                        </ul>
-                                    @endif
-                                </div>
-                            </td>
-                            <td>
                                 <form method="POST" action="{{ route('latefee.approve.installment', $installment->id) }}">
                                     @csrf
-                                    <div class="row g-2">
-                                        @php
-                                            $isPast = \Carbon\Carbon::parse($installment->due_date)->isPast();
-                                        @endphp
-
-                                        <div class="col-md-6">
-                                            <input type="number" step="0.01" min="0.01" name="approved_late_fee" 
-                                                class="form-control form-control-sm"
-                                                placeholder="Approved Fee"
-                                                value="{{ $installment->approved_late_fee ?? '' }}"
-                                                {{ $isPast ? '' : 'disabled' }}>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-1">
+                                            <input type="number" step="0.01" name="approved_late_fee" 
+                                                   class="form-control" placeholder="Approved Fee"
+                                                   value="{{ $installment->approved_late_fee ?? '' }}">
                                         </div>
-                                        <div class="col-md-6">
-                                            <input type="text" name="approval_note" 
-                                                class="form-control form-control-sm"
-                                                placeholder="Note"
-                                                value="{{ $installment->approval_note ?? '' }}"
-                                                {{ $isPast ? '' : 'disabled' }}>
-                                        </div>
-
-                                        <div class="col-12">
-                                            @if($isPast)
-                                                <button class="btn btn-sm btn-primary w-100">
-                                                    Approve
-                                                </button>
-                                            @else
-                                                <button class="btn btn-sm btn-secondary w-100" disabled
-                                                        title="Approval only allowed after due date">
-                                                    Approve
-                                                </button>
-                                            @endif
+                                        <div class="col-md-6 mb-1">
+                                            <input type="text" name="approval_note" class="form-control" 
+                                                   placeholder="Note" value="{{ $installment->approval_note ?? '' }}">
                                         </div>
                                     </div>
+                                    <button class="btn btn-sm btn-primary mt-1">Approve</button>
                                 </form>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-3">
+                            <td colspan="7" class="text-center text-muted py-3">
                                 No installments found for this student & course.
                             </td>
                         </tr>
@@ -203,8 +119,6 @@
             </table>
         </div>
     </div>
-</div>
-
     @endisset
 </div>
 
