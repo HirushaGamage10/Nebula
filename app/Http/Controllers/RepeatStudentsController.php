@@ -28,7 +28,11 @@ class RepeatStudentsController extends Controller
     
     public function showRepeatStudentsManagement()
     {
-        $courses = Course::orderBy('course_name')->get();
+        // Only show courses that have at least one intake (treat these as "repeatable" courses)
+        // The intakes table in this project stores course names (course_name) rather than course_id,
+        // so collect distinct course_name values and find matching Course rows by name.
+        $courseNamesWithIntakes = Intake::distinct()->pluck('course_name')->toArray();
+        $courses = Course::whereIn('course_name', $courseNamesWithIntakes)->orderBy('course_name')->get();
         $modules = Module::orderBy('module_name')->get();
         $intakes = Intake::join('courses', 'intakes.course_name', '=', 'courses.course_name')
             ->select('intakes.*', 'courses.course_name as course_display_name')
@@ -284,7 +288,13 @@ class RepeatStudentsController extends Controller
     public function getIntakesForCourseAndLocation($courseID, $location)
     {
         try {
-            $intakes = Intake::where('course_id', $courseID)
+            // Intake rows reference course_name; resolve the course name from provided id
+            $course = Course::find($courseID);
+            if (!$course) {
+                return response()->json(['success' => false, 'message' => 'Course not found.'], Response::HTTP_NOT_FOUND);
+            }
+
+            $intakes = Intake::where('course_name', $course->course_name)
                 ->where('location', $location)
                 ->get();
 
@@ -371,13 +381,19 @@ class RepeatStudentsController extends Controller
             return response()->json(['success' => false, 'message' => 'Only holding registrations can be updated.']);
         }
 
-        // Update the fields
+        // Preserve existing specialization when the incoming specialization is empty/null
+        $newSpecialization = isset($validated['specialization']) && $validated['specialization'] !== ''
+            ? $validated['specialization']
+            : $registration->specialization;
+
+        // Update the fields and change status from holding -> registered
         $registration->update([
             'location'       => $validated['location'],
             'course_id'      => $validated['course_id'],
             'intake_id'      => $validated['intake_id'],
             'semester_id'    => $validated['semester_id'],
-            'specialization' => $validated['specialization'],
+            'specialization' => $newSpecialization,
+            'status'         => 'registered',
         ]);
 
         return response()->json(['success' => true, 'message' => 'Semester registration updated successfully.']);
@@ -410,33 +426,53 @@ class RepeatStudentsController extends Controller
         }
 
         try {
-            $query = Intake::where('course_id', $courseId);
+            // Resolve course_name (intakes table stores course_name)
+            $course = Course::find($courseId);
+            if (!$course) {
+                return response()->json(['success' => false, 'message' => 'Course not found.'], Response::HTTP_NOT_FOUND);
+            }
+
+            $query = Intake::where('course_name', $course->course_name);
             if ($location) {
                 $query->where('location', $location);
             }
 
-            $intakes = $query->orderBy('start_date', 'asc')->get()->map(function ($i) {
-                return [
-                    'intake_id' => $i->intake_id ?? $i->id,
-                    'batch' => $i->batch ?? ($i->intake_no ?? ''),
-                    'start_date' => $i->start_date ?? null,
-                    'end_date' => $i->end_date ?? null,
-                ];
-            });
+            $now = Carbon::now();
 
             // identify next upcoming intake (if any)
-            $now = Carbon::now();
-            $next = Intake::where('course_id', $courseId)
+            $next = Intake::where('course_name', $course->course_name)
                 ->when($location, function ($q) use ($location) { return $q->where('location', $location); })
                 ->whereNotNull('start_date')
                 ->where('start_date', '>=', $now->toDateString())
                 ->orderBy('start_date', 'asc')
                 ->first();
 
+            $nextId = $next ? ($next->intake_id ?? $next->id) : null;
+
+            $intakes = $query->orderBy('start_date', 'asc')->get()->map(function ($i) use ($nextId) {
+                $id = $i->intake_id ?? $i->id;
+                $batch = $i->batch ?? ($i->intake_no ?? '');
+                $start = $i->start_date ? Carbon::parse($i->start_date)->toDateString() : null;
+                $label = $batch;
+                if ($start) {
+                    // append start date to label for clarity
+                    $label .= $label ? ' (' . $start . ')' : $start;
+                }
+
+                return [
+                    'intake_id' => $id,
+                    'batch' => $batch,
+                    'start_date' => $start,
+                    'end_date' => $i->end_date ?? null,
+                    'label' => $label,
+                    'is_next' => ($id == $nextId),
+                ];
+            });
+
             return response()->json([
                 'success' => true,
                 'intakes' => $intakes,
-                'next_intake_id' => $next ? ($next->intake_id ?? $next->id) : null,
+                'next_intake_id' => $nextId,
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Failed to fetch intakes.'], Response::HTTP_INTERNAL_SERVER_ERROR);
