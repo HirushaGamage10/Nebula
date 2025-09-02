@@ -191,7 +191,7 @@
       <td class="right">{{ $fmt($lateFee) }}</td>
     </tr>
     <tr>
-      <td class="label">Approved Reduction (Rs.):</td>
+      <td class="label">Approved Late Fee (Rs.):</td>
       <td class="right">{{ $fmt($approvedLate) }}</td>
     </tr>
     <tr>
@@ -200,6 +200,22 @@
     </tr>
   </table>
 </div>
+
+@if(!empty($slipData['partial_payments']))
+    <h5>Payment History</h5>
+    <ul class="list-group mb-3">
+        @foreach($slipData['partial_payments'] as $p)
+            <li class="list-group-item">
+                {{ $p['date'] }} - 
+                LKR {{ number_format($p['amount'], 2) }} 
+                ({{ $p['method'] }})
+            </li>
+        @endforeach
+    </ul>
+@endif
+
+<p><strong>Remaining Balance:</strong> LKR {{ number_format($slipData['remaining_amount'] ?? 0, 2) }}</p>
+<p><strong>Status:</strong> {{ ucfirst($slipData['status'] ?? 'pending') }}</p>
 
 
   </div>

@@ -719,115 +719,110 @@
                 </div>
 
                 <!-- Update Records Tab -->
-                <div class="tab-pane fade" id="update-records" role="tabpanel" aria-labelledby="update-records-tab">
-                    <div class="mt-4">
-                        <!-- Filters -->
-                        <div class="mb-4">
-                            <div class="row mb-3 align-items-center">
-                                <label class="col-sm-2 col-form-label fw-bold">Student NIC <span class="text-danger">*</span></label>
-                                <div class="col-sm-10">
-                                    <input type="text" class="form-control" id="update-student-nic" placeholder="Enter Student NIC" required onchange="loadStudentCoursesForUpdate()">
-                                </div>
-                            </div>
-                            <div class="row mb-3 align-items-center">
-                                <label class="col-sm-2 col-form-label fw-bold">Course <span class="text-danger">*</span></label>
-                                <div class="col-sm-10">
-                                    <select class="form-select" id="update-course" required>
-                                        <option value="" selected disabled>Select a Course</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-12 text-center">
-                                    <button type="button" class="btn btn-primary" onclick="loadPaymentRecords()">
-                                        <i class="ti ti-search me-2"></i>Load Payment Records
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Payment Records Table -->
-                        <div class="mt-4" id="paymentRecordsSection" style="display:none;">
-                            <h4 class="text-center mb-3">Payment Records</h4>
-                            <div class="table-responsive">
-                                <table class="table table-bordered">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Student ID</th>
-                                            <th>Student Name</th>
-                                            <th>Payment Type</th>
-                                            <th>Amount</th>
-                                            <th>Payment Method</th>
-                                            <th>Payment Date</th>
-                                            <th>Receipt No</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="paymentRecordsTableBody">
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="text-center mt-3" id="updateSaveBtnSection" style="display:none;">
-                                <button type="button" class="btn btn-success" onclick="updatePaymentRecords()">
-                                    <i class="ti ti-device-floppy me-2"></i>Update Records
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Upload Paid Slip Section -->
-                        <div class="mt-4" id="uploadPaidSlipSection">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="mb-0">
-                                        <i class="ti ti-upload me-2"></i>Upload Paid Slip
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Receipt Number <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" id="upload-receipt-no" placeholder="Enter receipt number from generated slip" required>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Payment Method <span class="text-danger">*</span></label>
-                                                <select class="form-select" id="upload-payment-method" required>
-                                                    <option value="" selected disabled>Select Payment Method</option>
-                                                    <option value="Cash">Cash</option>
-                                                    <option value="Bank Transfer">Bank Transfer</option>
-                                                    <option value="Cheque">Cheque</option>
-                                                    <option value="Credit Card">Credit Card</option>
-                                                    <option value="Debit Card">Debit Card</option>
-                                                </select>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Payment Date <span class="text-danger">*</span></label>
-                                                <input type="date" class="form-control" id="upload-payment-date" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Paid Slip <span class="text-danger">*</span></label>
-                                                <input type="file" class="form-control" id="upload-paid-slip" accept=".jpg,.jpeg,.png,.pdf" required>
-                                                <small class="text-muted">Upload the paid slip (JPG, PNG, or PDF - max 2MB)</small>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Remarks</label>
-                                                <textarea class="form-control" id="upload-remarks" rows="3" placeholder="Any additional remarks..."></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="text-center mt-3">
-                                        <button type="button" class="btn btn-success" onclick="savePaymentRecordFromUpdate()">
-                                            <i class="ti ti-device-floppy me-2"></i>Save Payment Record
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+<div class="tab-pane fade" id="update-records" role="tabpanel" aria-labelledby="update-records-tab">
+    <div class="mt-4">
+        <!-- Filters -->
+        <div class="mb-4">
+            <div class="row mb-3 align-items-center">
+                <label class="col-sm-2 col-form-label fw-bold">Student NIC <span class="text-danger">*</span></label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="update-student-nic" placeholder="Enter Student NIC" required onchange="loadStudentCoursesForUpdate()">
                 </div>
+            </div>
+            <div class="row mb-3 align-items-center">
+                <label class="col-sm-2 col-form-label fw-bold">Course <span class="text-danger">*</span></label>
+                <div class="col-sm-10">
+                    <select class="form-select" id="update-course" required>
+                        <option value="" selected disabled>Select a Course</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 text-center">
+                    <button type="button" class="btn btn-primary" onclick="loadPaymentRecords()">
+                        <i class="ti ti-search me-2"></i>Load Payment Records
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Records Table -->
+        <div class="mt-4" id="paymentRecordsSection" style="display:none;">
+            <h4 class="text-center mb-3">Payment Records</h4>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Student Name</th>
+                            <th>Payment Type</th>
+                            <th>Installment #</th>
+                            <th>Amount</th>
+                            <th>Late Fee</th>
+                            <th>Approved Late Fee</th>
+                            <th>Total Fee</th>
+                            <th>Remaining</th>
+                            <th>Payment Method</th>
+                            <th>Payment Date</th>
+                            <th>Receipt No</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="paymentRecordsTableBody">
+                        <!-- JS will append rows here -->
+                         
+                    </tbody>
+                </table>
+                <!-- Pay Modal -->
+<div class="modal fade" id="payModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Make a Payment</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="pay-payment-id">
+        <div class="mb-3">
+          <label class="form-label">Amount to Pay</label>
+          <input type="number" class="form-control" id="pay-amount" min="1">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Payment Method</label>
+          <select class="form-select" id="pay-method">
+            <option value="Cash">Cash</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+            <option value="Cheque">Cheque</option>
+            <option value="Credit Card">Credit Card</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Payment Date</label>
+          <input type="date" class="form-control" id="pay-date" value="{{ date('Y-m-d') }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Remarks</label>
+          <textarea class="form-control" id="pay-remarks"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-success" onclick="submitPayment()">Confirm Payment</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+            </div>
+            <div class="text-center mt-3" id="updateSaveBtnSection" style="display:none;">
+                <button type="button" class="btn btn-success" onclick="updatePaymentRecords()">
+                    <i class="ti ti-device-floppy me-2"></i>Update Records
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
                 <!-- Payment Summary Tab -->
                 <div class="tab-pane fade" id="payment-summary" role="tabpanel" aria-labelledby="payment-summary-tab">
@@ -2661,42 +2656,162 @@ function loadStudentCoursesForUpdate() {
     .finally(() => showSpinner(false));
 }
 
-// Render payment records table
 function renderPaymentRecords() {
-    const tbody = document.getElementById('paymentRecordsTableBody');
-    tbody.innerHTML = '';
-    
-    paymentRecords.forEach((record, index) => {
-        const row = `<tr>
-            <td>${record.student_id}</td>
-            <td>${record.student_name}</td>
-            <td>${record.payment_type}</td>
-            <td>Rs. ${record.amount.toLocaleString()}</td>
-            <td>${record.payment_method}</td>
-            <td>${record.payment_date}</td>
-            <td>${record.receipt_no}</td>
-            <td><span class="badge bg-success">${record.status}</span></td>
-            <td>
-                <button type="button" class="btn btn-sm btn-primary" onclick="editPaymentRecord(${index})">
-                    <i class="ti ti-edit"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-danger" onclick="deletePaymentRecord(${index})">
-                    <i class="ti ti-trash"></i>
-                </button>
-            </td>
-        </tr>`;
-        tbody.insertAdjacentHTML('beforeend', row);
-    });
+  const tbody = document.getElementById('paymentRecordsTableBody');
+  tbody.innerHTML = "";
+
+  (window.paymentRecords || []).forEach((r) => {
+    const modalId = `historyModal-${r.id}`;
+
+    const row = `
+      <tr>
+        <td>${r.student_id}</td>
+        <td>${r.student_name}</td>
+        <td>${r.payment_type}</td>
+        <td>${r.installment_number ?? '-'}</td>
+        <td>${r.amount}</td>
+        <td>${r.late_fee ?? 0}</td>
+        <td>${r.approved_late_fee ?? 0}</td>
+        <td>${r.total_fee ?? 0}</td>
+        <td>${r.remaining_amount ?? 0}</td>
+        <td>${r.payment_method ?? '-'}</td>
+        <td>${r.payment_date ?? '-'}</td>
+        <td>${r.receipt_no}</td>
+        <td>${r.status}</td>
+        <td>
+          <button class="btn btn-sm btn-success" 
+onclick="openPayModal(${r.payment_id}, ${r.remaining_amount ?? 0})"
+            <i class="ti ti-cash me-1"></i>Pay
+          </button>
+          <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#${modalId}">
+            <i class="ti ti-history me-1"></i>History
+          </button>
+        </td>
+      </tr>
+
+      <!-- History Modal -->
+      <div class="modal fade" id="${modalId}" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Payment History - ${r.receipt_no}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              ${renderHistoryList(r.partial_payments)}
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    tbody.insertAdjacentHTML("beforeend", row);
+  });
 }
+
+function renderHistoryList(payments) {
+  if (!payments || payments.length === 0) {
+    return `<p class="text-muted">No partial payments yet.</p>`;
+  }
+  return `
+    <ul class="list-group">
+      ${payments.map(p => `
+        <li class="list-group-item">
+          <strong>${p.date}</strong> - 
+          LKR ${Number(p.amount).toLocaleString()} (${p.method})
+          ${p.remarks ? `<br><small>${p.remarks}</small>` : ""}
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+function openPayModal(paymentId, remaining) {
+  document.getElementById('pay-payment-id').value = paymentId;  // ✅ correct
+  document.getElementById('pay-amount').value = remaining > 0 ? remaining : '';
+  document.getElementById('pay-date').value = new Date().toISOString().split('T')[0];
+
+  const modal = new bootstrap.Modal(document.getElementById('payModal'));
+  modal.show();
+}
+
+
+function submitPayment() {
+  const paymentId = document.getElementById('pay-payment-id').value;
+  const amount    = parseFloat(document.getElementById('pay-amount').value || 0);
+  const method    = document.getElementById('pay-method').value;
+  const date      = document.getElementById('pay-date').value;
+  const remarks   = document.getElementById('pay-remarks').value;
+
+  if (!amount || amount <= 0) {
+    showErrorMessage("Enter a valid payment amount.");
+    return;
+  }
+
+  fetch('/payment/make-payment', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': '{{ csrf_token() }}',
+    },
+    body: JSON.stringify({
+      payment_id: paymentId,
+      amount: amount,
+      payment_method: method,
+      payment_date: date,
+      remarks: remarks
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      showSuccessMessage("Payment recorded successfully!");
+      bootstrap.Modal.getInstance(document.getElementById('payModal')).hide();
+      loadPaymentRecords(); // refresh table
+    } else {
+      showErrorMessage(data.message || "Failed to record payment.");
+    }
+  })
+  .catch(() => showErrorMessage("An error occurred while making payment."));
+}
+
+
 
 // Update payment records
 function updatePaymentRecords() {
+    const updates = [];
+
+    document.querySelectorAll('#paymentRecordsTableBody [data-field]').forEach(el => {
+        const idx = el.dataset.idx;
+        const field = el.dataset.field;
+        const value = el.value;
+
+        if (!updates[idx]) updates[idx] = { id: window.paymentRecords[idx].id };
+        updates[idx][field] = value;
+    });
+
     showSpinner(true);
-    setTimeout(() => {
-        showToast('Success', 'Payment records updated successfully.', 'bg-success');
-        showSpinner(false);
-    }, 1000);
+
+    fetch('/payment/update-records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+        body: JSON.stringify({ updates })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showSuccessMessage('Payment records updated successfully!');
+            loadPaymentRecords();
+        } else {
+            showErrorMessage(data.message || 'Failed to update records.');
+        }
+    })
+    .catch(() => showErrorMessage('An error occurred while updating records.'))
+    .finally(() => showSpinner(false));
 }
+
 
 // Load courses for student when NIC is entered (for summary)
 function loadStudentCoursesForSummary() {

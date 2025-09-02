@@ -15,22 +15,25 @@ class PaymentDetail extends Model
 
 
     protected $fillable = [
-        'student_id',
-        'course_registration_id',
-        'amount',
-        'payment_method',
-        'transaction_id',
-        'remarks',
-        'paid_slip_path',
-        'installment_number',
-        'due_date',
-        'late_fee',           
-        'approved_late_fee',  
-        'total_fee',   
-        'status',
-        'created_at',
-        'updated_at'
-    ];
+    'student_id',
+    'course_registration_id',
+    'amount',
+    'payment_method',
+    'transaction_id',
+    'remarks',
+    'paid_slip_path',
+    'installment_number',
+    'due_date',
+    'late_fee',           
+    'approved_late_fee',  
+    'total_fee',   
+    'remaining_amount',   // ✅ add this
+    'partial_payments',   // ✅ add this
+    'status',
+    'created_at',
+    'updated_at'
+];
+
 
     protected $casts = [
         'id' => 'int',
@@ -39,6 +42,8 @@ class PaymentDetail extends Model
         'amount' => 'decimal:2',
         'installment_number' => 'int',
         'due_date' => 'date',
+        'partial_payments' => 'array',
+    'remaining_amount' => 'decimal:2',
     ];
 
     // Relationships

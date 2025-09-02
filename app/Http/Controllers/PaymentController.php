@@ -957,16 +957,21 @@ $existingPayment = \App\Models\PaymentDetail::where('student_id', $student->stud
     ->first();
 
 if ($existingPayment) {
-    // Build slip array with existing record
+    $paidSoFar = collect($existingPayment->partial_payments ?? [])->sum('amount');
+    $remaining = max(($existingPayment->total_fee - $paidSoFar), 0);
+
+    $existingPayment->update([
+        'late_fee'          => $lateFee,
+        'approved_late_fee' => $approvedLateFee,
+        'total_fee'         => $totalFee,
+        'remaining_amount'  => $remaining,  // ✅ recalc if needed
+    ]);
+
     $slipData = $this->buildSlipArray(
         $existingPayment, $student, $course, $intake,
         $courseFee, $franchiseFee, $registrationFee,
-        $existingPayment->late_fee, 
-        $existingPayment->approved_late_fee,
-        $existingPayment->total_fee
+        $lateFee, $approvedLateFee, $totalFee
     );
-
-    // add extra flags for frontend
     $slipData['id'] = $existingPayment->id;
     $slipData['can_delete'] = true;
 
@@ -975,9 +980,12 @@ if ($existingPayment) {
     return response()->json([
         'success'   => true,
         'slip_data' => $slipData,
-        'message'   => 'Existing payment slip found. You can delete it if you want to regenerate.'
+        'message'   => 'Existing payment slip found. You can delete it if you want to regenerate.',
+        'can_delete'=> true,
+        'id'        => $existingPayment->id,
     ]);
 }
+
 
 
         // --- Generate New Receipt Number ---
@@ -1009,6 +1017,9 @@ $payment = \App\Models\PaymentDetail::create([
     'late_fee'          => $lateFee,
     'approved_late_fee' => $approvedLateFee,
     'total_fee'         => $totalFee,
+    'remaining_amount'  => (float) $totalFee,
+'partial_payments'  => json_encode([]), // ensures proper JSON
+
 ]);
 
 
@@ -1068,6 +1079,9 @@ private function buildSlipArray($payment, $student, $course, $intake, $courseFee
         'total_fee'              => $totalFee,
         'generated_at'           => now()->format('Y-m-d H:i:s'),
         'valid_until'            => now()->addDays(7)->format('Y-m-d'),
+        'partial_payments' => $payment->partial_payments ?? [],
+        'remaining_amount' => $payment->remaining_amount ?? $totalFee,
+
     ];
 }
 
@@ -1097,6 +1111,42 @@ public function deletePaymentSlip($id)
     }
 }
 
+public function recordPartialPayment(Request $request, $id)
+{
+    $request->validate([
+        'amount'  => 'required|numeric|gt:0',
+        'method'  => 'nullable|string',
+        'date'    => 'nullable|date',
+    ]);
+
+    $payment = \App\Models\PaymentDetail::findOrFail($id);
+
+    // Load history
+    $history = $payment->partial_payments ?? [];
+
+    // Append new payment
+    $history[] = [
+        'date'   => $request->date ?? now()->toDateString(),
+        'amount' => (float) $request->amount,
+        'method' => $request->method ?? 'Cash',
+    ];
+
+    // Update remaining
+    $paidSoFar = collect($history)->sum('amount');
+    $remaining = max(($payment->total_fee - $paidSoFar), 0);
+
+    // Save
+    $payment->partial_payments = $history;
+    $payment->remaining_amount = $remaining;
+
+    if ($remaining <= 0) {
+        $payment->status = 'paid';
+    }
+
+    $payment->save();
+
+    return back()->with('success', 'Partial payment recorded successfully.');
+}
 
 
 
@@ -1258,98 +1308,125 @@ public function deletePaymentSlip($id)
 
 
     /**
-     * Get payment records with slip upload functionality.
-     */
-    public function getPaymentRecords(Request $request)
-    {
-        try {
-            $request->validate([
-                'student_nic' => 'required|string',
-                'course_id' => 'required|integer|exists:courses,course_id',
-            ]);
+ * Get payment records for Update Records tab.
+ */
+public function getPaymentRecords(Request $request)
+{
+    try {
+        $request->validate([
+            'student_nic' => 'required|string',
+            'course_id'   => 'required|integer|exists:courses,course_id',
+        ]);
 
-            // Find student by NIC
-            $student = Student::where('id_value', $request->student_nic)->first();
-            
-            if (!$student) {
-                return response()->json(['success' => false, 'message' => 'Student not found with the provided NIC.'], Response::HTTP_NOT_FOUND);
-            }
-
-            // Get course registration for this student and course
-            $registration = CourseRegistration::where('student_id', $student->student_id)
-                ->where('course_id', $request->course_id)
-                ->first();
-
-            if (!$registration) {
-                return response()->json(['success' => false, 'message' => 'Student is not registered for this course.'], Response::HTTP_NOT_FOUND);
-            }
-
-            // Get payment records for this student and course registration
-            $records = PaymentDetail::where('student_id', $student->student_id)
-                ->where('course_registration_id', $registration->id)
-                ->with(['student', 'registration.course'])
-                ->get()
-                ->map(function($payment) {
-                    return [
-                        'payment_id' => $payment->id,
-                        'student_id' => $payment->student->student_id,
-                        'student_name' => $payment->student->full_name,
-                        'payment_type' => $payment->payment_type ?? 'course_fee',
-                        'amount' => $payment->amount,
-                        'payment_method' => $payment->payment_method,
-                        'payment_date' => $payment->created_at->format('Y-m-d'),
-                        'receipt_no' => $payment->transaction_id,
-                        'status' => $payment->status,
-                        'remarks' => $payment->remarks,
-                        'installment_number' => $payment->installment_number,
-                        'due_date' => $payment->due_date,
-                        'paid_slip_path' => $payment->paid_slip_path,
-                        'has_slip' => !empty($payment->paid_slip_path),
-                    ];
-                });
-
+        // 🔹 Find student by NIC
+        $student = Student::where('id_value', $request->student_nic)->first();
+        if (!$student) {
             return response()->json([
-                'success' => true,
-                'records' => $records
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+                'success' => false,
+                'message' => 'Student not found with the provided NIC.'
+            ], Response::HTTP_NOT_FOUND);
         }
+
+        // 🔹 Verify registration
+        $registration = CourseRegistration::where('student_id', $student->student_id)
+            ->where('course_id', $request->course_id)
+            ->first();
+
+        if (!$registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Student is not registered for this course.'
+            ], Response::HTTP_NOT_FOUND);
+        }
+
+        // 🔹 Fetch payment details
+        $records = PaymentDetail::where('student_id', $student->student_id)
+            ->where('course_registration_id', $registration->id)
+            ->get()
+            ->map(function ($payment) use ($student) {
+                return [
+                    'payment_id' => $payment->id,
+                    'student_id'        => $student->student_id,
+                    'student_name'      => $student->full_name,
+                    'payment_type'      => $payment->payment_type ?? 'course_fee',
+                    'installment_number'=> $payment->installment_number,
+                    'amount'            => (float) $payment->amount,
+                    'late_fee'          => (float) ($payment->late_fee ?? 0),
+                    'approved_late_fee' => (float) ($payment->approved_late_fee ?? 0),
+                    'total_fee'         => (float) ($payment->total_fee ?? 0),
+                    'remaining_amount'  => (float) ($payment->remaining_amount ?? 0),
+                    'partial_payments' => $payment->partial_payments ?? [],
+                    'payment_method'    => $payment->payment_method,
+                    'payment_date'      => optional($payment->payment_date)->format('Y-m-d'),
+                    'receipt_no'        => $payment->transaction_id,
+                    'status'            => $payment->status,
+                    'remarks'           => $payment->remarks,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'records' => $records
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred: ' . $e->getMessage()
+        ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
+}
 
     /**
-     * Update payment record.
-     */
-    public function updatePaymentRecord(Request $request)
-    {
-        try {
-            $request->validate([
-                'payment_id' => 'required|exists:payment_details,payment_id',
-                'payment_type' => 'required|string',
-                'amount' => 'required|numeric|min:0',
-                'payment_method' => 'required|string',
-                'payment_date' => 'required|date',
-                'receipt_no' => 'required|string',
-                'remarks' => 'nullable|string',
-            ]);
+ * Update payment record (Update Records tab).
+ */
+public function updatePaymentRecord(Request $request)
+{
+    try {
+        $request->validate([
+            'id'                => 'required|exists:payment_details,id', // ✅ correct PK
+            'payment_type'      => 'required|string',
+            'amount'            => 'required|numeric|min:0',
+            'late_fee'          => 'nullable|numeric|min:0',
+            'approved_late_fee' => 'nullable|numeric|min:0',
+            'total_fee'         => 'nullable|numeric|min:0',
+            'remaining_amount'  => 'nullable|numeric|min:0',
+            'payment_method'    => 'required|string',
+            'payment_date'      => 'required|date',
+            'receipt_no'        => 'required|string',
+            'status'            => 'required|string',
+            'remarks'           => 'nullable|string',
+        ]);
 
-            $payment = PaymentDetail::find($request->payment_id);
-            $payment->update([
-                'payment_type' => $request->payment_type,
-                'payment_amount' => $request->amount,
-                'payment_method' => $request->payment_method,
-                'payment_date' => $request->payment_date,
-                'payment_reference' => $request->receipt_no,
-                'remarks' => $request->remarks,
-            ]);
+        $payment = PaymentDetail::findOrFail($request->id);
 
-            return response()->json(['success' => true, 'message' => 'Payment record updated successfully.'], Response::HTTP_OK);
+        $payment->update([
+            'payment_type'      => $request->payment_type,
+            'amount'            => $request->amount,
+            'late_fee'          => $request->late_fee ?? 0,
+            'approved_late_fee' => $request->approved_late_fee ?? 0,
+            'total_fee'         => $request->total_fee ?? ($request->amount + ($request->late_fee ?? 0) - ($request->approved_late_fee ?? 0)),
+            'remaining_amount'  => $request->remaining_amount ?? $payment->remaining_amount,
+            'payment_method'    => $request->payment_method,
+            'payment_date'      => $request->payment_date,
+            'transaction_id'    => $request->receipt_no, // ✅ correct column
+            'status'            => $request->status,
+            'remarks'           => $request->remarks,
+        ]);
 
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment record updated successfully.'
+        ], Response::HTTP_OK);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred: ' . $e->getMessage()
+        ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
+}
+
 
     /**
      * Delete payment record.
@@ -1369,6 +1446,95 @@ public function deletePaymentSlip($id)
             return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
+
+public function makePayment(Request $request)
+{
+    try {
+        $request->validate([
+            'payment_id'     => 'required|exists:payment_details,id',
+            'amount'         => 'required|numeric|min:1',
+            'payment_method' => 'required|string',
+            'payment_date'   => 'required|date',
+            'remarks'        => 'nullable|string',
+        ]);
+
+        $payment = PaymentDetail::findOrFail($request->payment_id);
+
+        // Decode existing partial payments (JSON field)
+        $partials = $payment->partial_payments ?? [];
+        if (!is_array($partials)) {
+            $partials = json_decode($partials, true) ?? [];
+        }
+
+        // Add new partial payment entry
+        $partials[] = [
+            'amount'  => (float)$request->amount,
+            'method'  => $request->payment_method,
+            'date'    => $request->payment_date,
+            'remarks' => $request->remarks,
+        ];
+
+        // Calculate totals
+        $paidSoFar  = collect($partials)->sum('amount');
+        $remaining  = max(($payment->total_fee - $paidSoFar), 0);
+
+       // 🔹 Update main payment record
+// 🔹 Update main payment record
+$payment->update([
+    'partial_payments' => $partials,
+    'remaining_amount' => $remaining,
+    'payment_method'   => $request->payment_method,
+    'payment_date'     => $request->payment_date,
+    'remarks'          => $request->remarks,
+    'status'           => $remaining <= 0 ? 'paid' : 'pending',
+]);
+
+// 🔹 If fully paid, also mark installment as paid
+if ($remaining <= 0 && $payment->payment_type === 'course_fee' && $payment->installment_number) {
+    // 1. Find student payment plan (via student_id + course_id)
+    $registration = $payment->registration; // relationship already defined
+    if ($registration) {
+        $plan = \App\Models\StudentPaymentPlan::where('student_id', $payment->student_id)
+            ->where('course_id', $registration->course_id)
+            ->first();
+
+        if ($plan) {
+            // 2. Find and update the installment
+            $inst = \App\Models\PaymentInstallment::where('payment_plan_id', $plan->id)
+                ->where('installment_number', $payment->installment_number)
+                ->first();
+
+            if ($inst) {
+                $inst->status    = 'paid';
+                $inst->paid_date = now();
+                $inst->save();
+            }
+        }
+    }
+}
+
+
+
+        return response()->json([
+            'success' => true,
+            'message' => $remaining <= 0 
+                ? 'Payment completed. Status updated to PAID.' 
+                : 'Partial payment recorded successfully.',
+            'remaining_amount' => $remaining,
+            'status' => $payment->status,
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+
+
+
 
     /**
      * Get payment summary for a specific student and course.

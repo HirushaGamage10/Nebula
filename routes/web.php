@@ -657,6 +657,8 @@ Route::post('/payment/generate-slip', action: [PaymentController::class, 'genera
 // Delete slip
 Route::delete('/payment/delete-slip/{id}', [PaymentController::class, 'deletePaymentSlip'])
     ->name('payment.delete.slip');
+Route::post('/payment/make-payment', [PaymentController::class, 'makePayment'])->name('payment.make');
+
 Route::post('/payment/download-slip-pdf', [PaymentController::class, 'downloadPaymentSlipPDF'])->name('payment.download.slip.pdf');
 Route::post('/payment/save-record', [PaymentController::class, 'savePaymentRecord'])->name('payment.save.record');
 Route::post('/payment/get-records', [PaymentController::class, 'getPaymentRecords'])->name('payment.get.records');

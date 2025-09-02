@@ -192,7 +192,7 @@
       <td class="right"><?php echo e($fmt($lateFee)); ?></td>
     </tr>
     <tr>
-      <td class="label">Approved Reduction (Rs.):</td>
+      <td class="label">Approved Late Fee (Rs.):</td>
       <td class="right"><?php echo e($fmt($approvedLate)); ?></td>
     </tr>
     <tr>
@@ -201,6 +201,22 @@
     </tr>
   </table>
 </div>
+
+<?php if(!empty($slipData['partial_payments'])): ?>
+    <h5>Payment History</h5>
+    <ul class="list-group mb-3">
+        <?php $__currentLoopData = $slipData['partial_payments']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <li class="list-group-item">
+                <?php echo e($p['date']); ?> - 
+                LKR <?php echo e(number_format($p['amount'], 2)); ?> 
+                (<?php echo e($p['method']); ?>)
+            </li>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+    </ul>
+<?php endif; ?>
+
+<p><strong>Remaining Balance:</strong> LKR <?php echo e(number_format($slipData['remaining_amount'] ?? 0, 2)); ?></p>
+<p><strong>Status:</strong> <?php echo e(ucfirst($slipData['status'] ?? 'pending')); ?></p>
 
 
   </div>
