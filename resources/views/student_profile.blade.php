@@ -1324,15 +1324,80 @@ $(function(){
 
     // Load specializations for this course
     $.get('/api/course/' + courseId + '/specializations', function(res){
-      if(res.success){
-        $specSelect.empty();
+      $specSelect.empty();
+      $specSelect.append(`<option value="">(No Specialization)</option>`);
+      if(res.success && res.specializations && res.specializations.length){
         res.specializations.forEach(function(spec){
-          $specSelect.append(`<option value="${spec}">${spec}</option>`);
+          if(spec && spec.toString().trim()!=='') {
+            $specSelect.append(`<option value="${spec}">${spec}</option>`);
+          }
         });
-        // Set current value
-        $specSelect.val($specText.text().trim());
-      }else{
-        $specSelect.html('<option value="">No Specialization</option>');
+      }
+      const current = $specText.text().trim();
+      $specSelect.val(current !== '' ? current : '');
+    }).fail(function(){
+      $specSelect.empty().append(`<option value="">(No Specialization)</option>`);
+    });
+  });
+
+  $(document).on('click', '.cancel-grade-btn', function(){
+    const $tr = $(this).closest('tr');
+    $tr.find('.grade-input').hide();
+    $tr.find('.grade-text').show();
+    $tr.find('.edit-grade-btn').show();
+    $tr.find('.save-grade-btn,.cancel-grade-btn').hide();
+
+    const $specCell = $tr.find('.specialization-cell');
+    $specCell.find('.specialization-select').hide();
+    $specCell.find('.specialization-text').show();
+  });
+
+
+  $(document).on('click', '.cancel-grade-btn', function(){
+    const $tr = $(this).closest('tr');
+    $tr.find('.grade-input').hide();
+    $tr.find('.grade-text').show();
+    $tr.find('.edit-grade-btn').show();
+    $tr.find('.save-grade-btn,.cancel-grade-btn').hide();
+
+    // Specialization dropdown
+    const $specCell = $tr.find('.specialization-cell');
+    $specCell.find('.specialization-select').hide();
+    $specCell.find('.specialization-text').show();
+  });
+
+  $(document).on('click', '.save-grade-btn', function(e){
+    e.preventDefault();
+    const $tr = $(this).closest('tr');
+    const id = $tr.data('id');
+    if (!id) return showErrorMessage('Invalid registration record.');
+
+    const grade = $tr.find('.grade-input').val().trim();
+    const specialization = $tr.find('.specialization-select').val();
+
+    $.ajax({
+      url: '/api/course-registration/' + id + '/update-grade',
+      method: 'POST',
+      data: {
+        full_grade: grade,
+        specialization: specialization,
+        _token: '{{ csrf_token() }}'
+      },
+      success: function(res){
+        if(res.success){
+          // refresh history from server to reflect DB state (authoritative)
+          fetchCourseRegistrationHistory();
+          showSuccessMessage('Grade and specialization updated successfully!');
+        } else {
+          showErrorMessage(res.message || 'Failed to update.');
+        }
+      },
+      error: function(xhr){
+        if(xhr && xhr.status === 419){
+          showErrorMessage('Session expired. Please refresh the page and try again.');
+        } else {
+          showErrorMessage('Error updating. Check the browser console / network tab for details.');
+        }
       }
     });
   });

@@ -284,26 +284,88 @@ class StudentProfileController extends Controller
     // API: Update course registration grade and specialization
     public function updateCourseRegistrationGrade(Request $request, $id)
     {
+        // Validate inputs
+        $validated = $request->validate([
+            'full_grade' => 'nullable|string|max:255',
+            'specialization' => 'nullable|string|max:255',
+        ]);
+
         $registration = \App\Models\CourseRegistration::find($id);
         if (!$registration) {
             return response()->json(['success' => false, 'message' => 'Registration not found.'], 404);
         }
 
-        // Update only full_grade in course_registration
-        $registration->full_grade = $request->input('full_grade');
-        $registration->save();
+        try {
+            \Illuminate\Support\Facades\DB::beginTransaction();
 
-        // Update only specialization in semester_registration
-        $semesterReg = \App\Models\SemesterRegistration::where('student_id', $registration->student_id)
-            ->where('course_id', $registration->course_id)
-            ->where('intake_id', $registration->intake_id)
-            ->first();
-        if ($semesterReg) {
-            $semesterReg->specialization = $request->input('specialization');
-            $semesterReg->save();
+            // Update only the full_grade column on the course_registration table using query builder
+            \Illuminate\Support\Facades\DB::table('course_registration')
+                ->where('id', $registration->id)
+                ->update([
+                    'full_grade' => $validated['full_grade'] ?? null,
+                    'updated_at' => now()
+                ]);
+
+            // Update or create the corresponding semester_registration so specialization is persisted
+            $semesterReg = \App\Models\SemesterRegistration::where('student_id', $registration->student_id)
+                ->where('course_id', $registration->course_id)
+                ->where('intake_id', $registration->intake_id)
+                ->first();
+
+            if (!$semesterReg) {
+                // Determine the semester_id for this course+intake. Prefer exact match, fall back to latest semester for the course.
+                $semester = \App\Models\Semester::where('course_id', $registration->course_id)
+                    ->where('intake_id', $registration->intake_id)
+                    ->first();
+
+                if (!$semester) {
+                    // fallback: most recent semester for the course (if any)
+                    $semester = \App\Models\Semester::where('course_id', $registration->course_id)
+                        ->orderBy('start_date', 'desc')
+                        ->first();
+                }
+
+                if (!$semester) {
+                    // No semester found - cannot create semester_registration because semester_id is required
+                    throw new \Exception('No semester found for the course/intake to persist specialization.');
+                }
+
+                // Normalize status to allowed enum values
+                $allowedStatuses = ['registered', 'pending', 'cancelled'];
+                $regStatus = strtolower(trim((string)($registration->status ?? '')));
+                $statusToSet = in_array($regStatus, $allowedStatuses) ? $regStatus : 'registered';
+
+                // create a minimal semester registration record with a valid semester_id
+                $semesterReg = \App\Models\SemesterRegistration::create([
+                    'student_id' => $registration->student_id,
+                    'semester_id' => $semester->id,
+                    'course_id' => $registration->course_id,
+                    'intake_id' => $registration->intake_id,
+                    'location' => $registration->location ?? null,
+                    'status' => $statusToSet,
+                    'registration_date' => $registration->created_at ?? now(),
+                ]);
+            }
+
+            if (array_key_exists('specialization', $validated)) {
+                // Preserve existing specialization when incoming is empty string
+                $newSpec = $validated['specialization'] !== '' ? $validated['specialization'] : $semesterReg->specialization;
+                $semesterReg->specialization = $newSpec;
+                $semesterReg->save();
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            // Return the final stored specialization so client can update UI from authoritative source
+            return response()->json([
+                'success' => true,
+                'specialization' => $semesterReg->specialization
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error('Database error updating course registration grade/specialization', ['message' => $e->getMessage(), 'registration_id' => $id]);
+            return response()->json(['success' => false, 'message' => 'Failed to update registration.'], 500);
         }
-
-        return response()->json(['success' => true]);
     }
     
     // API: Get intakes for a specific course
