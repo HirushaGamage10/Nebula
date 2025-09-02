@@ -1,8 +1,6 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | Repeat Students Management'); ?>
 
-@section('title', 'NEBULA | Repeat Students Management')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card shadow">
         <div class="card-body">
@@ -85,7 +83,7 @@
                     <div class="tab-pane fade" id="register">
                         <h5 class="fw-bold mb-3 mt-3 text-primary">Re-Register Intake</h5>
                         <form id="reRegisterForm">
-                            @csrf
+                            <?php echo csrf_field(); ?>
                             <input type="hidden" name="registration_id" id="registration_id">
                             <div class="mb-3 row mx-3">
                                 <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
@@ -361,7 +359,7 @@ document.getElementById('reRegisterForm').addEventListener('submit', function(e)
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         }
     })
     .then(r => r.json())
@@ -381,4 +379,5 @@ document.getElementById('reRegisterForm').addEventListener('submit', function(e)
     });
 });
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/Nebula finish/Nebula/resources/views/repeat_students.blade.php ENDPATH**/ ?>

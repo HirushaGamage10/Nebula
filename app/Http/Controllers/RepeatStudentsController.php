@@ -10,9 +10,12 @@ use App\Models\ExamResult;
 use App\Models\SemesterRegistration;
 use App\Models\CourseRegistration;
 use App\Models\PaymentDetail;
+use App\Models\Semester;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class RepeatStudentsController extends Controller
 {
@@ -63,7 +66,7 @@ class RepeatStudentsController extends Controller
             return response()->json(['error' => 'Course not found or invalid data.'], Response::HTTP_NOT_FOUND);
 
         } catch (\Exception $e) {
-            \Log::error('Error in getCourseData for course ID ' . $courseID . ': ' . $e->getMessage());
+            Log::error('Error in getCourseData for course ID ' . $courseID . ': ' . $e->getMessage());
             return response()->json(['error' => 'An internal server error occurred.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
@@ -378,6 +381,89 @@ class RepeatStudentsController extends Controller
         ]);
 
         return response()->json(['success' => true, 'message' => 'Semester registration updated successfully.']);
+    }
+
+    /**
+     * API: Return list of courses for populating selects
+     */
+    public function apiCourses()
+    {
+        try {
+            $courses = Course::orderBy('course_name')->get(['course_id', 'course_name']);
+            return response()->json(['success' => true, 'courses' => $courses]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to fetch courses.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * API: Return intakes for a given course (optionally filtered by location).
+     * Query param: course_id, optional location
+     */
+    public function apiIntakes(Request $request)
+    {
+        $courseId = $request->query('course_id');
+        $location = $request->query('location');
+
+        if (!$courseId) {
+            return response()->json(['success' => false, 'message' => 'course_id is required.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            $query = Intake::where('course_id', $courseId);
+            if ($location) {
+                $query->where('location', $location);
+            }
+
+            $intakes = $query->orderBy('start_date', 'asc')->get()->map(function ($i) {
+                return [
+                    'intake_id' => $i->intake_id ?? $i->id,
+                    'batch' => $i->batch ?? ($i->intake_no ?? ''),
+                    'start_date' => $i->start_date ?? null,
+                    'end_date' => $i->end_date ?? null,
+                ];
+            });
+
+            // identify next upcoming intake (if any)
+            $now = Carbon::now();
+            $next = Intake::where('course_id', $courseId)
+                ->when($location, function ($q) use ($location) { return $q->where('location', $location); })
+                ->whereNotNull('start_date')
+                ->where('start_date', '>=', $now->toDateString())
+                ->orderBy('start_date', 'asc')
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'intakes' => $intakes,
+                'next_intake_id' => $next ? ($next->intake_id ?? $next->id) : null,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to fetch intakes.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * API: Return semesters for a given course and (optionally) intake.
+     * Query params: course_id, intake_id
+     */
+    public function apiSemesters(Request $request)
+    {
+        $courseId = $request->query('course_id');
+
+        if (!$courseId) {
+            return response()->json(['success' => false, 'message' => 'course_id is required.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            $semesters = Semester::where('course_id', $courseId)
+                ->orderBy('id', 'asc')
+                ->get(['id', 'name']);
+
+            return response()->json(['success' => true, 'semesters' => $semesters]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to fetch semesters.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
     
 

@@ -339,6 +339,11 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/repeat-students/get-intakes/{courseID}/{location}', [RepeatStudentsController::class, 'getIntakesForCourseAndLocation'])->name('repeat.students.get.intakes.for.course.location');
         Route::post('/repeat-students/get-modules', [RepeatStudentsController::class, 'getFilteredModules'])->name('repeat.students.get.filtered.modules');
         Route::get('/repeat-students/get-semesters', [RepeatStudentsController::class, 'getSemesters'])->name('repeat.students.get.semesters');
+
+    // Additional API endpoints consumed by the repeat students frontend
+    Route::get('/api/courses', [RepeatStudentsController::class, 'apiCourses']);
+    Route::get('/api/intakes', [RepeatStudentsController::class, 'apiIntakes']);
+    Route::get('/api/semesters', [RepeatStudentsController::class, 'apiSemesters']);
     });
 
 
