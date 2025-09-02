@@ -1049,41 +1049,44 @@ $payment = \App\Models\PaymentDetail::create([
 /**
  * Helper: Build slip array
  */
-private function buildSlipArray($payment, $student, $course, $intake, $courseFee, $franchiseFee, $registrationFee, $lateFee, $approvedLateFee, $totalFee)
+private function buildSlipArray(\App\Models\PaymentDetail $payment, $student, $course, $intake, $courseFee, $franchiseFee, $registrationFee, $lateFee, $approvedLateFee, $totalFee)
 {
-    return [
-        'receipt_no'             => $payment->transaction_id,
-        'student_id'             => $student->student_id,
-        'student_name'           => $student->full_name,
-        'student_nic'            => $student->id_value,
-        'course_name'            => $course->course_name ?? 'N/A',
-        'course_code'            => $course->course_code ?? 'N/A',
-        'intake'                 => $intake->batch ?? 'N/A',
-        'intake_id'              => $intake->intake_id ?? null,
-        'payment_type'           => $payment->payment_type ?? '',
-        'payment_type_display'   => $this->getPaymentTypeDisplay($payment->payment_type ?? ''),
-        'amount'                 => (float) $payment->amount,
-        'installment_number'     => $payment->installment_number,
-        'due_date'               => optional($payment->due_date)->format('Y-m-d'),
-        'payment_date'           => optional($payment->created_at)->format('Y-m-d'),
-        'payment_method'         => $payment->payment_method ?? 'Cash',
-        'remarks'                => $payment->remarks,
-        'status'                 => $payment->status,
-        'location'               => $intake->location ?? 'N/A',
-        'registration_date'      => optional($intake->registration_date)->format('Y-m-d'),
-        'course_fee'             => $courseFee,
-        'franchise_fee'          => $franchiseFee,
-        'registration_fee'       => $registrationFee,
-        'late_fee'               => $lateFee,
-        'approved_late_fee'      => $approvedLateFee,
-        'total_fee'              => $totalFee,
-        'generated_at'           => now()->format('Y-m-d H:i:s'),
-        'valid_until'            => now()->addDays(7)->format('Y-m-d'),
-        'partial_payments' => $payment->partial_payments ?? [],
-        'remaining_amount' => $payment->remaining_amount ?? $totalFee,
+    // Normalize partial payments
+    $partials = $payment->partial_payments ?? [];
+    if (!is_array($partials)) {
+        $partials = json_decode($partials, true) ?? [];
+    }
 
+    return [
+        'receipt_no'        => $payment->transaction_id,
+        'student_id'        => $student->student_id,
+        'student_name'      => $student->full_name,
+        'student_nic'       => $student->id_value,
+        'course_name'       => $course->course_name ?? 'N/A',
+        'course_code'       => $course->course_code ?? 'N/A',
+        'intake'            => $intake->batch ?? 'N/A',
+        'intake_id'         => $intake->intake_id ?? null,
+        'payment_type'      => $payment->payment_type ?? '',
+        'amount'            => (float) $payment->amount,
+        'installment_number'=> $payment->installment_number,
+        'due_date'          => $payment->due_date,
+        'payment_date'      => $payment->payment_date,
+        'payment_method'    => $payment->payment_method ?? 'Cash',
+        'remarks'           => $payment->remarks,
+        'status'            => $payment->status,
+        'course_fee'        => $courseFee,
+        'franchise_fee'     => $franchiseFee,
+        'registration_fee'  => $registrationFee,
+        'late_fee'          => (float) $payment->late_fee,
+        'approved_late_fee' => (float) $payment->approved_late_fee,
+        'total_fee'         => (float) $payment->total_fee,
+        'remaining_amount'  => (float) $payment->remaining_amount,
+        'partial_payments'  => $partials,   // ✅ Always an array
+        'generated_at'      => now()->format('Y-m-d H:i:s'),
+        'valid_until'       => now()->addDays(7)->format('Y-m-d'),
     ];
 }
+
 
 public function deletePaymentSlip($id)
 {
