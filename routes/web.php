@@ -324,6 +324,11 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
     // Repeat Students Management - Program Administrator (level 01), Program Administrator (level 02), Developer
     Route::middleware(['role:Program Administrator (level 01),Program Administrator (level 02),Developer'])->group(function () {
+        Route::post('/repeat-students/update-semester-registration', [RepeatStudentsController::class, 'updateSemesterRegistration'])
+        ->name('repeat.students.updateSemesterRegistration');
+    
+        Route::get('/api/repeat-student-by-nic', [RepeatStudentsController::class, 'getRepeatStudentByNic']);
+
         Route::get('/repeat-students', [RepeatStudentsController::class, 'showRepeatStudentsManagement'])->name('repeat.students.management');
         Route::get('/repeat-students/get-course-data/{courseID}', [RepeatStudentsController::class, 'getCourseData']);
         Route::post('/repeat-students/get-student-name', [RepeatStudentsController::class, 'getStudentName'])->name('repeat.students.get.student.name');

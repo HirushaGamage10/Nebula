@@ -7,6 +7,7 @@ use App\Models\Intake;
 use App\Models\Module;
 use App\Models\Student;
 use App\Models\ExamResult;
+use App\Models\SemesterRegistration;
 use App\Models\CourseRegistration;
 use App\Models\PaymentDetail;
 use Illuminate\Http\Request;
@@ -15,9 +16,13 @@ use Illuminate\Database\QueryException;
 
 class RepeatStudentsController extends Controller
 {
+
+    
+
     /**
      * Show the repeat students management view.
      */
+    
     public function showRepeatStudentsManagement()
     {
         $courses = Course::orderBy('course_name')->get();
@@ -299,34 +304,82 @@ class RepeatStudentsController extends Controller
         }
     }
 
-    /**
-     * Get semesters.
-     */
-    public function getSemesters(Request $request)
+    
+    public function getRepeatStudentByNic(Request $request)
     {
-        try {
-            $request->validate([
-                'course_id' => 'required|integer|exists:courses,course_id',
-                'intake_id' => 'required|integer|exists:intakes,intake_id',
-            ]);
+        $nic = $request->input('nic');
+        $student = \App\Models\Student::where('id_value', $nic)->first();
 
-            $course = \App\Models\Course::find($request->course_id);
-            $intake = \App\Models\Intake::find($request->intake_id);
-
-            if (!$course || !$intake) {
-                return response()->json(['error' => 'Invalid course or intake.'], 404);
-            }
-
-            // Get only semesters that have been created for this course and intake
-            $semesters = \App\Models\Semester::where('course_id', $request->course_id)
-                ->where('intake_id', $request->intake_id)
-                ->whereIn('status', ['active', 'upcoming'])
-                ->select('id', 'name')
-                ->get();
-
-            return response()->json(['success' => true, 'semesters' => $semesters]);
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found.']);
         }
+
+        $holdingRegs = \App\Models\SemesterRegistration::where('student_id', $student->student_id)
+            ->where('status', 'holding')  // Only fetch holding registrations for re-registration
+            ->with(['course', 'intake', 'semester'])
+            ->orderByDesc('registration_date')
+            ->get()
+            ->map(function($reg){
+                return [
+                    'id'             => $reg->id,
+                    'course_id'      => $reg->course_id,
+                    'course_name'    => $reg->course->course_name ?? '',
+                    'intake_id'      => $reg->intake_id,
+                    'intake'         => $reg->intake->batch ?? '',
+                    'location'       => $reg->location ?? '',
+                    'semester_id'    => $reg->semester_id,
+                    'semester_name'  => $reg->semester->name ?? '',
+                    'status'         => $reg->status,
+                    'specialization' => $reg->specialization ?? '',
+                ];
+            });
+
+        $studentArr = $student->toArray();
+        $studentArr['parent'] = $student->parentGuardian ? $student->parentGuardian->toArray() : null;
+
+        return response()->json([
+            'success' => true,
+            'student' => $studentArr,
+            'holding_history' => $holdingRegs,
+        ]);
     }
+
+    // UPDATED: Method for updating semester registration details (handles form submit)
+    public function updateSemesterRegistration(Request $request)
+    {
+        // Validate input (matches form fields)
+        $validated = $request->validate([
+            'registration_id' => 'required|integer|exists:semester_registrations,id',
+            'location'        => 'required|string|in:Welisara,Moratuwa,Peradeniya',
+            'course_id'       => 'required|integer|exists:courses,course_id',
+            'intake_id'       => 'required|integer|exists:intakes,intake_id',
+            'semester_id'     => 'required|integer|exists:semesters,id',
+            'specialization'  => 'nullable|string|max:255',
+        ]);
+
+        // Fetch the registration record
+        $registration = \App\Models\SemesterRegistration::find($validated['registration_id']);
+        if (!$registration) {
+            return response()->json(['success' => false, 'message' => 'Registration not found.']);
+        }
+
+        // Ensure it's a holding record (prevent updating active/terminated records)
+        if ($registration->status !== 'holding') {
+            return response()->json(['success' => false, 'message' => 'Only holding registrations can be updated.']);
+        }
+
+        // Update the fields
+        $registration->update([
+            'location'       => $validated['location'],
+            'course_id'      => $validated['course_id'],
+            'intake_id'      => $validated['intake_id'],
+            'semester_id'    => $validated['semester_id'],
+            'specialization' => $validated['specialization'],
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Semester registration updated successfully.']);
+    }
+    
+
+    
 } 
