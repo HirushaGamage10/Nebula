@@ -223,60 +223,104 @@ function fillHoldingTable(holding_history){
 // Fill the re-register form with registration data
 function fillReRegisterForm(reg) {
     document.getElementById('registration_id').value = reg.id || '';
-    document.getElementById('location').value = reg.location || '';
-    // Populate course dropdown
-    fetch('/api/courses')
-        .then(r => r.json())
-        .then(data => {
-            let courseSelect = document.getElementById('course_id');
-            courseSelect.innerHTML = '<option value="">Select Course</option>';
-            data.courses.forEach(c => {
-                courseSelect.innerHTML += `<option value="${c.course_id}" ${reg.course_id == c.course_id ? 'selected' : ''}>${c.course_name}</option>`;
-            });
-            // Trigger intake population on course change
-            courseSelect.addEventListener('change', function() {
-                populateIntakes(this.value);
-            });
-            // Populate intakes initially
-            populateIntakes(reg.course_id);
-        });
+    // Normalize stored location (some records store a long name like "Nebula Institute of Technology - Welisara")
+    const locationSelect = document.getElementById('location');
+    const rawLoc = (reg.location || '').toString();
+    let normalizedLoc = '';
+    if (/welisara/i.test(rawLoc)) normalizedLoc = 'Welisara';
+    else if (/moratuwa/i.test(rawLoc)) normalizedLoc = 'Moratuwa';
+    else if (/peradeniya/i.test(rawLoc)) normalizedLoc = 'Peradeniya';
+    else normalizedLoc = rawLoc; // fallback if unknown
+    if (locationSelect) locationSelect.value = normalizedLoc;
+
+    // Populate course dropdown with only the repeated course (avoid listing every course)
+    const courseSelect = document.getElementById('course_id');
+    courseSelect.innerHTML = '<option value="">Select Course</option>';
+    if (reg.course_id) {
+        courseSelect.innerHTML += `<option value="${reg.course_id}" selected>${reg.course_name || reg.course_id}</option>`;
+    }
+
+    // Replace select node to remove previous listeners and attach a fresh one
+    const newCourseSelect = courseSelect.cloneNode(true);
+    courseSelect.parentNode.replaceChild(newCourseSelect, courseSelect);
+    newCourseSelect.addEventListener('change', function() {
+        populateIntakes(this.value, null, null, document.getElementById('location').value || normalizedLoc);
+    });
+
+    // Populate intakes for this course and normalized location, preselect intake & semester
+    populateIntakes(reg.course_id, reg.intake_id || null, reg.semester_id || null, normalizedLoc);
+
+    // Show specialization if available; keep existing value if not changed
+    const specRow = document.getElementById('specialization_row');
+    const specSelect = document.getElementById('specialization');
+    if (reg.specialization && reg.specialization !== '') {
+        specRow.style.display = '';
+        specSelect.innerHTML = `<option value="">Select Specialization</option><option value="${reg.specialization}" selected>${reg.specialization}</option>`;
+    } else {
+        specRow.style.display = 'none';
+        specSelect.innerHTML = '<option value="">Select Specialization</option>';
+    }
 }
 
 // Function to populate intakes based on course
-function populateIntakes(courseId) {
+function populateIntakes(courseId, selectedIntakeId = null, selectedSemesterId = null, location = null) {
+    const intakeSelect = document.getElementById('intake_id');
     if (!courseId) {
-        document.getElementById('intake_id').innerHTML = '<option value="">Select Intake</option>';
+        intakeSelect.innerHTML = '<option value="">Select Intake</option>';
         document.getElementById('semester_id').innerHTML = '<option value="">Select Semester</option>';
         return;
     }
-    fetch(`/api/intakes?course_id=${courseId}`)
+
+    // default to currently selected location if not provided
+    if (!location) {
+        location = document.getElementById('location') ? document.getElementById('location').value : '';
+    }
+
+    const q = `?course_id=${encodeURIComponent(courseId)}${location ? '&location=' + encodeURIComponent(location) : ''}`;
+    fetch(`/api/intakes${q}`)
         .then(r => r.json())
         .then(data => {
-            let intakeSelect = document.getElementById('intake_id');
             intakeSelect.innerHTML = '<option value="">Select Intake</option>';
-            data.intakes.forEach(i => {
-                intakeSelect.innerHTML += `<option value="${i.intake_id}">${i.batch}</option>`;
+            const nextId = data.next_intake_id || null;
+            (data.intakes || []).forEach(i => {
+                const isSelected = selectedIntakeId && (i.intake_id == selectedIntakeId);
+                let label = i.batch || i.intake_no || i.intake_display_name || '';
+                if (nextId && (i.intake_id == nextId)) label += ' — next';
+                const selectedAttr = isSelected ? 'selected' : '';
+                intakeSelect.innerHTML += `<option value="${i.intake_id}" ${selectedAttr}>${label}</option>`;
             });
-            // Trigger semester population on intake change
-            intakeSelect.addEventListener('change', function() {
+
+            // Replace node to clear listeners then attach one
+            const newIntakeSelect = intakeSelect.cloneNode(true);
+            intakeSelect.parentNode.replaceChild(newIntakeSelect, intakeSelect);
+            newIntakeSelect.addEventListener('change', function() {
                 populateSemesters(courseId, this.value);
             });
+
+            // If a selected intake was provided, populate semesters and preselect
+            if (selectedIntakeId) {
+                populateSemesters(courseId, selectedIntakeId, selectedSemesterId || null);
+            }
+        })
+        .catch(() => {
+            intakeSelect.innerHTML = '<option value="">Select Intake</option>';
         });
 }
 
 // Function to populate semesters based on course and intake
-function populateSemesters(courseId, intakeId) {
+function populateSemesters(courseId, intakeId, selectedSemesterId = null) {
+    const semesterSelect = document.getElementById('semester_id');
     if (!courseId || !intakeId) {
-        document.getElementById('semester_id').innerHTML = '<option value="">Select Semester</option>';
+        semesterSelect.innerHTML = '<option value="">Select Semester</option>';
         return;
     }
     fetch(`/api/semesters?course_id=${courseId}&intake_id=${intakeId}`)
         .then(r => r.json())
         .then(data => {
-            let semesterSelect = document.getElementById('semester_id');
             semesterSelect.innerHTML = '<option value="">Select Semester</option>';
             data.semesters.forEach(s => {
-                semesterSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+                const selected = selectedSemesterId && (s.id == selectedSemesterId) ? 'selected' : '';
+                semesterSelect.innerHTML += `<option value="${s.id}" ${selected}>${s.name}</option>`;
             });
         });
 }

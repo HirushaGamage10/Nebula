@@ -106,6 +106,7 @@
               <li class="nav-item"><a class="nav-link" id="payment-summary-tab" data-bs-toggle="tab" href="#payment-summary">Payment Summary</a></li>
             <li class="nav-item"><a class="nav-link" id="clearance-tab" data-bs-toggle="tab" href="#clearance">Clearance</a></li>
             <li class="nav-item"><a class="nav-link" id="certificates-tab" data-bs-toggle="tab" href="#certificates">Certificates</a></li>
+            <li class="nav-item"><a class="nav-link" id="status-history-tab" data-bs-toggle="tab" href="#status-history">Status History <span id="statusHistoryCount" class="badge bg-danger ms-1" style="display:none;">0</span></a></li>
             <li class="nav-item"><a class="nav-link" id="other-info-tab" data-bs-toggle="tab" href="#other-info">Other Information</a></li>
           </ul>
 
@@ -732,6 +733,21 @@
             </div>
             
             
+            <div class="tab-pane fade" id="status-history">
+              <h5 class="mt-4 mb-3 fw-bold">Status / Termination History</h5>
+              <div class="table-responsive">
+                <table class="table table-bordered">
+                  <thead class="bg-primary text-white">
+                    <tr><th>#</th><th>From Status</th><th>To Status</th><th>Reason</th><th>Document</th><th>Changed By</th><th>Date</th></tr>
+                  </thead>
+                  <tbody id="statusHistoryTableBody">
+                    <tr><td colspan="7" class="text-center text-muted">No status history available.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            
             
             <div class="tab-pane fade" id="other-info">
               <h5 class="mt-4 mb-3 fw-bold">Other Information</h5>
@@ -1142,6 +1158,42 @@ $(function(){
   }
   $('a[data-bs-toggle="tab"][href="#clearance"]').on('shown.bs.tab', function(){ fetchStudentClearances(); });
 
+  // ----- Status History tab -----
+  function fetchStatusHistory(){
+    const sid = $('#studentIdHidden').val(); if(!sid) return;
+    $.get('/api/student/' + sid + '/status-history', function(res){
+      const $tb = $('#statusHistoryTableBody').empty();
+      if(res && res.success && res.history && res.history.length){
+        res.history.forEach(function(h, idx){
+          const docLink = h.document ? `<a href="/storage/${h.document}" target="_blank">View</a>` : '—';
+          // highlight rows that represent a termination event
+          const rowClass = (h.to_status || '').toString().toLowerCase() === 'terminated' ? 'table-danger' : '';
+          $tb.append(`<tr class="${rowClass}">
+            <td>${idx+1}</td>
+            <td>${h.from_status || 'N/A'}</td>
+            <td>${h.to_status || 'N/A'}</td>
+            <td>${h.reason || ''}</td>
+            <td>${docLink}</td>
+            <td>${h.changed_by_name || h.changed_by || 'System'}</td>
+            <td>${h.created_at || ''}</td>
+          </tr>`);
+        });
+        // highlight tab in red and show count
+        $('#status-history-tab').addClass('bg-danger text-white');
+        $('#statusHistoryCount').text(res.history.length).show();
+      } else {
+        $tb.append('<tr><td colspan="7" class="text-center text-muted">No status history available.</td></tr>');
+        $('#status-history-tab').removeClass('bg-danger text-white');
+        $('#statusHistoryCount').hide();
+      }
+    }).fail(function(){
+      $('#statusHistoryTableBody').html('<tr><td colspan="7" class="text-center text-danger">Error loading status history.</td></tr>');
+      $('#status-history-tab').removeClass('bg-danger text-white');
+      $('#statusHistoryCount').hide();
+    });
+  }
+  $('a[data-bs-toggle="tab"][href="#status-history"]').on('shown.bs.tab', function(){ fetchStatusHistory(); });
+
   //-- payment summary tab --
   function fetchCoursesForPaymentSummary() {
     const sid = $('#studentIdHidden').val();
@@ -1357,7 +1409,40 @@ $(function(){
   $('a[data-bs-toggle="tab"][href="#certificates"]').on('shown.bs.tab', function(){ fetchStudentCertificates(); });
 
   // ----- Terminate / Reinstate actions -----
-  $(document).on('click','#terminateBtn',()=> new bootstrap.Modal(document.getElementById('terminateModal')).show());
+  // Intercept terminate click to check for existing clearances first
+  $(document).on('click','#terminateBtn', function(e){
+    e.preventDefault();
+    const studentId = $('#studentIdHidden').val();
+    if(!studentId) return showErrorMessage('No student selected.');
+
+    const $btn = $(this);
+    if ($btn.hasClass('loading')) return;
+    $btn.addClass('loading').prop('disabled', true);
+
+    $.ajax({
+      url: '/api/student/' + encodeURIComponent(studentId) + '/clearances',
+      method: 'GET',
+      success: function(res){
+        if(res && res.success && Array.isArray(res.clearances) && res.clearances.length>0){
+          let html = '';
+          res.clearances.forEach(function(c){
+            const statusText = c.status ? 'Approved' : 'Pending';
+            const dateText = c.approved_date ? ' ('+c.approved_date+')' : '';
+            const remarks = c.remarks ? ' — '+c.remarks : '';
+            html += `<li class="mb-2"><strong>${c.label}</strong>: ${statusText}${dateText}${remarks}</li>`;
+          });
+          $('#profileTerminateClearanceList').html(html);
+          new bootstrap.Modal(document.getElementById('terminateClearanceModal')).show();
+        } else if(res && res.success) {
+          new bootstrap.Modal(document.getElementById('terminateModal')).show();
+        } else {
+          showErrorMessage(res && res.message ? res.message : 'Failed to check clearances.');
+        }
+      },
+      error: function(){ showErrorMessage('Failed to check clearances.'); },
+      complete: function(){ $btn.removeClass('loading').prop('disabled', false); }
+    });
+  });
   $(document).on('click','#reinstateBtn',()=> new bootstrap.Modal(document.getElementById('reinstateModal')).show());
 
   $('#confirmTerminate').on('click', function(){
@@ -1382,6 +1467,12 @@ $(function(){
         else{ showErrorMessage(res.message||'Failed to re‑register.'); }
       }, error:function(){ showErrorMessage('Error while re‑registering student.'); }
     });
+  });
+
+  // If user chooses to proceed despite clearances
+  $(document).on('click', '#proceedToTerminateFromClearance', function(){
+    bootstrap.Modal.getInstance(document.getElementById('terminateClearanceModal')).hide();
+    new bootstrap.Modal(document.getElementById('terminateModal')).show();
   });
 
   // Tab coloring
@@ -1444,6 +1535,24 @@ $(function(){
     <div class="modal-footer">
       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
       <button type="button" id="confirmReinstate" class="btn btn-success">Confirm</button>
+    </div>
+  </div></div>
+</div>
+
+<!-- Modal shown when student has existing clearances -->
+<div class="modal fade" id="terminateClearanceModal" tabindex="-1" aria-labelledby="terminateClearanceModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header">
+      <h5 class="modal-title" id="terminateClearanceModalLabel">Student has existing clearances</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+    <div class="modal-body">
+      <p>The selected student has one or more clearance records. Please review them before terminating. Do you still want to proceed?</p>
+      <ul id="profileTerminateClearanceList" class="list-unstyled mb-3"></ul>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <button type="button" class="btn btn-danger" id="proceedToTerminateFromClearance">Yes, Terminate</button>
     </div>
   </div></div>
 </div>
