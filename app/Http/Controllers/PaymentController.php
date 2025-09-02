@@ -1347,25 +1347,37 @@ public function getPaymentRecords(Request $request)
             ->where('course_registration_id', $registration->id)
             ->get()
             ->map(function ($payment) use ($student) {
-                return [
-                    'payment_id' => $payment->id,
-                    'student_id'        => $student->student_id,
-                    'student_name'      => $student->full_name,
-                    'payment_type'      => $payment->payment_type ?? 'course_fee',
-                    'installment_number'=> $payment->installment_number,
-                    'amount'            => (float) $payment->amount,
-                    'late_fee'          => (float) ($payment->late_fee ?? 0),
-                    'approved_late_fee' => (float) ($payment->approved_late_fee ?? 0),
-                    'total_fee'         => (float) ($payment->total_fee ?? 0),
-                    'remaining_amount'  => (float) ($payment->remaining_amount ?? 0),
-                    'partial_payments' => $payment->partial_payments ?? [],
-                    'payment_method'    => $payment->payment_method,
-                    'payment_date'      => optional($payment->payment_date)->format('Y-m-d'),
-                    'receipt_no'        => $payment->transaction_id,
-                    'status'            => $payment->status,
-                    'remarks'           => $payment->remarks,
-                ];
-            });
+    return [
+        'payment_id'         => $payment->id,
+        'student_id'         => $student->student_id,
+        'student_name'       => $student->full_name,
+        'payment_type'       => $payment->payment_type ?? 'course_fee',
+        'installment_number' => $payment->installment_number,
+        'amount'             => (float) $payment->amount,
+        'late_fee'           => (float) ($payment->late_fee ?? 0),
+        'approved_late_fee'  => (float) ($payment->approved_late_fee ?? 0),
+        'total_fee'          => (float) ($payment->total_fee ?? 0),
+        'remaining_amount'   => (float) ($payment->remaining_amount ?? 0),
+
+        // ✅ always return array instead of raw JSON string
+        'partial_payments' => $payment->partial_payments 
+                            ? (is_array($payment->partial_payments) 
+                                ? $payment->partial_payments 
+                                : json_decode($payment->partial_payments, true)) 
+                            : [],
+
+
+        'payment_method'     => $payment->payment_method,
+        'payment_date'       => $payment->payment_date
+            ? \Carbon\Carbon::parse($payment->payment_date)->format('Y-m-d')
+            : null,
+        'receipt_no'         => $payment->transaction_id,
+        'status'             => $payment->status,
+        'remarks'            => $payment->remarks,
+    ];
+});
+
+
 
         return response()->json([
             'success' => true,
