@@ -249,6 +249,17 @@ function fillReRegisterForm(reg) {
 
     // Populate intakes for this course and normalized location, preselect intake & semester
     populateIntakes(reg.course_id, reg.intake_id || null, reg.semester_id || null, normalizedLoc);
+
+    // Show specialization if available; keep existing value if not changed
+    const specRow = document.getElementById('specialization_row');
+    const specSelect = document.getElementById('specialization');
+    if (reg.specialization && reg.specialization !== '') {
+        specRow.style.display = '';
+        specSelect.innerHTML = `<option value="">Select Specialization</option><option value="${reg.specialization}" selected>${reg.specialization}</option>`;
+    } else {
+        specRow.style.display = 'none';
+        specSelect.innerHTML = '<option value="">Select Specialization</option>';
+    }
 }
 
 // Function to populate intakes based on course

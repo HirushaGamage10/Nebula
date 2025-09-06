@@ -782,12 +782,13 @@ class TimetableController extends Controller
                 ['timetable.intake_id', '=', $validatedData['intake_id']],
                 ['timetable.semester', '=', $validatedData['semester']],
             ])
+            ->select('timetable.*', 'modules.module_name', 'modules.module_code')
             ->get();
 
         \Log::info('getTimetableEvents DB rows count: ' . $events->count(), ['rows' => $events->toArray()]);
 
-        // Map data to FullCalendar format
-        $calendarEvents = $events->map(function ($event) {
+    // Map data to FullCalendar format
+    $calendarEvents = $events->map(function ($event) {
             // ensure proper ISO datetimes (add seconds if needed)
             $time = $event->time;
             if (strpos($time, ':') && substr_count($time, ':') === 1) {
@@ -802,12 +803,16 @@ class TimetableController extends Controller
 
             return [
                 'id' => $event->id ?? null,
-                'title' => $event->module_name,
-                'date' => $event->date,
-                'time' => $time,
-                'end_time' => $endTime,
-                'start' => $startIso,
-                'end' => $endIso,
+        'title' => $event->module_name,
+        'date' => $event->date,
+        'time' => $time,
+        'end_time' => $endTime,
+        'start' => $startIso,
+        'end' => $endIso,
+        'classroom' => $event->classroom ?? null,
+        'lecturer' => $event->lecturer ?? null,
+        'module_code' => $event->module_code ?? null,
+        'module_name' => $event->module_name ?? null,
             ];
         });
 
@@ -878,6 +883,10 @@ class TimetableController extends Controller
             'course_id' => 'required|exists:courses,course_id',
             'intake_id' => 'required|exists:intakes,intake_id',
             'semester' => 'required|string',
+            'classrooms' => 'nullable|array',
+            'classrooms.*' => 'nullable|string',
+            'lecturers' => 'nullable|array',
+            'lecturers.*' => 'nullable|string',
         ];
 
         $validator = \Validator::make($request->all(), $rules);
@@ -952,6 +961,9 @@ class TimetableController extends Controller
                 $assignment->duration = $validated['durations'][$index];
                 $assignment->time = $start->format('H:i');
                 $assignment->end_time = $end->format('H:i');
+                // optional classroom and lecturer
+                $assignment->classroom = $validated['classrooms'][$index] ?? null;
+                $assignment->lecturer = $validated['lecturers'][$index] ?? null;
                 $assignment->save();
             }
             \DB::commit();
@@ -985,6 +997,10 @@ class TimetableController extends Controller
             'times.*' => 'required|string',
             'end_times' => 'required|array',
             'end_times.*' => 'required|string',
+            'classrooms' => 'nullable|array',
+            'classrooms.*' => 'nullable|string',
+            'lecturers' => 'nullable|array',
+            'lecturers.*' => 'nullable|string',
             'location' => 'nullable|string',
             'course_id' => 'nullable|integer',
             'intake_id' => 'nullable|integer',
@@ -1037,6 +1053,8 @@ class TimetableController extends Controller
                     'duration'   => $duration,
                     'module_id'  => $subId,
                     'subject_id' => $subId, // changed: save subject_id instead of null
+                    'classroom'  => $request->input('classrooms')[$i] ?? null,
+                    'lecturer'   => $request->input('lecturers')[$i] ?? null,
                 ]);
 
                 $created[] = $row;

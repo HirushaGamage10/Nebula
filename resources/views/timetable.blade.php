@@ -243,6 +243,18 @@
                                     <button type="button" class="btn btn-outline-danger btn-sm remove-subject-btn" style="display:none;">Remove</button>
                                 </div>
                             </div>
+                            <div class="mb-3 row align-items-center">
+                                <label for="degree_classroom_0" class="col-sm-3 col-form-label fw-bold">Classroom</label>
+                                <div class="col-sm-9">
+                                    <input type="text" class="form-control classroom-input" id="degree_classroom_0" name="classrooms[]" placeholder="Optional">
+                                </div>
+                            </div>
+                            <div class="mb-3 row align-items-center">
+                                <label for="degree_lecturer_0" class="col-sm-3 col-form-label fw-bold">Lecturer</label>
+                                <div class="col-sm-9">
+                                    <input type="text" class="form-control lecturer-input" id="degree_lecturer_0" name="lecturers[]" placeholder="Optional">
+                                </div>
+                            </div>
                         </div>
                     </div>
                     {{-- <button type="button" class="btn btn-secondary" id="addSubjectBtn">Add Another Subject</button> --}}
@@ -298,6 +310,32 @@
         </div>
       </div>
     </div>
+
+        <!-- Event Details Modal -->
+        <div id="eventDetailsModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="eventDetailsLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Event Details</h5>
+                        <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-2"><strong>Subject:</strong> <span id="ev_subject"></span></div>
+                        <div class="mb-2"><strong>Date:</strong> <span id="ev_date"></span></div>
+                        <div class="mb-2"><strong>Time:</strong> <span id="ev_time"></span></div>
+                        <div class="mb-2"><strong>Classroom:</strong> <span id="ev_classroom">-</span></div>
+                        <div class="mb-2"><strong>Lecturer:</strong> <span id="ev_lecturer">-</span></div>
+                        <input type="hidden" id="ev_id">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-danger" id="ev_delete_btn">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     <!-- FullCalendar v5 (modern build) -->
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
@@ -794,38 +832,21 @@
                 },
                 eventClick: function(info) {
                     var event = info.event;
-                    if (event && event.start) {
-                        var eventTime = moment(event.start).format('HH:mm');
-                        $('#degree_time_0').val(eventTime);
-                    }
+                    if (!event) return;
 
-                    if (confirm('Do you want to delete this timetable event?')) {
-                        var id = event.id;
-                        if (!id) { alert('Unable to determine event id to delete'); return; }
+                    // populate details modal
+                    $('#ev_id').val(event.id || '');
+                    $('#ev_subject').text(event.title || (event.extendedProps && (event.extendedProps.module_name || event.extendedProps.subject_name)) || '');
+                    $('#ev_date').text(event.start ? moment(event.start).format('YYYY-MM-DD') : '');
+                    $('#ev_time').text(event.start ? moment(event.start).format('HH:mm') + (event.end ? ' - ' + moment(event.end).format('HH:mm') : '') : '');
 
-                        // remove visually first
-                        try { event.remove(); } catch(e) { console.warn('client remove failed', e); }
+                    // show optional props if present
+                    var classroom = (event.extendedProps && (event.extendedProps.classroom || event.extendedProps.room || event.extendedProps.location_name)) || '';
+                    var lecturer = (event.extendedProps && (event.extendedProps.lecturer || event.extendedProps.lecturer_name)) || '';
+                    $('#ev_classroom').text(classroom || '-');
+                    $('#ev_lecturer').text(lecturer || '-');
 
-                        $.ajax({
-                            url: '/timetable/delete-event',
-                            type: 'POST',
-                            data: { id: id },
-                            headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') || '' },
-                            success: function (res) {
-                                if (res && res.success) {
-                                    calendar.refetchEvents();
-                                } else {
-                                    alert('Delete failed: ' + (res.message || 'unknown'));
-                                    calendar.refetchEvents();
-                                }
-                            },
-                            error: function (xhr) {
-                                alert('Delete failed');
-                                console.error('delete error', xhr);
-                                calendar.refetchEvents();
-                            }
-                        });
-                    }
+                    $('#eventDetailsModal').modal('show');
                 },
                 select: function(selectionInfo) {
                     var startDate = moment(selectionInfo.start).format('YYYY-MM-DD');
@@ -1678,12 +1699,20 @@
 
                 if (!valid) { alert('Please fill subject, duration and valid time for all entries.'); return; }
 
+                var classroomsArr = [], lecturersArr = [];
+                $('#subjectList .subject-block').each(function () {
+                    classroomsArr.push($(this).find('.classroom-input').val() || '');
+                    lecturersArr.push($(this).find('.lecturer-input').val() || '');
+                });
+
                 var payload = {
                     date: date,
                     subject_ids: subject_ids,
                     durations: durations,
                     times: times,
                     end_times: end_times,
+                    classrooms: classroomsArr,
+                    lecturers: lecturersArr,
                     location: $('#degree_location').val() || '',
                     course_id: $('#degree_course').val() || '',
                     intake_id: $('#degree_intake').val() || '',
@@ -1714,6 +1743,66 @@
                         } catch (e) {}
                         alert(msg);
                         console.error('Assign error:', xhr);
+                    }
+                });
+            });
+
+            // delete from event details modal
+            $('#ev_delete_btn').on('click', function () {
+                var id = $('#ev_id').val();
+                if (!id) { alert('No event id'); return; }
+                if (!confirm('Delete this timetable event?')) return;
+                $(this).prop('disabled', true).text('Deleting...');
+
+                $.ajax({
+                    url: '/timetable/delete-event',
+                    type: 'POST',
+                    data: { id: id },
+                    headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') || '' },
+                    success: function (res) {
+                        $('#eventDetailsModal').modal('hide');
+                        $('#ev_delete_btn').prop('disabled', false).text('Delete');
+
+                        // remove event from degree calendar client-side
+                        try {
+                            var cal = window.__nebulaCalendar;
+                            if (cal) {
+                                var evObj = cal.getEventById(id);
+                                if (evObj) evObj.remove();
+                            }
+                        } catch (e) { console.warn('Error removing event from degree calendar', e); }
+
+                        // remove event from certificate calendar client-side (if present)
+                        try {
+                            var ccal = window.__nebulaCertificateCalendar;
+                            if (ccal) {
+                                var evc = ccal.getEventById(id);
+                                if (evc) evc.remove();
+                            }
+                        } catch (e) { console.warn('Error removing event from certificate calendar', e); }
+
+                        // update local cached arrays so table render uses updated data
+                        try {
+                            latestFcEvents = (latestFcEvents || []).filter(function(it){ return String(it.id) !== String(id); });
+                            latestCertificateFcEvents = (latestCertificateFcEvents || []).filter(function(it){ return String(it.id) !== String(id); });
+                        } catch (e) { /* ignore */ }
+
+                        // if the table view is visible, re-render current period only (fast)
+                        try {
+                            if ($('#tableViewSection').length && $('#tableViewSection').is(':visible')) {
+                                var sel = $('#tablePeriod').val();
+                                var dtype = $('#tablePeriod option:selected').data('type') || $('#tableViewType').val() || 'week';
+                                if (sel) {
+                                    if (dtype === 'week') renderWeekTable(parseInt(sel, 10));
+                                    else renderMonthTable(parseInt(sel, 10));
+                                }
+                            }
+                        } catch (e) { console.warn('Failed to re-render table view after delete', e); }
+                    },
+                    error: function (xhr) {
+                        $('#eventDetailsModal').modal('hide');
+                        $('#ev_delete_btn').prop('disabled', false).text('Delete');
+                        alert('Delete failed');
                     }
                 });
             });
