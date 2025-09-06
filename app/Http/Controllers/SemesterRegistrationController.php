@@ -522,6 +522,25 @@ class SemesterRegistrationController extends Controller
             }
         }
 
-        return response()->json(['success' => true, 'clearances' => $result]);
+        // Pending payments: any payment details with remaining_amount > 0 or status != 'paid'
+        $pendingPayments = \App\Models\PaymentDetail::where('student_id', $studentId)
+            ->where(function($q) {
+                $q->where('remaining_amount', '>', 0)
+                  ->orWhere('status', '!=', 'paid');
+            })
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function($p) {
+                return [
+                    'id' => $p->id,
+                    'amount' => $p->remaining_amount ?? $p->total_fee ?? $p->amount,
+                    'description' => $p->remarks ?? ($p->payment_method ? $p->payment_method : 'Payment'),
+                    'due_date' => $p->due_date?->format('Y-m-d') ?? null,
+                    'payment_status' => $p->status,
+                    'formatted' => 'Rs. ' . number_format($p->remaining_amount ?? $p->total_fee ?? $p->amount, 2),
+                ];
+            })->toArray();
+
+        return response()->json(['success' => true, 'clearances' => $result, 'pending_payments' => $pendingPayments]);
     }
 }

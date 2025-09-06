@@ -9,6 +9,7 @@ use App\Models\Intake;
 use App\Models\CourseRegistration;
 use App\Models\StudentExam;
 use App\Models\PaymentDetail;
+use App\Models\SemesterRegistration;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -365,13 +366,14 @@ class CourseRegistraionController extends Controller
                 ], 404);
             }
 
-            // ⛔ Block terminated students
-            if (strtolower($student->academic_status) === 'terminated') {
-                $reason = $student->academic_status_reason ? ' — ' . $student->academic_status_reason : '';
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Student terminated for discipline reason' . $reason
-                ], 403); // 403 or 423 is fine; your JS already just reads JSON
+            // Determine latest semester registration and termination status
+            $latestSemReg = SemesterRegistration::where('student_id', $student->student_id)
+                ->latest('id')
+                ->first();
+
+            $isTerminated = false;
+            if ($latestSemReg && strtolower($latestSemReg->status) === 'terminated') {
+                $isTerminated = true;
             }
 
             // Get student exam details
@@ -406,9 +408,13 @@ class CourseRegistraionController extends Controller
                     'name_with_initials' => $student->name_with_initials,
                     'id_value'          => $student->id_value,
                     'registration_id'   => $student->student_id, // kept for compatibility
+                    // include academic/status from students table for frontend display
+                    'status'            => $student->academic_status ?? $student->status ?? null,
                 ],
                 'ol_exams' => $ol_exams,
-                'al_exams' => $al_exams
+                'al_exams' => $al_exams,
+                'is_terminated' => $isTerminated,
+                'latest_semester_registration' => $latestSemReg
             ]);
         } catch (\Exception $e) {
             \Log::error('Error getting student by NIC: ' . $e->getMessage());
@@ -473,6 +479,18 @@ class CourseRegistraionController extends Controller
                     'success' => false,
                     'message' => 'The student is already registered for this course.'
                 ], 400);
+            }
+
+            // Prevent registration if the student's latest semester registration is terminated
+            $student = Student::find($validatedData['student_id']);
+            if ($student) {
+                $latestSemReg = SemesterRegistration::where('student_id', $student->student_id)->latest('id')->first();
+                if ($latestSemReg && strtolower($latestSemReg->status) === 'terminated') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Cannot register student: student is terminated.'
+                    ], 422);
+                }
             }
 
             // Create a new CourseRegistration instance
@@ -601,6 +619,18 @@ class CourseRegistraionController extends Controller
                     'success' => false,
                     'message' => 'The student is already registered for this course.'
                 ], 400);
+            }
+
+            // Prevent registration if the student's latest semester registration is terminated
+            $student = Student::find($validatedData['student_id']);
+            if ($student) {
+                $latestSemReg = SemesterRegistration::where('student_id', $student->student_id)->latest('id')->first();
+                if ($latestSemReg && strtolower($latestSemReg->status) === 'terminated') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Cannot register student: student is terminated.'
+                    ], 422);
+                }
             }
 
             // Create a new CourseRegistration instance

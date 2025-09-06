@@ -397,6 +397,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     list.appendChild(li);
                 });
 
+                // Show pending payments if any
+                if (data.pending_payments && data.pending_payments.length > 0) {
+                    const hr = document.createElement('hr');
+                    list.appendChild(hr);
+                    const pTitle = document.createElement('li');
+                    pTitle.innerHTML = '<strong>Pending Payments</strong>';
+                    list.appendChild(pTitle);
+                    data.pending_payments.forEach(p => {
+                        const pli = document.createElement('li');
+                        pli.className = 'mb-2';
+                        pli.innerHTML = `${p.formatted} — ${p.description}` + (p.due_date ? ` <small class="text-muted">(Due: ${p.due_date})</small>` : '');
+                        list.appendChild(pli);
+                    });
+                }
+
                 // store studentId on confirm button
                 document.getElementById('confirmTerminateBtn').dataset.studentId = studentId;
                 const clrModal = new bootstrap.Modal(document.getElementById('clearanceCheckModal'));
