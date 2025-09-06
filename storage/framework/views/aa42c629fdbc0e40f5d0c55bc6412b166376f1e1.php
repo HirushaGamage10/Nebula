@@ -367,6 +367,45 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // If trying to terminate, check clearances first
+        if (action === 'terminated') {
+            const payload = new FormData();
+            payload.append('student_id', studentId);
+            payload.append('course_id', courseSelect.value || '');
+            payload.append('intake_id', intakeSelect.value || '');
+
+            fetch('<?php echo e(route("semester.registration.checkClearances")); ?>', {
+                method: 'POST',
+                body: payload,
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    showToast(data.message || 'Could not check clearances', 'error');
+                    return;
+                }
+
+                // populate modal list
+                const list = document.getElementById('clearanceList');
+                list.innerHTML = '';
+                data.clearances.forEach(c => {
+                    const li = document.createElement('li');
+                    li.className = 'mb-2';
+                    li.innerHTML = `<strong>${c.label}:</strong> ${c.status_text}` + (c.note ? ` <small class="text-muted">(${c.note})</small>` : '');
+                    list.appendChild(li);
+                });
+
+                // store studentId on confirm button
+                document.getElementById('confirmTerminateBtn').dataset.studentId = studentId;
+                const clrModal = new bootstrap.Modal(document.getElementById('clearanceCheckModal'));
+                clrModal.show();
+            })
+            .catch(() => showToast('Failed to check clearances', 'error'));
+
+            return;
+        }
+
         // Normal toggle
         row.querySelectorAll('.toggle-selection').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -375,6 +414,27 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update row styling
         row.classList.toggle('table-danger', action === 'terminated');
         row.classList.toggle('table-warning', action === 'holding');
+    });
+
+    // Confirm termination button (from clearance modal)
+    document.getElementById('confirmTerminateBtn').addEventListener('click', function() {
+        const sid = this.dataset.studentId;
+        if (!sid) return;
+        const row = document.querySelector(`#students_table tbody tr[data-student-id="${sid}"]`);
+        if (!row) return;
+
+        // Set the row status to terminated and update visuals
+        row.querySelectorAll('.toggle-selection').forEach(b => b.classList.remove('active'));
+        const termBtn = row.querySelector('.toggle-selection[data-action="terminated"]');
+        if (termBtn) termBtn.classList.add('active');
+        row.dataset.status = 'terminated';
+        row.querySelector('.student-status').textContent = 'terminated';
+        row.classList.add('table-danger');
+
+        // hide modal
+        const modalEl = document.getElementById('clearanceCheckModal');
+        const m = bootstrap.Modal.getInstance(modalEl);
+        if (m) m.hide();
     });
 
     // --- Special Approval modal submit ---
@@ -513,6 +573,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<!-- Clearance Check Modal (shown before terminating a student) -->
+<div class="modal fade" id="clearanceCheckModal" tabindex="-1" aria-labelledby="clearanceCheckModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="clearanceCheckModalLabel">Student has existing clearances</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>The selected student has one or more clearance records. Please review them before terminating. Do you still want to proceed?</p>
+                <ul id="clearanceList" class="list-unstyled"></ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmTerminateBtn" class="btn btn-danger">Yes, Terminate</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Special Approval Modal -->
 <div class="modal fade" id="specialApprovalModal" tabindex="-1" aria-labelledby="specialApprovalModalLabel" aria-hidden="true">

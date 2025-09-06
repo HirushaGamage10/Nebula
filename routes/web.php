@@ -560,7 +560,10 @@ Route::middleware(['auth', 'role:Program Administrator (level 01),Program Admini
         ->name('semester.registration.getAllSemestersForCourse');
 
     Route::post('/semester-registration/update-status', [SemesterRegistrationController::class, 'updateStatus'])
-        ->name('semester.registration.updateStatus');
+    ->name('semester.registration.updateStatus');
+
+    // AJAX: check pending clearances for a student before terminating
+    Route::post('/semester-registration/check-clearances', [SemesterRegistrationController::class, 'checkStudentClearances'])->name('semester.registration.checkClearances');
 
     // DGM approval actions (if required)
     Route::post('/semester-registration/approve-reenroll', [SemesterRegistrationController::class, 'approveReRegister'])

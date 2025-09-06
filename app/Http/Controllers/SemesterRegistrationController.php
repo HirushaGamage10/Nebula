@@ -12,6 +12,7 @@ use App\Models\CourseRegistration;
 use App\Models\SemesterRegistration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\ClearanceRequest;
 
 
 class SemesterRegistrationController extends Controller
@@ -475,5 +476,52 @@ class SemesterRegistrationController extends Controller
             'success'  => true,
             'requests' => $requests,
         ]);
+    }
+
+    /**
+     * AJAX: Check pending clearances for a single student.
+     * Returns an array of clearance types and their status texts.
+     */
+    public function checkStudentClearances(Request $request)
+    {
+        $request->validate([
+            'student_id' => 'required|integer',
+            'course_id'  => 'nullable|integer',
+            'intake_id'  => 'nullable|integer',
+        ]);
+
+        $studentId = $request->student_id;
+
+        // get clearance requests for this student (any type)
+        $rows = ClearanceRequest::where('student_id', $studentId)
+            ->orderByDesc('requested_at')
+            ->get();
+
+        $types = ClearanceRequest::getClearanceTypes();
+
+        // default: if no record for a type → treat as 'None'
+        $result = [];
+        foreach ($types as $key => $label) {
+            $r = $rows->firstWhere('clearance_type', $key);
+            if ($r) {
+                $result[] = [
+                    'type' => $key,
+                    'label' => $label,
+                    'status' => $r->status,
+                    'status_text' => $r->status_text,
+                    'note' => $r->remarks,
+                ];
+            } else {
+                $result[] = [
+                    'type' => $key,
+                    'label' => $label,
+                    'status' => 'none',
+                    'status_text' => 'No record',
+                    'note' => null,
+                ];
+            }
+        }
+
+        return response()->json(['success' => true, 'clearances' => $result]);
     }
 }
