@@ -2728,6 +2728,7 @@ function renderHistoryList(payments) {
   if (!payments || payments.length === 0) {
     return `<p class="text-muted">No partial payments yet.</p>`;
   }
+
   return `
     <ul class="list-group">
       ${payments.map(p => `
@@ -2735,11 +2736,13 @@ function renderHistoryList(payments) {
           <strong>${p.date}</strong> - 
           LKR ${Number(p.amount).toLocaleString()} (${p.method})
           ${p.remarks ? `<br><small>${p.remarks}</small>` : ""}
+          ${p.slip ? `<br><a href="/storage/${p.slip}" target="_blank" class="btn btn-sm btn-outline-primary mt-1">Download Slip</a>` : ""}
         </li>
       `).join("")}
     </ul>
   `;
 }
+
 
 function openPayModal(paymentId, remaining) {
   document.getElementById('pay-payment-id').value = paymentId;  // ✅ correct
