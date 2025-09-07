@@ -562,7 +562,7 @@
                                             <th>Due Date</th>
                                             <th id="amountHeader">Amount</th>
                                             <th id="lkrAmountHeader" style="display:none;">Amount (LKR)</th>
-                                            <th>Late Fee</th> <!-- ✅ New -->
+                                            <th>Late Fee</th> 
                                             <th>Paid Date</th>
                                             <th>Status</th>
                                             <th>Receipt No</th>
@@ -3778,12 +3778,15 @@ function renderPaymentDetailsTable(rows, paymentType) {
 
   // ✅ Helper to calculate late fee (same as PHP)
   function calculateLateFee(amount, daysLate) {
-    const monthlyRate = 0.05;        // 5% monthly
-    const dailyRate   = monthlyRate / 30;
-    let lateFee       = amount * dailyRate * daysLate;
-    const maxLateFee  = amount * 0.25;     // cap at 25%
+    const monthlyRate = 0.05;             // 5% monthly
+    const monthsLate  = daysLate / 30;    // fractional months
+    const lateFee     = amount * monthlyRate * monthsLate;
+    const maxLateFee  = amount * 0.25;    // cap at 25%
     return Math.min(lateFee, maxLateFee);
-  }
+}
+
+
+
 
   // ✅ Build table rows
   normalized.forEach((p, idx) => {
@@ -3806,7 +3809,9 @@ function renderPaymentDetailsTable(rows, paymentType) {
       const due = new Date(p.due_date);
       const today = new Date();
       if (today > due && (!p.status || p.status.toLowerCase() !== 'paid')) {
-        const diffDays = Math.ceil((today - due) / (1000 * 60 * 60 * 24));
+        const diffTime = today - due; // ms
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); 
+
         let rawLateFee = calculateLateFee(p.amount, diffDays);
 
         const approved = p.approved_late_fee;
