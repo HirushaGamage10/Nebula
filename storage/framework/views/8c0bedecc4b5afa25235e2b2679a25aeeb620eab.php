@@ -111,14 +111,28 @@
                             </div>
                         </div>
                         <div class="row align-items-center mx-3 mb-4">
-                            <label for="bankCharges" class="col-sm-3 col-form-label fw-bold">Bank Charges</label>
-                            <div class="col-sm-9">
-                                <div class="input-group">
-                                    <input type="number" class="form-control bg-white" id="bankCharges" name="bankCharges" placeholder="Enter bank charges" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
-                                    <span class="input-group-text bg-secondary text-white">LKR</span>
-                                </div>
-                            </div>
-                        </div>
+    <label for="bankCharges" class="col-sm-3 col-form-label fw-bold">
+        Bank Charges
+    </label>
+    <div class="col-sm-9">
+        <div class="input-group">
+            <input 
+                type="number" 
+                class="form-control bg-white" 
+                id="bankCharges" 
+                name="bankCharges" 
+                placeholder="Enter bank charges" 
+                min="0" 
+                step="1"
+                oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+            <span class="input-group-text bg-secondary text-white">LKR</span>
+        </div>
+        <small class="form-text text-muted">
+            Enter bank charges only for one installment.
+        </small>
+    </div>
+</div>
+
                         <div class="row mx-3 mb-3">
                             <label class="col-sm-3 col-form-label">Apply Full Payment Discount<span class="text-danger">*</span></label>
                             <div class="col-sm-3 d-flex justify-content-between">

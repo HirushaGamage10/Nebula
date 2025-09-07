@@ -15,6 +15,7 @@
     $generatedAt  = $get('generated_at', now()->format('Y-m-d H:i:s'));
     $studentId    = $get('student_id', '-');
     $studentName  = $get('student_name', '-');
+    $mobilePhone  = $get('mobile_phone', '-');
     $courseName   = $get('course_name', '-');
     $intake       = $get('intake', '-');
     $installment  = $get('installment_number');
@@ -439,26 +440,38 @@
         <div class="section-header">Customer Details</div>
         <div class="section-content">
           <table class="details-table">
-            <tr>
+            <!-- <tr>
               <td class="label-cell">Student Number:</td>
               <td class="value-cell font-mono"><?php echo e($studentId); ?></td>
-            </tr>
+            </tr> -->
             <tr>
               <td class="label-cell">Student Name:</td>
               <td class="value-cell"><?php echo e($studentName); ?></td>
             </tr>
             <tr>
-              <td class="label-cell">Course Name:</td>
+              <td class="label-cell">Reference Number:</td>
+              <td class="value-cell"><?php echo e($intake); ?> / REF-<?php echo e($studentId); ?> / INST-<?php echo e($installment !== null ? $installment : 'REG-FEE'); ?></td>
+            </tr>
+            <tr>
+              <td class="label-cell">Telephone Number:</td>
+              <td class="value-cell"><?php echo e($mobilePhone); ?></td>
+            </tr>
+            <tr>
+              <td class="label-cell">Reference 1:</td>
               <td class="value-cell"><?php echo e($courseName); ?></td>
             </tr>
             <tr>
+              <td class="label-cell">Reference 2:</td>
+              <td class="value-cell"><?php echo e($paymentCode); ?></td>
+            </tr>
+            <!-- <tr>
               <td class="label-cell">Intake:</td>
               <td class="value-cell font-mono"><?php echo e($intake); ?></td>
             </tr>
             <tr>
               <td class="label-cell">Installment #:</td>
               <td class="value-cell font-mono"><?php echo e($installment ?? '-'); ?></td>
-            </tr>
+            </tr> -->
             <tr>
               <td class="label-cell">Due Date:</td>
               <td class="value-cell font-mono"><?php echo e($dateOr($dueDate)); ?></td>

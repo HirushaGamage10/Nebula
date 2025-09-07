@@ -1062,6 +1062,7 @@ private function buildSlipArray(\App\Models\PaymentDetail $payment, $student, $c
         'student_id'        => $student->student_id,
         'student_name'      => $student->full_name,
         'student_nic'       => $student->id_value,
+        'mobile_phone'      => $student->mobile_phone ?? '-',  
         'course_name'       => $course->course_name ?? 'N/A',
         'course_code'       => $course->course_code ?? 'N/A',
         'intake'            => $intake->batch ?? 'N/A',

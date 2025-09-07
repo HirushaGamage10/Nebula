@@ -528,7 +528,7 @@
                                 <div class="col-sm-10">
                                     <div class="input-group">
                                         <span class="input-group-text">1</span>
-                                        <select class="form-select" id="currency-from" style="max-width: 80px;" onchange="updateConversionLabel()">
+                                        <select class="form-select" id="currency-from" style="max-width: 80px;" onchange="updateConversionLabel()" disabled>
                                             <option value="USD">USD</option>
                                             <option value="EUR">EUR</option>
                                             <option value="GBP">GBP</option>
