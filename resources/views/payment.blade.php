@@ -563,9 +563,9 @@
                                             <th id="amountHeader">Amount</th>
                                             <th id="lkrAmountHeader" style="display:none;">Amount (LKR)</th>
                                             <th>Late Fee</th> 
-                                            <th>Paid Date</th>
+                                            <!-- <th>Paid Date</th> -->
                                             <th>Status</th>
-                                            <th>Receipt No</th>
+                                            <!-- <th>Receipt No</th> -->
                                         </tr>
                                     </thead>
                                     <tbody id="paymentDetailsTableBody">
@@ -3824,6 +3824,11 @@ function renderPaymentDetailsTable(rows, paymentType) {
         }
       }
     }
+    // ---- ✅ Approved Late Fee Display String ----
+    const approvedLateFeeStr = p.approved_late_fee && Number(p.approved_late_fee) > 0
+        ? `<small class="text-success">Approved Late Fee: LKR ${money(p.approved_late_fee)}</small>`
+        : `<small class="text-muted">No approved late fee</small>`;
+
 
     const row = `
       <tr>
@@ -3836,11 +3841,11 @@ function renderPaymentDetailsTable(rows, paymentType) {
         ${showLkr ? lkrCell : ''}
         <td>
           LKR ${money(lateFee)} <br>
-          ${lateFeeNote}
+
         </td>
-        <td>${p.paid_date ? dstr(p.paid_date) : '-'}</td>
+        
         <td>${p.status ?? '-'}</td>
-        <td>${p.receipt_no ?? '-'}</td>
+      
       </tr>
     `;
     tbody.insertAdjacentHTML('beforeend', row);

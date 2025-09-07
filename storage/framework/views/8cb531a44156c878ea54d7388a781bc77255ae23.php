@@ -563,9 +563,9 @@
                                             <th id="amountHeader">Amount</th>
                                             <th id="lkrAmountHeader" style="display:none;">Amount (LKR)</th>
                                             <th>Late Fee</th> 
-                                            <th>Paid Date</th>
+                                            <!-- <th>Paid Date</th> -->
                                             <th>Status</th>
-                                            <th>Receipt No</th>
+                                            <!-- <th>Receipt No</th> -->
                                         </tr>
                                     </thead>
                                     <tbody id="paymentDetailsTableBody">
@@ -3812,37 +3812,23 @@ function renderPaymentDetailsTable(rows, paymentType) {
         const diffTime = today - due; // ms
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); 
 
-        let rawLateFee = 0;
-let lateFeeNote = '';
-let lateFee = 0;
+        let rawLateFee = calculateLateFee(p.amount, diffDays);
 
-if (p.due_date) {
-    const due = new Date(p.due_date);
-    const today = new Date();
-    if (today > due && (!p.status || p.status.toLowerCase() !== 'paid')) {
-        const diffDays = Math.ceil((today - due) / (1000 * 60 * 60 * 24));
-
-        // Calculate raw late fee
-        rawLateFee = calculateLateFee(p.amount, diffDays);
-
-        // Use approved late fee if available
-        const approved = Number(p.approved_late_fee || 0);
-
+        const approved = p.approved_late_fee;
         if (approved > 0) {
-            lateFee = Math.max(0, rawLateFee - approved);
-            lateFeeNote = `
-                <small class="text-muted">Raw Late Fee: LKR ${money(rawLateFee)}</small><br>
-                <small class="text-success">Approved Reduction: LKR ${money(approved)}</small>
-            `;
+          lateFee = Math.max(0, rawLateFee - approved);
+          lateFeeNote = `<small class="text-success">Reduced by Approval: LKR ${money(approved)}</small>`;
         } else {
-            lateFee = rawLateFee;
-            lateFeeNote = `<small class="text-muted">Raw Late Fee: LKR ${money(rawLateFee)}</small>`;
+          lateFee = rawLateFee;
+          lateFeeNote = `<small class="text-muted">No special approval</small>`;
         }
-    }
-}
-
       }
     }
+    // ---- ✅ Approved Late Fee Display String ----
+    const approvedLateFeeStr = p.approved_late_fee && Number(p.approved_late_fee) > 0
+        ? `<small class="text-success">Approved Late Fee: LKR ${money(p.approved_late_fee)}</small>`
+        : `<small class="text-muted">No approved late fee</small>`;
+
 
     const row = `
       <tr>
@@ -3855,11 +3841,11 @@ if (p.due_date) {
         ${showLkr ? lkrCell : ''}
         <td>
           LKR ${money(lateFee)} <br>
-          ${lateFeeNote}
+
         </td>
-        <td>${p.paid_date ? dstr(p.paid_date) : '-'}</td>
+        
         <td>${p.status ?? '-'}</td>
-        <td>${p.receipt_no ?? '-'}</td>
+      
       </tr>
     `;
     tbody.insertAdjacentHTML('beforeend', row);
