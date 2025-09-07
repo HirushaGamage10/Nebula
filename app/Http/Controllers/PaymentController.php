@@ -295,7 +295,9 @@ class PaymentController extends Controller
                     $isLastInstallment = ($index === count($localFeeInstallments) - 1);
                     if ($isLastInstallment && $paymentPlan->apply_discount && $paymentPlan->discount) {
                         if ($paymentPlan->discount > 0) {
-                            $discountAmount = ($localFeeTotal * $paymentPlan->discount) / 100;
+                            // Calculate discount on both local fee + registration fee
+                            $totalFeeForDiscount = $localFeeTotal + $paymentPlan->registration_fee;
+                            $discountAmount = ($totalFeeForDiscount * $paymentPlan->discount) / 100;
                             $discountText = 'Discount (' . $paymentPlan->discount . '% on total)';
                             $finalAmount -= $discountAmount;
                         }

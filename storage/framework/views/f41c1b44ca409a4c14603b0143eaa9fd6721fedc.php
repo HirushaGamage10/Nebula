@@ -1,3 +1,5 @@
+
+
 <?php $__env->startSection('title', 'NEBULA | Payment Management'); ?>
 
 <?php $__env->startSection('content'); ?>
@@ -354,17 +356,17 @@
                                             <div class="col-md-6">
                                                 <label class="form-label fw-bold">Fee Structure</label>
                                                 <div class="mb-2">
-                                                    <strong>Course Fee:</strong> <span id="course-fee-display">-</span>
+                                                    <strong>Course Fee (Without Registration Fee):</strong> <span id="course-fee-display">-</span>
                                                 </div>
                                                 <div class="mb-2">
                                                     <strong>Registration Fee:</strong> <span id="registration-fee-display">-</span>
                                                 </div>
                                                 <div class="mb-2">
-                                                    <strong>Total Amount:</strong> <span id="total-amount-display">-</span>
+                                                    <strong>Total Amount (Course Fee + Registration Fee):</strong> <span id="total-amount-display">-</span>
                                                 </div>
-                                                <div class="mb-2">
+                                                <!-- <div class="mb-2">
                                                 <strong>Franchise Fee:</strong> <span id="franchise-amount-display">-</span>
-                                                </div>
+                                                </div> -->
 
                                             </div>
                                         </div>
@@ -526,7 +528,7 @@
                                 <div class="col-sm-10">
                                     <div class="input-group">
                                         <span class="input-group-text">1</span>
-                                        <select class="form-select" id="currency-from" style="max-width: 80px;" onchange="updateConversionLabel()">
+                                        <select class="form-select" id="currency-from" style="max-width: 80px;" onchange="updateConversionLabel()" disabled>
                                             <option value="USD">USD</option>
                                             <option value="EUR">EUR</option>
                                             <option value="GBP">GBP</option>
@@ -560,10 +562,10 @@
                                             <th>Due Date</th>
                                             <th id="amountHeader">Amount</th>
                                             <th id="lkrAmountHeader" style="display:none;">Amount (LKR)</th>
-                                            <th>Late Fee</th> <!-- ✅ New -->
-                                            <th>Paid Date</th>
+                                            <th>Late Fee</th> 
+                                            <!-- <th>Paid Date</th> -->
                                             <th>Status</th>
-                                            <th>Receipt No</th>
+                                            <!-- <th>Receipt No</th> -->
                                         </tr>
                                     </thead>
                                     <tbody id="paymentDetailsTableBody">
@@ -602,13 +604,18 @@
                                         </div>
                                     </div>
                                     <div class="text-center mt-3">
-                                        <button type="button" class="btn btn-success me-2" onclick="printPaymentSlip()">
-                                            <i class="ti ti-printer me-2"></i>Print Slip
-                                        </button>
-                                        <button type="button" class="btn btn-info me-2" onclick="downloadPaymentSlip()">
-                                            <i class="ti ti-download me-2"></i>Download PDF
-                                        </button>
-                                    </div>
+    <button type="button" class="btn btn-success me-2" onclick="printPaymentSlip()">
+        <i class="ti ti-printer me-2"></i>Print Slip
+    </button>
+    <button type="button" class="btn btn-info me-2" onclick="downloadPaymentSlip()">
+        <i class="ti ti-download me-2"></i>Download PDF
+    </button>
+
+    <button type="button" class="btn btn-danger btn-sm" id="delete-slip-btn" style="display:none;">
+        <i class="ti ti-trash me-2"></i>Delete Slip
+    </button>
+</div>
+
                                 </div>
                             </div>
                         </div>
@@ -712,115 +719,123 @@
                 </div>
 
                 <!-- Update Records Tab -->
-                <div class="tab-pane fade" id="update-records" role="tabpanel" aria-labelledby="update-records-tab">
-                    <div class="mt-4">
-                        <!-- Filters -->
-                        <div class="mb-4">
-                            <div class="row mb-3 align-items-center">
-                                <label class="col-sm-2 col-form-label fw-bold">Student NIC <span class="text-danger">*</span></label>
-                                <div class="col-sm-10">
-                                    <input type="text" class="form-control" id="update-student-nic" placeholder="Enter Student NIC" required onchange="loadStudentCoursesForUpdate()">
-                                </div>
-                            </div>
-                            <div class="row mb-3 align-items-center">
-                                <label class="col-sm-2 col-form-label fw-bold">Course <span class="text-danger">*</span></label>
-                                <div class="col-sm-10">
-                                    <select class="form-select" id="update-course" required>
-                                        <option value="" selected disabled>Select a Course</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-12 text-center">
-                                    <button type="button" class="btn btn-primary" onclick="loadPaymentRecords()">
-                                        <i class="ti ti-search me-2"></i>Load Payment Records
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Payment Records Table -->
-                        <div class="mt-4" id="paymentRecordsSection" style="display:none;">
-                            <h4 class="text-center mb-3">Payment Records</h4>
-                            <div class="table-responsive">
-                                <table class="table table-bordered">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Student ID</th>
-                                            <th>Student Name</th>
-                                            <th>Payment Type</th>
-                                            <th>Amount</th>
-                                            <th>Payment Method</th>
-                                            <th>Payment Date</th>
-                                            <th>Receipt No</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="paymentRecordsTableBody">
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="text-center mt-3" id="updateSaveBtnSection" style="display:none;">
-                                <button type="button" class="btn btn-success" onclick="updatePaymentRecords()">
-                                    <i class="ti ti-device-floppy me-2"></i>Update Records
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Upload Paid Slip Section -->
-                        <div class="mt-4" id="uploadPaidSlipSection">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="mb-0">
-                                        <i class="ti ti-upload me-2"></i>Upload Paid Slip
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Receipt Number <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" id="upload-receipt-no" placeholder="Enter receipt number from generated slip" required>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Payment Method <span class="text-danger">*</span></label>
-                                                <select class="form-select" id="upload-payment-method" required>
-                                                    <option value="" selected disabled>Select Payment Method</option>
-                                                    <option value="Cash">Cash</option>
-                                                    <option value="Bank Transfer">Bank Transfer</option>
-                                                    <option value="Cheque">Cheque</option>
-                                                    <option value="Credit Card">Credit Card</option>
-                                                    <option value="Debit Card">Debit Card</option>
-                                                </select>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Payment Date <span class="text-danger">*</span></label>
-                                                <input type="date" class="form-control" id="upload-payment-date" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Paid Slip <span class="text-danger">*</span></label>
-                                                <input type="file" class="form-control" id="upload-paid-slip" accept=".jpg,.jpeg,.png,.pdf" required>
-                                                <small class="text-muted">Upload the paid slip (JPG, PNG, or PDF - max 2MB)</small>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Remarks</label>
-                                                <textarea class="form-control" id="upload-remarks" rows="3" placeholder="Any additional remarks..."></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="text-center mt-3">
-                                        <button type="button" class="btn btn-success" onclick="savePaymentRecordFromUpdate()">
-                                            <i class="ti ti-device-floppy me-2"></i>Save Payment Record
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+<div class="tab-pane fade" id="update-records" role="tabpanel" aria-labelledby="update-records-tab">
+    <div class="mt-4">
+        <!-- Filters -->
+        <div class="mb-4">
+            <div class="row mb-3 align-items-center">
+                <label class="col-sm-2 col-form-label fw-bold">Student NIC <span class="text-danger">*</span></label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="update-student-nic" placeholder="Enter Student NIC" required onchange="loadStudentCoursesForUpdate()">
                 </div>
+            </div>
+            <div class="row mb-3 align-items-center">
+                <label class="col-sm-2 col-form-label fw-bold">Course <span class="text-danger">*</span></label>
+                <div class="col-sm-10">
+                    <select class="form-select" id="update-course" required>
+                        <option value="" selected disabled>Select a Course</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 text-center">
+                    <button type="button" class="btn btn-primary" onclick="loadPaymentRecords()">
+                        <i class="ti ti-search me-2"></i>Load Payment Records
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Records Table -->
+        <div class="mt-4" id="paymentRecordsSection" style="display:none;">
+            <h4 class="text-center mb-3">Payment Records</h4>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Student Name</th>
+                            <th>Payment Type</th>
+                            <th>Installment #</th>
+                            <th>Amount</th>
+                            <th>Late Fee</th>
+                            <th>Approved Late Fee</th>
+                            <th>Total Fee</th>
+                            <th>Remaining</th>
+                            <th>Payment Method</th>
+                            <th>Payment Date</th>
+                            <th>Receipt No</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="paymentRecordsTableBody">
+                        <!-- JS will append rows here -->
+                         
+                    </tbody>
+                </table>
+                <!-- Pay Modal -->
+<!-- Pay Modal -->
+<div class="modal fade" id="payModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Make a Payment</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="pay-payment-id">
+
+        <div class="mb-3">
+          <label class="form-label">Amount to Pay</label>
+          <input type="number" class="form-control" id="pay-amount" min="1">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Payment Method</label>
+          <select class="form-select" id="pay-method">
+            <option value="Cash">Cash</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+            <option value="Cheque">Cheque</option>
+            <option value="Credit Card">Credit Card</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Payment Date</label>
+          <input type="date" class="form-control" id="pay-date" value="<?php echo e(date('Y-m-d')); ?>">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Remarks</label>
+          <textarea class="form-control" id="pay-remarks"></textarea>
+        </div>
+
+        <!-- Optional slip upload -->
+        <div class="mb-3">
+          <label class="form-label">Upload Payment Slip (Optional)</label>
+          <input type="file" class="form-control" id="pay-slip" accept=".jpg,.jpeg,.png,.pdf">
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-success" onclick="submitPayment()">Confirm Payment</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+            </div>
+            <div class="text-center mt-3" id="updateSaveBtnSection" style="display:none;">
+                <button type="button" class="btn btn-success" onclick="updatePaymentRecords()">
+                    <i class="ti ti-device-floppy me-2"></i>Update Records
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
                 <!-- Payment Summary Tab -->
                 <div class="tab-pane fade" id="payment-summary" role="tabpanel" aria-labelledby="payment-summary-tab">
@@ -1461,6 +1476,10 @@ function displayInstallments(installments) {
 
   // original local total BEFORE any discounts
   const originalLocalTotal = installments.reduce((sum, ins) => sum + N(ins.amount), 0);
+  
+  // Include registration fee in discount calculation
+  const registrationFee = N(window.currentStudentData?.registration_fee || 0);
+  const totalFeeForDiscount = originalLocalTotal + registrationFee;
 
   // apply discounts to last installment only (percentage first, then fixed)
   const discounted = installments.map((ins, idx, arr) => {
@@ -1469,7 +1488,7 @@ function displayInstallments(installments) {
 
     if (idx === arr.length - 1) {
       if (pct > 0) { 
-        const p = (originalLocalTotal * pct) / 100; 
+        const p = (totalFeeForDiscount * pct) / 100; 
         dAmt -= p; 
         applied += p; 
       }
@@ -2390,6 +2409,18 @@ async function generatePaymentSlip() {
     window.currentSlipData = data.slip_data;
     const s = data.slip_data;
 
+    // ===== Delete button setup =====
+const deleteBtn = document.getElementById('delete-slip-btn');
+if (s && s.id) {
+  deleteBtn.style.display = "inline-block"; // show the button
+  deleteBtn.onclick = function () {
+    deleteSlip(s.id);
+  };
+} else {
+  deleteBtn.style.display = "none"; // hide if no slip id
+}
+
+
     // ===== On-page preview =====
     setText('slip-student-id-display',   s.student_id);
     setText('slip-student-name-display', s.student_name);
@@ -2642,42 +2673,170 @@ function loadStudentCoursesForUpdate() {
     .finally(() => showSpinner(false));
 }
 
-// Render payment records table
 function renderPaymentRecords() {
-    const tbody = document.getElementById('paymentRecordsTableBody');
-    tbody.innerHTML = '';
-    
-    paymentRecords.forEach((record, index) => {
-        const row = `<tr>
-            <td>${record.student_id}</td>
-            <td>${record.student_name}</td>
-            <td>${record.payment_type}</td>
-            <td>Rs. ${record.amount.toLocaleString()}</td>
-            <td>${record.payment_method}</td>
-            <td>${record.payment_date}</td>
-            <td>${record.receipt_no}</td>
-            <td><span class="badge bg-success">${record.status}</span></td>
-            <td>
-                <button type="button" class="btn btn-sm btn-primary" onclick="editPaymentRecord(${index})">
-                    <i class="ti ti-edit"></i>
-                </button>
-                <button type="button" class="btn btn-sm btn-danger" onclick="deletePaymentRecord(${index})">
-                    <i class="ti ti-trash"></i>
-                </button>
-            </td>
-        </tr>`;
-        tbody.insertAdjacentHTML('beforeend', row);
-    });
+  const tbody = document.getElementById('paymentRecordsTableBody');
+  tbody.innerHTML = "";
+
+  (window.paymentRecords || []).forEach((r) => {
+    const modalId = `historyModal-${r.id}`;
+
+    const row = `
+      <tr>
+        <td>${r.student_id}</td>
+        <td>${r.student_name}</td>
+        <td>${r.payment_type}</td>
+        <td>${r.installment_number ?? '-'}</td>
+        <td>${r.amount}</td>
+        <td>${r.late_fee ?? 0}</td>
+        <td>${r.approved_late_fee ?? 0}</td>
+        <td>${r.total_fee ?? 0}</td>
+        <td>${r.remaining_amount ?? 0}</td>
+        <td>${r.payment_method ?? '-'}</td>
+        <td>${r.payment_date ?? '-'}</td>
+        <td>${r.receipt_no}</td>
+        <td>${r.status}</td>
+        <td>
+          <button class="btn btn-sm btn-success" 
+onclick="openPayModal(${r.payment_id}, ${r.remaining_amount ?? 0})"
+            <i class="ti ti-cash me-1"></i>Pay
+          </button>
+          <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#${modalId}">
+            <i class="ti ti-history me-1"></i>History
+          </button>
+        </td>
+      </tr>
+
+      <!-- History Modal -->
+      <div class="modal fade" id="${modalId}" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Payment History - ${r.receipt_no}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              ${renderHistoryList(r.partial_payments)}
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    tbody.insertAdjacentHTML("beforeend", row);
+  });
 }
+
+function renderHistoryList(payments) {
+  if (!payments || payments.length === 0) {
+    return `<p class="text-muted">No partial payments yet.</p>`;
+  }
+
+  return `
+    <ul class="list-group">
+      ${payments.map(p => `
+        <li class="list-group-item">
+          <strong>${p.date}</strong> - 
+          LKR ${Number(p.amount).toLocaleString()} (${p.method})
+          ${p.remarks ? `<br><small>${p.remarks}</small>` : ""}
+          ${p.slip ? `<br><a href="/storage/${p.slip}" target="_blank" class="btn btn-sm btn-outline-primary mt-1">Download Slip</a>` : ""}
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+
+function openPayModal(paymentId, remaining) {
+  document.getElementById('pay-payment-id').value = paymentId;  // ✅ correct
+  document.getElementById('pay-amount').value = remaining > 0 ? remaining : '';
+  document.getElementById('pay-date').value = new Date().toISOString().split('T')[0];
+
+  const modal = new bootstrap.Modal(document.getElementById('payModal'));
+  modal.show();
+}
+
+
+function submitPayment() {
+  const paymentId = document.getElementById('pay-payment-id').value;
+  const amount    = parseFloat(document.getElementById('pay-amount').value || 0);
+  const method    = document.getElementById('pay-method').value;
+  const date      = document.getElementById('pay-date').value;
+  const remarks   = document.getElementById('pay-remarks').value;
+  const slipFile  = document.getElementById('pay-slip').files[0]; // optional file
+
+  if (!amount || amount <= 0) {
+    showErrorMessage("Enter a valid payment amount.");
+    return;
+  }
+
+  // Use FormData to handle file
+  const formData = new FormData();
+  formData.append("payment_id", paymentId);
+  formData.append("amount", amount);
+  formData.append("payment_method", method);
+  formData.append("payment_date", date);
+  formData.append("remarks", remarks);
+  if (slipFile) {
+    formData.append("slip", slipFile);
+  }
+
+  fetch('/payment/make-payment', {
+    method: 'POST',
+    headers: {
+      'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
+    },
+    body: formData
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      showSuccessMessage("Payment recorded successfully!");
+      bootstrap.Modal.getInstance(document.getElementById('payModal')).hide();
+      loadPaymentRecords(); // refresh table
+    } else {
+      showErrorMessage(data.message || "Failed to record payment.");
+    }
+  })
+  .catch(() => showErrorMessage("An error occurred while making payment."));
+}
+
+
 
 // Update payment records
 function updatePaymentRecords() {
+    const updates = [];
+
+    document.querySelectorAll('#paymentRecordsTableBody [data-field]').forEach(el => {
+        const idx = el.dataset.idx;
+        const field = el.dataset.field;
+        const value = el.value;
+
+        if (!updates[idx]) updates[idx] = { id: window.paymentRecords[idx].id };
+        updates[idx][field] = value;
+    });
+
     showSpinner(true);
-    setTimeout(() => {
-        showToast('Success', 'Payment records updated successfully.', 'bg-success');
-        showSpinner(false);
-    }, 1000);
+
+    fetch('/payment/update-records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' },
+        body: JSON.stringify({ updates })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showSuccessMessage('Payment records updated successfully!');
+            loadPaymentRecords();
+        } else {
+            showErrorMessage(data.message || 'Failed to update records.');
+        }
+    })
+    .catch(() => showErrorMessage('An error occurred while updating records.'))
+    .finally(() => showSpinner(false));
 }
+
 
 // Load courses for student when NIC is entered (for summary)
 function loadStudentCoursesForSummary() {
@@ -3623,12 +3782,15 @@ function renderPaymentDetailsTable(rows, paymentType) {
 
   // ✅ Helper to calculate late fee (same as PHP)
   function calculateLateFee(amount, daysLate) {
-    const monthlyRate = 0.05;        // 5% monthly
-    const dailyRate   = monthlyRate / 30;
-    let lateFee       = amount * dailyRate * daysLate;
-    const maxLateFee  = amount * 0.25;     // cap at 25%
+    const monthlyRate = 0.05;             // 5% monthly
+    const monthsLate  = daysLate / 30;    // fractional months
+    const lateFee     = amount * monthlyRate * monthsLate;
+    const maxLateFee  = amount * 0.25;    // cap at 25%
     return Math.min(lateFee, maxLateFee);
-  }
+}
+
+
+
 
   // ✅ Build table rows
   normalized.forEach((p, idx) => {
@@ -3651,7 +3813,9 @@ function renderPaymentDetailsTable(rows, paymentType) {
       const due = new Date(p.due_date);
       const today = new Date();
       if (today > due && (!p.status || p.status.toLowerCase() !== 'paid')) {
-        const diffDays = Math.ceil((today - due) / (1000 * 60 * 60 * 24));
+        const diffTime = today - due; // ms
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); 
+
         let rawLateFee = calculateLateFee(p.amount, diffDays);
 
         const approved = p.approved_late_fee;
@@ -3664,6 +3828,11 @@ function renderPaymentDetailsTable(rows, paymentType) {
         }
       }
     }
+    // ---- ✅ Approved Late Fee Display String ----
+    const approvedLateFeeStr = p.approved_late_fee && Number(p.approved_late_fee) > 0
+        ? `<small class="text-success">Approved Late Fee: LKR ${money(p.approved_late_fee)}</small>`
+        : `<small class="text-muted">No approved late fee</small>`;
+
 
     const row = `
       <tr>
@@ -3676,11 +3845,11 @@ function renderPaymentDetailsTable(rows, paymentType) {
         ${showLkr ? lkrCell : ''}
         <td>
           LKR ${money(lateFee)} <br>
-          ${lateFeeNote}
+
         </td>
-        <td>${p.paid_date ? dstr(p.paid_date) : '-'}</td>
+        
         <td>${p.status ?? '-'}</td>
-        <td>${p.receipt_no ?? '-'}</td>
+      
       </tr>
     `;
     tbody.insertAdjacentHTML('beforeend', row);
@@ -3695,6 +3864,31 @@ function renderPaymentDetailsTable(rows, paymentType) {
 // If user changes FX inputs, recompute the LKR column live
 document.getElementById('currency-conversion-rate')?.addEventListener('input', recalculateLKRAmounts);
 document.getElementById('currency-from')?.addEventListener('change', recalculateLKRAmounts);
+
+function deleteSlip(id) {
+  if (!confirm("Are you sure you want to delete this slip?")) return;
+
+  fetch(`/payment/delete-slip/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+      'Accept': 'application/json'
+    }
+  })
+    .then(res => res.json())
+    .then(data => {
+      alert(data.message);
+      if (data.success) {
+        // Hide preview & reset button
+        document.getElementById('slipPreviewSection').style.display = 'none';
+        document.getElementById('delete-slip-btn').style.display = 'none';
+        window.currentSlipData = null;
+      }
+    })
+    .catch(err => console.error("Delete failed", err));
+}
+
+
 </script>
 
 <?php $__env->stopSection(); ?> 

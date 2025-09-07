@@ -1,145 +1,212 @@
 
 
-<?php $__env->startSection('title', 'NEBULA | Late Fee Approval'); ?>
+<?php $__env->startSection('title', 'Late Fee Approval'); ?>
 
 <?php $__env->startSection('content'); ?>
-<div class="container-fluid">
-    <div class="card">
-        <div class="card-body">
-            <h2 class="text-center mb-4">Late Fee Approval</h2>
-            <hr>
+<div class="container mt-4">
+    
+    
+<div class="card mb-4">
+    <div class="card shadow-sm mb-4">
+    <div class="card-header bg-white text-center">
+        <h4 class="mb-0 fw-bold text-dark">
+            <i class="bi bi-cash-stack me-2 text-primary"></i>
+            Late Fee Approval
+        </h4>
+    </div>
+</div>
 
-            
-            <div class="card mb-4">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">
-                        <i class="ti ti-user me-2"></i>Select Student & Course
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form method="GET" onsubmit="event.preventDefault(); goToApprovalPage();">
-                        <div class="row mb-3">
-                            <div class="col-md-5">
-                                <label for="student_nic" class="form-label fw-bold">Student NIC <span class="text-danger">*</span></label>
-                                <input type="text" id="student-nic" name="student_nic" class="form-control" placeholder="Enter Student NIC" required>
-                            </div>
+    <div class="card-header bg-secondary text-white">Select Student & Course</div>
+    <div class="card-body">
+        <form method="GET" onsubmit="event.preventDefault(); goToApprovalPage();">
+    <div class="row mb-3">
+        <div class="col-md-5">
+            <label for="student_nic">Student NIC</label>
+            <input type="text" id="student-nic" name="student_nic" class="form-control" placeholder="Enter NIC" required>
+        </div>
 
-                            <div class="col-md-5">
-                                <label for="course_id" class="form-label fw-bold">Course <span class="text-danger">*</span></label>
-                                <select id="course_id" class="form-control" required>
-                                    <option value="">-- Select Course --</option>
-                                </select>
-                            </div>
+        <div class="col-md-5">
+            <label for="course_id">Course</label>
+            <select id="course_id" class="form-control" required>
+                <option value="">-- Select Course --</option>
+            </select>
+        </div>
 
-                            <div class="col-md-2 d-flex align-items-end">
-                                <button type="submit" class="btn btn-primary w-100">Load</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">Load</button>
+        </div>
+    </div>
+</form>
+
+    </div>
+</div>
 
 
     <?php if(isset($installments)): ?>
 
-            
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="ti ti-discount me-2"></i>Global Reduction - Feature Coming Soon
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="<?php echo e(route('latefee.approve.global', [$student->id_value ?? $studentId, $courseId])); ?>">
-                        <?php echo csrf_field(); ?>
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">Reduction Amount</label>
-                                <input type="number" step="0.01" name="reduction_amount" class="form-control" required disabled>
-                            </div>
-                            <div class="col-md-8">
-                                <label class="form-label fw-bold">Approval Note</label>
-                                <input type="text" name="approval_note" class="form-control" disabled>
-                            </div>
-                        </div>
-                        <button class="btn btn-success" disabled>Apply Global Reduction</button>
-                    </form>
-                </div>
-            </div>
-
-            
-            <div class="card">
-                <div class="card-header bg-dark text-white">
-                    <h5 class="mb-0">
-                        <i class="ti ti-calendar me-2"></i>Installment-wise Approval
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-striped">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th class="text-center">Installment #</th>
-                                    <th class="text-center">Due Date</th>
-                                    <th class="text-center">Final Amount</th>
-                                    <th class="text-center">Calculated Late Fee</th>
-                                    <th class="text-center">Approved Late Fee</th>
-                                    <th class="text-center">Approval Note</th>
-                                    <th class="text-center">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php $__empty_1 = true; $__currentLoopData = $installments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $installment): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-                                    <tr>
-                                        <td class="text-center"><?php echo e($installment->installment_number); ?></td>
-                                        <td class="text-center"><?php echo e($installment->formatted_due_date); ?></td>
-                                        <td class="text-center fw-bold"><?php echo e($installment->formatted_amount); ?></td>
-                                        <td class="text-center">LKR <?php echo e(number_format($installment->calculated_late_fee ?? 0, 2)); ?></td>
-                                        <td class="text-center">
-                                            <?php if($installment->approved_late_fee !== null): ?>
-                                                <span class="text-success fw-bold">
-                                                    LKR <?php echo e(number_format($installment->approved_late_fee, 2)); ?>
-
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="text-muted">Not approved</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="text-center"><?php echo e($installment->approval_note ?? '-'); ?></td>
-                                        <td class="text-center">
-                                            <form method="POST" action="<?php echo e(route('latefee.approve.installment', $installment->id)); ?>">
-                                                <?php echo csrf_field(); ?>
-                                                <div class="row">
-                                                    <div class="col-md-6 mb-1">
-                                                        <input type="number" step="0.01" name="approved_late_fee" 
-                                                               class="form-control" placeholder="Approved Fee"
-                                                               value="<?php echo e($installment->approved_late_fee ?? ''); ?>">
-                                                    </div>
-                                                    <div class="col-md-6 mb-1">
-                                                        <input type="text" name="approval_note" class="form-control" 
-                                                               placeholder="Note" value="<?php echo e($installment->approval_note ?? ''); ?>">
-                                                    </div>
-                                                </div>
-                                                <button class="btn btn-sm btn-primary mt-1">Approve</button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-                                    <tr>
-                                        <td colspan="7" class="text-center text-muted py-4">
-                                            <i class="ti ti-inbox" style="font-size: 2rem;"></i>
-                                            <p class="mt-2 mb-0">No installments found for this student & course.</p>
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">Global Reduction - Feature Coming Soon</div>
+        <div class="card-body">
+            <form method="POST" action="<?php echo e(route('latefee.approve.global', [$student->id_value ?? $studentId, $courseId])); ?>">
+                <?php echo csrf_field(); ?>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label>Reduction Amount</label>
+                        <input type="number" step="0.01" min="0.01" name="reduction_amount" class="form-control" required>
+                    </div>
+                    <div class="col-md-8">
+                        <label>Approval Note</label>
+                        <input type="text" name="approval_note" class="form-control">
                     </div>
                 </div>
-            </div>
-            <?php endif; ?>
+                <button class="btn btn-success" >Apply Global Reduction</button>
+            </form>
         </div>
     </div>
+
+    
+<div class="card shadow-lg rounded-3 border-0">
+    <div class="card-header bg-dark text-white fw-bold">
+        <i class="bi bi-cash-coin me-2"></i> Installment-wise Approval
+    </div>
+    <div class="card-body p-3">
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle text-center">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Installment #</th>
+                        <th>Due Date</th>
+                        <th>Final Amount</th>
+                        <th>Calculated Late Fee</th>
+                        <th>Approved Late Fee</th>
+                        <th>Overdue (Calc - Approved)</th>
+                        <th>Approval Note</th>
+                        <th>History</th>
+                        <th style="width: 220px;">Action</th>
+
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php $__empty_1 = true; $__currentLoopData = $installments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $installment): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <tr>
+                            <td class="fw-bold"><?php echo e($installment->installment_number); ?></td>
+                            <td><?php echo e($installment->formatted_due_date); ?></td>
+                            <td class="text-primary fw-semibold"><?php echo e($installment->formatted_amount); ?></td>
+                            <td class="text-warning fw-semibold">
+                                LKR <?php echo e(number_format($installment->calculated_late_fee ?? 0, 2)); ?>
+
+                            </td>
+                            <td>
+                                <?php if($installment->approved_late_fee !== null): ?>
+                                    <span class="badge bg-success p-2">
+                                        LKR <?php echo e(number_format($installment->approved_late_fee, 2)); ?>
+
+                                    </span>
+                                <?php else: ?>
+                                    <span class="badge bg-secondary">Not approved</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php
+                                    $calcFee = $installment->calculated_late_fee ?? 0;
+                                    $approvedFee = $installment->approved_late_fee ?? 0;
+                                    $overdue = $calcFee - $approvedFee;
+                                ?>
+
+                                <?php if($overdue > 0): ?>
+                                    <span class="text-danger fw-bold">
+                                        LKR <?php echo e(number_format($overdue, 2)); ?>
+
+                                    </span>
+                                <?php else: ?>
+                                    <span class="text-success fw-bold">LKR 0.00</span>
+                                <?php endif; ?>
+                            </td>
+                            <td><?php echo e($installment->approval_note ?? '-'); ?></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-info" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#history-<?php echo e($installment->id); ?>">
+                                    View History
+                                </button>
+
+                                <div id="history-<?php echo e($installment->id); ?>" class="collapse mt-2 text-start">
+                                    <?php
+                                        $histories = is_array($installment->approval_history)
+                                            ? $installment->approval_history
+                                            : json_decode($installment->approval_history ?? '[]', true);
+                                    ?>
+
+                                    <?php if(empty($histories)): ?>
+                                        <small class="text-muted fst-italic">No history yet</small>
+                                    <?php else: ?>
+                                        <ul class="list-group list-group-flush small">
+                                            <?php $__currentLoopData = $histories; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $h): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                <li class="list-group-item py-1">
+                                                    <strong>LKR <?php echo e(number_format($h['approved_late_fee'], 2)); ?></strong>
+                                                    (<?php echo e($h['approval_note'] ?? 'No note'); ?>) 
+                                                    by <span class="fw-semibold"><?php echo e($h['approved_by'] ?? 'System'); ?></span>
+                                                    <small class="text-muted d-block">on <?php echo e($h['approved_at'] ?? '-'); ?></small>
+                                                </li>
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                        </ul>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                            <td>
+                                <form method="POST" action="<?php echo e(route('latefee.approve.installment', $installment->id)); ?>">
+                                    <?php echo csrf_field(); ?>
+                                    <div class="row g-2">
+                                        <?php
+                                            $isPast = \Carbon\Carbon::parse($installment->due_date)->isPast();
+                                        ?>
+
+                                        <div class="col-md-6">
+                                            <input type="number" step="0.01" min="0.01" name="approved_late_fee" 
+                                                class="form-control form-control-sm"
+                                                placeholder="Approved Fee"
+                                                value="<?php echo e($installment->approved_late_fee ?? ''); ?>"
+                                                <?php echo e($isPast ? '' : 'disabled'); ?>>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <input type="text" name="approval_note" 
+                                                class="form-control form-control-sm"
+                                                placeholder="Note"
+                                                value="<?php echo e($installment->approval_note ?? ''); ?>"
+                                                <?php echo e($isPast ? '' : 'disabled'); ?>>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <?php if($isPast): ?>
+                                                <button class="btn btn-sm btn-primary w-100">
+                                                    Approve
+                                                </button>
+                                            <?php else: ?>
+                                                <button class="btn btn-sm btn-secondary w-100" disabled
+                                                        title="Approval only allowed after due date">
+                                                    Approve
+                                                </button>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-3">
+                                No installments found for this student & course.
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+    <?php endif; ?>
 </div>
 
 <script>
@@ -225,6 +292,12 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 </script>
+<script>
+    if (performance.navigation.type === performance.navigation.TYPE_RELOAD) {
+        window.location.href = "<?php echo e(url('/late-fee/approval')); ?>";
+    }
+</script>
+
 <?php $__env->stopSection(); ?>
 
 <?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/late_fee/approval.blade.php ENDPATH**/ ?>
