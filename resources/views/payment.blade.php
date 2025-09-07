@@ -775,6 +775,7 @@
                     </tbody>
                 </table>
                 <!-- Pay Modal -->
+<!-- Pay Modal -->
 <div class="modal fade" id="payModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -784,10 +785,12 @@
       </div>
       <div class="modal-body">
         <input type="hidden" id="pay-payment-id">
+
         <div class="mb-3">
           <label class="form-label">Amount to Pay</label>
           <input type="number" class="form-control" id="pay-amount" min="1">
         </div>
+
         <div class="mb-3">
           <label class="form-label">Payment Method</label>
           <select class="form-select" id="pay-method">
@@ -797,14 +800,23 @@
             <option value="Credit Card">Credit Card</option>
           </select>
         </div>
+
         <div class="mb-3">
           <label class="form-label">Payment Date</label>
           <input type="date" class="form-control" id="pay-date" value="{{ date('Y-m-d') }}">
         </div>
+
         <div class="mb-3">
           <label class="form-label">Remarks</label>
           <textarea class="form-control" id="pay-remarks"></textarea>
         </div>
+
+        <!-- Optional slip upload -->
+        <div class="mb-3">
+          <label class="form-label">Upload Payment Slip (Optional)</label>
+          <input type="file" class="form-control" id="pay-slip" accept=".jpg,.jpeg,.png,.pdf">
+        </div>
+
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-success" onclick="submitPayment()">Confirm Payment</button>
@@ -812,6 +824,7 @@
     </div>
   </div>
 </div>
+
 
             </div>
             <div class="text-center mt-3" id="updateSaveBtnSection" style="display:none;">
@@ -2744,25 +2757,30 @@ function submitPayment() {
   const method    = document.getElementById('pay-method').value;
   const date      = document.getElementById('pay-date').value;
   const remarks   = document.getElementById('pay-remarks').value;
+  const slipFile  = document.getElementById('pay-slip').files[0]; // optional file
 
   if (!amount || amount <= 0) {
     showErrorMessage("Enter a valid payment amount.");
     return;
   }
 
+  // Use FormData to handle file
+  const formData = new FormData();
+  formData.append("payment_id", paymentId);
+  formData.append("amount", amount);
+  formData.append("payment_method", method);
+  formData.append("payment_date", date);
+  formData.append("remarks", remarks);
+  if (slipFile) {
+    formData.append("slip", slipFile);
+  }
+
   fetch('/payment/make-payment', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
       'X-CSRF-TOKEN': '{{ csrf_token() }}',
     },
-    body: JSON.stringify({
-      payment_id: paymentId,
-      amount: amount,
-      payment_method: method,
-      payment_date: date,
-      remarks: remarks
-    })
+    body: formData
   })
   .then(res => res.json())
   .then(data => {

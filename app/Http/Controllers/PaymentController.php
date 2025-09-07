@@ -1472,6 +1472,7 @@ public function makePayment(Request $request)
             'payment_method' => 'required|string',
             'payment_date'   => 'required|date',
             'remarks'        => 'nullable|string',
+            'slip'           => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ]);
 
         $payment = PaymentDetail::findOrFail($request->payment_id);
@@ -1482,54 +1483,50 @@ public function makePayment(Request $request)
             $partials = json_decode($partials, true) ?? [];
         }
 
+        // Handle slip upload (optional)
+        $slipPath = null;
+        if ($request->hasFile('slip')) {
+            $slipPath = $request->file('slip')->store('payment_slips', 'public');
+        }
+
         // Add new partial payment entry
         $partials[] = [
             'amount'  => (float)$request->amount,
             'method'  => $request->payment_method,
             'date'    => $request->payment_date,
             'remarks' => $request->remarks,
+            'slip'    => $slipPath, // ✅ store path in partial payments only
         ];
 
         // Calculate totals
         $paidSoFar  = collect($partials)->sum('amount');
         $remaining  = max(($payment->total_fee - $paidSoFar), 0);
 
-       // 🔹 Update main payment record
-// 🔹 Update main payment record
-$payment->update([
-    'partial_payments' => $partials,
-    'remaining_amount' => $remaining,
-    'payment_method'   => $request->payment_method,
-    'payment_date'     => $request->payment_date,
-    'remarks'          => $request->remarks,
-    'status'           => $remaining <= 0 ? 'paid' : 'pending',
-]);
+        // Update payment record
+        $payment->update([
+            'partial_payments' => $partials,
+            'remaining_amount' => $remaining,
+            'status'           => $remaining <= 0 ? 'paid' : 'pending',
+        ]);
 
-// 🔹 If fully paid, also mark installment as paid
-if ($remaining <= 0 && $payment->payment_type === 'course_fee' && $payment->installment_number) {
-    // 1. Find student payment plan (via student_id + course_id)
-    $registration = $payment->registration; // relationship already defined
-    if ($registration) {
-        $plan = \App\Models\StudentPaymentPlan::where('student_id', $payment->student_id)
-            ->where('course_id', $registration->course_id)
-            ->first();
+        // If fully paid, mark installment as paid
+        if ($remaining <= 0 && $payment->payment_type === 'course_fee' && $payment->installment_number) {
+            $registration = $payment->registration;
+            if ($registration) {
+                $plan = \App\Models\StudentPaymentPlan::where('student_id', $payment->student_id)
+                    ->where('course_id', $registration->course_id)
+                    ->first();
 
-        if ($plan) {
-            // 2. Find and update the installment
-            $inst = \App\Models\PaymentInstallment::where('payment_plan_id', $plan->id)
-                ->where('installment_number', $payment->installment_number)
-                ->first();
-
-            if ($inst) {
-                $inst->status    = 'paid';
-                $inst->paid_date = now();
-                $inst->save();
+                if ($plan) {
+                    \App\Models\PaymentInstallment::where('payment_plan_id', $plan->id)
+                        ->where('installment_number', $payment->installment_number)
+                        ->update([
+                            'status'    => 'paid',
+                            'paid_date' => now(),
+                        ]);
+                }
             }
         }
-    }
-}
-
-
 
         return response()->json([
             'success' => true,
@@ -1547,6 +1544,7 @@ if ($remaining <= 0 && $payment->payment_type === 'course_fee' && $payment->inst
         ], 500);
     }
 }
+
 
 
 
