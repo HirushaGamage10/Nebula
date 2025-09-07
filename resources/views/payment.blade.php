@@ -356,17 +356,17 @@
                                             <div class="col-md-6">
                                                 <label class="form-label fw-bold">Fee Structure</label>
                                                 <div class="mb-2">
-                                                    <strong>Course Fee:</strong> <span id="course-fee-display">-</span>
+                                                    <strong>Course Fee (Without Registration Fee):</strong> <span id="course-fee-display">-</span>
                                                 </div>
                                                 <div class="mb-2">
                                                     <strong>Registration Fee:</strong> <span id="registration-fee-display">-</span>
                                                 </div>
                                                 <div class="mb-2">
-                                                    <strong>Total Amount:</strong> <span id="total-amount-display">-</span>
+                                                    <strong>Total Amount (Course Fee + Registration Fee):</strong> <span id="total-amount-display">-</span>
                                                 </div>
-                                                <div class="mb-2">
+                                                <!-- <div class="mb-2">
                                                 <strong>Franchise Fee:</strong> <span id="franchise-amount-display">-</span>
-                                                </div>
+                                                </div> -->
 
                                             </div>
                                         </div>
