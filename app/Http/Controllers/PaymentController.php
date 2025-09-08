@@ -992,7 +992,8 @@ public function generatePaymentSlip(Request $request)
         $foreignCurrency = null;
         $foreignAmount = null;
         $conversionRate = 1; // default
-        
+        //Theres a bug to fix here with franchise fee
+
         // 🔹 Franchise currency conversion and additional charges
         $franchiseFee = 0;
         $ssclTaxAmount = 0;
