@@ -462,28 +462,28 @@
                         </div>
                         
                         <!-- keep your existing section markup -->
-<!-- Existing Payment Plans Table -->
-<div class="mt-4" id="existingPaymentPlansSection" style="display:none;">
-  <h4 class="text-center mb-3">Existing Payment Plans</h4>
-  <div class="table-responsive">
-    <table class="table table-bordered">
-      <thead class="table-light">
-        <tr>
-          <th>Student ID</th>
-          <th>Student Name</th>
-          <th>Student NIC</th>
-          <th>Course</th>
-          <th>Payment Plan Type</th>
-          <th>Total Amount</th>
-          <th>Installments</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="existingPaymentPlansTableBody"></tbody>
-    </table>
-  </div>
-</div>
+                        <!-- Existing Payment Plans Table -->
+                        <div class="mt-4" id="existingPaymentPlansSection" style="display:none;">
+                        <h4 class="text-center mb-3">Existing Payment Plans</h4>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                <th>Student ID</th>
+                                <th>Student Name</th>
+                                <th>Student NIC</th>
+                                <th>Course</th>
+                                <th>Payment Plan Type</th>
+                                <th>Total Amount</th>
+                                <th>Installments</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="existingPaymentPlansTableBody"></tbody>
+                            </table>
+                        </div>
+                        </div>
 
                     </div>
                 </div>
@@ -529,9 +529,7 @@
                                     <div class="input-group">
                                         <span class="input-group-text">1</span>
                                         <select class="form-select" id="currency-from" style="max-width: 80px;" onchange="updateConversionLabel()" disabled>
-                                            <option value="USD">USD</option>
-                                            <option value="EUR">EUR</option>
-                                            <option value="GBP">GBP</option>
+                                           <!-- Removed the Dropdown by Savindu -->
                                         </select>
                                         <span class="input-group-text">=</span>
                                         <input type="number" class="form-control" id="currency-conversion-rate" placeholder="Enter conversion rate (e.g., 320)" step="0.01" min="0" value="320" oninput="recalculateLKRAmounts()">
@@ -3301,6 +3299,9 @@ async function loadPaymentDetails() {
   const courseId       = parseInt(document.getElementById('slip-course').value || '0', 10);
   const paymentType    = document.getElementById('slip-payment-type').value;
 
+  const conversionRow = document.getElementById('currencyConversionRow');
+  const currencySelect = document.getElementById('currency-from');
+
   if (!studentIdOrNic) {
     showWarningMessage('Enter Student ID / NIC first.');
     return;
@@ -3314,15 +3315,22 @@ async function loadPaymentDetails() {
     return;
   }
 
-  // Show the section
+  // Show/hide conversion row only for franchise_fee
+  if (paymentType === 'franchise_fee') {
+      conversionRow.style.display = 'flex';
+      currencySelect.disabled = false;
+  } else {
+      conversionRow.style.display = 'none';
+      currencySelect.disabled = true;
+  }
+
+  // Show payment details section
   document.getElementById('paymentDetailsSection').style.display = '';
 
-  // Build request for backend's getPaymentDetails()
-  // (Your PaymentController::getPaymentDetails accepts student_id, course_id, payment_type)
   const payload = {
-    student_id:   studentIdOrNic,   // can be Student ID or NIC (controller supports both)
-    course_id:    String(courseId),
-    payment_type: paymentType       // 'course_fee' | 'franchise_fee' | 'registration_fee'
+    student_id: studentIdOrNic,
+    course_id: String(courseId),
+    payment_type: paymentType
   };
 
   try {
@@ -3330,13 +3338,12 @@ async function loadPaymentDetails() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-TOKEN' : '{{ csrf_token() }}',
-        'Accept'       : 'application/json'
+        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+        'Accept': 'application/json'
       },
       body: JSON.stringify(payload)
     });
 
-    // Guard against HTML error responses
     const text = await res.text();
     let data;
     try { data = JSON.parse(text); } 
@@ -3346,22 +3353,34 @@ async function loadPaymentDetails() {
       throw new Error(data.message || 'Failed to load payment details.');
     }
 
-    // Map backend rows to what the table renderer expects.
-    // IMPORTANT: For course_fee we use the amounts coming from payment_installments table.
-    // If your install. rows already store final_amount (after discounts & SLT), prefer it.
+    // --- Set the currency from backend for franchise_fee ---
+    if (paymentType === 'franchise_fee' && data.payment_details?.length > 0) {
+        // Use currency from the first installment
+        const planCurrency = data.payment_details[0].currency || 'USD';
+
+        // Add to dropdown if it doesn't exist
+        if (![...currencySelect.options].some(opt => opt.value === planCurrency)) {
+            const newOpt = document.createElement('option');
+            newOpt.value = planCurrency;
+            newOpt.textContent = planCurrency;
+            currencySelect.appendChild(newOpt);
+        }
+
+        currencySelect.value = planCurrency;
+    }
+
+    // Map backend rows to table format
     const details = (data.payment_details || []).map(d => ({
       installment_number: d.installment_number ?? null,
       due_date:           d.due_date ?? null,
-      // prefer final_amount if backend includes it; fallback to amount
       final_amount:       (d.final_amount != null) ? Number(d.final_amount) : Number(d.amount || 0),
-      amount:             Number(d.amount || 0),  // keep base for reference
+      amount:             Number(d.amount || 0),
       status:             d.status || 'pending',
       paid_date:          d.paid_date || null,
       receipt_no:         d.receipt_no || null,
       currency:           d.currency || 'LKR'
     }));
 
-    // Save & render
     renderPaymentDetailsTable(details, paymentType);
 
   } catch (err) {
@@ -3370,6 +3389,8 @@ async function loadPaymentDetails() {
     tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">${err.message}</td></tr>`;
   }
 }
+
+
 // Display payment details in the table
 function displayPaymentDetails(paymentDetails) {
     const tbody = document.getElementById('paymentDetailsTableBody');
