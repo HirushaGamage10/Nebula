@@ -397,6 +397,7 @@ function loadPaymentPlanData(studentId, courseId) {
     console.log('Loading payment plan data for student:', studentId, 'course:', courseId);
     
     // Show loading state
+    // Reset UI
     document.getElementById('paymentPlanLoading').style.display = 'block';
     document.getElementById('paymentStudentInfo').style.display = 'none';
     document.getElementById('paymentPlanSummary').style.display = 'none';
@@ -405,28 +406,41 @@ function loadPaymentPlanData(studentId, courseId) {
     document.getElementById('noPaymentPlanMessage').style.display = 'none';
     document.getElementById('paymentPlanAlert').style.display = 'none';
 
-    const url = `/api/payment-plan/${studentId}/${courseId}`;
+    const url = `/api/payment-plan/${encodeURIComponent(studentId)}/${encodeURIComponent(courseId)}`;
     console.log('Fetching from URL:', url);
-    
+
     fetch(url)
-        .then(response => {
-            console.log('Response status:', response.status);
-            return response.json();
+        .then(async response => {
+            let data = null;
+            try { data = await response.json(); } catch (e) { /* ignore parse errors */ }
+            if (!response.ok) {
+                // Backend returned 4xx/5xx. Show no-plan message with backend message when available.
+                console.warn('Payment plan fetch returned non-OK status', response.status, data);
+                document.getElementById('paymentPlanLoading').style.display = 'none';
+                document.getElementById('noPaymentPlanMessage').innerHTML = `\n                    <i class="ti ti-info-circle fs-4 mb-2"></i>\n                    <h6 class="mb-2">No Payment Plan Found</h6>\n                    <p class="mb-0">${(data && data.message) ? data.message : 'This student does not have a payment plan created yet.'}</p>\n                `;
+                document.getElementById('noPaymentPlanMessage').style.display = 'block';
+                return null;
+            }
+            return data;
         })
         .then(data => {
+            if (!data) return; // already handled above
             console.log('Payment plan data received:', data);
             document.getElementById('paymentPlanLoading').style.display = 'none';
-            
+
             if (data.success && data.payment_plan) {
                 displayPaymentPlan(data.payment_plan, data.student, data.course, data.intake);
             } else {
+                // No payment plan present — show the message area with explanation
                 console.log('No payment plan found or error:', data.message);
+                document.getElementById('noPaymentPlanMessage').innerHTML = `\n                    <i class="ti ti-info-circle fs-4 mb-2"></i>\n                    <h6 class="mb-2">No Payment Plan Found</h6>\n                    <p class="mb-0">${data.message || "This student doesn't have a payment plan created yet."}</p>\n                `;
                 document.getElementById('noPaymentPlanMessage').style.display = 'block';
             }
         })
         .catch(error => {
             console.error('Error loading payment plan:', error);
             document.getElementById('paymentPlanLoading').style.display = 'none';
+            document.getElementById('noPaymentPlanMessage').innerHTML = `\n                <i class="ti ti-alert-circle fs-4 mb-2"></i>\n                <h6 class="mb-2">Error</h6>\n                <p class="mb-0">Failed to load payment plan details. Please try again later.</p>\n            `;
             document.getElementById('noPaymentPlanMessage').style.display = 'block';
             showToast('Error', 'Failed to load payment plan details.', 'bg-danger');
         });
