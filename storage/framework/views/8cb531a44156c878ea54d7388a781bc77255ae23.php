@@ -1476,6 +1476,10 @@ function displayInstallments(installments) {
 
   // original local total BEFORE any discounts
   const originalLocalTotal = installments.reduce((sum, ins) => sum + N(ins.amount), 0);
+  
+  // Include registration fee in discount calculation
+  const registrationFee = N(window.currentStudentData?.registration_fee || 0);
+  const totalFeeForDiscount = originalLocalTotal + registrationFee;
 
   // apply discounts to last installment only (percentage first, then fixed)
   const discounted = installments.map((ins, idx, arr) => {
@@ -1484,7 +1488,7 @@ function displayInstallments(installments) {
 
     if (idx === arr.length - 1) {
       if (pct > 0) { 
-        const p = (originalLocalTotal * pct) / 100; 
+        const p = (totalFeeForDiscount * pct) / 100; 
         dAmt -= p; 
         applied += p; 
       }

@@ -177,11 +177,44 @@ class PaymentController extends Controller
                     return response()->json(['success' => false, 'message' => 'No payment plan found for this course/intake.'], 404);
                 }
 
+                // Get registration fee discount if any
+                $registrationFee = (float) $plan->registration_fee;
+                $discountedAmount = $registrationFee;
+                $discountText = '';
+                
+                // Check if there's a registration fee discount applied to this student's payment plan
+                $studentPaymentPlan = \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
+                    ->where('course_id', $request->course_id)
+                    ->first();
+                
+                if ($studentPaymentPlan) {
+                    $registrationFeeDiscount = \App\Models\PaymentPlanDiscount::where('payment_plan_id', $studentPaymentPlan->id)
+                        ->whereHas('discount', function($query) {
+                            $query->where('discount_category', 'registration_fee');
+                        })
+                        ->with('discount')
+                        ->first();
+                    
+                    if ($registrationFeeDiscount) {
+                        $discount = $registrationFeeDiscount->discount;
+                        if ($discount->type === 'percentage') {
+                            $discountAmount = ($registrationFee * $discount->value) / 100;
+                            $discountedAmount = $registrationFee - $discountAmount;
+                            $discountText = 'Discount (' . $discount->value . '% on registration fee)';
+                        } elseif ($discount->type === 'amount') {
+                            $discountAmount = min($discount->value, $registrationFee); // Don't discount more than the registration fee
+                            $discountedAmount = $registrationFee - $discountAmount;
+                            $discountText = 'Discount (LKR ' . $discountAmount . ' on registration fee)';
+                        }
+                    }
+                }
+
                 $rows[] = [
                     'installment_number' => 1,
                     'due_date'           => now()->toDateString(),
-                    'amount'             => (float) $plan->registration_fee,
-                    'base_amount'        => (float) $plan->registration_fee,
+                    'amount'             => $discountedAmount,
+                    'base_amount'        => $registrationFee,
+                    'discount'           => $discountText,
                     'status'             => 'pending',
                     'paid_date'          => null,
                     'receipt_no'         => null,
@@ -460,6 +493,11 @@ class PaymentController extends Controller
             'discounts.*.discount_type'     => 'required|in:percentage,amount', // "amount" = fixed
             'discounts.*.discount_value'    => 'required|numeric|min:0',
 
+            'registration_fee_discount'     => 'nullable|array',
+            'registration_fee_discount.discount_id' => 'required_with:registration_fee_discount|integer|exists:discounts,id',
+            'registration_fee_discount.discount_type' => 'required_with:registration_fee_discount|in:percentage,amount',
+            'registration_fee_discount.discount_value' => 'required_with:registration_fee_discount|numeric|min:0',
+
             'slt_loan_applied'  => 'nullable|in:yes',
             'slt_loan_amount'   => 'nullable|numeric|min:0',
 
@@ -470,6 +508,31 @@ class PaymentController extends Controller
             'installments.*.amount'                 => 'required|numeric|min:0', // base local amount (pre-discount)
             'installments.*.status'                 => 'required|in:pending,paid,overdue',
         ]);
+
+        // Validate that discounts are of correct category
+        if ($request->filled('discounts')) {
+            foreach ($request->discounts as $discountData) {
+                $discount = \App\Models\Discount::find($discountData['discount_id']);
+                if (!$discount || $discount->discount_category !== 'local_course_fee') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Local course fee discounts must be of category "local_course_fee".'
+                    ], \Illuminate\Http\Response::HTTP_BAD_REQUEST);
+                }
+            }
+        }
+
+        // Validate that registration fee discount is of correct category
+        if ($request->filled('registration_fee_discount')) {
+            $regDiscountId = $request->registration_fee_discount['discount_id'];
+            $discount = \App\Models\Discount::find($regDiscountId);
+            if (!$discount || $discount->discount_category !== 'registration_fee') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Registration fee discount must be of category "registration_fee".'
+                ], \Illuminate\Http\Response::HTTP_BAD_REQUEST);
+            }
+        }
 
         // Must be registered
         $registration = \App\Models\CourseRegistration::where('student_id', $request->student_id)
@@ -608,6 +671,17 @@ class PaymentController extends Controller
                         'discount_value'  => $d['discount_value'],
                     ]);
                 }
+            }
+
+            // Save registration fee discount if provided
+            if ($request->filled('registration_fee_discount')) {
+                $regDiscount = $request->registration_fee_discount;
+                \App\Models\PaymentPlanDiscount::create([
+                    'payment_plan_id' => $plan->id,
+                    'discount_id'     => $regDiscount['discount_id'],
+                    'discount_type'   => $regDiscount['discount_type'],
+                    'discount_value'  => $regDiscount['discount_value'],
+                ]);
             }
 
             // Column presence (safe fallback)
@@ -916,7 +990,107 @@ public function generatePaymentSlip(Request $request)
         // 🔹 Breakdown by payment type
         $courseFee       = $paymentType === 'course_fee'       ? $amount : 0;
         $franchiseFee    = $paymentType === 'franchise_fee'    ? $amount : 0;
-        $registrationFee = $paymentType === 'registration_fee' ? ($intake->registration_fee ?? 0) : 0;
+
+        //Theres a bug here with registration fee 
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        $registrationFee = 0;
+
+        if ($paymentType === 'registration_fee') {
+            $baseRegFee = $intake->registration_fee ?? 0;
+
+            // Existing payment
+            $existingRegFee = \App\Models\PaymentDetail::where('student_id', $student->student_id)
+                ->where('course_registration_id', $registration->id)
+                ->where('status', 'pending')
+                ->whereNull('installment_number') // important for registration fee
+                ->first();
+
+            if ($existingRegFee) {
+                $existingRegFee->refresh();
+                $partialPayments = $existingRegFee->partial_payments ?? [];
+                $paidSoFar = collect($partialPayments)->sum('amount');
+                $remainingAmount = max(($existingRegFee->total_fee - $paidSoFar), 0);
+
+                $slipData = $this->buildSlipArray(
+                    $existingRegFee,
+                    $student,
+                    $course,
+                    $intake,
+                    0,
+                    0,
+                    $existingRegFee->amount, // ✅ ensure amount is correct
+                    $existingRegFee->late_fee ?? 0,
+                    $existingRegFee->approved_late_fee ?? 0,
+                    $existingRegFee->total_fee
+                );
+
+                $slipData['partial_payments'] = $partialPayments;
+                $slipData['remaining_amount'] = $remainingAmount;
+                $slipData['id'] = $existingRegFee->id;
+                $slipData['can_delete'] = true;
+                $slipData['remarks'] = $existingRegFee->remarks ?? '';
+
+                return response()->json([
+                    'success'           => true,
+                    'message'           => 'Registration fee already exists. Showing current payment data.',
+                    'slip_data'         => $slipData,
+                    'existing_receipt'  => $existingRegFee->transaction_id,
+                    'can_delete'        => true
+                ]);
+            }
+
+            // 🔹 If no existing registration fee, calculate normally
+            $planId = $registration->payment_plan_id
+                ?? \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
+                    ->where('course_id', $request->course_id)
+                    ->where('status', 'active')
+                    ->value('id');
+
+            $pctSum = 0.0;
+            $fixedSum = 0.0;
+            $names = [];
+
+            if ($planId) {
+                $ppds = \App\Models\PaymentPlanDiscount::where('payment_plan_id', $planId)
+                    ->with('discount')
+                    ->get();
+
+                $regDiscounts = $ppds->filter(function ($ppd) {
+                    return $ppd->discount
+                        && $ppd->discount->discount_category === 'registration_fee'
+                        && ($ppd->discount->status ?? 'active') === 'active';
+                });
+
+                $pctSum = (float) $regDiscounts->where('discount_type', 'percentage')
+                            ->sum('discount_value');
+                $fixedSum = (float) $regDiscounts->where('discount_type', 'amount')
+                            ->sum('discount_value');
+
+                $names = $regDiscounts->map(function ($ppd) {
+                    return $ppd->discount ? $ppd->discount->name : null;
+                })->filter()->unique()->values()->all();
+            }
+
+            // Calculate effective discount & final registration fee
+            $pctAmt = $baseRegFee * ($pctSum / 100);
+            $discEff = min($baseRegFee, $pctAmt + $fixedSum);
+            $registrationFee = round($baseRegFee - $discEff, 2);
+
+            // Build remarks string
+            $discountRemark = "Registration fee LKR {$baseRegFee}";
+            if ($pctSum > 0) $discountRemark .= " - {$pctSum}%";
+            if ($fixedSum > 0) $discountRemark .= " - LKR {$fixedSum}";
+            if ($discEff > 0) $discountRemark .= " = discount LKR {$discEff}";
+            $discountRemark .= "; payable LKR {$registrationFee}";
+            if ($names) $discountRemark .= " (applied: " . implode(", ", $names) . ")";
+
+            $request->merge([
+                'remarks' => trim(($request->remarks ? $request->remarks . ' | ' : '') . $discountRemark)
+            ]);
+        }
+
+        //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
         // 🔹 Calculate late fee (ONLY for course_fee installments)
         $lateFee = 0;
@@ -976,6 +1150,7 @@ if ($existingPayment) {
     );
     $slipData['id'] = $existingPayment->id;
     $slipData['can_delete'] = true;
+    $slipData['remarks']    = $request->remarks ?? '';
 
     session(['generated_slip_' . $existingPayment->transaction_id => $slipData]);
 
@@ -1000,29 +1175,29 @@ if ($existingPayment) {
 
 
         // --- Create new Payment record ---
-$payment = \App\Models\PaymentDetail::create([
-    'student_id'             => $student->student_id,
-    'course_registration_id' => $registration->id,
-    'amount'                 => $amount,
-    'payment_method'         => 'Cash',
-    'transaction_id'         => $receiptNo,
-    'status'                 => 'pending',
-    'remarks'                => $request->remarks,
-    'due_date'               => $request->due_date,
+        $payment = \App\Models\PaymentDetail::create([
+            'student_id'             => $student->student_id,
+            'course_registration_id' => $registration->id,
+            'amount'                 => $amount,
+            'payment_method'         => 'Cash',
+            'transaction_id'         => $receiptNo,
+            'status'                 => 'pending',
+            'remarks'                => $request->remarks,
+            'due_date'               => $request->due_date,
 
-    // 👇 Fix: Only course_fee/franchise_fee should store installment_number
-    'installment_number'     => in_array($paymentType, ['course_fee','franchise_fee']) 
-                                    ? $request->installment_number 
-                                    : null,
+            // 👇 Fix: Only course_fee/franchise_fee should store installment_number
+            'installment_number'     => in_array($paymentType, ['course_fee','franchise_fee']) 
+                                            ? $request->installment_number 
+                                            : null,
 
-    // ✅ New fields
-    'late_fee'          => $lateFee,
-    'approved_late_fee' => $approvedLateFee,
-    'total_fee'         => $totalFee,
-    'remaining_amount'  => (float) $totalFee,
-'partial_payments'  => json_encode([]), // ensures proper JSON
+            // ✅ New fields
+            'late_fee'          => $lateFee,
+            'approved_late_fee' => $approvedLateFee,
+            'total_fee'         => $totalFee,
+            'remaining_amount'  => (float) $totalFee,
+            'partial_payments'  => json_encode([]), // ensures proper JSON
 
-]);
+        ]);
 
 
         $slipData = $this->buildSlipArray(

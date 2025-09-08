@@ -2001,6 +2001,7 @@ function calculateFinalAmount() {
     
     // Apply registration fee discount if selected
     const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
+    
     if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value) {
         const selectedOption = registrationFeeDiscountSelect.options[registrationFeeDiscountSelect.selectedIndex];
         const discountType = selectedOption.dataset.type;
