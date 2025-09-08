@@ -21,6 +21,8 @@
     $installment  = $get('installment_number');
     $dueDate      = $get('due_date');
     $remarks     = $get('remarks', '');
+    $ssclTaxAmount = (float) $get('sscl_tax_amount', 0); // NEW: SSCL Tax Amount
+    $bankCharges   = (float) $get('bank_charges', 0);
 
     // Amount
     $amountLkr    = $get('lkr_amount');                // for franchise w/ FX
@@ -513,6 +515,21 @@
         <td>Approved Late Fee Discount:</td>
         <td class="amount">- LKR <?php echo e($fmt($approvedLate)); ?></td>
       </tr>
+      
+    <?php if(!empty($ssclTaxAmount) && $ssclTaxAmount > 0): ?>
+    <tr>
+        <td>Tax</td>
+        <td class="amount">+ LKR <?php echo e($fmt($ssclTaxAmount)); ?></td>
+    </tr>
+    <?php endif; ?>
+
+    
+    <?php if(!empty($bankCharges) && $bankCharges > 0): ?>
+    <tr>
+        <td>Bank Charges</td>
+        <td class="amount">+ LKR <?php echo e($fmt($bankCharges)); ?></td>
+    </tr>
+    <?php endif; ?>
       <tr class="total-row">
         <td>TOTAL PAYMENT:</td>
         <td class="amount">LKR <?php echo e($fmt($totalFee)); ?></td>
