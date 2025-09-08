@@ -31,7 +31,9 @@ class PaymentDetail extends Model
     'partial_payments',   // ✅ add this
     'status',
     'created_at',
-    'updated_at'
+    'updated_at',
+    'foreign_currency_code',
+    'foreign_currency_amount',
 ];
 
 

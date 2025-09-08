@@ -20,6 +20,7 @@
     $intake       = $get('intake', '-');
     $installment  = $get('installment_number');
     $dueDate      = $get('due_date');
+    $remarks     = $get('remarks', '');
 
     // Amount
     $amountLkr    = $get('lkr_amount');                // for franchise w/ FX
@@ -484,31 +485,52 @@
           </div>
         </div>
       </div>
+<?php if(!empty($remarks) && str_contains(strtolower($paymentType), 'registration')): ?>
+<div class="section">
+  <div class="section-header">Remarks</div>
+  <div class="section-content">
+    <p class="text-sm text-muted"><?php echo e($remarks); ?></p>
+  </div>
+</div>
+<?php endif; ?>
+
+
 
       <!-- Payment Summary -->
-      <div class="section">
-        <div class="section-header">Payment Summary</div>
-        <div class="section-content">
-          <table class="payment-table">
-            <tr>
-              <td>Course / Installment Fee:</td>
-              <td class="amount">LKR <?php echo e($fmt($amount)); ?></td>
-            </tr>
-            <tr>
-              <td>Late Fee:</td>
-              <td class="amount">LKR <?php echo e($fmt($lateFee)); ?></td>
-            </tr>
-            <tr>
-              <td>Approved Late Fee Discount:</td>
-              <td class="amount">- LKR <?php echo e($fmt($approvedLate)); ?></td>
-            </tr>
-            <tr class="total-row">
-              <td>TOTAL PAYMENT:</td>
-              <td class="amount">LKR <?php echo e($fmt($totalFee)); ?></td>
-            </tr>
-          </table>
-        </div>
-      </div>
+<div class="section">
+  <div class="section-header">Payment Summary</div>
+  <div class="section-content">
+    <table class="payment-table">
+      <tr>
+        <td>Course / Installment Fee:</td>
+        <td class="amount">LKR <?php echo e($fmt($amount)); ?></td>
+      </tr>
+      <tr>
+        <td>Late Fee:</td>
+        <td class="amount">LKR <?php echo e($fmt($lateFee)); ?></td>
+      </tr>
+      <tr>
+        <td>Approved Late Fee Discount:</td>
+        <td class="amount">- LKR <?php echo e($fmt($approvedLate)); ?></td>
+      </tr>
+      <tr class="total-row">
+        <td>TOTAL PAYMENT:</td>
+        <td class="amount">LKR <?php echo e($fmt($totalFee)); ?></td>
+      </tr>
+    </table>
+
+    
+<?php if(is_null($slipData['installment_number'] ?? null) && !empty($slipData['remarks'])): ?>
+<div class="remarks mt-2">
+  <strong>Remarks:</strong>
+  <p class="text-sm text-muted"><?php echo e($slipData['remarks']); ?></p>
+</div>
+<?php endif; ?>
+
+
+  </div>
+</div>
+
 
       <?php
           // Decode partial payments from slipData or directly from payment_details

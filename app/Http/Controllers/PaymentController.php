@@ -987,6 +987,25 @@ public function generatePaymentSlip(Request $request)
         $paymentType = $request->payment_type;
         $amount      = (float) $request->amount;
 
+
+        // 🔹 Franchise currency conversion
+        $foreignCurrency = null;
+        $foreignAmount = null;
+        $conversionRate = 1; // default
+
+        if ($paymentType === 'franchise_fee') {
+            $conversionRate = (float) ($request->conversion_rate ?? 0);
+            $foreignCurrency = $request->currency_from ?? 'USD';
+            $foreignAmount = $amount;
+
+            if ($conversionRate > 0) {
+                $amount = round($amount * $conversionRate, 2); // convert to LKR
+                $franchiseFee = $amount; // update franchiseFee to LKR
+            }
+        }
+
+        
+
         // 🔹 Breakdown by payment type
         $courseFee       = $paymentType === 'course_fee'       ? $amount : 0;
         $franchiseFee    = $paymentType === 'franchise_fee'    ? $amount : 0;
@@ -1196,6 +1215,8 @@ if ($existingPayment) {
             'total_fee'         => $totalFee,
             'remaining_amount'  => (float) $totalFee,
             'partial_payments'  => json_encode([]), // ensures proper JSON
+            'foreign_currency_code'  => $foreignCurrency,
+            'foreign_currency_amount'=> $foreignAmount,
 
         ]);
 
@@ -1260,6 +1281,8 @@ private function buildSlipArray(\App\Models\PaymentDetail $payment, $student, $c
         'total_fee'         => (float) $payment->total_fee,
         'remaining_amount'  => (float) $payment->remaining_amount,
         'partial_payments'  => $partials,   // ✅ Always an array
+        'foreign_currency_code'   => $payment->foreign_currency_code,     
+        'foreign_currency_amount' => (float) $payment->foreign_currency_amount, 
         'generated_at'      => now()->format('Y-m-d H:i:s'),
         'valid_until'       => now()->addDays(7)->format('Y-m-d'),
     ];
