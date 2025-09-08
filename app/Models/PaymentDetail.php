@@ -34,6 +34,7 @@ class PaymentDetail extends Model
     'updated_at',
     'foreign_currency_code',
     'foreign_currency_amount',
+    'installment_type',
 ];
 
 

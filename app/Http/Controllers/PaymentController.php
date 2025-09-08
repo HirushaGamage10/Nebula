@@ -1146,6 +1146,7 @@ public function generatePaymentSlip(Request $request)
         // --- Prevent duplicate pending slips ---
 $existingPayment = \App\Models\PaymentDetail::where('student_id', $student->student_id)
     ->where('course_registration_id', $registration->id)
+    ->where('installment_type', $paymentType) // ✅ Add this
     ->when($request->installment_number, fn($q) => $q->where('installment_number', $request->installment_number))
     ->when($request->due_date, fn($q) => $q->whereDate('due_date', $request->due_date))
     ->where('status', 'pending')
@@ -1184,6 +1185,7 @@ if ($existingPayment) {
 
 
 
+
         // --- Generate New Receipt Number ---
         $today      = date('Ymd');
         $latest     = \App\Models\PaymentDetail::where('transaction_id', 'like', "RCP{$today}%")
@@ -1191,6 +1193,7 @@ if ($existingPayment) {
         $lastNumber = $latest ? (int) substr($latest->transaction_id, -4) : 0;
         $nextNumber = str_pad($lastNumber + 1, 4, '0', STR_PAD_LEFT);
         $receiptNo  = 'RCP' . $today . $nextNumber;
+        $installmentType = $paymentType; // 'course_fee' | 'franchise_fee' | 'registration_fee'
 
 
         // --- Create new Payment record ---
@@ -1217,6 +1220,7 @@ if ($existingPayment) {
             'partial_payments'  => json_encode([]), // ensures proper JSON
             'foreign_currency_code'  => $foreignCurrency,
             'foreign_currency_amount'=> $foreignAmount,
+            'installment_type'         => $installmentType,
 
         ]);
 
