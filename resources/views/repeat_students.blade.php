@@ -32,6 +32,9 @@
                     <li class="nav-item">
                         <a class="nav-link" id="register-tab" data-bs-toggle="tab" href="#register">Re-Register Intake</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="payment-tab" data-bs-toggle="tab" href="#payment">Payment Plan</a>
+                    </li>
                 </ul>
                 <div class="tab-content mt-2">
                     <!-- PROFILE INFO TAB -->
@@ -137,6 +140,92 @@
                             </div>
                         </form>
                     </div>
+                    <!-- PAYMENT PLAN TAB -->
+                    <div class="tab-pane fade" id="payment">
+                        <h5 class="fw-bold mb-3 mt-3 text-primary">Create Payment Plan</h5>
+                        <div class="alert alert-warning">
+                            <strong>No Student Data Loaded:</strong> Please load student details first before creating a payment plan.
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6>Student Information</h6>
+                                <div>Name: <span id="pp_student_name">-</span></div>
+                                <div>Student ID: <span id="pp_student_id">-</span></div>
+                                <div>Course: <span id="pp_course">-</span></div>
+                                <div>Intake: <span id="pp_intake">-</span></div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Fee Structure</h6>
+                                <div>Course Fee (Without Registration Fee): <span id="pp_course_fee">-</span></div>
+                                <div>Registration Fee: <span id="pp_reg_fee">-</span></div>
+                                <div>Total Amount (Course Fee + Registration Fee): <span id="pp_total_fee">-</span></div>
+                            </div>
+                        </div>
+                        <form id="paymentPlanForm">
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label>Payment Plan Type <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="pp_plan_type" required>
+                                        <option value="">Select Payment Plan</option>
+                                        <!-- Add options dynamically -->
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label>Discounts</label>
+                                    <select class="form-select" id="pp_discount">
+                                        <option value="">No Discount</option>
+                                        <!-- Add options dynamically -->
+                                    </select>
+                                    <button type="button" class="btn btn-link btn-sm mt-1">+ Add Another Discount</button>
+                                </div>
+                                <div class="col-md-4">
+                                    <label>Registration Fee Discount</label>
+                                    <select class="form-select" id="pp_reg_discount">
+                                        <option value="">No Registration Fee Discount</option>
+                                        <!-- Add options dynamically -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <label>SLT Loan Applied</label>
+                                    <select class="form-select" id="pp_loan_applied">
+                                        <option value="">No SLT Loan</option>
+                                        <!-- Add options dynamically -->
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label>SLT Loan Amount</label>
+                                    <input type="number" class="form-control" id="pp_loan_amount" placeholder="Enter SLT loan amount">
+                                </div>
+                                <div class="col-md-3">
+                                    <label>Final Amount After Discount & Loan</label>
+                                    <input type="text" class="form-control" id="pp_final_amount" readonly>
+                                </div>
+                            </div>
+                            <h6 class="mt-4">Installment Details</h6>
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Installment #</th>
+                                        <th>Due Date</th>
+                                        <th>Amount</th>
+                                        <th>Discount</th>
+                                        <th>SLT Loan</th>
+                                        <th>Final Amount</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pp_installment_body">
+                                    <!-- Fill with JS -->
+                                </tbody>
+                            </table>
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-success">Save Payment Plan</button>
+                            </div>
+                        </form>
+                    </div>
+                    
                 </div>
             </div>
             <!-- Spinner and Toast containers -->

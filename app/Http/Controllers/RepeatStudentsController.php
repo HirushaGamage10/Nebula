@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class RepeatStudentsController extends Controller
@@ -370,33 +371,51 @@ class RepeatStudentsController extends Controller
             'specialization'  => 'nullable|string|max:255',
         ]);
 
-        // Fetch the registration record
-        $registration = \App\Models\SemesterRegistration::find($validated['registration_id']);
-        if (!$registration) {
-            return response()->json(['success' => false, 'message' => 'Registration not found.']);
+        try {
+            DB::beginTransaction();
+
+            // Fetch the registration record
+            $registration = \App\Models\SemesterRegistration::find($validated['registration_id']);
+            if (!$registration) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'Registration not found.']);
+            }
+
+            // Ensure it's a holding record (prevent updating active/terminated records)
+            if ($registration->status !== 'holding') {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'Only holding registrations can be updated.']);
+            }
+
+            // Preserve existing specialization when the incoming specialization is empty/null
+            $newSpecialization = isset($validated['specialization']) && $validated['specialization'] !== ''
+                ? $validated['specialization']
+                : $registration->specialization;
+
+            // Update the fields and change status from holding -> registered
+            $registration->update([
+                'location'       => $validated['location'],
+                'course_id'      => $validated['course_id'],
+                'intake_id'      => $validated['intake_id'],
+                'semester_id'    => $validated['semester_id'],
+                'specialization' => $newSpecialization,
+                'status'         => 'registered',
+            ]);
+
+            // Also update corresponding course_registration rows for this student + course
+            // (ensure intake changes are reflected in the course registration records)
+            \App\Models\CourseRegistration::where('student_id', $registration->student_id)
+                ->where('course_id', $validated['course_id'])
+                ->update(['intake_id' => $validated['intake_id']]);
+
+            DB::commit();
+
+            return response()->json(['success' => true, 'message' => 'Semester registration updated successfully.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating semester registration: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'An error occurred while updating registration.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
-
-        // Ensure it's a holding record (prevent updating active/terminated records)
-        if ($registration->status !== 'holding') {
-            return response()->json(['success' => false, 'message' => 'Only holding registrations can be updated.']);
-        }
-
-        // Preserve existing specialization when the incoming specialization is empty/null
-        $newSpecialization = isset($validated['specialization']) && $validated['specialization'] !== ''
-            ? $validated['specialization']
-            : $registration->specialization;
-
-        // Update the fields and change status from holding -> registered
-        $registration->update([
-            'location'       => $validated['location'],
-            'course_id'      => $validated['course_id'],
-            'intake_id'      => $validated['intake_id'],
-            'semester_id'    => $validated['semester_id'],
-            'specialization' => $newSpecialization,
-            'status'         => 'registered',
-        ]);
-
-        return response()->json(['success' => true, 'message' => 'Semester registration updated successfully.']);
     }
 
     /**

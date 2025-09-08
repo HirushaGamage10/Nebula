@@ -1,6 +1,25 @@
 <?php $__env->startSection('title', 'NEBULA | Course Registration'); ?>
 
 <?php $__env->startSection('content'); ?>
+<style>
+    /* Dim and disable the student details when a student is terminated */
+    .terminated-disabled {
+        opacity: 0.6;
+        filter: grayscale(100%);
+        pointer-events: none;
+    }
+    /* Overlay to fully block interactions inside the details section */
+    .terminated-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 50;
+        cursor: not-allowed;
+        background: rgba(255,255,255,0);
+    }
+</style>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -29,6 +48,9 @@
                   </div>
                 </div>
               </div>
+
+              <!-- Message container: render search/termination banners here so they are always visible -->
+              <div id="searchMessageContainer" class="mx-3"></div>
 
               <div id="studentDetailsSection" style="display: none;">
                 <div class="row mt-3">
@@ -289,11 +311,16 @@
 <?php $__env->startPush('scripts'); ?>
   <script>
     $(document).ready(function() {
-        // Handle NIC search
-        $('#searchNicBtn').on('click', function() {
+    // Handle NIC search
+    $('#searchNicBtn').on('click', function() {
             var nic = $('#studentNicSearch').val();
             if (nic) {
-                $('#spinner-overlay').show();
+        // clear previous messages/banners
+        $('#searchMessageContainer').empty();
+        $('#terminatedBanner').remove();
+        $('#statusBanner').remove();
+        $('#studentDetailsOverlay').remove();
+        $('#spinner-overlay').show();
                 $.ajax({
                     url: '/api/students/' + nic,
                     type: 'GET',
@@ -344,14 +371,179 @@
                             }
                             
                             $('#studentDetailsSection').show();
+
+                            // If the student is terminated, show a prominent banner and disable register actions
+                            if (response.is_terminated) {
+                                var termMsg = 'This student is terminated and cannot register.';
+                                if (response.latest_semester_registration && response.latest_semester_registration.updated_at) {
+                                    try {
+                                        var termDate = response.latest_semester_registration.updated_at.split('T')[0];
+                                        termMsg += ' (Terminated on: ' + termDate + ')';
+                                    } catch (e) {
+                                        // ignore formatting errors
+                                    }
+                                }
+                                if ($('#terminatedBanner').length === 0) {
+                                    // Render banner into the stable message container so it's visible below the search
+                                    $('#searchMessageContainer').html('<div id="terminatedBanner" class="alert alert-danger mt-3" role="alert">' + termMsg + '</div>');
+                                } else {
+                                    $('#terminatedBanner').text(termMsg).show();
+                                }
+                                // visually dim/disable details section and fully block interactions
+                                $('#studentDetailsSection').addClass('terminated-disabled').show();
+                                $('#studentDetailsSection').css('position', 'relative');
+                                // disable and set readonly where applicable
+                                $('#studentDetailsSection').find('input, select, textarea, button').each(function() {
+                                    $(this).prop('disabled', true);
+                                    if ($(this).is('input, textarea')) $(this).prop('readonly', true);
+                                });
+                                // add overlay to ensure nothing is clickable
+                                if ($('#studentDetailsOverlay').length === 0) {
+                                    $('#studentDetailsSection').append('<div id="studentDetailsOverlay" class="terminated-overlay" aria-hidden="true"></div>');
+                                }
+                                // show popup toast with student's name if available
+                                try {
+                                    var sname = (student && student.name_with_initials) ? student.name_with_initials : $('#studentNicSearch').val();
+                                    showToast('The student ' + sname + ' is terminated.', 'danger');
+                                } catch (e) {}
+                                // disable registration actions
+                                $('#finalRegister, #checkEligibility').prop('disabled', true).addClass('disabled');
+                            } else {
+                                // remove any existing banner and enable actions
+                                $('#terminatedBanner').remove();
+                                // restore details section and remove overlay
+                                    $('#studentDetailsSection').removeClass('terminated-disabled');
+                                    $('#studentDetailsSection').find('input, select, textarea, button').each(function() {
+                                        $(this).prop('disabled', false);
+                                        if ($(this).is('input, textarea')) $(this).prop('readonly', false);
+                                    });
+                                    $('#studentDetailsOverlay').remove();
+                                    $('#finalRegister, #checkEligibility').prop('disabled', false).removeClass('disabled');
+                                    // Show active/status banner in the stable message container
+                                    // Prefer explicit student.status if provided by the API, else fall back to latest_semester_registration.status
+                                    var statusText = 'ACTIVE';
+                                    if (response.student && response.student.status) {
+                                        statusText = response.student.status.toString().toUpperCase();
+                                    } else if (response.latest_semester_registration && response.latest_semester_registration.status) {
+                                        statusText = response.latest_semester_registration.status.toString().toUpperCase();
+                                    }
+                                    // If status indicates termination, show red terminated banner and hide details
+                                    if (statusText && statusText.toLowerCase().includes('terminat')) {
+                                        $('#statusBanner').remove();
+                                        var termMsg = 'This student is terminated and cannot register.';
+                                        if (response.latest_semester_registration && response.latest_semester_registration.updated_at) {
+                                            try {
+                                                var termDate = response.latest_semester_registration.updated_at.split('T')[0];
+                                                termMsg += ' (Terminated on: ' + termDate + ')';
+                                            } catch (e) {}
+                                        }
+                                        $('#searchMessageContainer').html('<div id="terminatedBanner" class="alert alert-danger mt-3" role="alert"><strong>Terminated:</strong> ' + termMsg + '</div>');
+                                        $('#studentDetailsSection').hide();
+                                        $('#studentDetailsOverlay').remove();
+                                        $('#finalRegister, #checkEligibility').prop('disabled', true).addClass('disabled');
+                                        try {
+                                            var snameX = (response.student && response.student.name_with_initials) ? response.student.name_with_initials : $('#studentNicSearch').val();
+                                            showToast('The student ' + snameX + ' is terminated.', 'danger');
+                                        } catch (e) {}
+                                    } else if (statusText && statusText.toLowerCase() === 'active') {
+                                        // Active: remove any banners entirely and ensure details are visible and enabled
+                                        $('#statusBanner').remove();
+                                        $('#terminatedBanner').remove();
+                                        $('#studentDetailsSection').show();
+                                        $('#studentDetailsSection').removeClass('terminated-disabled');
+                                        $('#studentDetailsSection').find('input, select, textarea, button').each(function() {
+                                            $(this).prop('disabled', false);
+                                            if ($(this).is('input, textarea')) $(this).prop('readonly', false);
+                                        });
+                                        $('#studentDetailsOverlay').remove();
+                                        $('#finalRegister, #checkEligibility').prop('disabled', false).removeClass('disabled');
+                                    } else {
+                                        // Other statuses (e.g., HOLDING) — show green status banner
+                                        if ($('#statusBanner').length === 0) {
+                                            $('#searchMessageContainer').html('<div id="statusBanner" class="alert alert-success mt-3" role="alert">Student status: ' + statusText + '</div>');
+                                        } else {
+                                            $('#statusBanner').text('Student status: ' + statusText).show();
+                                        }
+                                    }
+                            }
                         } else {
-                            showToast(response.message, 'danger');
-                            $('#studentDetailsSection').hide();
+                            // If server returned non-success but indicates termination, still show terminated banner
+                            var msg = response.message || '';
+                            var studentStatusMsg = (response.student && response.student.status) ? response.student.status.toString().toLowerCase() : '';
+                            if (response.is_terminated || (msg && msg.toLowerCase().includes('terminat')) || (studentStatusMsg && studentStatusMsg.includes('terminat'))) {
+                                var termMsg = msg && msg.toLowerCase().includes('terminat') ? msg : 'This student is terminated and cannot register.';
+                                if (response.latest_semester_registration && response.latest_semester_registration.updated_at) {
+                                    try {
+                                        var termDate = response.latest_semester_registration.updated_at.split('T')[0];
+                                        termMsg += ' (Terminated on: ' + termDate + ')';
+                                    } catch (e) {}
+                                }
+                                if ($('#terminatedBanner').length === 0) {
+                                    $('#searchMessageContainer').html('<div id="terminatedBanner" class="alert alert-danger mt-3" role="alert">' + termMsg + '</div>');
+                                } else {
+                                    $('#terminatedBanner').text(termMsg).show();
+                                }
+                                $('#studentDetailsSection').hide();
+                                $('#studentDetailsSection').find('input, select, button').prop('disabled', true);
+                                $('#finalRegister, #checkEligibility').prop('disabled', true).addClass('disabled');
+                                // popup message with student name if present
+                                try {
+                                    var sname2 = (response.student && response.student.name_with_initials) ? response.student.name_with_initials : $('#studentNicSearch').val();
+                                    showToast('The student ' + sname2 + ' is terminated.', 'danger');
+                                } catch (e) {}
+                            } else {
+                                // show error message both as toast and banner
+                                var errMsg = response.message || 'An error occurred while fetching student data.';
+                                showToast(errMsg, 'danger');
+                                $('#searchMessageContainer').html('<div class="alert alert-danger mt-3" role="alert">' + errMsg + '</div>');
+                                $('#studentDetailsSection').hide();
+                            }
                         }
                     },
                     error: function(xhr, status, error) {
-                        showToast('The student Terminated.', 'danger');
-                        $('#studentDetailsSection').hide();
+                        // If the server returned a termination message or 422, show terminated banner
+                        var handled = false;
+                            if (xhr && xhr.responseJSON) {
+                            var msg = xhr.responseJSON.message || xhr.responseJSON.error || '';
+                            var respStudentStatus = (xhr.responseJSON && xhr.responseJSON.student && xhr.responseJSON.student.status) ? xhr.responseJSON.student.status.toString().toLowerCase() : '';
+                            if (xhr.status === 422 || (msg && msg.toLowerCase().includes('terminat')) || (respStudentStatus && respStudentStatus.includes('terminat'))) {
+                                var termMsg = msg && msg.toLowerCase().includes('terminat') ? msg : 'This student is terminated and cannot register.';
+                                if (xhr.responseJSON.latest_semester_registration && xhr.responseJSON.latest_semester_registration.updated_at) {
+                                    try {
+                                        var termDate = xhr.responseJSON.latest_semester_registration.updated_at.split('T')[0];
+                                        termMsg += ' (Terminated on: ' + termDate + ')';
+                                    } catch (e) {}
+                                }
+                                if ($('#terminatedBanner').length === 0) {
+                                    $('#searchMessageContainer').html('<div id="terminatedBanner" class="alert alert-danger mt-3" role="alert">' + termMsg + '</div>');
+                                } else {
+                                    $('#terminatedBanner').text(termMsg).show();
+                                }
+                                $('#studentDetailsSection').hide();
+                                $('#studentDetailsSection').find('input, select, button').prop('disabled', true);
+                                $('#finalRegister, #checkEligibility').prop('disabled', true).addClass('disabled');
+                                handled = true;
+                                // popup message: try read student name from response or fallback to NIC
+                                try {
+                                    var sname3 = xhr.responseJSON.student && xhr.responseJSON.student.name_with_initials ? xhr.responseJSON.student.name_with_initials : $('#studentNicSearch').val();
+                                    showToast('The student ' + sname3 + ' is terminated.', 'danger');
+                                } catch (e) {}
+                            }
+                        }
+                        if (!handled) {
+                            var fallback = 'An error occurred while fetching student data.';
+                            var serverMsg = fallback;
+                            try {
+                                if (xhr && xhr.responseJSON && (xhr.responseJSON.message || xhr.responseJSON.error)) {
+                                    serverMsg = xhr.responseJSON.message || xhr.responseJSON.error;
+                                } else if (xhr && xhr.status) {
+                                    serverMsg = 'Server returned status: ' + xhr.status;
+                                }
+                            } catch (e) {}
+                            showToast(serverMsg, 'danger');
+                            $('#searchMessageContainer').html('<div class="alert alert-danger mt-3" role="alert">' + serverMsg + '</div>');
+                            $('#studentDetailsSection').hide();
+                        }
                     },
                     complete: function() {
                         $('#spinner-overlay').hide();

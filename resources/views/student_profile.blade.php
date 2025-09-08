@@ -427,7 +427,7 @@
                     <th>Intake</th>
                     <th>Status</th>
                     <th>Specialization</th>
-                    <th>Full Grade</th>
+                    <th>Overall Grade</th>
                     <th>Action</th>
                   </tr>
                 </thead>
