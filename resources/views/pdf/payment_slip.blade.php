@@ -20,6 +20,7 @@
     $intake       = $get('intake', '-');
     $installment  = $get('installment_number');
     $dueDate      = $get('due_date');
+    $remarks     = $get('remarks', '');
 
     // Amount
     $amountLkr    = $get('lkr_amount');                // for franchise w/ FX
@@ -483,31 +484,52 @@
           </div>
         </div>
       </div>
+@if(!empty($remarks) && str_contains(strtolower($paymentType), 'registration'))
+<div class="section">
+  <div class="section-header">Remarks</div>
+  <div class="section-content">
+    <p class="text-sm text-muted">{{ $remarks }}</p>
+  </div>
+</div>
+@endif
+
+
 
       <!-- Payment Summary -->
-      <div class="section">
-        <div class="section-header">Payment Summary</div>
-        <div class="section-content">
-          <table class="payment-table">
-            <tr>
-              <td>Course / Installment Fee:</td>
-              <td class="amount">LKR {{ $fmt($amount) }}</td>
-            </tr>
-            <tr>
-              <td>Late Fee:</td>
-              <td class="amount">LKR {{ $fmt($lateFee) }}</td>
-            </tr>
-            <tr>
-              <td>Approved Late Fee Discount:</td>
-              <td class="amount">- LKR {{ $fmt($approvedLate) }}</td>
-            </tr>
-            <tr class="total-row">
-              <td>TOTAL PAYMENT:</td>
-              <td class="amount">LKR {{ $fmt($totalFee) }}</td>
-            </tr>
-          </table>
-        </div>
-      </div>
+<div class="section">
+  <div class="section-header">Payment Summary</div>
+  <div class="section-content">
+    <table class="payment-table">
+      <tr>
+        <td>Course / Installment Fee:</td>
+        <td class="amount">LKR {{ $fmt($amount) }}</td>
+      </tr>
+      <tr>
+        <td>Late Fee:</td>
+        <td class="amount">LKR {{ $fmt($lateFee) }}</td>
+      </tr>
+      <tr>
+        <td>Approved Late Fee Discount:</td>
+        <td class="amount">- LKR {{ $fmt($approvedLate) }}</td>
+      </tr>
+      <tr class="total-row">
+        <td>TOTAL PAYMENT:</td>
+        <td class="amount">LKR {{ $fmt($totalFee) }}</td>
+      </tr>
+    </table>
+
+    {{-- ✅ Registration Fee Remarks --}}
+@if(is_null($slipData['installment_number'] ?? null) && !empty($slipData['remarks']))
+<div class="remarks mt-2">
+  <strong>Remarks:</strong>
+  <p class="text-sm text-muted">{{ $slipData['remarks'] }}</p>
+</div>
+@endif
+
+
+  </div>
+</div>
+
 
       @php
           // Decode partial payments from slipData or directly from payment_details
