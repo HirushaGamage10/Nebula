@@ -992,6 +992,12 @@ public function generatePaymentSlip(Request $request)
         $foreignCurrency = null;
         $foreignAmount = null;
         $conversionRate = 1; // default
+        
+        // 🔹 Franchise currency conversion and additional charges
+        $franchiseFee = 0;
+        $ssclTaxAmount = 0;
+        $bankCharges = 0;
+        $remainingAmount = 0;
 
         if ($paymentType === 'franchise_fee') {
             $conversionRate = (float) ($request->conversion_rate ?? 0);
@@ -1000,9 +1006,44 @@ public function generatePaymentSlip(Request $request)
 
             if ($conversionRate > 0) {
                 $amount = round($amount * $conversionRate, 2); // convert to LKR
-                $franchiseFee = $amount; // update franchiseFee to LKR
             }
+
+            $franchiseFee = $amount; // base franchise fee in LKR
+
+            // 🔹 Get student payment plan
+            $studentPlan = \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
+                ->where('course_id', $request->course_id)
+                ->where('status', 'active')
+                ->first();
+
+            if ($studentPlan) {
+                // 🔹 Use the $registration fetched at the top of your function
+                $paymentPlan = \App\Models\PaymentPlan::where('id', $studentPlan->payment_plan_id)
+                    ->where('course_id', $request->course_id)
+                    ->where('intake_id', $registration->intake_id)
+                    ->first();
+
+                if ($paymentPlan) {
+                    $ssclPercent = $paymentPlan->sscl_tax ?? 0; // percentage
+                    $bankCharges = $paymentPlan->bank_charges ?? 0; // fixed
+                    $ssclTaxAmount = round($franchiseFee * ($ssclPercent / 100), 2);
+                }
+            }
+
+            // 🔹 Remaining amount = franchise fee + SSCL tax + bank charges
+            $remainingAmount = $franchiseFee + $ssclTaxAmount + $bankCharges;
+
+            // Optional: merge into request for storing in PaymentDetail
+            $request->merge([
+                'sscl_tax_amount' => $ssclTaxAmount,
+                'bank_charges'    => $bankCharges,
+                'remaining_amount'=> $remainingAmount,
+            ]);
         }
+
+
+
+
 
         
 
@@ -1216,7 +1257,9 @@ if ($existingPayment) {
             'late_fee'          => $lateFee,
             'approved_late_fee' => $approvedLateFee,
             'total_fee'         => $totalFee,
-            'remaining_amount'  => (float) $totalFee,
+            'remaining_amount'  => $paymentType === 'franchise_fee' ? $remainingAmount : (float) $totalFee,
+            'sscl_tax_amount'   => $paymentType === 'franchise_fee' ? $ssclTaxAmount : 0,
+            'bank_charges'      => $paymentType === 'franchise_fee' ? $bankCharges : 0,
             'partial_payments'  => json_encode([]), // ensures proper JSON
             'foreign_currency_code'  => $foreignCurrency,
             'foreign_currency_amount'=> $foreignAmount,

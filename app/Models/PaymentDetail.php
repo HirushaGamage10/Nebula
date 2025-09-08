@@ -35,6 +35,8 @@ class PaymentDetail extends Model
     'foreign_currency_code',
     'foreign_currency_amount',
     'installment_type',
+    'sscl_tax_amount',
+    'bank_charges',
 ];
 
 
