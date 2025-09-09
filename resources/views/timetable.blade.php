@@ -227,11 +227,11 @@
                                 </div>
                             </div>
                             <div class="mb-3 row align-items-center">
-                                <label for="degree_duration_0" class="col-sm-3 col-form-label fw-bold">Duration (Minutes) <span
+                                <label for="degree_duration_0" class="col-sm-3 col-form-label fw-bold">Duration (Hours) <span
                                         class="text-danger">*</span></label>
                                 <div class="col-sm-9">
-                                    <input type="number" class="form-control duration-input" id="degree_duration_0"
-                                        name="durations[]" required>
+                                    <input type="number" step="0.01" min="0" class="form-control duration-input" id="degree_duration_0"
+                                        name="durations[]" placeholder="Hours (e.g. 1.5)" required>
                                 </div>
                             </div>
                             <div class="mb-3 row align-items-center">
@@ -948,15 +948,31 @@
                             var startTime = (e.time || '').toString().trim();
                             var endTime = (e.end_time || '').toString().trim();
 
-                            // compute endTime from duration if needed
-                            if (!endTime && e.duration) {
-                                var mStartTmp = moment(startTime, ['HH:mm:ss','HH:mm','h:mm A']);
-                                if (mStartTmp.isValid()) {
-                                    endTime = mStartTmp.clone().add(parseInt(e.duration,10) || 0, 'minutes').format('HH:mm');
-                                } else {
-                                    endTime = startTime;
-                                }
-                            }
+                                    // compute endTime from duration if needed
+                                    if (!endTime && e.duration) {
+                                        var mStartTmp = moment(startTime, ['HH:mm:ss','HH:mm','h:mm A']);
+                                        if (mStartTmp.isValid()) {
+                                            // incoming stored duration may already be minutes; if it's a small float or integer and looks like hours (<=24),
+                                            // conservatively treat values <=24 with decimal point as hours and convert to minutes. Otherwise assume minutes.
+                                            var rawDur = parseFloat(e.duration);
+                                            var durMinutes = 0;
+                                            if (!isNaN(rawDur)) {
+                                                if (Math.abs(rawDur) <= 24 && String(e.duration).indexOf('.') !== -1) {
+                                                    // treat as hours with decimals
+                                                    durMinutes = Math.round(rawDur * 60);
+                                                } else if (Math.abs(rawDur) <= 24 && String(e.duration).indexOf('.') === -1 && rawDur <= 8) {
+                                                    // if small integer and <=8, user might have entered hours without decimal; treat as hours
+                                                    durMinutes = Math.round(rawDur * 60);
+                                                } else {
+                                                    // otherwise assume minutes already
+                                                    durMinutes = Math.round(rawDur);
+                                                }
+                                            }
+                                            endTime = mStartTmp.clone().add(durMinutes || 0, 'minutes').format('HH:mm');
+                                        } else {
+                                            endTime = startTime;
+                                        }
+                                    }
 
                             // require date and startTime to build ISO datetimes
                             if (!datePart || !startTime) {
@@ -1668,7 +1684,7 @@
                 var date = $('#selectedDate').val();
                 if (!date) { alert('No date selected'); return; }
 
-                var subject_ids = [], durations = [], times = [], end_times = [];
+                    var subject_ids = [], durations = [], times = [], end_times = [];
                 var valid = true;
 
                 $('#subjectList .subject-block').each(function () {
@@ -1688,11 +1704,19 @@
                     }
                     // use 24-hour format to keep server/store consistent and easier to parse later
                     var startFormatted = m.format('HH:mm');
-                    var endMoment = m.clone().add(parseInt(dur, 10) || 0, 'minutes');
+                    // dur input is in HOURS (can be decimal). Convert to minutes for storage and calculations.
+                    var durFloat = parseFloat(dur);
+                    var durMinutes = 0;
+                    if (!isNaN(durFloat)) {
+                        // treat numeric input as hours when reasonable (e.g. 1.5 => 90), otherwise fallback to 0
+                        durMinutes = Math.round(durFloat * 60);
+                    }
+                    var endMoment = m.clone().add(durMinutes || 0, 'minutes');
                     var endFormatted = endMoment.format('HH:mm');
 
                     subject_ids.push(subj);
-                    durations.push(parseInt(dur, 10));
+                    // store durations as integer minutes on payload so backend remains unchanged
+                    durations.push(durMinutes);
                     times.push(startFormatted);
                     end_times.push(endFormatted);
                 });
