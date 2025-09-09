@@ -960,19 +960,25 @@ function performStudentSearch() {
                 document.getElementById('profileSection').style.display = '';
                 document.getElementById('studentIdHidden').value = res.student.student_id || '';
                 document.querySelector('#studentTabs .nav-link.active').click();
-                // Fill re-register form with latest holding registration
+                // Fill re-register form with latest holding registration when present
                 if(res.holding_history && res.holding_history.length){
                     fillReRegisterForm(res.holding_history[0]);
-                    // Also load payment plan data if we have registration info
-                    const latestRegistration = res.holding_history[0];
-                    if(latestRegistration.course_id) {
-                        console.log('Loading payment plan for student:', res.student.student_id, 'course:', latestRegistration.course_id);
-                        loadPaymentPlanData(res.student.student_id, latestRegistration.course_id);
-                    } else {
-                        console.log('No course_id found in registration');
-                    }
+                }
+
+                // Decide which registration to use for payment plan display:
+                // Prefer the first holding registration (student being re-registered), otherwise use the active/current registration returned by the API.
+                let planCourseId = null;
+                if (res.holding_history && res.holding_history.length && res.holding_history[0].course_id) {
+                    planCourseId = res.holding_history[0].course_id;
+                } else if (res.current_registration && res.current_registration.course_id) {
+                    planCourseId = res.current_registration.course_id;
+                }
+
+                if (planCourseId) {
+                    console.log('Loading payment plan for student:', res.student.student_id, 'course:', planCourseId);
+                    loadPaymentPlanData(res.student.student_id, planCourseId);
                 } else {
-                    console.log('No holding history found');
+                    console.log('No course registration found to load payment plan');
                 }
                 if(res.student.academic_status === 'holding'){
                     showToast('Notice', 'This student is currently on hold.', 'bg-warning');
@@ -1038,8 +1044,15 @@ document.getElementById('reRegisterForm').addEventListener('submit', function(e)
     .then(res => {
         if(res.success){
             showToast('Success', res.message, 'bg-success');
-            // Optional: Reload the page or update UI
-            setTimeout(() => location.reload(), 2000);
+            // If backend returned an updated course registration, reload its payment plan
+            if (res.updated_course_registration && res.updated_course_registration.course_id) {
+                // Update the currentStudentData.holding_history first (replace the updated one)
+                performStudentSearch(); // refresh student data so UI shows updated state
+                loadPaymentPlanData(document.getElementById('studentIdHidden').value, res.updated_course_registration.course_id);
+            } else {
+                // fallback: refresh student data
+                performStudentSearch();
+            }
         }else{
             showToast('Error', res.message || 'Update failed.', 'bg-danger');
         }

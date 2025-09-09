@@ -355,10 +355,35 @@ class RepeatStudentsController extends Controller
         $studentArr = $student->toArray();
         $studentArr['parent'] = $student->parentGuardian ? $student->parentGuardian->toArray() : null;
 
+        // Also include a current/active course registration if available (useful when student is not on hold)
+        $currentCourseReg = \App\Models\CourseRegistration::where('student_id', $student->student_id)
+            ->where(function($q){
+                $q->where('status', 'Registered')
+                  ->orWhere('approval_status', 'Approved by DGM')
+                  ->orWhere('approval_status', 'Approved by manager')
+                  ->orWhere('status', 'Pending');
+            })
+            ->with('course', 'intake')
+            ->orderByDesc('id')
+            ->first();
+
+        $currentRegArr = null;
+        if ($currentCourseReg) {
+            $currentRegArr = [
+                'id' => $currentCourseReg->id,
+                'course_id' => $currentCourseReg->course_id,
+                'course_name' => $currentCourseReg->course->course_name ?? null,
+                'intake_id' => $currentCourseReg->intake_id,
+                'intake' => $currentCourseReg->intake->batch ?? null,
+                'status' => $currentCourseReg->status,
+            ];
+        }
+
         return response()->json([
             'success' => true,
             'student' => $studentArr,
             'holding_history' => $holdingRegs,
+            'current_registration' => $currentRegArr,
         ]);
     }
 
@@ -412,9 +437,28 @@ class RepeatStudentsController extends Controller
                 ->where('course_id', $validated['course_id'])
                 ->update(['intake_id' => $validated['intake_id']]);
 
+            // Fetch a representative course registration for this student+course to return to frontend
+            $updatedCourseReg = \App\Models\CourseRegistration::where('student_id', $registration->student_id)
+                ->where('course_id', $validated['course_id'])
+                ->with('intake', 'course')
+                ->orderByDesc('id')
+                ->first();
+
             DB::commit();
 
-            return response()->json(['success' => true, 'message' => 'Semester registration updated successfully.']);
+            return response()->json([
+                'success' => true,
+                'message' => 'Semester registration updated successfully.',
+                'updated_semester_registration' => $registration,
+                'updated_course_registration' => $updatedCourseReg ? [
+                    'id' => $updatedCourseReg->id,
+                    'course_id' => $updatedCourseReg->course_id,
+                    'course_name' => $updatedCourseReg->course->course_name ?? null,
+                    'intake_id' => $updatedCourseReg->intake_id,
+                    'intake' => $updatedCourseReg->intake ? ($updatedCourseReg->intake->batch ?? $updatedCourseReg->intake->intake_no) : null,
+                    'status' => $updatedCourseReg->status,
+                ] : null,
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Error updating semester registration: ' . $e->getMessage());
