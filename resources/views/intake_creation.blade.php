@@ -168,6 +168,7 @@
                             <th style="position: sticky; top: 0; background: #fff;">Enrollment End</th>
                             <th style="position: sticky; top: 0; background: #fff;">Capacity</th>
                             <th style="position: sticky; top: 0; background: #fff;">Status</th>
+                            <th style="position: sticky; top: 0; background: #fff;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="intake-table-body">
@@ -191,14 +192,177 @@
                                     <span class="badge bg-warning">Upcoming</span>
                                 @endif
                             </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="editIntake({{ $intake->intake_id }})" title="Edit Intake">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="10" class="text-center">No intakes found.</td>
+                            <td colspan="11" class="text-center">No intakes found.</td>
                         </tr>
                         @endforelse
                     </tbody>
                 </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    <!-- Edit Intake Modal -->
+    <div class="modal fade" id="editIntakeModal" tabindex="-1" aria-labelledby="editIntakeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editIntakeModalLabel">Edit Intake</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editIntakeForm">
+                        @csrf
+                        <input type="hidden" id="edit_intake_id" name="intake_id">
+                        
+                        <div class="mb-3 row">
+                            <label for="edit_location" class="col-sm-3 col-form-label">Location <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <select class="form-select" id="edit_location" name="location" required>
+                                    <option value="">Choose a location...</option>
+                                    <option value="Welisara">Nebula Institute of Technology - Welisara</option>
+                                    <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
+                                    <option value="Peradeniya">Nebula Institute of Technology - Peradeniya</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="edit_course_name" class="col-sm-3 col-form-label">Course <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <select class="form-select" id="edit_course_name" name="course_name" required>
+                                    <option value="">Choose a course...</option>
+                                    @foreach($courses as $course)
+                                        <option value="{{ $course }}">{{ $course }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="edit_batch" class="col-sm-3 col-form-label">Batch Name / Code <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="edit_batch" name="batch" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="edit_batch_size" class="col-sm-3 col-form-label">Batch Size <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <input type="number" class="form-control" id="edit_batch_size" name="batch_size" min="1" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="edit_intake_mode" class="col-sm-3 col-form-label">Intake Mode <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <select class="form-select" id="edit_intake_mode" name="intake_mode" required>
+                                    <option value="">Choose a mode...</option>
+                                    <option value="Physical">Physical</option>
+                                    <option value="Online">Online</option>
+                                    <option value="Hybrid">Hybrid</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="edit_intake_type" class="col-sm-3 col-form-label">Intake Type <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <select class="form-select" id="edit_intake_type" name="intake_type" required>
+                                    <option value="">Choose a type...</option>
+                                    <option value="Fulltime">Full Time</option>
+                                    <option value="Parttime">Part Time</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="edit_registration_fee" class="col-sm-3 col-form-label">Registration Fee (LKR) <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <input type="number" class="form-control" id="edit_registration_fee" name="registration_fee" step="0.01" min="0" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="edit_franchise_payment" class="col-sm-3 col-form-label">Franchise Payment <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <div class="input-group">
+                                    <select class="form-select" id="edit_franchise_payment_currency" name="franchise_payment_currency" style="max-width:90px;">
+                                        <option value="LKR">LKR</option>
+                                        <option value="USD">USD</option>
+                                        <option value="GBP">GBP</option>
+                                        <option value="EUR">EUR</option>
+                                    </select>
+                                    <input type="number" class="form-control" id="edit_franchise_payment" name="franchise_payment" step="0.01" min="0" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="edit_course_fee" class="col-sm-3 col-form-label">Course Fee (LKR) <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <input type="number" class="form-control" id="edit_course_fee" name="course_fee" step="0.01" min="0" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="edit_sscl_tax" class="col-sm-3 col-form-label">SSCL Tax Percentage <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="edit_sscl_tax" name="sscl_tax" step="0.01" min="0" max="100" required>
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="edit_bank_charges" class="col-sm-3 col-form-label">Bank Charges (LKR)</label>
+                            <div class="col-sm-9">
+                                <input type="number" class="form-control" id="edit_bank_charges" name="bank_charges" step="0.01" min="0">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="edit_start_date" class="col-sm-3 col-form-label">Start Date <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <input type="date" class="form-control" id="edit_start_date" name="start_date" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="edit_end_date" class="col-sm-3 col-form-label">End Date <span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <input type="date" class="form-control" id="edit_end_date" name="end_date" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="edit_enrollment_end_date" class="col-sm-3 col-form-label">Enrollment End Date</label>
+                            <div class="col-sm-9">
+                                <input type="date" class="form-control" id="edit_enrollment_end_date" name="enrollment_end_date">
+                                <small class="form-text text-muted">Last date for students to enroll in this intake (optional)</small>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 row">
+                            <label for="edit_course_registration_id_pattern" class="col-sm-3 col-form-label">Course Registration ID pattern</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="edit_course_registration_id_pattern" name="course_registration_id_pattern" required>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="updateIntake()">Update Intake</button>
             </div>
           </div>
         </div>
@@ -240,10 +404,15 @@ $(document).ready(function() {
                             <td>
                                 ${intake.isPast ? '<span class="badge bg-danger">Finished</span>' : (intake.isCurrent ? '<span class="badge bg-success">Ongoing</span>' : '<span class="badge bg-warning">Upcoming</span>')}
                             </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="editIntake(${intake.intake_id})" title="Edit Intake">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
                         </tr>
                     `;
 
-                    if ($('#intake-table-body').find('td[colspan="10"]').length) {
+                    if ($('#intake-table-body').find('td[colspan="11"]').length) {
                         $('#intake-table-body').html(newRow);
                     } else {
                         $('#intake-table-body').prepend(newRow);
@@ -270,7 +439,8 @@ $(document).ready(function() {
         });
       });
 
-    function showToast(message, type) {
+    // Move showToast to global scope so it can be accessed by updateIntake function
+    window.showToast = function(message, type) {
         const toastHtml = `
             <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
                 <div class="d-flex">
@@ -284,7 +454,8 @@ $(document).ready(function() {
         toast.show();
     }
 
-    function formatDate(dateStr) {
+    // Move formatDate to global scope so it can be accessed by updateIntake function
+    window.formatDate = function(dateStr) {
         if (!dateStr) return '';
         const d = new Date(dateStr);
         if (isNaN(d)) return dateStr;
@@ -390,7 +561,158 @@ $(document).ready(function() {
             return;
         }
     });
-});
+
+    // Validate enrollment end date in edit modal
+    $('#edit_enrollment_end_date').on('change', function() {
+        const enrollmentEndDate = new Date($(this).val());
+        const startDate = new Date($('#edit_start_date').val());
+        const endDate = new Date($('#edit_end_date').val());
+        
+        if ($('#edit_start_date').val() && enrollmentEndDate < startDate) {
+            showToast('Enrollment end date cannot be before the start date.', 'danger');
+            $(this).val('');
+            return;
+        }
+        
+        if ($('#edit_end_date').val() && enrollmentEndDate > endDate) {
+            showToast('Enrollment end date cannot be after the end date.', 'danger');
+            $(this).val('');
+            return;
+        }
+    });
+
+    // Edit Intake Functions - moved inside document ready
+    window.editIntake = function(intakeId) {
+    console.log('Editing intake with ID:', intakeId);
+    
+    $.ajax({
+        url: `/intake-creation/${intakeId}/edit`,
+        type: 'GET',
+        success: function(response) {
+            console.log('Edit response:', response);
+            if (response.success) {
+                const intake = response.intake;
+                
+                // Populate the edit form
+                $('#edit_intake_id').val(intake.intake_id);
+                $('#edit_location').val(intake.location);
+                $('#edit_course_name').val(intake.course_name);
+                $('#edit_batch').val(intake.batch);
+                $('#edit_batch_size').val(intake.batch_size);
+                $('#edit_intake_mode').val(intake.intake_mode);
+                $('#edit_intake_type').val(intake.intake_type);
+                $('#edit_registration_fee').val(intake.registration_fee);
+                $('#edit_franchise_payment').val(intake.franchise_payment);
+                $('#edit_franchise_payment_currency').val(intake.franchise_payment_currency);
+                $('#edit_course_fee').val(intake.course_fee);
+                $('#edit_sscl_tax').val(intake.sscl_tax);
+                $('#edit_bank_charges').val(intake.bank_charges);
+                $('#edit_start_date').val(intake.start_date);
+                $('#edit_end_date').val(intake.end_date);
+                $('#edit_enrollment_end_date').val(intake.enrollment_end_date);
+                $('#edit_course_registration_id_pattern').val(intake.course_registration_id_pattern);
+                
+                console.log('Form populated, showing modal');
+                // Show the modal
+                $('#editIntakeModal').modal('show');
+            } else {
+                showToast(response.message, 'danger');
+            }
+        },
+        error: function(xhr) {
+            console.error('Error loading intake data:', xhr);
+            showToast('Error loading intake data.', 'danger');
+        }
+    });
+    };
+
+    window.updateIntake = function() {
+    const intakeId = $('#edit_intake_id').val();
+    
+    if (!intakeId) {
+        showToast('Intake ID not found. Please try again.', 'danger');
+        return;
+    }
+    
+    const formData = new FormData($('#editIntakeForm')[0]);
+    
+    // Add method override for PUT request
+    formData.append('_method', 'PUT');
+    
+    console.log('Updating intake with ID:', intakeId);
+    console.log('Form data:', Object.fromEntries(formData));
+    
+    $.ajax({
+        url: `/intake-creation/${intakeId}`,
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            console.log('Update response:', response);
+            if (response.success) {
+                showToast(response.message, 'success');
+                $('#editIntakeModal').modal('hide');
+                
+                // Update the table row
+                const intake = response.intake;
+                const rowId = `#intake-row-${intake.intake_id}`;
+                
+                // Update the row content
+                $(rowId + ' td:nth-child(1)').text(intake.course_name);
+                $(rowId + ' td:nth-child(2)').text(intake.batch);
+                $(rowId + ' td:nth-child(3)').text(intake.location);
+                $(rowId + ' td:nth-child(4)').text(intake.intake_mode);
+                $(rowId + ' td:nth-child(5)').text(intake.intake_type);
+                $(rowId + ' td:nth-child(6)').text(formatDate(intake.start_date));
+                $(rowId + ' td:nth-child(7)').text(formatDate(intake.end_date));
+                $(rowId + ' td:nth-child(8)').text(intake.enrollment_end_date ? formatDate(intake.enrollment_end_date) : '-');
+                $(rowId + ' td:nth-child(9)').text(`${intake.registrations_count || 0} / ${intake.batch_size}`);
+                
+                // Update status badge
+                let statusBadge = '';
+                const startDate = new Date(intake.start_date);
+                const endDate = new Date(intake.end_date);
+                const now = new Date();
+                
+                if (now > endDate) {
+                    statusBadge = '<span class="badge bg-danger">Finished</span>';
+                } else if (now >= startDate && now <= endDate) {
+                    statusBadge = '<span class="badge bg-success">Ongoing</span>';
+                } else {
+                    statusBadge = '<span class="badge bg-warning">Upcoming</span>';
+                }
+                $(rowId + ' td:nth-child(10)').html(statusBadge);
+                
+            } else {
+                showToast(response.message, 'danger');
+            }
+        },
+        error: function(xhr) {
+            console.error('Update error:', xhr);
+            let errorMessage = 'An error occurred while updating the intake.';
+            if (xhr.responseJSON) {
+                if (xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                } else if (xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                if (xhr.responseJSON.errors) {
+                    const errors = Object.values(xhr.responseJSON.errors).flat();
+                    errorMessage += '<br>' + errors.join('<br>');
+                }
+            }
+            // Use the showToast function that's defined in the document ready block
+            if (typeof showToast === 'function') {
+                showToast(errorMessage, 'danger');
+            } else {
+                alert(errorMessage); // Fallback if showToast is not available
+            }
+        }
+    });
+    };
+
+}); // End of document ready
     </script>
 @endpush
 

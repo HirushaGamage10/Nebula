@@ -113,6 +113,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Developer'])->group(function () {
         Route::get('/intake-creation', [IntakeCreationController::class, 'create'])->name('intake.create');
         Route::post('/intake-creation', [IntakeCreationController::class, 'store'])->name('intake.store');
+        Route::get('/intake-creation/{id}/edit', [IntakeCreationController::class, 'edit'])->name('intake.edit');
+        Route::put('/intake-creation/{id}', [IntakeCreationController::class, 'update'])->name('intake.update');
     });
 
     // Course Management Page - DGM, Program Administrator (level 01), Program Administrator (level 02), Developer
