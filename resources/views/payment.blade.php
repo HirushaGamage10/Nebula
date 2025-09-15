@@ -1504,10 +1504,11 @@ function displayInstallments(installments) {
   const sumAfterDiscounts = discounted.reduce((s, x) => s + x.discountedAmount, 0);
 
   // target total by your rule:
-  // ΣFi = (ΣAi / L) * (L - S)  where Ai = discountedAmount, L = originalLocalTotal, S = SLT
-  const useLoan = (sltLoanApplied === 'yes' && sltLoanAmount > 0 && originalLocalTotal > 0);
+  // ΣFi = (ΣAi / ΣAi) * (ΣAi - S)  where Ai = discountedAmount, S = SLT
+  // This simplifies to: ΣFi = ΣAi - S (total after discounts minus SLT loan)
+  const useLoan = (sltLoanApplied === 'yes' && sltLoanAmount > 0 && sumAfterDiscounts > 0);
   const targetTotal = useLoan
-    ? (sumAfterDiscounts / originalLocalTotal) * (originalLocalTotal - sltLoanAmount)
+    ? sumAfterDiscounts - sltLoanAmount
     : sumAfterDiscounts;
 
   // build rows; prorate SLT AFTER discounts using originalLocalTotal; fix rounding on last row
@@ -1538,7 +1539,8 @@ function displayInstallments(installments) {
     if (useLoan) {
       let Fi;
       if (!isLast) {
-        Fi = r2((ins.discountedAmount / originalLocalTotal) * (originalLocalTotal - sltLoanAmount));
+        // Apply the formula: (Installment amount after discounts) / (Total sum of installments after discounts) × amount to be paid
+        Fi = r2((ins.discountedAmount / sumAfterDiscounts) * targetTotal);
         runningFinals += Fi;
       } else {
         // last row gets remainder to fix rounding drift
@@ -1546,11 +1548,11 @@ function displayInstallments(installments) {
       }
 
       const Ai = ins.discountedAmount;
-      const L  = originalLocalTotal;
-      const S  = sltLoanAmount;
+      const L  = sumAfterDiscounts;
+      const S  = targetTotal;
 
       // 👉 show the final-amount formula in SLT column (e.g., 200,000 / 500,000 × 400,000)
-      sltLoanText = sltFormulaHTML(Ai, L, L - S);
+      sltLoanText = sltFormulaHTML(Ai, L, S);
 
       finalAmount = Math.max(0, Fi);
     }
