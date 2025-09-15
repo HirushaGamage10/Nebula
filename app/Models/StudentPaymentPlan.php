@@ -17,6 +17,7 @@ class StudentPaymentPlan extends Model
         'slt_loan_amount',
         'total_amount',
         'final_amount',
+        'remaining_registration_discount',
         'status',
     ];
 
@@ -24,6 +25,7 @@ class StudentPaymentPlan extends Model
         'slt_loan_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
         'final_amount' => 'decimal:2',
+        'remaining_registration_discount' => 'decimal:2',
     ];
 
     // Relationships

@@ -26,7 +26,10 @@ class PaymentInstallment extends Model
 
         'approved_late_fee',
         'calculated_late_fee',
-        'approval_history',   
+        'approval_history',
+        
+        'registration_fee_discount_applied',
+        'registration_fee_discount_note',
 
     ];
 
@@ -43,7 +46,9 @@ class PaymentInstallment extends Model
         'approved_late_fee'  => 'float',
         'calculated_late_fee'=> 'float',
 
-        'approval_history'    => 'array', 
+        'approval_history'    => 'array',
+        
+        'registration_fee_discount_applied' => 'decimal:2',
 
     ];
 
