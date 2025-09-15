@@ -1082,6 +1082,8 @@ public function generatePaymentSlip(Request $request)
             'due_date'           => 'nullable|date',
             'conversion_rate'    => 'nullable|numeric|min:0',
             'currency_from'      => 'nullable|string',
+            'sscl_tax_amount'    => 'nullable|numeric|min:0',  
+            'bank_charges'       => 'nullable|numeric|min:0',   
             'remarks'            => 'nullable|string',
         ]);
 
@@ -1152,15 +1154,18 @@ public function generatePaymentSlip(Request $request)
 
                 if ($paymentPlan) {
                     // Use frontend values if provided, otherwise fall back to payment plan values
-                    $ssclTaxAmount = $request->sscl_tax ?? 0; // Use frontend value
-                    $bankCharges = $request->bank_charges ?? 0; // Use frontend value
+                    $ssclTaxAmount = (float) ($request->sscl_tax_amount ?? 0); // Use frontend value
+                    $bankCharges = (float) ($request->bank_charges ?? 0); // Use frontend value
                 }
+            } else {
+                // 🔹 SSCL & Bank Charges come from frontend (manual entry) when no payment plan
+                $ssclTaxAmount = (float) ($request->sscl_tax_amount ?? 0);
+                $bankCharges = (float) ($request->bank_charges ?? 0);
             }
 
             // 🔹 Remaining amount = franchise fee + SSCL tax + bank charges
             $remainingAmount = $franchiseFee + $ssclTaxAmount + $bankCharges;
 
-            // Optional: merge into request for storing in PaymentDetail
             $request->merge([
                 'sscl_tax_amount' => $ssclTaxAmount,
                 'bank_charges'    => $bankCharges,
@@ -1170,9 +1175,6 @@ public function generatePaymentSlip(Request $request)
 
 
 
-
-
-        
 
         // 🔹 Breakdown by payment type
         $courseFee       = $paymentType === 'course_fee'       ? $amount : 0;
@@ -1316,6 +1318,7 @@ public function generatePaymentSlip(Request $request)
             $totalFee = $courseFee + $franchiseFee + $registrationFee + $lateFee - $approvedLateFee;
         }
 
+
         // --- Prevent duplicate pending slips ---
 $existingPayment = \App\Models\PaymentDetail::where('student_id', $student->student_id)
     ->where('course_registration_id', $registration->id)
@@ -1389,9 +1392,12 @@ if ($existingPayment) {
             'late_fee'          => $lateFee,
             'approved_late_fee' => $approvedLateFee,
             'total_fee'         => $totalFee,
-            'remaining_amount'  => $paymentType === 'franchise_fee' ? $remainingAmount : (float) $totalFee,
-            'sscl_tax_amount'   => $paymentType === 'franchise_fee' ? $ssclTaxAmount : 0,
-            'bank_charges'      => $paymentType === 'franchise_fee' ? $bankCharges : 0,
+            'sscl_tax_amount'   => $ssclTaxAmount,
+            'bank_charges'      => $bankCharges,
+            'remaining_amount'  => $paymentType === 'franchise_fee'
+                                    ? $remainingAmount
+                                    : (float) $totalFee,
+
             'partial_payments'  => json_encode([]), // ensures proper JSON
             'foreign_currency_code'  => $foreignCurrency,
             'foreign_currency_amount'=> $foreignAmount,
@@ -1468,6 +1474,8 @@ private function buildSlipArray(\App\Models\PaymentDetail $payment, $student, $c
         'lkr_amount'        => (float) $payment->amount, // For franchise fees, this should be the converted LKR amount
         'generated_at'      => now()->format('Y-m-d H:i:s'),
         'valid_until'       => now()->addDays(7)->format('Y-m-d'),
+        'sscl_tax_amount'   => $payment->sscl_tax_amount,   // 👈 new
+        'bank_charges'      => $payment->bank_charges, 
     ];
 }
 

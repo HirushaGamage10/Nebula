@@ -257,6 +257,70 @@ class TimetableController extends Controller
         return $formattedTime;
     }
 
+    // Check for overlapping timetable conflicts on a given date/time
+    private function checkConflicts($date, $startTime, $endTime, $location = null, $courseId = null, $intakeId = null, $semester = null, $classroom = null, $lecturer = null, $excludeId = null)
+    {
+        $conflicts = [];
+
+        // normalize times to H:i:s
+        $st = \Carbon\Carbon::parse($startTime)->format('H:i:s');
+        $et = \Carbon\Carbon::parse($endTime)->format('H:i:s');
+
+        // base condition: same date and overlapping interval
+        $baseQuery = DB::table('timetable')
+            ->where('date', $date)
+            ->whereRaw('time < ? AND end_time > ?', [$et, $st]);
+
+        if ($excludeId) {
+            $baseQuery->where('id', '<>', $excludeId);
+        }
+
+        // nice readable time for messages (e.g. "07:30 AM")
+        $readableTime = \Carbon\Carbon::createFromFormat('H:i:s', $st)->format('h:i A');
+
+        // 1) same class (course + intake + semester) must not have two overlapping classes
+        if ($courseId && $intakeId && $semester !== null) {
+            $q = (clone $baseQuery);
+            $q = $q->where('course_id', $courseId)
+                   ->where('intake_id', $intakeId)
+                   ->where('semester', $semester);
+            if ($q->exists()) {
+                $conflicts[] = "This class already addede in {$readableTime}";
+            }
+        }
+
+        // 2) lecturer + classroom combined check (preferred message)
+        $combinedHandled = false;
+        if (!empty($lecturer) && !empty($classroom)) {
+            $q = (clone $baseQuery);
+            $q = $q->where('lecturer', $lecturer)
+                   ->where('classroom', $classroom);
+            if ($q->exists()) {
+                $conflicts[] = "{$lecturer} and {$classroom} in same in {$readableTime} already addede";
+                $combinedHandled = true;
+            }
+        }
+
+        // 3) lecturer alone
+        if (!$combinedHandled && !empty($lecturer)) {
+            $q = (clone $baseQuery);
+            $q = $q->where('lecturer', $lecturer);
+            if ($q->exists()) {
+                $conflicts[] = "{$lecturer} in same in {$readableTime} already addede";
+            }
+        }
+
+        // 4) classroom alone
+        if (!$combinedHandled && !empty($classroom)) {
+            $q = (clone $baseQuery);
+            $q = $q->where('classroom', $classroom);
+            if ($q->exists()) {
+                $conflicts[] = "{$classroom} in same in {$readableTime} already addede";
+            }
+        }
+
+        return $conflicts;
+    }
 
     // Method to get existing timetable data
     public function getExistingTimetable(Request $request)
@@ -866,8 +930,6 @@ class TimetableController extends Controller
     }
     public function assignSubjectToTimeslot(Request $request)
     {
-        \Log::info('assignSubjectToTimeslot payload', $request->all()); // add this line
-
         // Custom validator to accept HH:mm optionally with AM/PM
         $rules = [
             'date' => 'required|date',
@@ -948,6 +1010,24 @@ class TimetableController extends Controller
                     } catch (\Exception $e2) {
                         $end = Carbon::parse($rawEnd);
                     }
+                }
+
+                // Check for conflicts before saving
+                $conflicts = $this->checkConflicts(
+                    $validated['date'],
+                    $start->format('H:i:s'),
+                    $end->format('H:i:s'),
+                    $validated['location'],
+                    $validated['course_id'],
+                    $validated['intake_id'],
+                    $semesterValue,
+                    $validated['classrooms'][$index] ?? null,
+                    $validated['lecturers'][$index] ?? null
+                );
+                if (!empty($conflicts)) {
+                    \DB::rollBack();
+                    $msg = is_array($conflicts) && count($conflicts) ? $conflicts[0] : 'Conflict detected';
+                    return response()->json(['success' => false, 'message' => $msg], 422);
                 }
 
                 $assignment = new \App\Models\Timetable();
@@ -1039,8 +1119,31 @@ class TimetableController extends Controller
                 $endRaw = $endTimes[$i] ?? null;
                 $duration = intval($durations[$i] ?? 0);
 
-                $start = $startRaw ? Carbon::parse($startRaw)->format('H:i:s') : null;
-                $end = $endRaw ? Carbon::parse($endRaw)->format('H:i:s') : null;
+                $start = $startRaw ? Carbon::parse($startRaw) : null;
+                $end = $endRaw ? Carbon::parse($endRaw) : null;
+
+                // conflict check
+                if ($start && $end) {
+                    $conflicts = $this->checkConflicts(
+                        $date,
+                        $start->format('H:i:s'),
+                        $end->format('H:i:s'),
+                        $request->input('location'),
+                        $request->input('course_id'),
+                        $request->input('intake_id'),
+                        $semesterValue,
+                        $request->input('classrooms')[$i] ?? null,
+                        $request->input('lecturers')[$i] ?? null
+                    );
+                    if (!empty($conflicts)) {
+                        \DB::rollBack();
+                        $msg = is_array($conflicts) && count($conflicts) ? $conflicts[0] : 'Conflict detected';
+                        return response()->json(['success' => false, 'message' => $msg], 422);
+                    }
+                }
+
+                $start = $start ? $start->format('H:i:s') : null;
+                $end = $end ? $end->format('H:i:s') : null;
 
                 $row = Timetable::create([
                     'location'   => $request->input('location'),
