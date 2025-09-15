@@ -538,19 +538,6 @@
                                     <small class="form-text text-muted">Enter the current exchange rate to convert franchise fees to LKR</small>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Payment Details Table -->
-                        <div class="mt-4" id="paymentDetailsSection" style="display:none;">
-                            <h4 class="text-center mb-3">Payment Details</h4>
-                            <div id="conversionRateWarning" class="alert alert-warning" style="display: none;">
-                                <i class="ti ti-alert-triangle me-2"></i>
-                                <strong>Note:</strong> Please enter a currency conversion rate above to see LKR amounts for franchise fee payments.
-                            </div>
-                            <div id="conversionRateInfo" class="alert alert-info" style="display: none;">
-                                <i class="ti ti-info-circle me-2"></i>
-                                <strong>Conversion Rate:</strong> <span id="currentConversionRate">320</span> LKR per <span id="currentCurrency">USD</span>
-                            </div>
                             <!-- SSCL & Bank Charges (only for Franchise Fee) -->
                             <div id="franchiseChargesRow" style="display:none; margin-top:20px;">
                                 <div class="row mb-3 align-items-center">
@@ -566,6 +553,20 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Payment Details Table -->
+                        <div class="mt-4" id="paymentDetailsSection" style="display:none;">
+                            <h4 class="text-center mb-3">Payment Details</h4>
+                            <div id="conversionRateWarning" class="alert alert-warning" style="display: none;">
+                                <i class="ti ti-alert-triangle me-2"></i>
+                                <strong>Note:</strong> Please enter a currency conversion rate above to see LKR amounts for franchise fee payments.
+                            </div>
+                            <div id="conversionRateInfo" class="alert alert-info" style="display: none;">
+                                <i class="ti ti-info-circle me-2"></i>
+                                <strong>Conversion Rate:</strong> <span id="currentConversionRate">320</span> LKR per <span id="currentCurrency">USD</span>
+                            </div>
+                            
                             <div class="table-responsive">
                                 <table class="table table-bordered table-hover" id="paymentDetailsTable">
                                     <thead class="table-light">
