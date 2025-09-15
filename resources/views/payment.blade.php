@@ -611,7 +611,15 @@
                                         <div class="col-md-6">
                                             <h5>Payment Information</h5>
                                             <p><strong>Payment Type:</strong> <span id="slip-payment-type-display"></span></p>
-                                            <p><strong>Amount:</strong> <span id="slip-amount-display"></span></p>
+                                            <p><strong>Installment Amount:</strong> <span id="slip-amount-display"></span></p>
+
+                                            <div id="franchiseAmountsSection" style="display:none;">
+                                                <p><strong>SSCL Tax:</strong> <span id="slip-sscl-amount"></span></p>
+                                                <p><strong>Bank Charges:</strong> <span id="slip-bank-amount"></span></p>
+                                                <p><strong>Total Amount:</strong> <span id="slip-final-amount"></span></p>
+                                            </div>
+
+
                                             <p><strong>Installment #:</strong> <span id="slip-installment-display"></span></p>
                                             <p><strong>Due Date:</strong> <span id="slip-due-date-display"></span></p>
                                             <p><strong>Date:</strong> <span id="slip-date-display"></span></p>
@@ -619,18 +627,17 @@
                                         </div>
                                     </div>
                                     <div class="text-center mt-3">
-    <button type="button" class="btn btn-success me-2" onclick="printPaymentSlip()">
-        <i class="ti ti-printer me-2"></i>Print Slip
-    </button>
-    <button type="button" class="btn btn-info me-2" onclick="downloadPaymentSlip()">
-        <i class="ti ti-download me-2"></i>Download PDF
-    </button>
+                                        <button type="button" class="btn btn-success me-2" onclick="printPaymentSlip()">
+                                            <i class="ti ti-printer me-2"></i>Print Slip
+                                        </button>
+                                        <button type="button" class="btn btn-info me-2" onclick="downloadPaymentSlip()">
+                                            <i class="ti ti-download me-2"></i>Download PDF
+                                        </button>
 
-    <button type="button" class="btn btn-danger btn-sm" id="delete-slip-btn" style="display:none;">
-        <i class="ti ti-trash me-2"></i>Delete Slip
-    </button>
-</div>
-
+                                        <button type="button" class="btn btn-danger btn-sm" id="delete-slip-btn" style="display:none;">
+                                            <i class="ti ti-trash me-2"></i>Delete Slip
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2457,15 +2464,15 @@ async function generatePaymentSlip() {
     const s = data.slip_data;
 
     // ===== Delete button setup =====
-const deleteBtn = document.getElementById('delete-slip-btn');
-if (s && s.id) {
-  deleteBtn.style.display = "inline-block"; // show the button
-  deleteBtn.onclick = function () {
-    deleteSlip(s.id);
-  };
-} else {
-  deleteBtn.style.display = "none"; // hide if no slip id
-}
+    const deleteBtn = document.getElementById('delete-slip-btn');
+    if (s && s.id) {
+    deleteBtn.style.display = "inline-block"; // show the button
+    deleteBtn.onclick = function () {
+        deleteSlip(s.id);
+    };
+    } else {
+    deleteBtn.style.display = "none"; // hide if no slip id
+    }
 
 
     // ===== On-page preview =====
@@ -2474,7 +2481,22 @@ if (s && s.id) {
     setText('slip-course-display',       s.course_name);
     setText('slip-intake-display',       s.intake);
 
+    setText('slip-intallment-type',       s.intallment_type);
+    
     setText('slip-payment-type-display', s.payment_type_display || s.payment_type);
+
+    if (paymentType === 'franchise_fee') {
+        document.getElementById('franchiseAmountsSection').style.display = 'block';
+
+        setText('slip-sscl-amount', `LKR ${Number(s.sscl_tax_amount || 0).toLocaleString()}`);
+        setText('slip-bank-amount', `LKR ${Number(s.bank_charges || 0).toLocaleString()}`);
+        setText('slip-final-amount', `LKR ${Number(s.total_fee || 0).toLocaleString()}`);
+    } else {
+        document.getElementById('franchiseAmountsSection').style.display = 'none';
+    }
+
+
+
     setText('slip-installment-display',  installmentNo ?? '-');
     setText('slip-due-date-display',     dueDate ? new Date(dueDate).toLocaleDateString() : '-');
     setText('slip-date-display',         s.payment_date || '');
