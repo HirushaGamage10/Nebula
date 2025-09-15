@@ -1134,34 +1134,10 @@ public function generatePaymentSlip(Request $request)
             }
 
             $franchiseFee = $amount; // base franchise fee in LKR
-            
-            // Initialize SSCL tax and bank charges
-            $ssclTaxAmount = 0;
-            $bankCharges = 0;
 
-            // 🔹 Get student payment plan
-            $studentPlan = \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
-                ->where('course_id', $request->course_id)
-                ->where('status', 'active')
-                ->first();
-
-            if ($studentPlan) {
-                // 🔹 Use the $registration fetched at the top of your function
-                $paymentPlan = \App\Models\PaymentPlan::where('id', $studentPlan->payment_plan_id)
-                    ->where('course_id', $request->course_id)
-                    ->where('intake_id', $registration->intake_id)
-                    ->first();
-
-                if ($paymentPlan) {
-                    // Use frontend values if provided, otherwise fall back to payment plan values
-                    $ssclTaxAmount = (float) ($request->sscl_tax_amount ?? 0); // Use frontend value
-                    $bankCharges = (float) ($request->bank_charges ?? 0); // Use frontend value
-                }
-            } else {
-                // 🔹 SSCL & Bank Charges come from frontend (manual entry) when no payment plan
-                $ssclTaxAmount = (float) ($request->sscl_tax_amount ?? 0);
-                $bankCharges = (float) ($request->bank_charges ?? 0);
-            }
+            // 🔹 SSCL & Bank Charges come from frontend (manual entry)
+            $ssclTaxAmount = (float) ($request->sscl_tax_amount ?? 0);
+            $bankCharges   = (float) ($request->bank_charges ?? 0);
 
             // 🔹 Remaining amount = franchise fee + SSCL tax + bank charges
             $remainingAmount = $franchiseFee + $ssclTaxAmount + $bankCharges;
@@ -1310,12 +1286,11 @@ public function generatePaymentSlip(Request $request)
             }
         }
 
-        // 🔹 Total Fee = base fee + late fee - approved late fee
-        // For franchise fees, include SSCL tax and bank charges
+        $totalFee = $courseFee + $franchiseFee + $registrationFee + $lateFee - $approvedLateFee;
+
+        // add SSCL & Bank charges for franchise payments
         if ($paymentType === 'franchise_fee') {
-            $totalFee = $courseFee + $franchiseFee + $registrationFee + $lateFee - $approvedLateFee + $ssclTaxAmount + $bankCharges;
-        } else {
-            $totalFee = $courseFee + $franchiseFee + $registrationFee + $lateFee - $approvedLateFee;
+            $totalFee += $ssclTaxAmount + $bankCharges;
         }
 
 
@@ -1467,11 +1442,7 @@ private function buildSlipArray(\App\Models\PaymentDetail $payment, $student, $c
         'remaining_amount'  => (float) $payment->remaining_amount,
         'partial_payments'  => $partials,   // ✅ Always an array
         'foreign_currency_code'   => $payment->foreign_currency_code,     
-        'foreign_currency_amount' => (float) $payment->foreign_currency_amount,
-        'sscl_tax_amount'   => (float) $payment->sscl_tax_amount,
-        'bank_charges'      => (float) $payment->bank_charges,
-        'base_amount'       => (float) $payment->amount,
-        'lkr_amount'        => (float) $payment->amount, // For franchise fees, this should be the converted LKR amount
+        'foreign_currency_amount' => (float) $payment->foreign_currency_amount, 
         'generated_at'      => now()->format('Y-m-d H:i:s'),
         'valid_until'       => now()->addDays(7)->format('Y-m-d'),
         'sscl_tax_amount'   => $payment->sscl_tax_amount,   // 👈 new
@@ -1571,10 +1542,7 @@ public function recordPartialPayment(Request $request, $id)
             'receipt_no' => 'required|string',
         ]);
 
-        // Clear any cached session data to ensure we get fresh data
-        session()->forget('generated_slip_' . $request->receipt_no);
-        
-        // Try session first (should be empty now, so will fall through to DB)
+        // Try session first
         $slipData = session('generated_slip_' . $request->receipt_no);
 
         if (!$slipData) {
@@ -2312,15 +2280,6 @@ private function buildSlipDataFromPaymentDetail(\App\Models\PaymentDetail $payme
         'course_fee'             => $courseFee,
         'franchise_fee'          => $franchiseFee,
         'registration_fee'       => $registrationFee,
-
-        // Fee calculations
-        'late_fee'               => (float) ($payment->late_fee ?? 0),
-        'approved_late_fee'      => (float) ($payment->approved_late_fee ?? 0),
-        'total_fee'              => (float) ($payment->total_fee ?? 0),
-        'sscl_tax_amount'        => (float) ($payment->sscl_tax_amount ?? 0),
-        'bank_charges'           => (float) ($payment->bank_charges ?? 0),
-        'base_amount'            => (float) $payment->amount,
-        'remaining_amount'       => (float) ($payment->remaining_amount ?? 0),
 
         'generated_at'           => optional($payment->created_at)->format('Y-m-d H:i:s'),
         'valid_until'            => optional($payment->created_at)->copy()->addDays(7)->format('Y-m-d'),
