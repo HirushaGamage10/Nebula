@@ -496,7 +496,7 @@
                             <div class="row mb-3 align-items-center">
                                 <label class="col-sm-2 col-form-label fw-bold">Student ID <span class="text-danger">*</span></label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" id="slip-student-id" placeholder="Enter Student ID / NIC" required onchange="checkStudentAndCourse()">
+                                    <input type="text" class="form-control" id="slip-student-id" placeholder="Enter Student ID / NIC" required onchange="loadCoursesForStudentSlip(); checkStudentAndCourse()">
                                 </div>
                             </div>
                             <div class="row mb-3 align-items-center">
@@ -536,6 +536,26 @@
                                         <span class="input-group-text">LKR</span>
                                     </div>
                                     <small class="form-text text-muted">Enter the current exchange rate to convert franchise fees to LKR</small>
+                                </div>
+                            </div>
+                            <div class="row mb-3 align-items-center" id="ssclTaxRow" style="display: none;">
+                                <label class="col-sm-2 col-form-label fw-bold">SSCL Tax <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="sscl-tax" placeholder="Enter SSCL tax amount" step="0.01" min="0" value="0" oninput="recalculateLKRAmounts()">
+                                        <span class="input-group-text">LKR</span>
+                                    </div>
+                                    <small class="form-text text-muted">Enter the SSCL tax amount to be added to each franchise fee installment</small>
+                                </div>
+                            </div>
+                            <div class="row mb-3 align-items-center" id="bankChargesRow" style="display: none;">
+                                <label class="col-sm-2 col-form-label fw-bold">Bank Charges (Per Installment) <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="bank-charges" placeholder="Enter bank charges per installment" step="0.01" min="0" value="0" oninput="recalculateLKRAmounts()">
+                                        <span class="input-group-text">LKR</span>
+                                    </div>
+                                    <small class="form-text text-muted">Enter the bank charges amount to be added to each franchise fee installment</small>
                                 </div>
                             </div>
                         </div>
@@ -685,6 +705,10 @@
                                             <tr>
                                                 <td style="border: 1px solid #ddd; padding: 10px;">Registration Fee</td>
                                                 <td style="border: 1px solid #ddd; padding: 10px; text-align: right;" id="print-registration-fee">0.00</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="border: 1px solid #ddd; padding: 10px;">Late Fee</td>
+                                                <td style="border: 1px solid #ddd; padding: 10px; text-align: right;" id="print-late-fee">0.00</td>
                                             </tr>
                                             <tr style="background-color: #f8f9fa; font-weight: bold;">
                                                 <td style="border: 1px solid #ddd; padding: 10px;">Total Amount</td>
@@ -1287,8 +1311,11 @@ function loadCoursesForStudent() {
     
     if (!studentNic) {
         // Reset course dropdown to show all courses
-        document.getElementById('plan-course').innerHTML = '<option selected disabled value="">Select a Course</option>' + 
-            '@foreach($courses as $course)<option value="{{ $course->course_id }}">{{ $course->course_name }}</option>@endforeach';
+        const courseSelect = document.getElementById('plan-course');
+        courseSelect.innerHTML = '<option selected disabled value="">Select a Course</option>';
+        @foreach($courses as $course)
+            courseSelect.innerHTML += '<option value="{{ $course->course_id }}">{{ $course->course_name }}</option>';
+        @endforeach
         return;
     }
 
@@ -1318,15 +1345,21 @@ function loadCoursesForStudent() {
         } else {
             showErrorMessage(data.message || 'Failed to load courses for student.');
             // Reset to all courses on error
-            document.getElementById('plan-course').innerHTML = '<option selected disabled value="">Select a Course</option>' + 
-                '@foreach($courses as $course)<option value="{{ $course->course_id }}">{{ $course->course_name }}</option>@endforeach';
+            const courseSelect = document.getElementById('plan-course');
+            courseSelect.innerHTML = '<option selected disabled value="">Select a Course</option>';
+            @foreach($courses as $course)
+                courseSelect.innerHTML += '<option value="{{ $course->course_id }}">{{ $course->course_name }}</option>';
+            @endforeach
         }
     })
     .catch(() => {
         showErrorMessage('An error occurred while loading courses.');
         // Reset to all courses on error
-        document.getElementById('plan-course').innerHTML = '<option selected disabled value="">Select a Course</option>' + 
-            '@foreach($courses as $course)<option value="{{ $course->course_id }}">{{ $course->course_name }}</option>@endforeach';
+        const courseSelect = document.getElementById('plan-course');
+        courseSelect.innerHTML = '<option selected disabled value="">Select a Course</option>';
+        @foreach($courses as $course)
+            courseSelect.innerHTML += '<option value="{{ $course->course_id }}">{{ $course->course_name }}</option>';
+        @endforeach
     })
     .finally(() => showSpinner(false));
 }
@@ -2383,16 +2416,44 @@ async function generatePaymentSlip() {
   if (!paymentType)return showErrorMessage('Please select a payment type.');
   if (!courseId)   return showErrorMessage('Please select a course.');
 
-  // Payable amount we rendered (backend will recompute/validate anyway)
+  // Get the final amount and late fee from the selected row in the table
   const rawAmount     = Number(row.amount || 0);
   const installmentNo = row.installment_number ?? null;
   const dueDate       = row.due_date ?? null;
+  
+  // Get the final LKR amount and late fee from the actual table row DOM elements
+  const selectedRow = selected.closest('tr');
+  
+  // Column positions depend on whether it's franchise fee (shows LKR column) or not
+  let lkrAmountCell, lateFeeCell;
+  if (paymentType === 'franchise_fee') {
+    // For franchise fee: Select(1), Installment(2), Due Date(3), Amount(4), Amount LKR(5), Late Fee(6), Status(7)
+    lkrAmountCell = selectedRow?.querySelector('td:nth-child(5)'); // Amount (LKR) column
+    lateFeeCell = selectedRow?.querySelector('td:nth-child(6)'); // Late Fee column
+  } else {
+    // For other payment types: Select(1), Installment(2), Due Date(3), Amount(4), Late Fee(5), Status(6)
+    lkrAmountCell = selectedRow?.querySelector('td:nth-child(4)'); // Amount column (no LKR column)
+    lateFeeCell = selectedRow?.querySelector('td:nth-child(5)'); // Late Fee column
+  }
+  
+  const finalLkrAmount = lkrAmountCell ? parseFloat(lkrAmountCell.textContent.replace(/[^\d.-]/g, '')) || 0 : 0;
+  const lateFeeAmount = lateFeeCell ? parseFloat(lateFeeCell.textContent.replace(/[^\d.-]/g, '')) || 0 : 0;
+  
+  // Debug logging
+  console.log('Payment Type:', paymentType);
+  console.log('LKR Amount Cell:', lkrAmountCell?.textContent);
+  console.log('Late Fee Cell:', lateFeeCell?.textContent);
+  console.log('Final LKR Amount:', finalLkrAmount);
+  console.log('Late Fee Amount:', lateFeeAmount);
 
-  // FX inputs (only franchise)
-  let conversionRate = null, currencyFrom = null;
+  // FX inputs and additional charges (only franchise)
+  let conversionRate = null, currencyFrom = null, ssclTax = null, bankCharges = null;
   if (paymentType === 'franchise_fee') {
     conversionRate = Number(document.getElementById('currency-conversion-rate').value);
     currencyFrom   = document.getElementById('currency-from').value;
+    ssclTax        = Number(document.getElementById('sscl-tax').value) || 0;
+    bankCharges    = Number(document.getElementById('bank-charges').value) || 0;
+    
     if (!conversionRate || conversionRate <= 0) {
       showErrorMessage('Please enter a valid currency conversion rate for franchise fee.');
       return;
@@ -2410,6 +2471,8 @@ async function generatePaymentSlip() {
     due_date:           dueDate,
     conversion_rate:    conversionRate, // null when not franchise
     currency_from:      currencyFrom,   // null when not franchise
+    sscl_tax:           ssclTax,        // null when not franchise
+    bank_charges:       bankCharges,    // null when not franchise
     remarks:            ''
   };
 
@@ -2430,9 +2493,38 @@ async function generatePaymentSlip() {
 
     if (!data.success) throw new Error(data.message || 'Failed to generate payment slip.');
 
-    // Cache for print/download
+    // Cache for print/download and update with final calculated amounts
     window.currentSlipData = data.slip_data;
     const s = data.slip_data;
+    
+    // Update the slip data with final amounts from the table
+    if (paymentType === 'franchise_fee') {
+      // Use the final LKR amount from the table (already includes SSCL tax and bank charges)
+      s.lkr_amount = finalLkrAmount;
+      s.final_amount = finalLkrAmount;
+      s.amount = finalLkrAmount; // Also update the main amount field
+      s.sscl_tax = ssclTax;
+      s.bank_charges = bankCharges;
+      // Update total_fee to include late fee
+      s.total_fee = finalLkrAmount + lateFeeAmount;
+    } else {
+      // For non-franchise fees, use the amount from the row
+      s.final_amount = Number(s.amount || 0);
+      // Update total_fee to include late fee
+      s.total_fee = Number(s.amount || 0) + lateFeeAmount;
+    }
+    
+    // Always update late fee from the table
+    s.late_fee = lateFeeAmount;
+    s.final_amount_with_late_fee = (paymentType === 'franchise_fee' ? finalLkrAmount : Number(s.amount || 0)) + lateFeeAmount;
+    
+    // Debug: Log the updated slip data
+    console.log('Updated Slip Data:');
+    console.log('s.amount:', s.amount);
+    console.log('s.lkr_amount:', s.lkr_amount);
+    console.log('s.final_amount:', s.final_amount);
+    console.log('s.late_fee:', s.late_fee);
+    console.log('s.final_amount_with_late_fee:', s.final_amount_with_late_fee);
 
     // ===== Delete button setup =====
 const deleteBtn = document.getElementById('delete-slip-btn');
@@ -2458,14 +2550,24 @@ if (s && s.id) {
     setText('slip-date-display',         s.payment_date || '');
     setText('slip-receipt-no-display',   s.receipt_no || '');
 
-    // Amount text (FX + LKR for franchise; LKR for others)
+    // Amount text (FX + LKR for franchise; LKR for others) - including late fee
     let amountDisplay;
     if (paymentType === 'franchise_fee' && s.franchise_fee_currency) {
-      const fx  = Number(s.amount || 0);
-      const lkr = Number(s.lkr_amount || (fx * (conversionRate || 0)));
-      amountDisplay = `${s.franchise_fee_currency} ${fx.toLocaleString()} (LKR ${lkr.toLocaleString()})`;
+      // Use the original FX amount from the row data, not the slip data
+      const fx = Number(row.amount || 0);
+      // Use the final LKR amount we extracted from the table
+      const totalWithLateFee = finalLkrAmount + lateFeeAmount;
+      amountDisplay = `${s.franchise_fee_currency} ${fx.toLocaleString()} (LKR ${totalWithLateFee.toLocaleString()})`;
+      
+      // Debug logging
+      console.log('Franchise Fee Debug:');
+      console.log('FX Amount from row:', fx);
+      console.log('Final LKR Amount from table:', finalLkrAmount);
+      console.log('Late Fee Amount from table:', lateFeeAmount);
+      console.log('Total with Late Fee:', totalWithLateFee);
     } else {
-      amountDisplay = `LKR ${Number(s.amount || 0).toLocaleString()}`;
+      const totalWithLateFee = Number(s.amount || 0) + lateFeeAmount;
+      amountDisplay = `LKR ${totalWithLateFee.toLocaleString()}`;
     }
     setText('slip-amount-display', amountDisplay);
 
@@ -2493,15 +2595,28 @@ if (s && s.id) {
     setText('print-receipt-no', s.receipt_no);
     setText('print-valid-until', s.valid_until ? new Date(s.valid_until).toLocaleDateString() : 'N/A');
 
-    // Breakdown rows (as returned by backend)
+    // Breakdown rows (use table values for franchise fee, backend values for others)
     setText('print-course-fee',       Number(s.course_fee || 0).toLocaleString());
-    setText('print-franchise-fee',    Number(s.franchise_fee || 0).toLocaleString());
+    if (paymentType === 'franchise_fee') {
+      setText('print-franchise-fee', finalLkrAmount.toLocaleString());
+    } else {
+      setText('print-franchise-fee', Number(s.franchise_fee || 0).toLocaleString());
+    }
     setText('print-registration-fee', Number(s.registration_fee || 0).toLocaleString());
+    setText('print-late-fee', lateFeeAmount.toLocaleString());
+    
+    // Debug logging for print template
+    console.log('Print Template Debug:');
+    console.log('paymentType:', paymentType);
+    console.log('finalLkrAmount:', finalLkrAmount);
+    console.log('lateFeeAmount:', lateFeeAmount);
+    console.log('totalForPrint:', finalLkrAmount + lateFeeAmount);
 
-    // Total on slip (LKR if franchise with FX)
-    const totalForPrint = (paymentType === 'franchise_fee')
-      ? Number(s.lkr_amount || 0)
-      : Number(s.amount || 0);
+    // Total on slip (LKR if franchise with FX, including SSCL tax, bank charges, and late fee)
+    // Use the updated total_fee from the slip data
+    const totalForPrint = s.total_fee || ((paymentType === 'franchise_fee')
+      ? finalLkrAmount + lateFeeAmount
+      : Number(s.amount || 0) + lateFeeAmount);
     setText('print-total-amount', totalForPrint.toLocaleString());
 
     setText('print-generated-date', new Date().toLocaleString());
@@ -2546,12 +2661,26 @@ function printPaymentSlip() {
   setText('print-valid-until', s.valid_until ? new Date(s.valid_until).toLocaleDateString() : 'N/A');
 
   setText('print-course-fee',       Number(s.course_fee || 0).toLocaleString() + '.00');
-  setText('print-franchise-fee',    Number(s.franchise_fee || 0).toLocaleString() + '.00');
+  if (s.payment_type === 'franchise_fee') {
+    setText('print-franchise-fee', Number(s.final_amount || s.lkr_amount || 0).toLocaleString() + '.00');
+  } else {
+    setText('print-franchise-fee', Number(s.franchise_fee || 0).toLocaleString() + '.00');
+  }
   setText('print-registration-fee', Number(s.registration_fee || 0).toLocaleString() + '.00');
+  setText('print-late-fee', Number(s.late_fee || 0).toLocaleString() + '.00');
 
+  // Use the final amount from slip data (already includes SSCL tax, bank charges, and late fee)
   const totalForPrint = (s.payment_type === 'franchise_fee')
-    ? Number(s.lkr_amount || 0)
-    : Number(s.amount || 0);
+    ? Number(s.final_amount_with_late_fee || s.final_amount || s.lkr_amount || 0)
+    : Number(s.amount || 0) + Number(s.late_fee || 0);
+    
+  // Debug logging for print function
+  console.log('Print Function Debug:');
+  console.log('s.final_amount_with_late_fee:', s.final_amount_with_late_fee);
+  console.log('s.final_amount:', s.final_amount);
+  console.log('s.lkr_amount:', s.lkr_amount);
+  console.log('s.late_fee:', s.late_fee);
+  console.log('totalForPrint:', totalForPrint);
   setText('print-total-amount', totalForPrint.toLocaleString() + '.00');
 
   // Show print template and print
@@ -3117,7 +3246,7 @@ document.addEventListener('DOMContentLoaded', function() {
         statusIndicator.style.display = 'block';
     }
     
-    // Add event listener for NIC field to filter courses
+    // Add event listener for NIC field to filter courses in payment plans tab
     const studentNicField = document.getElementById('plan-student-nic');
     if (studentNicField) {
         studentNicField.addEventListener('input', function() {
@@ -3129,6 +3258,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 clearTimeout(this.timeout);
                 this.timeout = setTimeout(() => {
                     loadCoursesForStudent();
+                }, 1000); // 1 second delay after complete NIC
+            }
+        });
+    }
+    
+    // Add event listener for NIC field to filter courses in slip tab
+    const slipStudentIdField = document.getElementById('slip-student-id');
+    if (slipStudentIdField) {
+        slipStudentIdField.addEventListener('input', function() {
+            const nicValue = this.value.trim();
+            
+            // Wait for complete NIC number (assuming NIC is 10-12 characters)
+            if (nicValue.length >= 10) {
+                // Add a small delay to avoid too many API calls while typing
+                clearTimeout(this.timeout);
+                this.timeout = setTimeout(() => {
+                    loadCoursesForStudentSlip();
                 }, 1000); // 1 second delay after complete NIC
             }
         });
@@ -3320,6 +3466,53 @@ function checkStudentAndCourse() {
     }
 }
 
+// Load courses for student in slip tab based on NIC
+function loadCoursesForStudentSlip() {
+    const studentNic = document.getElementById('slip-student-id').value;
+    const courseSelect = document.getElementById('slip-course');
+    
+    if (!studentNic) {
+        // Reset course dropdown to show all courses
+        courseSelect.innerHTML = '<option selected disabled value="">Select Course</option>';
+        @if(isset($courses))
+            @foreach($courses as $course)
+                courseSelect.innerHTML += '<option value="{{ $course->course_id }}">{{ $course->course_name }}</option>';
+            @endforeach
+        @endif
+        return;
+    }
+
+    // Make API call to get courses for the student
+    fetch('/payment/get-student-courses', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        body: JSON.stringify({
+            student_nic: studentNic
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.courses) {
+            courseSelect.innerHTML = '<option selected disabled value="">Select Course</option>';
+            data.courses.forEach(course => {
+                const option = document.createElement('option');
+                option.value = course.course_id;
+                option.textContent = `${course.course_name} (Registered: ${course.registration_date})`;
+                courseSelect.appendChild(option);
+            });
+            courseSelect.disabled = false;
+        } else {
+            courseSelect.innerHTML = '<option selected disabled value="">No courses found for this student</option>';
+            courseSelect.disabled = true;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading courses for student:', error);
+        courseSelect.innerHTML = '<option selected disabled value="">Error loading courses</option>';
+        courseSelect.disabled = true;
+    });
+}
+
 async function loadPaymentDetails() {
   const studentIdOrNic = document.getElementById('slip-student-id').value?.trim();
   const courseId       = parseInt(document.getElementById('slip-course').value || '0', 10);
@@ -3341,12 +3534,19 @@ async function loadPaymentDetails() {
     return;
   }
 
-  // Show/hide conversion row only for franchise_fee
+  // Show/hide conversion row and additional fields only for franchise_fee
+  const ssclTaxRow = document.getElementById('ssclTaxRow');
+  const bankChargesRow = document.getElementById('bankChargesRow');
+  
   if (paymentType === 'franchise_fee') {
       conversionRow.style.display = 'flex';
+      ssclTaxRow.style.display = 'flex';
+      bankChargesRow.style.display = 'flex';
       currencySelect.disabled = false;
   } else {
       conversionRow.style.display = 'none';
+      ssclTaxRow.style.display = 'none';
+      bankChargesRow.style.display = 'none';
       currencySelect.disabled = true;
   }
 
@@ -3508,6 +3708,8 @@ function recalculateLKRAmounts() {
     // Update the warning and info messages
     const warningDiv = document.getElementById('conversionRateWarning');
     const infoDiv = document.getElementById('conversionRateInfo');
+    const ssclTaxRow = document.getElementById('ssclTaxRow');
+    const bankChargesRow = document.getElementById('bankChargesRow');
     
     if (paymentType === 'franchise_fee') {
         if (conversionRate <= 0) {
@@ -3520,9 +3722,15 @@ function recalculateLKRAmounts() {
             document.getElementById('currentConversionRate').textContent = conversionRate;
             document.getElementById('currentCurrency').textContent = document.getElementById('currency-from').value;
         }
+        // Show additional fields for franchise fee
+        if (ssclTaxRow) ssclTaxRow.style.display = 'flex';
+        if (bankChargesRow) bankChargesRow.style.display = 'flex';
     } else {
         warningDiv.style.display = 'none';
         infoDiv.style.display = 'none';
+        // Hide additional fields for non-franchise fee
+        if (ssclTaxRow) ssclTaxRow.style.display = 'none';
+        if (bankChargesRow) bankChargesRow.style.display = 'none';
     }
     
     // Only recalculate if we have payment data and it's franchise fee
@@ -3845,11 +4053,15 @@ function renderPaymentDetailsTable(rows, paymentType) {
     const disabled = p.status && p.status.toLowerCase() === 'paid' ? 'disabled' : '';
     const amountText = `${p.currency} ${money(p.amount)}`;
 
-    // LKR column for franchise
+    // LKR column for franchise (including SSCL tax and bank charges)
     let lkrCell = '';
     if (showLkr) {
       if (rate && rate > 0) {
-        lkrCell = `<td>LKR ${money(p.amount * rate)}</td>`;
+        const ssclTax = parseFloat(document.getElementById('sscl-tax')?.value || 0);
+        const bankCharges = parseFloat(document.getElementById('bank-charges')?.value || 0);
+        const baseLkrAmount = p.amount * rate;
+        const totalLkrAmount = baseLkrAmount + ssclTax + bankCharges;
+        lkrCell = `<td>LKR ${money(totalLkrAmount)}</td>`;
       } else {
         lkrCell = `<td class="text-muted">—</td>`;
       }
@@ -3911,6 +4123,8 @@ function renderPaymentDetailsTable(rows, paymentType) {
 
 // If user changes FX inputs, recompute the LKR column live
 document.getElementById('currency-conversion-rate')?.addEventListener('input', recalculateLKRAmounts);
+document.getElementById('sscl-tax')?.addEventListener('input', recalculateLKRAmounts);
+document.getElementById('bank-charges')?.addEventListener('input', recalculateLKRAmounts);
 document.getElementById('currency-from')?.addEventListener('change', recalculateLKRAmounts);
 
 function deleteSlip(id) {

@@ -1,4 +1,4 @@
-@php
+<?php
     // Helpers
     $get = fn($key, $default = null) => data_get($slipData ?? [], $key, $default);
     $fmt = function ($n, $dec = 2) {
@@ -74,7 +74,7 @@
         'reference_1',
         trim($courseName) . ' / ' . ($installment ? ($installment . ' Installment') : 'Payment')
     );
-@endphp
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -415,8 +415,8 @@
       <div class="company-name">SLTMOBITEL NEBULA INSTITUTE OF TECHNOLOGY</div>
       <div class="slip-title">TELESHOP PAYMENT SLIP</div>
       <div class="receipt-info">
-        <span>Receipt No: <span class="receipt-number">{{ $receiptNo }}</span></span>
-        <span>Generated: <span class="font-mono">{{ $generatedAt }}</span></span>
+        <span>Receipt No: <span class="receipt-number"><?php echo e($receiptNo); ?></span></span>
+        <span>Generated: <span class="font-mono"><?php echo e($generatedAt); ?></span></span>
       </div>
     </div>
 
@@ -429,19 +429,19 @@
           <div class="teleshop-grid">
             <div class="teleshop-item">
               <span class="teleshop-label">Payment Type:</span>
-              <span class="teleshop-value">{{ $paymentType }}</span>
+              <span class="teleshop-value"><?php echo e($paymentType); ?></span>
             </div>
             <div class="teleshop-item">
               <span class="teleshop-label">Cost Centre:</span>
-              <span class="teleshop-value">{{ $costCentre }}</span>
+              <span class="teleshop-value"><?php echo e($costCentre); ?></span>
             </div>
             <div class="teleshop-item">
               <span class="teleshop-label">Account Code:</span>
-              <span class="teleshop-value">{{ $accountCode }}</span>
+              <span class="teleshop-value"><?php echo e($accountCode); ?></span>
             </div>
             <div class="teleshop-item">
               <span class="teleshop-label">Payment Code:</span>
-              <span class="teleshop-value">{{ $paymentCode }}</span>
+              <span class="teleshop-value"><?php echo e($paymentCode); ?></span>
             </div>
           </div>
         </div>
@@ -454,55 +454,56 @@
           <table class="details-table">
             <!-- <tr>
               <td class="label-cell">Student Number:</td>
-              <td class="value-cell font-mono">{{ $studentId }}</td>
+              <td class="value-cell font-mono"><?php echo e($studentId); ?></td>
             </tr> -->
             <tr>
               <td class="label-cell">Student Name:</td>
-              <td class="value-cell">{{ $studentName }}</td>
+              <td class="value-cell"><?php echo e($studentName); ?></td>
             </tr>
             <tr>
               <td class="label-cell">Reference Number:</td>
-              <td class="value-cell">{{ $intake }} / REF-{{ $studentId }} / INST-{{ $installment !== null ? $installment : 'REG-FEE' }}</td>
+              <td class="value-cell"><?php echo e($intake); ?> / REF-<?php echo e($studentId); ?> / INST-<?php echo e($installment !== null ? $installment : 'REG-FEE'); ?></td>
             </tr>
             <tr>
               <td class="label-cell">Telephone Number:</td>
-              <td class="value-cell">{{ $mobilePhone }}</td>
+              <td class="value-cell"><?php echo e($mobilePhone); ?></td>
             </tr>
             <tr>
               <td class="label-cell">Reference 1:</td>
-              <td class="value-cell">{{ $courseName }}</td>
+              <td class="value-cell"><?php echo e($courseName); ?></td>
             </tr>
             <tr>
               <td class="label-cell">Reference 2:</td>
-              <td class="value-cell">{{ $paymentCode }}</td>
+              <td class="value-cell"><?php echo e($paymentCode); ?></td>
             </tr>
             <!-- <tr>
               <td class="label-cell">Intake:</td>
-              <td class="value-cell font-mono">{{ $intake }}</td>
+              <td class="value-cell font-mono"><?php echo e($intake); ?></td>
             </tr>
             <tr>
               <td class="label-cell">Installment #:</td>
-              <td class="value-cell font-mono">{{ $installment ?? '-' }}</td>
+              <td class="value-cell font-mono"><?php echo e($installment ?? '-'); ?></td>
             </tr> -->
             <tr>
               <td class="label-cell">Due Date:</td>
-              <td class="value-cell font-mono">{{ $dateOr($dueDate) }}</td>
+              <td class="value-cell font-mono"><?php echo e($dateOr($dueDate)); ?></td>
             </tr>
           </table>
           
           <div class="reference-box">
-            {{ $intake }} / REF-{{ $studentId }} / INST-{{ $installment !== null ? $installment : 'REG-FEE' }}
+            <?php echo e($intake); ?> / REF-<?php echo e($studentId); ?> / INST-<?php echo e($installment !== null ? $installment : 'REG-FEE'); ?>
+
           </div>
         </div>
       </div>
-@if(!empty($remarks) && str_contains(strtolower($paymentType), 'registration'))
+<?php if(!empty($remarks) && str_contains(strtolower($paymentType), 'registration')): ?>
 <div class="section">
   <div class="section-header">Remarks</div>
   <div class="section-content">
-    <p class="text-sm text-muted">{{ $remarks }}</p>
+    <p class="text-sm text-muted"><?php echo e($remarks); ?></p>
   </div>
 </div>
-@endif
+<?php endif; ?>
 
 
 
@@ -513,51 +514,51 @@
     <table class="payment-table">
       <tr>
         <td>Course / Installment Fee:</td>
-        <td class="amount">LKR {{ $fmt($baseAmount) }}</td>
+        <td class="amount">LKR <?php echo e($fmt($baseAmount)); ?></td>
       </tr>
       <tr>
         <td>Late Fee:</td>
-        <td class="amount">LKR {{ $fmt($lateFee) }}</td>
+        <td class="amount">LKR <?php echo e($fmt($lateFee)); ?></td>
       </tr>
       <tr>
         <td>Approved Late Fee Discount:</td>
-        <td class="amount">- LKR {{ $fmt($approvedLate) }}</td>
+        <td class="amount">- LKR <?php echo e($fmt($approvedLate)); ?></td>
       </tr>
-      {{-- ✅ SSCL Tax (only if > 0) --}}
-    @if(!empty($ssclTaxAmount) && $ssclTaxAmount > 0)
+      
+    <?php if(!empty($ssclTaxAmount) && $ssclTaxAmount > 0): ?>
     <tr>
         <td>Tax</td>
-        <td class="amount">+ LKR {{ $fmt($ssclTaxAmount) }}</td>
+        <td class="amount">+ LKR <?php echo e($fmt($ssclTaxAmount)); ?></td>
     </tr>
-    @endif
+    <?php endif; ?>
 
-    {{-- ✅ Bank Charges (only if > 0) --}}
-    @if(!empty($bankCharges) && $bankCharges > 0)
+    
+    <?php if(!empty($bankCharges) && $bankCharges > 0): ?>
     <tr>
         <td>Bank Charges</td>
-        <td class="amount">+ LKR {{ $fmt($bankCharges) }}</td>
+        <td class="amount">+ LKR <?php echo e($fmt($bankCharges)); ?></td>
     </tr>
-    @endif
+    <?php endif; ?>
       <tr class="total-row">
         <td>TOTAL PAYMENT:</td>
-        <td class="amount">LKR {{ $fmt($totalFee) }}</td>
+        <td class="amount">LKR <?php echo e($fmt($totalFee)); ?></td>
       </tr>
     </table>
 
-    {{-- ✅ Registration Fee Remarks --}}
-@if(is_null($slipData['installment_number'] ?? null) && !empty($slipData['remarks']))
+    
+<?php if(is_null($slipData['installment_number'] ?? null) && !empty($slipData['remarks'])): ?>
 <div class="remarks mt-2">
   <strong>Remarks:</strong>
-  <p class="text-sm text-muted">{{ $slipData['remarks'] }}</p>
+  <p class="text-sm text-muted"><?php echo e($slipData['remarks']); ?></p>
 </div>
-@endif
+<?php endif; ?>
 
 
   </div>
 </div>
 
 
-      @php
+      <?php
           // Decode partial payments from slipData or directly from payment_details
           $partials = [];
 
@@ -568,48 +569,49 @@
                   $partials = json_decode($slipData['partial_payments'], true) ?? [];
               }
           }
-      @endphp
+      ?>
 
       <!-- Payment History -->
-      @if(!empty($partials))
+      <?php if(!empty($partials)): ?>
       <div class="section">
         <div class="section-header">Payment History</div>
         <div class="section-content">
           <ul class="payment-list">
-            @foreach($partials as $p)
+            <?php $__currentLoopData = $partials; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <li class="payment-item">
               <div class="payment-details">
-                <div class="font-mono">{{ $p['date'] ?? '' }}</div>
-                <div class="payment-method">({{ $p['method'] ?? 'N/A' }})</div>
-                @if(!empty($p['remarks']))
-                  <div class="payment-remarks">{{ $p['remarks'] }}</div>
-                @endif
+                <div class="font-mono"><?php echo e($p['date'] ?? ''); ?></div>
+                <div class="payment-method">(<?php echo e($p['method'] ?? 'N/A'); ?>)</div>
+                <?php if(!empty($p['remarks'])): ?>
+                  <div class="payment-remarks"><?php echo e($p['remarks']); ?></div>
+                <?php endif; ?>
               </div>
-              <div class="payment-amount">LKR {{ number_format($p['amount'] ?? 0, 2) }}</div>
+              <div class="payment-amount">LKR <?php echo e(number_format($p['amount'] ?? 0, 2)); ?></div>
             </li>
-            @endforeach
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
           </ul>
         </div>
       </div>
-      @else
+      <?php else: ?>
       <div class="section">
         <div class="section-header">Payment History</div>
         <div class="section-content">
           <p class="text-muted text-center">No partial payments recorded yet.</p>
         </div>
       </div>
-      @endif
+      <?php endif; ?>
 
       <!-- Summary Information -->
       <div class="summary-info">
         <div class="summary-item">
           <div class="summary-label">REMAINING BALANCE</div>
-          <div class="summary-value">LKR {{ number_format($slipData['remaining_amount'] ?? 0, 2) }}</div>
+          <div class="summary-value">LKR <?php echo e(number_format($slipData['remaining_amount'] ?? 0, 2)); ?></div>
         </div>
         <div class="summary-item">
           <div class="summary-label">PAYMENT STATUS</div>
-          <div class="summary-value status-{{ strtolower($slipData['status'] ?? 'pending') }}">
-            {{ strtoupper($slipData['status'] ?? 'PENDING') }}
+          <div class="summary-value status-<?php echo e(strtolower($slipData['status'] ?? 'pending')); ?>">
+            <?php echo e(strtoupper($slipData['status'] ?? 'PENDING')); ?>
+
           </div>
         </div>
       </div>
@@ -619,4 +621,4 @@
 </div>
 
 </body>
-</html>
+</html><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/pdf/payment_slip.blade.php ENDPATH**/ ?>

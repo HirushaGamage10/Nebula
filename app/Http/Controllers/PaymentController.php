@@ -1132,6 +1132,10 @@ public function generatePaymentSlip(Request $request)
             }
 
             $franchiseFee = $amount; // base franchise fee in LKR
+            
+            // Initialize SSCL tax and bank charges
+            $ssclTaxAmount = 0;
+            $bankCharges = 0;
 
             // 🔹 Get student payment plan
             $studentPlan = \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
@@ -1147,9 +1151,9 @@ public function generatePaymentSlip(Request $request)
                     ->first();
 
                 if ($paymentPlan) {
-                    $ssclPercent = $paymentPlan->sscl_tax ?? 0; // percentage
-                    $bankCharges = $paymentPlan->bank_charges ?? 0; // fixed
-                    $ssclTaxAmount = round($franchiseFee * ($ssclPercent / 100), 2);
+                    // Use frontend values if provided, otherwise fall back to payment plan values
+                    $ssclTaxAmount = $request->sscl_tax ?? 0; // Use frontend value
+                    $bankCharges = $request->bank_charges ?? 0; // Use frontend value
                 }
             }
 
@@ -1305,7 +1309,12 @@ public function generatePaymentSlip(Request $request)
         }
 
         // 🔹 Total Fee = base fee + late fee - approved late fee
-        $totalFee = $courseFee + $franchiseFee + $registrationFee + $lateFee - $approvedLateFee;
+        // For franchise fees, include SSCL tax and bank charges
+        if ($paymentType === 'franchise_fee') {
+            $totalFee = $courseFee + $franchiseFee + $registrationFee + $lateFee - $approvedLateFee + $ssclTaxAmount + $bankCharges;
+        } else {
+            $totalFee = $courseFee + $franchiseFee + $registrationFee + $lateFee - $approvedLateFee;
+        }
 
         // --- Prevent duplicate pending slips ---
 $existingPayment = \App\Models\PaymentDetail::where('student_id', $student->student_id)
@@ -1452,7 +1461,11 @@ private function buildSlipArray(\App\Models\PaymentDetail $payment, $student, $c
         'remaining_amount'  => (float) $payment->remaining_amount,
         'partial_payments'  => $partials,   // ✅ Always an array
         'foreign_currency_code'   => $payment->foreign_currency_code,     
-        'foreign_currency_amount' => (float) $payment->foreign_currency_amount, 
+        'foreign_currency_amount' => (float) $payment->foreign_currency_amount,
+        'sscl_tax_amount'   => (float) $payment->sscl_tax_amount,
+        'bank_charges'      => (float) $payment->bank_charges,
+        'base_amount'       => (float) $payment->amount,
+        'lkr_amount'        => (float) $payment->amount, // For franchise fees, this should be the converted LKR amount
         'generated_at'      => now()->format('Y-m-d H:i:s'),
         'valid_until'       => now()->addDays(7)->format('Y-m-d'),
     ];
@@ -1550,7 +1563,10 @@ public function recordPartialPayment(Request $request, $id)
             'receipt_no' => 'required|string',
         ]);
 
-        // Try session first
+        // Clear any cached session data to ensure we get fresh data
+        session()->forget('generated_slip_' . $request->receipt_no);
+        
+        // Try session first (should be empty now, so will fall through to DB)
         $slipData = session('generated_slip_' . $request->receipt_no);
 
         if (!$slipData) {
@@ -2288,6 +2304,15 @@ private function buildSlipDataFromPaymentDetail(\App\Models\PaymentDetail $payme
         'course_fee'             => $courseFee,
         'franchise_fee'          => $franchiseFee,
         'registration_fee'       => $registrationFee,
+
+        // Fee calculations
+        'late_fee'               => (float) ($payment->late_fee ?? 0),
+        'approved_late_fee'      => (float) ($payment->approved_late_fee ?? 0),
+        'total_fee'              => (float) ($payment->total_fee ?? 0),
+        'sscl_tax_amount'        => (float) ($payment->sscl_tax_amount ?? 0),
+        'bank_charges'           => (float) ($payment->bank_charges ?? 0),
+        'base_amount'            => (float) $payment->amount,
+        'remaining_amount'       => (float) ($payment->remaining_amount ?? 0),
 
         'generated_at'           => optional($payment->created_at)->format('Y-m-d H:i:s'),
         'valid_until'            => optional($payment->created_at)->copy()->addDays(7)->format('Y-m-d'),
