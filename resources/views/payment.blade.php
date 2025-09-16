@@ -2037,31 +2037,34 @@ function calculateFinalAmount() {
     }
     
     // Apply registration fee discount if selected
-    const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
-    
-    if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value) {
-        const selectedOption = registrationFeeDiscountSelect.options[registrationFeeDiscountSelect.selectedIndex];
-        const discountType = selectedOption.dataset.type;
-        const discountValue = parseFloat(selectedOption.dataset.value || 0);
-        
-        const registrationFee = parseFloat(window.currentStudentData?.registration_fee || 0);
-        let registrationFeeDiscount = 0;
-        
-        if (discountType === 'percentage') {
-            registrationFeeDiscount = registrationFee * (discountValue / 100);
-        } else if (discountType === 'amount') {
-            registrationFeeDiscount = discountValue;
-        }
-        
-        if (registrationFeeDiscount <= registrationFee) {
-            // Discount is less than or equal to registration fee - apply directly
-            finalAmount = finalAmount - registrationFeeDiscount;
-        } else {
-            // Discount exceeds registration fee - apply full registration fee discount
-            // The excess will be handled by backend and applied to course fee installments
-            finalAmount = finalAmount - registrationFee;
-        }
+const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
+
+if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value) {
+    const selectedOption = registrationFeeDiscountSelect.options[registrationFeeDiscountSelect.selectedIndex];
+    const discountType = selectedOption.dataset.type;
+    const discountValue = parseFloat(selectedOption.dataset.value || 0);
+
+    const registrationFee = parseFloat(window.currentStudentData?.registration_fee || 0);
+    let discountAmount = 0;
+
+    // Calculate discount amount
+    if (discountType === 'percentage') {
+        discountAmount = registrationFee * (discountValue / 100);
+    } else if (discountType === 'amount') {
+        discountAmount = discountValue;
     }
+
+    if (discountAmount <= registrationFee) {
+        // Case A: discount fits within registration fee
+        finalAmount -= discountAmount;
+    } else {
+        // Case B: discount is bigger than registration fee
+        finalAmount -= registrationFee; // wipe out full reg. fee
+        const excess = discountAmount - registrationFee;
+        finalAmount -= excess; // ✅ also reduce final total by excess
+    }
+}
+
 
     // Apply SLT loan if selected
     if (sltLoanApplied === 'yes' && sltLoanAmount > 0) {
