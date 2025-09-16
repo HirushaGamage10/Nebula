@@ -2124,7 +2124,7 @@ function calculateFinalAmount() {
     // Apply SLT loan
     if (sltLoanApplied === 'yes' && sltLoanAmount > 0) {
         finalAmount -= sltLoanAmount;
-        breakdownSteps.push(`SLT Loan: -LKR ${sltLoanAmount.toLocaleString()}`);
+        breakdownSteps.push(`<strong> SLT Loan:</strong> -LKR ${sltLoanAmount.toLocaleString()}`);
     }
 
     // Ensure non-negative

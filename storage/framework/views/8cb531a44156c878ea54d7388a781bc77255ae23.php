@@ -2117,14 +2117,14 @@ function calculateFinalAmount() {
             finalAmount -= registrationFee;
             const excess = discountAmount - registrationFee;
             finalAmount -= excess;
-            breakdownSteps.push(`<string>Registration Fee Wiped </string>(-LKR ${registrationFee.toLocaleString()}) + Excess Applied (-LKR ${excess.toLocaleString()})`);
+            breakdownSteps.push(`<string>Registration Fee Wiped </string> (-LKR ${registrationFee.toLocaleString()}) + Excess Applied (-LKR ${excess.toLocaleString()})`);
         }
     }
 
     // Apply SLT loan
     if (sltLoanApplied === 'yes' && sltLoanAmount > 0) {
         finalAmount -= sltLoanAmount;
-        breakdownSteps.push(`SLT Loan: -LKR ${sltLoanAmount.toLocaleString()}`);
+        breakdownSteps.push(`<strong> SLT Loan:</strong> -LKR ${sltLoanAmount.toLocaleString()}`);
     }
 
     // Ensure non-negative
