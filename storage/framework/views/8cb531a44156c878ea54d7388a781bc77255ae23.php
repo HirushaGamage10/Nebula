@@ -564,19 +564,39 @@
                             </div>
                             <!-- SSCL & Bank Charges (only for Franchise Fee) -->
                             <div id="franchiseChargesRow" style="display:none; margin-top:20px;">
+
+                                <!-- SSCL Tax -->
+                                <div class="row mb-3 align-items-center">
+                                    <label class="col-sm-2 col-form-label fw-bold">SSCL Tax</label>
+                                    <div class="col-sm-10 d-flex">
+                                        <select class="form-select me-2" id="sscl-type" style="max-width: 120px;">
+                                            <option value="amount" selected>Amount</option>
+                                            <option value="percentage">%</option>
+                                        </select>
+                                        <input type="number" class="form-control" id="sscl-value"
+                                            placeholder="Enter SSCL (e.g. 2000 or 5)" step="0.01" min="0" value="0"
+                                            oninput="recalculateSSCL()">
+                                    </div>
+                                </div>
+
+                                <!-- Calculated SSCL in LKR -->
                                 <div class="row mb-3 align-items-center">
                                     <label class="col-sm-2 col-form-label fw-bold">SSCL Tax (LKR)</label>
                                     <div class="col-sm-10">
-                                        <input type="number" class="form-control" id="sscl-tax-amount" placeholder="Enter SSCL Tax" step="0.01" min="0" value="0">
+                                        <input type="text" class="form-control" id="sscl-tax-amount" value="0" readonly>
                                     </div>
                                 </div>
+
+                                <!-- Bank Charges (still fixed for now) -->
                                 <div class="row mb-3 align-items-center">
                                     <label class="col-sm-2 col-form-label fw-bold">Bank Charges (LKR)</label>
                                     <div class="col-sm-10">
-                                        <input type="number" class="form-control" id="bank-charges" placeholder="Enter Bank Charges" step="0.01" min="0" value="0">
+                                        <input type="number" class="form-control" id="bank-charges"
+                                            placeholder="Enter Bank Charges" step="0.01" min="0" value="0">
                                     </div>
                                 </div>
                             </div>
+
                         </div>
 
                         <!-- Payment Details Table -->
@@ -2499,34 +2519,49 @@ async function generatePaymentSlip() {
   const dueDate       = row.due_date ?? null;
 
     // FX inputs + SSCL & Bank Charges (only franchise)
-    let conversionRate = null, currencyFrom = null, ssclTaxAmount = null, bankCharges = null;
-    if (paymentType === 'franchise_fee') {
-        conversionRate   = Number(document.getElementById('currency-conversion-rate').value);
-        currencyFrom     = document.getElementById('currency-from').value;
-        ssclTaxAmount    = Number(document.getElementById('sscl-tax-amount').value || 0); // 👈 added
-        bankCharges      = Number(document.getElementById('bank-charges').value || 0);     // 👈 added
+let conversionRate = null, currencyFrom = null, ssclTaxAmount = 0, bankCharges = 0;
 
-        if (!conversionRate || conversionRate <= 0) {
-        showErrorMessage('Please enter a valid currency conversion rate for franchise fee.');
+if (paymentType === 'franchise_fee') {
+    // ✅ Ensure installment is selected first
+    const selectedInstallment = document.querySelector('input[name="selectedPayment"]:checked');
+    if (!selectedInstallment) {
+        showErrorMessage('Please select an installment before entering SSCL or Bank Charges.');
         return;
-        }
     }
 
-    showSpinner(true);
+    // ✅ Conversion Rate
+    conversionRate = Number(document.getElementById('currency-conversion-rate').value || 0);
+    currencyFrom   = document.getElementById('currency-from').value;
 
-    const payload = {
-        student_id:         studentId,
-        course_id:          courseId,
-        payment_type:       paymentType,
-        amount:             rawAmount,
-        installment_number: installmentNo,
-        due_date:           dueDate,
-        conversion_rate:    conversionRate, 
-        currency_from:      currencyFrom,   
-        sscl_tax_amount:    ssclTaxAmount,  
-        bank_charges:       bankCharges,    
-        remarks:            ''
-    };
+    if (!conversionRate || conversionRate <= 0) {
+        showErrorMessage('Please enter a valid currency conversion rate for franchise fee.');
+        return;
+    }
+
+    // ✅ SSCL calculated (already pre-computed via recalculateSSCL)
+    ssclTaxAmount = parseFloat(document.getElementById('sscl-tax-amount').value || 0);
+
+    // ✅ Bank Charges direct input
+    bankCharges = parseFloat(document.getElementById('bank-charges').value || 0);
+}
+
+
+showSpinner(true);
+
+const payload = {
+    student_id:         studentId,
+    course_id:          courseId,
+    payment_type:       paymentType,
+    amount:             rawAmount,
+    installment_number: installmentNo,
+    due_date:           dueDate,
+    conversion_rate:    conversionRate, 
+    currency_from:      currencyFrom,   
+    sscl_tax_amount:    ssclTaxAmount,  
+    bank_charges:       bankCharges,     
+    remarks:            ''
+};
+
 
   try {
     const res  = await fetch('/payment/generate-slip', {
@@ -2649,6 +2684,36 @@ function setText(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = (val == null ? '' : String(val));
 }
+
+function recalculateSSCL() {
+    const selected = document.querySelector('input[name="selectedPayment"]:checked');
+    if (!selected) {
+        showWarningMessage('Please select an installment first.');
+        document.getElementById('sscl-value').value = 0;
+        document.getElementById('sscl-tax-amount').value = 0;
+        return;
+    }
+
+    const type   = document.getElementById('sscl-type').value;
+    const value  = parseFloat(document.getElementById('sscl-value').value || 0);
+
+    // Base franchise fee in LKR (after conversion)
+    const row = (window.paymentDetailsData || [])[selected.value];
+    const rawAmount = Number(row?.amount || 0);
+    const conversionRate = Number(document.getElementById('currency-conversion-rate').value || 0);
+    const baseFranchise = conversionRate > 0 ? rawAmount * conversionRate : rawAmount;
+
+    let ssclAmount = 0;
+    if (type === 'percentage') {
+        ssclAmount = (baseFranchise * value) / 100;
+    } else {
+        ssclAmount = value;
+    }
+
+    document.getElementById('sscl-tax-amount').value = ssclAmount.toFixed(2);
+}
+
+
 
 // ============ (Optional) Print remains same but uses cached slipData ============
 function printPaymentSlip() {
