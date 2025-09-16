@@ -487,13 +487,13 @@
                                                 <input type="number" class="form-control" id="slt-loan-amount" name="slt_loan_amount" min="0" step="0.01" placeholder="Enter SLT loan amount" disabled>
                                             </div>
                                             <div class="col-md-4">
-                                                <label class="form-label fw-bold">Final Amount After Discount & Loan</label>
+    <label class="form-label fw-bold">Final Amount After Discount & Loan</label>
     <div class="input-group">
-                                                <input type="text" class="form-control" id="final-amount" name="final_amount" readonly>
+        <input type="text" class="form-control" id="final-amount" name="final_amount" readonly>
         <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#finalAmountBreakdownModal">
             View Breakdown
         </button>
-                                            </div>
+    </div>
 </div>
 
                                             <!-- Final Amount Breakdown Modal -->
@@ -604,7 +604,7 @@
                             <div class="row mb-3 align-items-center">
                                 <label class="col-sm-2 col-form-label fw-bold">Student ID <span class="text-danger">*</span></label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" id="slip-student-id" placeholder="Enter Student ID / NIC" required onchange="checkStudentAndCourse()" oninput="clearSlipFormIfEmpty()">
+                                    <input type="text" class="form-control" id="slip-student-id" placeholder="Enter Student ID / NIC" required onchange="checkStudentAndCourse()">
                                 </div>
                             </div>
                             <div class="row mb-3 align-items-center">
@@ -628,7 +628,6 @@
                                         <option value="course_fee">Course Fee</option>
                                         <option value="franchise_fee">Franchise Fee</option>
                                         <option value="registration_fee">Registration Fee</option>
-                                        <option value="other">Other</option>
                                     </select>
                                 </div>
                             </div>
@@ -645,30 +644,6 @@
                                         <span class="input-group-text">LKR</span>
                                     </div>
                                     <small class="form-text text-muted">Enter the current exchange rate to convert franchise fees to LKR</small>
-                                </div>
-                            </div>
-                            
-                            <!-- Custom Payment Fields (shown when "Other" is selected) -->
-                            <div id="customPaymentFields" style="display: none;">
-                                <div class="card mt-3">
-                                    <div class="card-header">
-                                        <h5 class="mb-0">
-                                            <i class="ti ti-plus me-2"></i>Custom Payment Details
-                                        </h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <div id="customPaymentsList">
-                                            <!-- Custom payment entries will be added here -->
-                                        </div>
-                                        <div class="text-center mt-3">
-                                            <button type="button" class="btn btn-outline-primary me-2" onclick="addCustomPayment()">
-                                                <i class="ti ti-plus me-2"></i>Add Custom Payment
-                                            </button>
-                                            <button type="button" class="btn btn-success" onclick="saveCustomPayments()">
-                                                <i class="ti ti-device-floppy me-2"></i>Save Custom Payments
-                                            </button>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                             <!-- SSCL & Bank Charges (only for Franchise Fee) -->
@@ -774,7 +749,7 @@
                                             </div>
 
 
-                                            <p><strong id="slip-installment-label">Installment #:</strong> <span id="slip-installment-display"></span></p>
+                                            <p><strong>Installment #:</strong> <span id="slip-installment-display"></span></p>
                                             <p><strong>Due Date:</strong> <span id="slip-due-date-display"></span></p>
                                             <p><strong>Date:</strong> <span id="slip-date-display"></span></p>
                                             <p><strong>Receipt No:</strong> <span id="slip-receipt-no-display"></span></p>
@@ -830,7 +805,7 @@
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                                         <div>
                                             <p><strong>Payment Type:</strong> <span id="print-payment-type"></span></p>
-                                            <p><strong id="print-installment-label">Installment #:</strong> <span id="print-installment"></span></p>
+                                            <p><strong>Installment #:</strong> <span id="print-installment"></span></p>
                                             <p><strong>Due Date:</strong> <span id="print-due-date"></span></p>
                                         </div>
                                         <div>
@@ -2274,13 +2249,13 @@ function calculateFinalAmount() {
     let totalDiscountPercentage = 0;
     let breakdownSteps = [`<strong>Base Total (Course Fee + Registration Fee):</strong> LKR ${totalAmount.toLocaleString()}`];
 
-    // Calculate total discounts
+    // ===== Normal discounts =====
     discountSelects.forEach((select) => {
         if (select.value) {
             const selectedOption = select.options[select.selectedIndex];
             const discountType = selectedOption.dataset.type;
             const discountValue = parseFloat(selectedOption.dataset.value);
-            
+
             if (discountType === 'percentage') {
                 totalDiscountPercentage += discountValue;
             } else if (discountType === 'amount') {
@@ -2289,29 +2264,27 @@ function calculateFinalAmount() {
         }
     });
 
-    // Apply percentage discounts
     if (totalDiscountPercentage > 0) {
         const pctReduction = finalAmount * totalDiscountPercentage / 100;
         finalAmount -= pctReduction;
         breakdownSteps.push(`<strong>-${totalDiscountPercentage}% Discount:</strong> -LKR ${pctReduction.toLocaleString()}`);
     }
 
-    // Apply fixed amount discounts
     if (totalDiscountAmount > 0) {
         finalAmount -= totalDiscountAmount;
         breakdownSteps.push(`<strong>Fixed Discount:</strong> -LKR ${totalDiscountAmount.toLocaleString()}`);
     }
 
-    // Registration Fee Discount
+    // ===== Registration Fee Discount =====
     const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
     if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value) {
         const selectedOption = registrationFeeDiscountSelect.options[registrationFeeDiscountSelect.selectedIndex];
         const discountType = selectedOption.dataset.type;
         const discountValue = parseFloat(selectedOption.dataset.value || 0);
-        
+
         const registrationFee = parseFloat(window.currentStudentData?.registration_fee || 0);
         let discountAmount = 0;
-        
+
         if (discountType === 'percentage') {
             discountAmount = registrationFee * (discountValue / 100);
         } else if (discountType === 'amount') {
@@ -2335,18 +2308,17 @@ function calculateFinalAmount() {
         breakdownSteps.push(`<strong>SLT Loan:</strong> -LKR ${sltLoanAmount.toLocaleString()}`);
     }
 
-    // Ensure non-negative
+    // ===== Finalize =====
     finalAmount = Math.max(0, finalAmount);
     breakdownSteps.push(`<strong>Final Amount:</strong> LKR ${finalAmount.toLocaleString()}`);
 
-    // Update DOM
     if (finalAmountField) {
         finalAmountField.value = 'LKR ' + finalAmount.toLocaleString();
     }
     if (breakdownModalBody) {
         breakdownModalBody.innerHTML = breakdownSteps.join('<br>');
     }
-    
+
     if (window.currentStudentData) {
         window.currentStudentData.final_amount = finalAmount;
     }
@@ -2495,14 +2467,14 @@ function createPaymentPlan() {
     const sltPerInst = (sltLoanApplied === 'yes' && sltLoanAmount > 0) ? (sltLoanAmount / count) : 0;
 
     // Build installments INCLUDING final_amount
-    const installments = (data.installments || []).map(inst => {
+const installments = (data.installments || []).map(inst => {
   const base = parseFloat(inst.amount || 0);
   const discounted = parseFloat(inst.final_amount || base);
   const discountAmount = Math.max(0, base - discounted);
-      const finalWithLoan = Math.max(0, discounted - sltPerInst);
+  const finalWithLoan = Math.max(0, discounted - sltPerInst);
 
-      return {
-        installment_number: inst.installment_number,
+  return {
+    installment_number: inst.installment_number,
     due_date: inst.due_date,
     amount: base,
     discount_amount: discountAmount,
@@ -2511,9 +2483,9 @@ function createPaymentPlan() {
     registration_fee_discount_note: null,
     slt_loan_amount: sltPerInst,
     final_amount: finalWithLoan,
-        status: 'pending'
-      };
-    });
+    status: 'pending'
+  };
+});
 
 // ===============================
 // Handle registration fee discount excess
@@ -2783,23 +2755,6 @@ const payload = {
     remarks:            ''
 };
 
-<<<<<<< HEAD
-    const payload = {
-        student_id:         studentId,
-        course_id:          courseId,
-        payment_type:       paymentType,
-        amount:             rawAmount,
-        installment_number: installmentNo,
-        payment_name:       paymentType === 'other' ? row.payment_name : null,
-        due_date:           dueDate,
-        conversion_rate:    conversionRate, 
-        currency_from:      currencyFrom,   
-        sscl_tax_amount:    ssclTaxAmount,  
-        bank_charges:       bankCharges,    
-        remarks:            ''
-    };
-=======
->>>>>>> a8cea6e8abb0046247d9ea7da5daf2407be3bc67
 
   try {
     const res  = await fetch('/payment/generate-slip', {
@@ -2856,15 +2811,7 @@ const payload = {
 
 
 
-    // Update label and value based on payment type
-    const installmentLabel = document.getElementById('slip-installment-label');
-    if (paymentType === 'other') {
-        installmentLabel.textContent = 'Payment Name:';
-        setText('slip-installment-display', row.payment_name ?? '-');
-    } else {
-        installmentLabel.textContent = 'Installment #:';
-        setText('slip-installment-display', installmentNo ?? '-');
-    }
+    setText('slip-installment-display',  installmentNo ?? '-');
     setText('slip-due-date-display',     dueDate ? new Date(dueDate).toLocaleDateString() : '-');
     setText('slip-date-display',         s.payment_date || '');
     setText('slip-receipt-no-display',   s.receipt_no || '');
@@ -2892,15 +2839,7 @@ const payload = {
     setText('print-location', s.location);
     setText('print-registration-date', s.registration_date ? new Date(s.registration_date).toLocaleDateString() : 'N/A');
     setText('print-payment-type', s.payment_type_display || s.payment_type);
-    // Update print template label and value based on payment type
-    const printInstallmentLabel = document.getElementById('print-installment-label');
-    if (paymentType === 'other') {
-        printInstallmentLabel.textContent = 'Payment Name:';
-        setText('print-installment', row.payment_name ?? '-');
-    } else {
-        printInstallmentLabel.textContent = 'Installment #:';
-        setText('print-installment', installmentNo ?? '-');
-    }
+    setText('print-installment', installmentNo ?? '-');
     setText('print-due-date', dueDate ? new Date(dueDate).toLocaleDateString() : '-');
 
     if (paymentType === 'franchise_fee' && s.franchise_fee_currency) {
@@ -2982,15 +2921,7 @@ function printPaymentSlip() {
   setText('print-location', s.location);
   setText('print-registration-date', s.registration_date ? new Date(s.registration_date).toLocaleDateString() : 'N/A');
   setText('print-payment-type', s.payment_type_display || s.payment_type);
-  // Update print template label and value based on payment type for PDF
-  const printInstallmentLabel = document.getElementById('print-installment-label');
-  if (s.payment_type === 'other') {
-    printInstallmentLabel.textContent = 'Payment Name:';
-    setText('print-installment', s.payment_name || 'N/A');
-  } else {
-    printInstallmentLabel.textContent = 'Installment #:';
-    setText('print-installment', s.installment_number || 'N/A');
-  }
+  setText('print-installment', s.installment_number || 'N/A');
   setText('print-due-date', s.due_date ? new Date(s.due_date).toLocaleDateString() : 'N/A');
 
   if (s.payment_type === 'franchise_fee' && s.franchise_fee_currency) {
@@ -3764,315 +3695,18 @@ function loadIntakesForCourse() {
 
 // Check if both student ID and course are selected
 function checkStudentAndCourse() {
-    const studentId = document.getElementById('slip-student-id').value?.trim();
-    const courseSelect = document.getElementById('slip-course');
+    const courseId = document.getElementById('slip-course').value;
+    const studentId = document.getElementById('slip-student-id').value;
+    
     const paymentTypeSelect = document.getElementById('slip-payment-type');
     
-    // Reset course selection and payment type
-    courseSelect.innerHTML = '<option value="" selected disabled>Select Course</option>';
+    if (!courseId || !studentId) {
         paymentTypeSelect.disabled = true;
         paymentTypeSelect.value = '';
-    
-    if (!studentId) {
-        return;
-    }
-    
-    // Load courses for the student
-    loadStudentCoursesForSlip(studentId);
-}
-
-// Load courses for a specific student in the generate slip tab
-function loadStudentCoursesForSlip(studentNic) {
-    const courseSelect = document.getElementById('slip-course');
-    const paymentTypeSelect = document.getElementById('slip-payment-type');
-    
-    // Show loading state
-    courseSelect.innerHTML = '<option value="" disabled>Loading courses...</option>';
-    courseSelect.disabled = true;
-    paymentTypeSelect.disabled = true;
-    
-    fetch('/payment/get-student-courses', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({
-            student_nic: studentNic
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success && data.courses && data.courses.length > 0) {
-            // Populate course dropdown with student's registered courses
-            courseSelect.innerHTML = '<option value="" selected disabled>Select Course</option>';
-            data.courses.forEach(course => {
-                const option = document.createElement('option');
-                option.value = course.course_id;
-                option.textContent = course.course_name;
-                courseSelect.appendChild(option);
-            });
-            courseSelect.disabled = false;
     } else {
-            // No courses found for this student
-            courseSelect.innerHTML = '<option value="" disabled>No registered courses found</option>';
-            courseSelect.disabled = true;
-            paymentTypeSelect.disabled = true;
-            
-            if (data.message) {
-                showToast(data.message, 'warning');
-            } else {
-                showToast('No registered courses found for this student.', 'warning');
-            }
-        }
-    })
-    .catch(error => {
-        console.error('Error loading student courses:', error);
-        courseSelect.innerHTML = '<option value="" disabled>Error loading courses</option>';
-        courseSelect.disabled = true;
-        paymentTypeSelect.disabled = true;
-        showToast('Error loading student courses. Please try again.', 'danger');
-    });
-}
-
-// Clear slip form when student ID is empty
-function clearSlipFormIfEmpty() {
-    const studentId = document.getElementById('slip-student-id').value?.trim();
-    const courseSelect = document.getElementById('slip-course');
-    const paymentTypeSelect = document.getElementById('slip-payment-type');
-    
-    if (!studentId) {
-        // Reset course selection to show all courses
-        courseSelect.innerHTML = '<option value="" selected disabled>Select Course</option>';
-        @if(isset($courses))
-            @foreach($courses as $course)
-                courseSelect.innerHTML += '<option value="{{ $course->course_id }}">{{ $course->course_name }}</option>';
-            @endforeach
-        @endif
-        courseSelect.disabled = false;
-        
-        // Reset payment type
-        paymentTypeSelect.disabled = true;
-        paymentTypeSelect.value = '';
-        
-        // Clear payment details table
-        const tbody = document.getElementById('paymentDetailsTableBody');
-        if (tbody) {
-            tbody.innerHTML = '';
-        }
+        paymentTypeSelect.disabled = false;
     }
 }
-
-// Custom Payment Functions
-let customPaymentCounter = 0;
-
-function addCustomPayment() {
-    customPaymentCounter++;
-    const customPaymentsList = document.getElementById('customPaymentsList');
-    
-    const paymentDiv = document.createElement('div');
-    paymentDiv.className = 'custom-payment-item border rounded p-3 mb-3';
-    paymentDiv.id = `custom-payment-${customPaymentCounter}`;
-    
-    paymentDiv.innerHTML = `
-        <div class="row">
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Payment Name <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" name="custom_payment_name_${customPaymentCounter}" placeholder="e.g., Library Fee, Lab Fee" required>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Amount (LKR) <span class="text-danger">*</span></label>
-                <input type="number" class="form-control" name="custom_payment_amount_${customPaymentCounter}" step="0.01" min="0" placeholder="0.00" required oninput="calculateCustomFinalAmount(${customPaymentCounter})">
-            </div>
-        </div>
-        <div class="row mt-2">
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Due Date <span class="text-danger">*</span></label>
-                <input type="date" class="form-control" name="custom_payment_due_date_${customPaymentCounter}" required>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Late Payment Fee (LKR)</label>
-                <input type="number" class="form-control" name="custom_payment_late_fee_${customPaymentCounter}" step="0.01" min="0" placeholder="0.00" oninput="calculateCustomFinalAmount(${customPaymentCounter})">
-            </div>
-        </div>
-        <div class="row mt-2">
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Discount Amount (LKR)</label>
-                <input type="number" class="form-control" name="custom_payment_discount_${customPaymentCounter}" step="0.01" min="0" placeholder="0.00" oninput="calculateCustomFinalAmount(${customPaymentCounter})">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Discount Reason</label>
-                <input type="text" class="form-control" name="custom_payment_discount_reason_${customPaymentCounter}" placeholder="e.g., Early payment discount">
-            </div>
-        </div>
-        <div class="row mt-2">
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Final Amount (LKR)</label>
-                <input type="number" class="form-control" name="custom_payment_final_amount_${customPaymentCounter}" step="0.01" readonly>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Notes</label>
-                <input type="text" class="form-control" name="custom_payment_notes_${customPaymentCounter}" placeholder="Additional notes">
-            </div>
-        </div>
-        <div class="row mt-2">
-            <div class="col-12 text-end">
-                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeCustomPayment(${customPaymentCounter})">
-                    <i class="ti ti-trash me-1"></i>Remove
-                </button>
-            </div>
-        </div>
-    `;
-    
-    customPaymentsList.appendChild(paymentDiv);
-}
-
-function removeCustomPayment(paymentId) {
-    const paymentElement = document.getElementById(`custom-payment-${paymentId}`);
-    if (paymentElement) {
-        paymentElement.remove();
-    }
-}
-
-function calculateCustomFinalAmount(paymentId) {
-    const amount = parseFloat(document.querySelector(`input[name="custom_payment_amount_${paymentId}"]`).value) || 0;
-    const lateFee = parseFloat(document.querySelector(`input[name="custom_payment_late_fee_${paymentId}"]`).value) || 0;
-    const discount = parseFloat(document.querySelector(`input[name="custom_payment_discount_${paymentId}"]`).value) || 0;
-    
-    const finalAmount = amount + lateFee - discount;
-    document.querySelector(`input[name="custom_payment_final_amount_${paymentId}"]`).value = finalAmount.toFixed(2);
-}
-
-function getCustomPaymentsData() {
-    const customPayments = [];
-    const customPaymentItems = document.querySelectorAll('.custom-payment-item');
-    
-    customPaymentItems.forEach((item, index) => {
-        const paymentId = item.id.split('-')[2];
-        const paymentName = document.querySelector(`input[name="custom_payment_name_${paymentId}"]`).value;
-        const amount = parseFloat(document.querySelector(`input[name="custom_payment_amount_${paymentId}"]`).value) || 0;
-        const dueDate = document.querySelector(`input[name="custom_payment_due_date_${paymentId}"]`).value;
-        const lateFee = parseFloat(document.querySelector(`input[name="custom_payment_late_fee_${paymentId}"]`).value) || 0;
-        const discount = parseFloat(document.querySelector(`input[name="custom_payment_discount_${paymentId}"]`).value) || 0;
-        const discountReason = document.querySelector(`input[name="custom_payment_discount_reason_${paymentId}"]`).value;
-        const finalAmount = parseFloat(document.querySelector(`input[name="custom_payment_final_amount_${paymentId}"]`).value) || 0;
-        const notes = document.querySelector(`input[name="custom_payment_notes_${paymentId}"]`).value;
-        
-        if (paymentName && amount > 0 && dueDate) {
-            customPayments.push({
-                payment_name: paymentName,
-                amount: amount,
-                due_date: dueDate,
-                late_payment_fee: lateFee,
-                discount_amount: discount,
-                discount_reason: discountReason,
-                final_amount: finalAmount,
-                notes: notes
-            });
-        }
-    });
-    
-    return customPayments;
-}
-
-function renderCustomPaymentsTable(customPayments) {
-    const tbody = document.getElementById('paymentDetailsTableBody');
-    tbody.innerHTML = '';
-    
-    // Update table headers for custom payments
-    updateTableHeadersForCustomPayments();
-    
-    customPayments.forEach((payment, index) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td><input type="radio" name="paymentRow" value="${index}" checked></td>
-            <td>${payment.payment_name}</td>
-            <td>${payment.due_date}</td>
-            <td>LKR ${payment.amount.toLocaleString()}</td>
-            <td>${payment.discount_amount > 0 ? `LKR ${payment.discount_amount.toLocaleString()}` : '-'}</td>
-            <td>${payment.late_payment_fee > 0 ? `LKR ${payment.late_payment_fee.toLocaleString()}` : '-'}</td>
-            <td>LKR ${payment.final_amount.toLocaleString()}</td>
-            <td><span class="badge bg-warning">Pending</span></td>
-        `;
-        tbody.appendChild(row);
-    });
-    
-    // Update headers for custom payments
-    const amountHeader = document.getElementById('amountHeader');
-    const lkrHeader = document.getElementById('lkrAmountHeader');
-    const convRow = document.getElementById('currencyConversionRow');
-    
-    amountHeader.textContent = 'Amount';
-    lkrHeader.style.display = 'none';
-    convRow.style.display = 'none';
-}
-
-function updateTableHeadersForCustomPayments() {
-    // Find the installment header and replace it with Payment Name
-    const tableHeaders = document.querySelectorAll('#paymentDetailsTable thead th');
-    if (tableHeaders.length > 1) {
-        tableHeaders[1].textContent = 'Payment Name';
-    }
-}
-
-function restoreTableHeadersForRegularPayments() {
-    // Restore the installment header for regular payments
-    const tableHeaders = document.querySelectorAll('#paymentDetailsTable thead th');
-    if (tableHeaders.length > 1) {
-        tableHeaders[1].textContent = 'Installment #';
-    }
-}
-
-async function saveCustomPayments() {
-    const studentId = document.getElementById('slip-student-id').value?.trim();
-    const courseId = parseInt(document.getElementById('slip-course').value || '0', 10);
-    
-    if (!studentId) {
-        showWarningMessage('Please enter Student ID/NIC first.');
-        return;
-    }
-    
-    if (!courseId) {
-        showWarningMessage('Please select a course first.');
-        return;
-    }
-    
-    const customPayments = getCustomPaymentsData();
-    
-    if (customPayments.length === 0) {
-        showWarningMessage('Please add at least one custom payment.');
-        return;
-    }
-    
-    try {
-        const response = await fetch('/payment/save-custom-payments', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({
-                student_id: studentId,
-                course_id: courseId,
-                custom_payments: customPayments
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            showToast('Custom payments saved successfully!', 'success');
-            // Refresh the payment details table
-            renderCustomPaymentsTable(customPayments);
-    } else {
-            showToast(data.message || 'Failed to save custom payments.', 'danger');
-    }
-    } catch (error) {
-        console.error('Error saving custom payments:', error);
-        showToast('An error occurred while saving custom payments.', 'danger');
-}
-}
-
 async function loadPaymentDetails() {
   const studentIdOrNic = document.getElementById('slip-student-id').value?.trim();
   const courseId       = parseInt(document.getElementById('slip-course').value || '0', 10);
@@ -4100,72 +3734,14 @@ async function loadPaymentDetails() {
       conversionRow.style.display = 'flex';
       franchiseRow.style.display  = 'block'; // 👈 show our new inputs
       currencySelect.disabled     = false;
-      document.getElementById('customPaymentFields').style.display = 'none';
-      restoreTableHeadersForRegularPayments();
-  } else if (paymentType === 'other') {
-      conversionRow.style.display = 'none';
-      franchiseRow.style.display  = 'none';
-      currencySelect.disabled     = true;
-      document.getElementById('customPaymentFields').style.display = 'block';
-      updateTableHeadersForCustomPayments();
   } else {
       conversionRow.style.display = 'none';
       franchiseRow.style.display  = 'none'; // 👈 hide if not franchise
       currencySelect.disabled     = true;
-      document.getElementById('customPaymentFields').style.display = 'none';
-      restoreTableHeadersForRegularPayments();
   }
 
   // Show payment details section
   document.getElementById('paymentDetailsSection').style.display = '';
-
-  // Handle custom payments differently
-  if (paymentType === 'other') {
-    // Load existing custom payments from the server
-    try {
-      const res = await fetch('/payment/get-payment-details', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': '{{ csrf_token() }}',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          student_id: studentIdOrNic,
-          course_id: String(courseId),
-          payment_type: 'other'
-        })
-      });
-
-      const data = await res.json();
-      
-      if (data.success && data.payment_details && data.payment_details.length > 0) {
-        // Update table headers for custom payments
-        updateTableHeadersForCustomPayments();
-        
-        // Display existing custom payments
-        renderPaymentDetailsTable(data.payment_details, 'other');
-      } else {
-        // Update table headers for custom payments even when no data
-        updateTableHeadersForCustomPayments();
-        
-        // No existing custom payments, show message to add some
-        const tbody = document.getElementById('paymentDetailsTableBody');
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="8" class="text-center text-muted">
-              <i class="ti ti-info-circle me-2"></i>
-              No custom payments found. Please add custom payments above and save them.
-            </td>
-          </tr>
-        `;
-      }
-    } catch (error) {
-      console.error('Error loading custom payments:', error);
-      showErrorMessage('Error loading custom payments.');
-    }
-    return;
-  }
 
   const payload = {
     student_id: studentIdOrNic,
@@ -4599,13 +4175,6 @@ function renderPaymentDetailsTable(rows, paymentType) {
   convRow.style.display = showLkr ? '' : 'none';
   lkrHeader.style.display = showLkr ? '' : 'none';
   amountHeader.textContent = 'Amount';
-  
-  // Update table headers based on payment type
-  if (paymentType === 'other') {
-    updateTableHeadersForCustomPayments();
-  } else {
-    restoreTableHeadersForRegularPayments();
-  }
 
   // capture FX inputs (if needed)
   let rate = null, ccy = null;
@@ -4637,7 +4206,6 @@ function renderPaymentDetailsTable(rows, paymentType) {
     const payable = (r.final_amount != null) ? Number(r.final_amount) : Number(r.amount || 0);
     return {
       installment_number: r.installment_number ?? null,
-      payment_name:       r.payment_name ?? null, // For custom payments
       due_date:           r.due_date ?? null,
       amount:             payable,
       base_amount:        Number(r.amount || payable),
@@ -4705,15 +4273,12 @@ function renderPaymentDetailsTable(rows, paymentType) {
         : `<small class="text-muted">No approved late fee</small>`;
 
 
-    // Use payment name for custom payments, installment number for others
-    const identifier = paymentType === 'other' ? (p.payment_name ?? '-') : (p.installment_number ?? '-');
-    
     const row = `
       <tr>
         <td class="text-center">
           <input type="radio" name="selectedPayment" value="${idx}" ${disabled}>
         </td>
-        <td>${identifier}</td>
+        <td>${p.installment_number ?? '-'}</td>
         <td>${dstr(p.due_date)}</td>
         <td>${amountText}</td>
         ${showLkr ? lkrCell : ''}
