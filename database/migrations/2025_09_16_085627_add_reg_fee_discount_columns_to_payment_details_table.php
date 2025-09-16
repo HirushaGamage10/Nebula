@@ -14,8 +14,8 @@ return new class extends Migration
     public function up()
 {
     Schema::table('payment_details', function (Blueprint $table) {
-        $table->decimal('registration_fee_discount_applied', 10, 2)->default(0)->after('discount_amount');
-        $table->string('registration_fee_discount_note')->nullable()->after('registration_fee_discount_applied');
+        $table->decimal('registration_fee_discount_applied', 10, 2)->default(0);
+        $table->string('registration_fee_discount_note')->nullable();
     });
 }
 

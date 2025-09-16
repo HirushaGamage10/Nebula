@@ -23,6 +23,7 @@ class PaymentDetail extends Model
     'remarks',
     'paid_slip_path',
     'installment_number',
+    'payment_name',
     'due_date',
     'late_fee',           
     'approved_late_fee',  
