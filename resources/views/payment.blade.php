@@ -257,6 +257,74 @@
   .slt-formula .bar { display:block; width:100%; border-top:1px solid currentColor; margin:.15rem 0; }
   .slt-formula .times { white-space:nowrap; }
 
+  .slt-formula {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.slt-formula .fraction {
+  display: inline-block;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 1.2;
+}
+
+.slt-formula .fraction .top {
+  display: block;
+}
+
+.slt-formula .fraction .bar {
+  border-top: 1px solid #000;
+  display: block;
+  width: 100%;
+  margin: 2px 0;
+}
+
+.slt-formula .fraction .bottom {
+  display: block;
+}
+.math-formula {
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  margin: 15px 0;
+}
+
+.math-formula .fraction {
+  display: inline-block;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 1.2;
+  margin: 0 4px;
+}
+
+.math-formula .fraction .top {
+  display: block;
+}
+
+.math-formula .fraction .bar {
+  border-top: 1px solid #000;
+  display: block;
+  width: 100%;
+  margin: 2px 0;
+}
+
+.math-formula .fraction .bottom {
+  display: block;
+}
+
+.math-formula .times {
+  margin-left: 6px;
+}
+
+
+
 </style>
 
 
@@ -409,7 +477,8 @@
                                             <div class="col-md-4">
                                                 <label class="form-label fw-bold">SLT Loan Applied</label>
                                                 <select class="form-select" id="slt-loan-applied" name="slt_loan_applied">
-                                                    <option value="">No SLT Loan</option>
+                                                    <option value="">Select SLT Loan Status</option disabled>
+                                                    <option value="no">No SLT Loan</option>
                                                     <option value="yes">Yes - SLT Loan Applied</option>
                                                 </select>
                                             </div>
@@ -466,6 +535,21 @@
                                                         <tbody id="installmentTableBody">
                                                         </tbody>
                                                     </table>
+                                                    <div id="formulaModal" class="modal" style="display:none; position:fixed; top:0; left:0; 
+                                                        width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1050; align-items:center; justify-content:center;">
+                                                    <div style="background:#fff; padding:20px; border-radius:8px; width:500px; max-width:90%;">
+                                                        <h4>SLT Loan Formula</h4>
+                                                        <div id="formulaExplanation"></div>
+                                                        <div style="text-align:right; margin-top:15px;">
+                                                        <button type="button" class="btn btn-secondary" 
+                                                                onclick="document.getElementById('formulaModal').style.display='none'">
+                                                            Close
+                                                        </button>
+                                                        </div>
+                                                    </div>
+                                                    </div>
+
+
                                                 </div>
                                             </div>
                                         </div>
@@ -589,19 +673,39 @@
                             </div>
                             <!-- SSCL & Bank Charges (only for Franchise Fee) -->
                             <div id="franchiseChargesRow" style="display:none; margin-top:20px;">
+
+                                <!-- SSCL Tax -->
+                                <div class="row mb-3 align-items-center">
+                                    <label class="col-sm-2 col-form-label fw-bold">SSCL Tax</label>
+                                    <div class="col-sm-10 d-flex">
+                                        <select class="form-select me-2" id="sscl-type" style="max-width: 120px;">
+                                            <option value="amount" selected>Amount</option>
+                                            <option value="percentage">%</option>
+                                        </select>
+                                        <input type="number" class="form-control" id="sscl-value"
+                                            placeholder="Enter SSCL (e.g. 2000 or 5)" step="0.01" min="0" value="0"
+                                            oninput="recalculateSSCL()">
+                                    </div>
+                                </div>
+
+                                <!-- Calculated SSCL in LKR -->
                                 <div class="row mb-3 align-items-center">
                                     <label class="col-sm-2 col-form-label fw-bold">SSCL Tax (LKR)</label>
                                     <div class="col-sm-10">
-                                        <input type="number" class="form-control" id="sscl-tax-amount" placeholder="Enter SSCL Tax" step="0.01" min="0" value="0">
+                                        <input type="text" class="form-control" id="sscl-tax-amount" value="0" readonly>
                                     </div>
                                 </div>
+
+                                <!-- Bank Charges (still fixed for now) -->
                                 <div class="row mb-3 align-items-center">
                                     <label class="col-sm-2 col-form-label fw-bold">Bank Charges (LKR)</label>
                                     <div class="col-sm-10">
-                                        <input type="number" class="form-control" id="bank-charges" placeholder="Enter Bank Charges" step="0.01" min="0" value="0">
+                                        <input type="number" class="form-control" id="bank-charges"
+                                            placeholder="Enter Bank Charges" step="0.01" min="0" value="0">
                                     </div>
                                 </div>
                             </div>
+
                         </div>
 
                         <!-- Payment Details Table -->
@@ -1521,14 +1625,17 @@ function displayInstallments(installments) {
 
   // 👉 formula HTML builder
   const sltFormulaHTML = (Ai, L, LminusS) => `
-    <div class="slt-formula">
-      <span class="fraction">
-        <span class="top">${fmt0(Ai)}</span>
-        <span class="bar"></span>
-        <span class="bottom">${fmt0(L)}</span>
-      </span>
-      <span class="times">× ${fmt0(LminusS)}</span>
-    </div>`;
+  <div class="slt-formula" onclick="showFormulaModal(${Ai}, ${L}, ${LminusS})">
+    <span class="fraction">
+      <span class="top">${fmt0(Ai)}</span>
+      <span class="bar"></span>
+      <span class="bottom">${fmt0(L)}</span>
+    </span>
+    <span class="times">× ${fmt0(LminusS)}</span>
+  </div>`;
+
+
+
 
   // current form state
   const discountSelects  = document.querySelectorAll('.discount-select');
@@ -1676,6 +1783,76 @@ if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value && disc
     tbody.insertAdjacentHTML('beforeend', row);
   });
 }
+function showFormulaModal(Ai, L, LminusS) {
+  const S = L - LminusS; // SLT loan amount
+  const Fi = Math.round((Ai / L) * LminusS); // Final installment amount
+
+  document.getElementById('formulaExplanation').innerHTML = `
+    <h5 style="margin-bottom:10px;">General Formula</h5>
+    <div class="math-formula">
+      F<sub>i</sub> = 
+      <span class="fraction">
+        <span class="top">A<sub>i</sub></span>
+        <span class="bar"></span>
+        <span class="bottom">L</span>
+      </span>
+      × (L − S)
+    </div>
+
+    <h6 style="margin-top:20px;">Where:</h6>
+<table style="width:100%; border-collapse:collapse; margin-top:10px; font-size:14px;">
+  <thead>
+    <tr style="background:#f2f2f2; text-align:left;">
+      <th style="padding:6px; border:1px solid #ddd;">Symbol</th>
+      <th style="padding:6px; border:1px solid #ddd;">Description</th>
+      <th style="padding:6px; border:1px solid #ddd;">Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding:6px; border:1px solid #ddd;"><strong>A<sub>i</sub></strong></td>
+      <td style="padding:6px; border:1px solid #ddd;">Installment Amount After the Discount</td>
+      <td style="padding:6px; border:1px solid #ddd; color:#007bff;">LKR ${Ai.toLocaleString()}</td>
+    </tr>
+    <tr>
+      <td style="padding:6px; border:1px solid #ddd;"><strong>L</strong></td>
+      <td style="padding:6px; border:1px solid #ddd;">Total of all installments after discounts (Course Fee Only)</td>
+      <td style="padding:6px; border:1px solid #ddd; color:#007bff;">LKR ${L.toLocaleString()}</td>
+    </tr>
+    <tr>
+      <td style="padding:6px; border:1px solid #ddd;"><strong>S</strong></td>
+      <td style="padding:6px; border:1px solid #ddd;">SLT Loan Amount</td>
+      <td style="padding:6px; border:1px solid #ddd; color:#007bff;">LKR ${S.toLocaleString()}</td>
+    </tr>
+    <tr>
+      <td style="padding:6px; border:1px solid #ddd;"><strong>(L − S)</strong></td>
+      <td style="padding:6px; border:1px solid #ddd;">Remaining payable total (Without Registration Fee)</td>
+      <td style="padding:6px; border:1px solid #ddd; color:#007bff;">LKR ${LminusS.toLocaleString()}</td>
+    </tr>
+  </tbody>
+</table>
+
+
+    <hr>
+
+    <h6>Applied to this installment:</h6>
+    <div class="math-formula" style="background:#f9f9f9; padding:10px; border-radius:6px;">
+      <span class="fraction">
+        <span class="top">${Ai.toLocaleString()}</span>
+        <span class="bar"></span>
+        <span class="bottom">${L.toLocaleString()}</span>
+      </span>
+      × ${LminusS.toLocaleString()}
+    </div>
+
+    <p><strong>Final Amount (F<sub>i</sub>):</strong> 
+      <span style="color:green; font-size:18px;">LKR ${Fi.toLocaleString()}</span>
+    </p>
+  `;
+
+  document.getElementById('formulaModal').style.display = 'flex';
+}
+
 
 // Show "new plan" editor and try to seed rows from the course/intake plan
 function bootstrapNewPlan(studentNic, courseId) {
@@ -1901,6 +2078,8 @@ function loadExistingPaymentPlans(studentNic, courseId) {
     window.isLoadingExistingPlans = false;
   });
 }
+
+
 // Attach a single delegated handler for "Load to editor" buttons
 function attachLoadToEditorHandler() {
   const tbody = document.getElementById('existingPaymentPlansTableBody');
@@ -2524,21 +2703,50 @@ async function generatePaymentSlip() {
   const dueDate       = row.due_date ?? null;
 
     // FX inputs + SSCL & Bank Charges (only franchise)
-    let conversionRate = null, currencyFrom = null, ssclTaxAmount = null, bankCharges = null;
-    if (paymentType === 'franchise_fee') {
-        conversionRate   = Number(document.getElementById('currency-conversion-rate').value);
-        currencyFrom     = document.getElementById('currency-from').value;
-        ssclTaxAmount    = Number(document.getElementById('sscl-tax-amount').value || 0); // 👈 added
-        bankCharges      = Number(document.getElementById('bank-charges').value || 0);     // 👈 added
+let conversionRate = null, currencyFrom = null, ssclTaxAmount = 0, bankCharges = 0;
 
-        if (!conversionRate || conversionRate <= 0) {
-        showErrorMessage('Please enter a valid currency conversion rate for franchise fee.');
+if (paymentType === 'franchise_fee') {
+    // ✅ Ensure installment is selected first
+    const selectedInstallment = document.querySelector('input[name="selectedPayment"]:checked');
+    if (!selectedInstallment) {
+        showErrorMessage('Please select an installment before entering SSCL or Bank Charges.');
         return;
-        }
     }
 
-    showSpinner(true);
+    // ✅ Conversion Rate
+    conversionRate = Number(document.getElementById('currency-conversion-rate').value || 0);
+    currencyFrom   = document.getElementById('currency-from').value;
 
+    if (!conversionRate || conversionRate <= 0) {
+        showErrorMessage('Please enter a valid currency conversion rate for franchise fee.');
+        return;
+    }
+
+    // ✅ SSCL calculated (already pre-computed via recalculateSSCL)
+    ssclTaxAmount = parseFloat(document.getElementById('sscl-tax-amount').value || 0);
+
+    // ✅ Bank Charges direct input
+    bankCharges = parseFloat(document.getElementById('bank-charges').value || 0);
+}
+
+
+showSpinner(true);
+
+const payload = {
+    student_id:         studentId,
+    course_id:          courseId,
+    payment_type:       paymentType,
+    amount:             rawAmount,
+    installment_number: installmentNo,
+    due_date:           dueDate,
+    conversion_rate:    conversionRate, 
+    currency_from:      currencyFrom,   
+    sscl_tax_amount:    ssclTaxAmount,  
+    bank_charges:       bankCharges,     
+    remarks:            ''
+};
+
+<<<<<<< HEAD
     const payload = {
         student_id:         studentId,
         course_id:          courseId,
@@ -2553,6 +2761,8 @@ async function generatePaymentSlip() {
         bank_charges:       bankCharges,    
         remarks:            ''
     };
+=======
+>>>>>>> a8cea6e8abb0046247d9ea7da5daf2407be3bc67
 
   try {
     const res  = await fetch('/payment/generate-slip', {
@@ -2691,6 +2901,36 @@ function setText(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = (val == null ? '' : String(val));
 }
+
+function recalculateSSCL() {
+    const selected = document.querySelector('input[name="selectedPayment"]:checked');
+    if (!selected) {
+        showWarningMessage('Please select an installment first.');
+        document.getElementById('sscl-value').value = 0;
+        document.getElementById('sscl-tax-amount').value = 0;
+        return;
+    }
+
+    const type   = document.getElementById('sscl-type').value;
+    const value  = parseFloat(document.getElementById('sscl-value').value || 0);
+
+    // Base franchise fee in LKR (after conversion)
+    const row = (window.paymentDetailsData || [])[selected.value];
+    const rawAmount = Number(row?.amount || 0);
+    const conversionRate = Number(document.getElementById('currency-conversion-rate').value || 0);
+    const baseFranchise = conversionRate > 0 ? rawAmount * conversionRate : rawAmount;
+
+    let ssclAmount = 0;
+    if (type === 'percentage') {
+        ssclAmount = (baseFranchise * value) / 100;
+    } else {
+        ssclAmount = value;
+    }
+
+    document.getElementById('sscl-tax-amount').value = ssclAmount.toFixed(2);
+}
+
+
 
 // ============ (Optional) Print remains same but uses cached slipData ============
 function printPaymentSlip() {

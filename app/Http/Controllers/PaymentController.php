@@ -1320,6 +1320,13 @@ public function generatePaymentSlip(Request $request)
         if ($paymentType === 'franchise_fee') {
             $totalFee += $ssclTaxAmount + $bankCharges;
         }
+        if ($paymentType === 'franchise_fee' && !$request->installment_number) {
+            return response()->json([
+                'success' => false,
+                'message' => 'SSCL Tax or Bank Charges cannot be applied without selecting an installment.'
+            ], 422);
+        }
+
 
 
         // --- Prevent duplicate pending slips ---

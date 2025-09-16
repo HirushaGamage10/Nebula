@@ -27,11 +27,20 @@
     // Amount
     $amountLkr    = $get('lkr_amount');                // for franchise w/ FX
     $amount       = (float) ($amountLkr ?? $get('amount', 0));
+    
+    // Base amount (without SSCL tax and bank charges) for display
+    $baseAmount   = (float) $get('base_amount', $amount);
 
     // NEW: Late fee fields
     $lateFee        = (float) $get('late_fee', 0);
     $approvedLate   = (float) $get('approved_late_fee', 0);
-    $totalFee       = (float) $get('total_fee', $amount + $lateFee - $approvedLate);
+    
+    // Use the total_fee from slip data if available, otherwise calculate it
+    $totalFee = (float) $get('total_fee');
+    if ($totalFee <= 0) {
+        // Fallback calculation: amount + late fee (approved late fee is already deducted in amount)
+        $totalFee = $amount + $lateFee + $ssclTaxAmount + $bankCharges;
+    }
 
     // Teleshop overlay
     $ts           = $get('teleshop', []);
@@ -505,7 +514,7 @@
     <table class="payment-table">
       <tr>
         <td>Course / Installment Fee:</td>
-        <td class="amount">LKR <?php echo e($fmt($amount)); ?></td>
+        <td class="amount">LKR <?php echo e($fmt($baseAmount)); ?></td>
       </tr>
       <tr>
         <td>Late Fee:</td>
