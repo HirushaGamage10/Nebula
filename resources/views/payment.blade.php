@@ -257,6 +257,74 @@
   .slt-formula .bar { display:block; width:100%; border-top:1px solid currentColor; margin:.15rem 0; }
   .slt-formula .times { white-space:nowrap; }
 
+  .slt-formula {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.slt-formula .fraction {
+  display: inline-block;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 1.2;
+}
+
+.slt-formula .fraction .top {
+  display: block;
+}
+
+.slt-formula .fraction .bar {
+  border-top: 1px solid #000;
+  display: block;
+  width: 100%;
+  margin: 2px 0;
+}
+
+.slt-formula .fraction .bottom {
+  display: block;
+}
+.math-formula {
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  margin: 15px 0;
+}
+
+.math-formula .fraction {
+  display: inline-block;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 1.2;
+  margin: 0 4px;
+}
+
+.math-formula .fraction .top {
+  display: block;
+}
+
+.math-formula .fraction .bar {
+  border-top: 1px solid #000;
+  display: block;
+  width: 100%;
+  margin: 2px 0;
+}
+
+.math-formula .fraction .bottom {
+  display: block;
+}
+
+.math-formula .times {
+  margin-left: 6px;
+}
+
+
+
 </style>
 
 
@@ -409,7 +477,8 @@
                                             <div class="col-md-4">
                                                 <label class="form-label fw-bold">SLT Loan Applied</label>
                                                 <select class="form-select" id="slt-loan-applied" name="slt_loan_applied">
-                                                    <option value="">No SLT Loan</option>
+                                                    <option value="">Select SLT Loan Status</option disabled>
+                                                    <option value="no">No SLT Loan</option>
                                                     <option value="yes">Yes - SLT Loan Applied</option>
                                                 </select>
                                             </div>
@@ -466,6 +535,21 @@
                                                         <tbody id="installmentTableBody">
                                                         </tbody>
                                                     </table>
+                                                    <div id="formulaModal" class="modal" style="display:none; position:fixed; top:0; left:0; 
+                                                        width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1050; align-items:center; justify-content:center;">
+                                                    <div style="background:#fff; padding:20px; border-radius:8px; width:500px; max-width:90%;">
+                                                        <h4>SLT Loan Formula</h4>
+                                                        <div id="formulaExplanation"></div>
+                                                        <div style="text-align:right; margin-top:15px;">
+                                                        <button type="button" class="btn btn-secondary" 
+                                                                onclick="document.getElementById('formulaModal').style.display='none'">
+                                                            Close
+                                                        </button>
+                                                        </div>
+                                                    </div>
+                                                    </div>
+
+
                                                 </div>
                                             </div>
                                         </div>
@@ -1516,14 +1600,17 @@ function displayInstallments(installments) {
 
   // 👉 formula HTML builder
   const sltFormulaHTML = (Ai, L, LminusS) => `
-    <div class="slt-formula">
-      <span class="fraction">
-        <span class="top">${fmt0(Ai)}</span>
-        <span class="bar"></span>
-        <span class="bottom">${fmt0(L)}</span>
-      </span>
-      <span class="times">× ${fmt0(LminusS)}</span>
-    </div>`;
+  <div class="slt-formula" onclick="showFormulaModal(${Ai}, ${L}, ${LminusS})">
+    <span class="fraction">
+      <span class="top">${fmt0(Ai)}</span>
+      <span class="bar"></span>
+      <span class="bottom">${fmt0(L)}</span>
+    </span>
+    <span class="times">× ${fmt0(LminusS)}</span>
+  </div>`;
+
+
+
 
   // current form state
   const discountSelects  = document.querySelectorAll('.discount-select');
@@ -1671,6 +1758,76 @@ if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value && disc
     tbody.insertAdjacentHTML('beforeend', row);
   });
 }
+function showFormulaModal(Ai, L, LminusS) {
+  const S = L - LminusS; // SLT loan amount
+  const Fi = Math.round((Ai / L) * LminusS); // Final installment amount
+
+  document.getElementById('formulaExplanation').innerHTML = `
+    <h5 style="margin-bottom:10px;">General Formula</h5>
+    <div class="math-formula">
+      F<sub>i</sub> = 
+      <span class="fraction">
+        <span class="top">A<sub>i</sub></span>
+        <span class="bar"></span>
+        <span class="bottom">L</span>
+      </span>
+      × (L − S)
+    </div>
+
+    <h6 style="margin-top:20px;">Where:</h6>
+<table style="width:100%; border-collapse:collapse; margin-top:10px; font-size:14px;">
+  <thead>
+    <tr style="background:#f2f2f2; text-align:left;">
+      <th style="padding:6px; border:1px solid #ddd;">Symbol</th>
+      <th style="padding:6px; border:1px solid #ddd;">Description</th>
+      <th style="padding:6px; border:1px solid #ddd;">Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding:6px; border:1px solid #ddd;"><strong>A<sub>i</sub></strong></td>
+      <td style="padding:6px; border:1px solid #ddd;">Installment Amount After the Discount</td>
+      <td style="padding:6px; border:1px solid #ddd; color:#007bff;">LKR ${Ai.toLocaleString()}</td>
+    </tr>
+    <tr>
+      <td style="padding:6px; border:1px solid #ddd;"><strong>L</strong></td>
+      <td style="padding:6px; border:1px solid #ddd;">Total of all installments after discounts (Course Fee Only)</td>
+      <td style="padding:6px; border:1px solid #ddd; color:#007bff;">LKR ${L.toLocaleString()}</td>
+    </tr>
+    <tr>
+      <td style="padding:6px; border:1px solid #ddd;"><strong>S</strong></td>
+      <td style="padding:6px; border:1px solid #ddd;">SLT Loan Amount</td>
+      <td style="padding:6px; border:1px solid #ddd; color:#007bff;">LKR ${S.toLocaleString()}</td>
+    </tr>
+    <tr>
+      <td style="padding:6px; border:1px solid #ddd;"><strong>(L − S)</strong></td>
+      <td style="padding:6px; border:1px solid #ddd;">Remaining payable total (Without Registration Fee)</td>
+      <td style="padding:6px; border:1px solid #ddd; color:#007bff;">LKR ${LminusS.toLocaleString()}</td>
+    </tr>
+  </tbody>
+</table>
+
+
+    <hr>
+
+    <h6>Applied to this installment:</h6>
+    <div class="math-formula" style="background:#f9f9f9; padding:10px; border-radius:6px;">
+      <span class="fraction">
+        <span class="top">${Ai.toLocaleString()}</span>
+        <span class="bar"></span>
+        <span class="bottom">${L.toLocaleString()}</span>
+      </span>
+      × ${LminusS.toLocaleString()}
+    </div>
+
+    <p><strong>Final Amount (F<sub>i</sub>):</strong> 
+      <span style="color:green; font-size:18px;">LKR ${Fi.toLocaleString()}</span>
+    </p>
+  `;
+
+  document.getElementById('formulaModal').style.display = 'flex';
+}
+
 
 // Show "new plan" editor and try to seed rows from the course/intake plan
 function bootstrapNewPlan(studentNic, courseId) {
@@ -1896,6 +2053,8 @@ function loadExistingPaymentPlans(studentNic, courseId) {
     window.isLoadingExistingPlans = false;
   });
 }
+
+
 // Attach a single delegated handler for "Load to editor" buttons
 function attachLoadToEditorHandler() {
   const tbody = document.getElementById('existingPaymentPlansTableBody');
