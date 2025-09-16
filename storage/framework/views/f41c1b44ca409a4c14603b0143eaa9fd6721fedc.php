@@ -1,3 +1,5 @@
+
+
 <?php $__env->startSection('title', 'NEBULA | Payment Management'); ?>
 
 <?php $__env->startSection('content'); ?>
@@ -417,8 +419,32 @@
                                             </div>
                                             <div class="col-md-4">
                                                 <label class="form-label fw-bold">Final Amount After Discount & Loan</label>
+    <div class="input-group">
                                                 <input type="text" class="form-control" id="final-amount" name="final_amount" readonly>
+        <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#finalAmountBreakdownModal">
+            View Breakdown
+        </button>
                                             </div>
+</div>
+
+                                            <!-- Final Amount Breakdown Modal -->
+<div class="modal fade" id="finalAmountBreakdownModal" tabindex="-1" aria-labelledby="breakdownModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="breakdownModalLabel">Final Amount Calculation Breakdown</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="breakdown-modal-body">
+        <!-- Steps will be injected here -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
                                         </div>
                                         
                                         <div class="row mb-3">
@@ -494,7 +520,7 @@
                             <div class="row mb-3 align-items-center">
                                 <label class="col-sm-2 col-form-label fw-bold">Student ID <span class="text-danger">*</span></label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" id="slip-student-id" placeholder="Enter Student ID / NIC" required onchange="loadCoursesForStudentSlip(); checkStudentAndCourse()">
+                                    <input type="text" class="form-control" id="slip-student-id" placeholder="Enter Student ID / NIC" required onchange="checkStudentAndCourse()" oninput="clearSlipFormIfEmpty()">
                                 </div>
                             </div>
                             <div class="row mb-3 align-items-center">
@@ -518,6 +544,7 @@
                                         <option value="course_fee">Course Fee</option>
                                         <option value="franchise_fee">Franchise Fee</option>
                                         <option value="registration_fee">Registration Fee</option>
+                                        <option value="other">Other</option>
                                     </select>
                                 </div>
                             </div>
@@ -536,24 +563,43 @@
                                     <small class="form-text text-muted">Enter the current exchange rate to convert franchise fees to LKR</small>
                                 </div>
                             </div>
-                            <div class="row mb-3 align-items-center" id="ssclTaxRow" style="display: none;">
-                                <label class="col-sm-2 col-form-label fw-bold">SSCL Tax <span class="text-danger">*</span></label>
-                                <div class="col-sm-10">
-                                    <div class="input-group">
-                                        <input type="number" class="form-control" id="sscl-tax" placeholder="Enter SSCL tax amount" step="0.01" min="0" value="0" oninput="recalculateLKRAmounts()">
-                                        <span class="input-group-text">LKR</span>
+                            
+                            <!-- Custom Payment Fields (shown when "Other" is selected) -->
+                            <div id="customPaymentFields" style="display: none;">
+                                <div class="card mt-3">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">
+                                            <i class="ti ti-plus me-2"></i>Custom Payment Details
+                                        </h5>
                                     </div>
-                                    <small class="form-text text-muted">Enter the SSCL tax amount to be added to each franchise fee installment</small>
+                                    <div class="card-body">
+                                        <div id="customPaymentsList">
+                                            <!-- Custom payment entries will be added here -->
+                                        </div>
+                                        <div class="text-center mt-3">
+                                            <button type="button" class="btn btn-outline-primary me-2" onclick="addCustomPayment()">
+                                                <i class="ti ti-plus me-2"></i>Add Custom Payment
+                                            </button>
+                                            <button type="button" class="btn btn-success" onclick="saveCustomPayments()">
+                                                <i class="ti ti-device-floppy me-2"></i>Save Custom Payments
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="row mb-3 align-items-center" id="bankChargesRow" style="display: none;">
-                                <label class="col-sm-2 col-form-label fw-bold">Bank Charges (Per Installment) <span class="text-danger">*</span></label>
-                                <div class="col-sm-10">
-                                    <div class="input-group">
-                                        <input type="number" class="form-control" id="bank-charges" placeholder="Enter bank charges per installment" step="0.01" min="0" value="0" oninput="recalculateLKRAmounts()">
-                                        <span class="input-group-text">LKR</span>
+                            <!-- SSCL & Bank Charges (only for Franchise Fee) -->
+                            <div id="franchiseChargesRow" style="display:none; margin-top:20px;">
+                                <div class="row mb-3 align-items-center">
+                                    <label class="col-sm-2 col-form-label fw-bold">SSCL Tax (LKR)</label>
+                                    <div class="col-sm-10">
+                                        <input type="number" class="form-control" id="sscl-tax-amount" placeholder="Enter SSCL Tax" step="0.01" min="0" value="0">
                                     </div>
-                                    <small class="form-text text-muted">Enter the bank charges amount to be added to each franchise fee installment</small>
+                                </div>
+                                <div class="row mb-3 align-items-center">
+                                    <label class="col-sm-2 col-form-label fw-bold">Bank Charges (LKR)</label>
+                                    <div class="col-sm-10">
+                                        <input type="number" class="form-control" id="bank-charges" placeholder="Enter Bank Charges" step="0.01" min="0" value="0">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -569,6 +615,7 @@
                                 <i class="ti ti-info-circle me-2"></i>
                                 <strong>Conversion Rate:</strong> <span id="currentConversionRate">320</span> LKR per <span id="currentCurrency">USD</span>
                             </div>
+                            
                             <div class="table-responsive">
                                 <table class="table table-bordered table-hover" id="paymentDetailsTable">
                                     <thead class="table-light">
@@ -588,6 +635,8 @@
                                         <!-- Payment details will be loaded here -->
                                     </tbody>
                                 </table>
+
+
                             </div>
                             <div class="text-center mt-3">
                                 <button type="button" class="btn btn-primary" id="generateSlipBtn" onclick="generatePaymentSlip()" disabled>
@@ -612,26 +661,33 @@
                                         <div class="col-md-6">
                                             <h5>Payment Information</h5>
                                             <p><strong>Payment Type:</strong> <span id="slip-payment-type-display"></span></p>
-                                            <p><strong>Amount:</strong> <span id="slip-amount-display"></span></p>
-                                            <p><strong>Installment #:</strong> <span id="slip-installment-display"></span></p>
+                                            <p><strong>Installment Amount:</strong> <span id="slip-amount-display"></span></p>
+
+                                            <div id="franchiseAmountsSection" style="display:none;">
+                                                <p><strong>SSCL Tax:</strong> <span id="slip-sscl-amount"></span></p>
+                                                <p><strong>Bank Charges:</strong> <span id="slip-bank-amount"></span></p>
+                                                <p><strong>Total Amount:</strong> <span id="slip-final-amount"></span></p>
+                                            </div>
+
+
+                                            <p><strong id="slip-installment-label">Installment #:</strong> <span id="slip-installment-display"></span></p>
                                             <p><strong>Due Date:</strong> <span id="slip-due-date-display"></span></p>
                                             <p><strong>Date:</strong> <span id="slip-date-display"></span></p>
                                             <p><strong>Receipt No:</strong> <span id="slip-receipt-no-display"></span></p>
                                         </div>
                                     </div>
                                     <div class="text-center mt-3">
-    <button type="button" class="btn btn-success me-2" onclick="printPaymentSlip()">
-        <i class="ti ti-printer me-2"></i>Print Slip
-    </button>
-    <button type="button" class="btn btn-info me-2" onclick="downloadPaymentSlip()">
-        <i class="ti ti-download me-2"></i>Download PDF
-    </button>
+                                        <button type="button" class="btn btn-success me-2" onclick="printPaymentSlip()">
+                                            <i class="ti ti-printer me-2"></i>Print Slip
+                                        </button>
+                                        <button type="button" class="btn btn-info me-2" onclick="downloadPaymentSlip()">
+                                            <i class="ti ti-download me-2"></i>Download PDF
+                                        </button>
 
-    <button type="button" class="btn btn-danger btn-sm" id="delete-slip-btn" style="display:none;">
-        <i class="ti ti-trash me-2"></i>Delete Slip
-    </button>
-</div>
-
+                                        <button type="button" class="btn btn-danger btn-sm" id="delete-slip-btn" style="display:none;">
+                                            <i class="ti ti-trash me-2"></i>Delete Slip
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -670,7 +726,7 @@
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                                         <div>
                                             <p><strong>Payment Type:</strong> <span id="print-payment-type"></span></p>
-                                            <p><strong>Installment #:</strong> <span id="print-installment"></span></p>
+                                            <p><strong id="print-installment-label">Installment #:</strong> <span id="print-installment"></span></p>
                                             <p><strong>Due Date:</strong> <span id="print-due-date"></span></p>
                                         </div>
                                         <div>
@@ -703,10 +759,6 @@
                                             <tr>
                                                 <td style="border: 1px solid #ddd; padding: 10px;">Registration Fee</td>
                                                 <td style="border: 1px solid #ddd; padding: 10px; text-align: right;" id="print-registration-fee">0.00</td>
-                                            </tr>
-                                            <tr>
-                                                <td style="border: 1px solid #ddd; padding: 10px;">Late Fee</td>
-                                                <td style="border: 1px solid #ddd; padding: 10px; text-align: right;" id="print-late-fee">0.00</td>
                                             </tr>
                                             <tr style="background-color: #f8f9fa; font-weight: bold;">
                                                 <td style="border: 1px solid #ddd; padding: 10px;">Total Amount</td>
@@ -1309,11 +1361,8 @@ function loadCoursesForStudent() {
     
     if (!studentNic) {
         // Reset course dropdown to show all courses
-        const courseSelect = document.getElementById('plan-course');
-        courseSelect.innerHTML = '<option selected disabled value="">Select a Course</option>';
-        <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            courseSelect.innerHTML += '<option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>';
-        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+        document.getElementById('plan-course').innerHTML = '<option selected disabled value="">Select a Course</option>' + 
+            '<?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>';
         return;
     }
 
@@ -1343,21 +1392,15 @@ function loadCoursesForStudent() {
         } else {
             showErrorMessage(data.message || 'Failed to load courses for student.');
             // Reset to all courses on error
-            const courseSelect = document.getElementById('plan-course');
-            courseSelect.innerHTML = '<option selected disabled value="">Select a Course</option>';
-            <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                courseSelect.innerHTML += '<option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>';
-            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            document.getElementById('plan-course').innerHTML = '<option selected disabled value="">Select a Course</option>' + 
+                '<?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>';
         }
     })
     .catch(() => {
         showErrorMessage('An error occurred while loading courses.');
         // Reset to all courses on error
-        const courseSelect = document.getElementById('plan-course');
-        courseSelect.innerHTML = '<option selected disabled value="">Select a Course</option>';
-        <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            courseSelect.innerHTML += '<option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>';
-        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+        document.getElementById('plan-course').innerHTML = '<option selected disabled value="">Select a Course</option>' + 
+            '<?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>';
     })
     .finally(() => showSpinner(false));
 }
@@ -1530,6 +1573,35 @@ function displayInstallments(installments) {
     dAmt = Math.max(0, dAmt);
     return { ...ins, discountedAmount: dAmt, discountApplied: applied };
   });
+  // ===============================
+// Handle registration fee discount excess
+// ===============================
+const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
+if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value && discounted.length > 0) {
+  const opt = registrationFeeDiscountSelect.options[registrationFeeDiscountSelect.selectedIndex];
+  const discountType = opt.dataset.type;
+  const discountValue = N(opt.dataset.value);
+
+  const regFee = N(window.currentStudentData?.registration_fee || 0);
+  let discountAmount = 0;
+
+  if (discountType === 'percentage') {
+    discountAmount = regFee * (discountValue / 100);
+  } else if (discountType === 'amount') {
+    discountAmount = discountValue;
+  }
+
+  if (discountAmount > regFee) {
+    const excess = discountAmount - regFee;
+
+    // Deduct excess from first installment
+    discounted[0].discountedAmount = Math.max(0, discounted[0].discountedAmount - excess);
+
+    // Mark it so discount column shows correctly
+    discounted[0].registration_fee_discount_applied = excess;
+    discounted[0].registration_fee_discount_note = 'Reg. Fee Excess';
+  }
+}
 
   // sum of discounted amounts
   const sumAfterDiscounts = discounted.reduce((s, x) => s + x.discountedAmount, 0);
@@ -2012,13 +2084,15 @@ function calculateFinalAmount() {
     const sltLoanApplied = document.getElementById('slt-loan-applied').value;
     const sltLoanAmount = parseFloat(document.getElementById('slt-loan-amount').value) || 0;
     const finalAmountField = document.getElementById('final-amount');
+    const breakdownModalBody = document.getElementById('breakdown-modal-body'); // 👈 modal content
     
     let finalAmount = totalAmount;
     let totalDiscountAmount = 0;
     let totalDiscountPercentage = 0;
+    let breakdownSteps = [`<strong>Base Total (Course Fee + Registration Fee):</strong> LKR ${totalAmount.toLocaleString()}`];
     
     // Calculate total discounts
-    discountSelects.forEach((select, index) => {
+    discountSelects.forEach((select) => {
         if (select.value) {
             const selectedOption = select.options[select.selectedIndex];
             const discountType = selectedOption.dataset.type;
@@ -2032,60 +2106,69 @@ function calculateFinalAmount() {
         }
     });
     
-    // Apply percentage discounts first
+    // Apply percentage discounts
     if (totalDiscountPercentage > 0) {
-        finalAmount = finalAmount - (finalAmount * totalDiscountPercentage / 100);
+        const pctReduction = finalAmount * totalDiscountPercentage / 100;
+        finalAmount -= pctReduction;
+        breakdownSteps.push(`<strong>-${totalDiscountPercentage}% Discount (Normal Discount to the Total Fee): </strong> -LKR ${pctReduction.toLocaleString()}`);
     }
     
     // Apply fixed amount discounts
     if (totalDiscountAmount > 0) {
-        finalAmount = finalAmount - totalDiscountAmount;
+        finalAmount -= totalDiscountAmount;
+        breakdownSteps.push(`<strong>Fixed Discount (Normal Discount to the Total Fee):</strong> -LKR ${totalDiscountAmount.toLocaleString()}`);
     }
     
-    // Apply registration fee discount if selected
+    // Registration Fee Discount
     const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
-    
     if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value) {
         const selectedOption = registrationFeeDiscountSelect.options[registrationFeeDiscountSelect.selectedIndex];
         const discountType = selectedOption.dataset.type;
         const discountValue = parseFloat(selectedOption.dataset.value || 0);
         
         const registrationFee = parseFloat(window.currentStudentData?.registration_fee || 0);
-        let registrationFeeDiscount = 0;
+        let discountAmount = 0;
         
         if (discountType === 'percentage') {
-            registrationFeeDiscount = registrationFee * (discountValue / 100);
+            discountAmount = registrationFee * (discountValue / 100);
         } else if (discountType === 'amount') {
-            registrationFeeDiscount = discountValue;
+            discountAmount = discountValue;
         }
-        
-        if (registrationFeeDiscount <= registrationFee) {
-            // Discount is less than or equal to registration fee - apply directly
-            finalAmount = finalAmount - registrationFeeDiscount;
+
+        if (discountAmount <= registrationFee) {
+            finalAmount -= discountAmount;
+            breakdownSteps.push(`<string>Registration Fee Discount</string>: -LKR ${discountAmount.toLocaleString()}`);
         } else {
-            // Discount exceeds registration fee - apply full registration fee discount
-            // The excess will be handled by backend and applied to course fee installments
-            finalAmount = finalAmount - registrationFee;
+            finalAmount -= registrationFee;
+            const excess = discountAmount - registrationFee;
+            finalAmount -= excess;
+            breakdownSteps.push(`<string>Registration Fee Wiped </string> (-LKR ${registrationFee.toLocaleString()}) + Excess Applied (-LKR ${excess.toLocaleString()})`);
         }
     }
 
-    // Apply SLT loan if selected
+    // Apply SLT loan
     if (sltLoanApplied === 'yes' && sltLoanAmount > 0) {
-        finalAmount = finalAmount - sltLoanAmount;
+        finalAmount -= sltLoanAmount;
+        breakdownSteps.push(`<strong> SLT Loan:</strong> -LKR ${sltLoanAmount.toLocaleString()}`);
     }
     
-    // Ensure final amount is not negative
+    // Ensure non-negative
     finalAmount = Math.max(0, finalAmount);
+    breakdownSteps.push(`<strong>Final Amount:</strong> LKR ${finalAmount.toLocaleString()}`);
     
+    // Update DOM
     if (finalAmountField) {
         finalAmountField.value = 'LKR ' + finalAmount.toLocaleString();
     }
+    if (breakdownModalBody) {
+        breakdownModalBody.innerHTML = breakdownSteps.join('<br>');
+    }
     
-    // Update window.currentStudentData with final amount
     if (window.currentStudentData) {
         window.currentStudentData.final_amount = finalAmount;
     }
 }
+
 
 // Calculate and display installments
 function calculateInstallments() {
@@ -2197,28 +2280,49 @@ function createPaymentPlan() {
 
     // Build installments INCLUDING final_amount
     const installments = (data.installments || []).map(inst => {
-      const base = parseFloat(inst.amount || 0);                 // local base amount
-      const discounted = parseFloat(inst.final_amount || base);  // backend already applied discount (usually last row)
-      const discountAmount = Math.max(0, base - discounted);     // derived discount applied to this row
+  const base = parseFloat(inst.amount || 0);
+  const discounted = parseFloat(inst.final_amount || base);
+  const discountAmount = Math.max(0, base - discounted);
       const finalWithLoan = Math.max(0, discounted - sltPerInst);
-
-      // Check for registration fee discount excess
-      const registrationFeeDiscountApplied = parseFloat(inst.registration_fee_discount_applied || 0);
-      const registrationFeeDiscountNote = inst.registration_fee_discount_note || null;
 
       return {
         installment_number: inst.installment_number,
-        due_date: inst.due_date,                 // already ISO from backend
-        amount: base,                            // base amount
-        discount_amount: discountAmount,         // numeric
-        discount_note: inst.discount || null,    // e.g. "Discount (10% on total)" or null
-        registration_fee_discount_applied: registrationFeeDiscountApplied,
-        registration_fee_discount_note: registrationFeeDiscountNote,
-        slt_loan_amount: sltPerInst,             // distributed loan
-        final_amount: finalWithLoan,             // ✅ REQUIRED by backend
+    due_date: inst.due_date,
+    amount: base,
+    discount_amount: discountAmount,
+    discount_note: inst.discount || null,
+    registration_fee_discount_applied: 0,     // always start with 0
+    registration_fee_discount_note: null,
+    slt_loan_amount: sltPerInst,
+    final_amount: finalWithLoan,
         status: 'pending'
       };
     });
+
+// ===============================
+// Handle registration fee discount excess
+// ===============================
+if (registrationFeeDiscount && installments.length > 0) {
+  const regFee = parseFloat(window.currentStudentData?.registration_fee || 0);
+  let discountAmount = 0;
+
+  if (registrationFeeDiscount.discount_type === 'percentage') {
+    discountAmount = regFee * (registrationFeeDiscount.discount_value / 100);
+  } else if (registrationFeeDiscount.discount_type === 'amount') {
+    discountAmount = registrationFeeDiscount.discount_value;
+  }
+
+  if (discountAmount > regFee) {
+    const excess = discountAmount - regFee;
+
+    // ✅ Just mark excess for displayInstallments
+    installments[0].registration_fee_discount_applied = excess;
+    installments[0].registration_fee_discount_note = 'Reg. Fee Excess';
+  }
+}
+
+
+
 
     // totals
     const totalAmount = installments.reduce((s, i) => s + (i.amount || 0), 0);
@@ -2414,65 +2518,41 @@ async function generatePaymentSlip() {
   if (!paymentType)return showErrorMessage('Please select a payment type.');
   if (!courseId)   return showErrorMessage('Please select a course.');
 
-  // Get the final amount and late fee from the selected row in the table
+  // Payable amount we rendered (backend will recompute/validate anyway)
   const rawAmount     = Number(row.amount || 0);
   const installmentNo = row.installment_number ?? null;
   const dueDate       = row.due_date ?? null;
-  
-  // Get the final LKR amount and late fee from the actual table row DOM elements
-  const selectedRow = selected.closest('tr');
-  
-  // Column positions depend on whether it's franchise fee (shows LKR column) or not
-  let lkrAmountCell, lateFeeCell;
-  if (paymentType === 'franchise_fee') {
-    // For franchise fee: Select(1), Installment(2), Due Date(3), Amount(4), Amount LKR(5), Late Fee(6), Status(7)
-    lkrAmountCell = selectedRow?.querySelector('td:nth-child(5)'); // Amount (LKR) column
-    lateFeeCell = selectedRow?.querySelector('td:nth-child(6)'); // Late Fee column
-  } else {
-    // For other payment types: Select(1), Installment(2), Due Date(3), Amount(4), Late Fee(5), Status(6)
-    lkrAmountCell = selectedRow?.querySelector('td:nth-child(4)'); // Amount column (no LKR column)
-    lateFeeCell = selectedRow?.querySelector('td:nth-child(5)'); // Late Fee column
-  }
-  
-  const finalLkrAmount = lkrAmountCell ? parseFloat(lkrAmountCell.textContent.replace(/[^\d.-]/g, '')) || 0 : 0;
-  const lateFeeAmount = lateFeeCell ? parseFloat(lateFeeCell.textContent.replace(/[^\d.-]/g, '')) || 0 : 0;
-  
-  // Debug logging
-  console.log('Payment Type:', paymentType);
-  console.log('LKR Amount Cell:', lkrAmountCell?.textContent);
-  console.log('Late Fee Cell:', lateFeeCell?.textContent);
-  console.log('Final LKR Amount:', finalLkrAmount);
-  console.log('Late Fee Amount:', lateFeeAmount);
 
-  // FX inputs and additional charges (only franchise)
-  let conversionRate = null, currencyFrom = null, ssclTax = null, bankCharges = null;
-  if (paymentType === 'franchise_fee') {
-    conversionRate = Number(document.getElementById('currency-conversion-rate').value);
-    currencyFrom   = document.getElementById('currency-from').value;
-    ssclTax        = Number(document.getElementById('sscl-tax').value) || 0;
-    bankCharges    = Number(document.getElementById('bank-charges').value) || 0;
-    
-    if (!conversionRate || conversionRate <= 0) {
-      showErrorMessage('Please enter a valid currency conversion rate for franchise fee.');
-      return;
+    // FX inputs + SSCL & Bank Charges (only franchise)
+    let conversionRate = null, currencyFrom = null, ssclTaxAmount = null, bankCharges = null;
+    if (paymentType === 'franchise_fee') {
+        conversionRate   = Number(document.getElementById('currency-conversion-rate').value);
+        currencyFrom     = document.getElementById('currency-from').value;
+        ssclTaxAmount    = Number(document.getElementById('sscl-tax-amount').value || 0); // 👈 added
+        bankCharges      = Number(document.getElementById('bank-charges').value || 0);     // 👈 added
+
+        if (!conversionRate || conversionRate <= 0) {
+        showErrorMessage('Please enter a valid currency conversion rate for franchise fee.');
+        return;
+        }
     }
-  }
 
-  showSpinner(true);
+    showSpinner(true);
 
-  const payload = {
-    student_id:         studentId,
-    course_id:          courseId,       // ✅ send course_id
-    payment_type:       paymentType,
-    amount:             rawAmount,      // UI amount; backend derives real amount
-    installment_number: installmentNo,
-    due_date:           dueDate,
-    conversion_rate:    conversionRate, // null when not franchise
-    currency_from:      currencyFrom,   // null when not franchise
-    sscl_tax:           ssclTax,        // null when not franchise
-    bank_charges:       bankCharges,    // null when not franchise
-    remarks:            ''
-  };
+    const payload = {
+        student_id:         studentId,
+        course_id:          courseId,
+        payment_type:       paymentType,
+        amount:             rawAmount,
+        installment_number: installmentNo,
+        payment_name:       paymentType === 'other' ? row.payment_name : null,
+        due_date:           dueDate,
+        conversion_rate:    conversionRate, 
+        currency_from:      currencyFrom,   
+        sscl_tax_amount:    ssclTaxAmount,  
+        bank_charges:       bankCharges,    
+        remarks:            ''
+    };
 
   try {
     const res  = await fetch('/payment/generate-slip', {
@@ -2491,49 +2571,20 @@ async function generatePaymentSlip() {
 
     if (!data.success) throw new Error(data.message || 'Failed to generate payment slip.');
 
-    // Cache for print/download and update with final calculated amounts
+    // Cache for print/download
     window.currentSlipData = data.slip_data;
     const s = data.slip_data;
-    
-    // Update the slip data with final amounts from the table
-    if (paymentType === 'franchise_fee') {
-      // Use the final LKR amount from the table (already includes SSCL tax and bank charges)
-      s.lkr_amount = finalLkrAmount;
-      s.final_amount = finalLkrAmount;
-      s.amount = finalLkrAmount; // Also update the main amount field
-      s.sscl_tax = ssclTax;
-      s.bank_charges = bankCharges;
-      // Update total_fee to include late fee
-      s.total_fee = finalLkrAmount + lateFeeAmount;
-    } else {
-      // For non-franchise fees, use the amount from the row
-      s.final_amount = Number(s.amount || 0);
-      // Update total_fee to include late fee
-      s.total_fee = Number(s.amount || 0) + lateFeeAmount;
-    }
-    
-    // Always update late fee from the table
-    s.late_fee = lateFeeAmount;
-    s.final_amount_with_late_fee = (paymentType === 'franchise_fee' ? finalLkrAmount : Number(s.amount || 0)) + lateFeeAmount;
-    
-    // Debug: Log the updated slip data
-    console.log('Updated Slip Data:');
-    console.log('s.amount:', s.amount);
-    console.log('s.lkr_amount:', s.lkr_amount);
-    console.log('s.final_amount:', s.final_amount);
-    console.log('s.late_fee:', s.late_fee);
-    console.log('s.final_amount_with_late_fee:', s.final_amount_with_late_fee);
 
     // ===== Delete button setup =====
-const deleteBtn = document.getElementById('delete-slip-btn');
-if (s && s.id) {
-  deleteBtn.style.display = "inline-block"; // show the button
-  deleteBtn.onclick = function () {
-    deleteSlip(s.id);
-  };
-} else {
-  deleteBtn.style.display = "none"; // hide if no slip id
-}
+    const deleteBtn = document.getElementById('delete-slip-btn');
+    if (s && s.id) {
+    deleteBtn.style.display = "inline-block"; // show the button
+    deleteBtn.onclick = function () {
+        deleteSlip(s.id);
+    };
+    } else {
+    deleteBtn.style.display = "none"; // hide if no slip id
+    }
 
 
     // ===== On-page preview =====
@@ -2542,30 +2593,43 @@ if (s && s.id) {
     setText('slip-course-display',       s.course_name);
     setText('slip-intake-display',       s.intake);
 
+    setText('slip-intallment-type',       s.intallment_type);
+    
     setText('slip-payment-type-display', s.payment_type_display || s.payment_type);
-    setText('slip-installment-display',  installmentNo ?? '-');
+
+    if (paymentType === 'franchise_fee') {
+        document.getElementById('franchiseAmountsSection').style.display = 'block';
+
+        setText('slip-sscl-amount', `LKR ${Number(s.sscl_tax_amount || 0).toLocaleString()}`);
+        setText('slip-bank-amount', `LKR ${Number(s.bank_charges || 0).toLocaleString()}`);
+        setText('slip-final-amount', `LKR ${Number(s.total_fee || 0).toLocaleString()}`);
+    } else {
+        document.getElementById('franchiseAmountsSection').style.display = 'none';
+    }
+
+
+
+    // Update label and value based on payment type
+    const installmentLabel = document.getElementById('slip-installment-label');
+    if (paymentType === 'other') {
+        installmentLabel.textContent = 'Payment Name:';
+        setText('slip-installment-display', row.payment_name ?? '-');
+    } else {
+        installmentLabel.textContent = 'Installment #:';
+        setText('slip-installment-display', installmentNo ?? '-');
+    }
     setText('slip-due-date-display',     dueDate ? new Date(dueDate).toLocaleDateString() : '-');
     setText('slip-date-display',         s.payment_date || '');
     setText('slip-receipt-no-display',   s.receipt_no || '');
 
-    // Amount text (FX + LKR for franchise; LKR for others) - including late fee
+    // Amount text (FX + LKR for franchise; LKR for others)
     let amountDisplay;
     if (paymentType === 'franchise_fee' && s.franchise_fee_currency) {
-      // Use the original FX amount from the row data, not the slip data
-      const fx = Number(row.amount || 0);
-      // Use the final LKR amount we extracted from the table
-      const totalWithLateFee = finalLkrAmount + lateFeeAmount;
-      amountDisplay = `${s.franchise_fee_currency} ${fx.toLocaleString()} (LKR ${totalWithLateFee.toLocaleString()})`;
-      
-      // Debug logging
-      console.log('Franchise Fee Debug:');
-      console.log('FX Amount from row:', fx);
-      console.log('Final LKR Amount from table:', finalLkrAmount);
-      console.log('Late Fee Amount from table:', lateFeeAmount);
-      console.log('Total with Late Fee:', totalWithLateFee);
+      const fx  = Number(s.amount || 0);
+      const lkr = Number(s.lkr_amount || (fx * (conversionRate || 0)));
+      amountDisplay = `${s.franchise_fee_currency} ${fx.toLocaleString()} (LKR ${lkr.toLocaleString()})`;
     } else {
-      const totalWithLateFee = Number(s.amount || 0) + lateFeeAmount;
-      amountDisplay = `LKR ${totalWithLateFee.toLocaleString()}`;
+      amountDisplay = `LKR ${Number(s.amount || 0).toLocaleString()}`;
     }
     setText('slip-amount-display', amountDisplay);
 
@@ -2581,7 +2645,15 @@ if (s && s.id) {
     setText('print-location', s.location);
     setText('print-registration-date', s.registration_date ? new Date(s.registration_date).toLocaleDateString() : 'N/A');
     setText('print-payment-type', s.payment_type_display || s.payment_type);
-    setText('print-installment', installmentNo ?? '-');
+    // Update print template label and value based on payment type
+    const printInstallmentLabel = document.getElementById('print-installment-label');
+    if (paymentType === 'other') {
+        printInstallmentLabel.textContent = 'Payment Name:';
+        setText('print-installment', row.payment_name ?? '-');
+    } else {
+        printInstallmentLabel.textContent = 'Installment #:';
+        setText('print-installment', installmentNo ?? '-');
+    }
     setText('print-due-date', dueDate ? new Date(dueDate).toLocaleDateString() : '-');
 
     if (paymentType === 'franchise_fee' && s.franchise_fee_currency) {
@@ -2593,28 +2665,15 @@ if (s && s.id) {
     setText('print-receipt-no', s.receipt_no);
     setText('print-valid-until', s.valid_until ? new Date(s.valid_until).toLocaleDateString() : 'N/A');
 
-    // Breakdown rows (use table values for franchise fee, backend values for others)
+    // Breakdown rows (as returned by backend)
     setText('print-course-fee',       Number(s.course_fee || 0).toLocaleString());
-    if (paymentType === 'franchise_fee') {
-      setText('print-franchise-fee', finalLkrAmount.toLocaleString());
-    } else {
-      setText('print-franchise-fee', Number(s.franchise_fee || 0).toLocaleString());
-    }
+    setText('print-franchise-fee',    Number(s.franchise_fee || 0).toLocaleString());
     setText('print-registration-fee', Number(s.registration_fee || 0).toLocaleString());
-    setText('print-late-fee', lateFeeAmount.toLocaleString());
-    
-    // Debug logging for print template
-    console.log('Print Template Debug:');
-    console.log('paymentType:', paymentType);
-    console.log('finalLkrAmount:', finalLkrAmount);
-    console.log('lateFeeAmount:', lateFeeAmount);
-    console.log('totalForPrint:', finalLkrAmount + lateFeeAmount);
 
-    // Total on slip (LKR if franchise with FX, including SSCL tax, bank charges, and late fee)
-    // Use the updated total_fee from the slip data
-    const totalForPrint = s.total_fee || ((paymentType === 'franchise_fee')
-      ? finalLkrAmount + lateFeeAmount
-      : Number(s.amount || 0) + lateFeeAmount);
+    // Total on slip (LKR if franchise with FX)
+    const totalForPrint = (paymentType === 'franchise_fee')
+      ? Number(s.lkr_amount || 0)
+      : Number(s.amount || 0);
     setText('print-total-amount', totalForPrint.toLocaleString());
 
     setText('print-generated-date', new Date().toLocaleString());
@@ -2646,7 +2705,15 @@ function printPaymentSlip() {
   setText('print-location', s.location);
   setText('print-registration-date', s.registration_date ? new Date(s.registration_date).toLocaleDateString() : 'N/A');
   setText('print-payment-type', s.payment_type_display || s.payment_type);
-  setText('print-installment', s.installment_number || 'N/A');
+  // Update print template label and value based on payment type for PDF
+  const printInstallmentLabel = document.getElementById('print-installment-label');
+  if (s.payment_type === 'other') {
+    printInstallmentLabel.textContent = 'Payment Name:';
+    setText('print-installment', s.payment_name || 'N/A');
+  } else {
+    printInstallmentLabel.textContent = 'Installment #:';
+    setText('print-installment', s.installment_number || 'N/A');
+  }
   setText('print-due-date', s.due_date ? new Date(s.due_date).toLocaleDateString() : 'N/A');
 
   if (s.payment_type === 'franchise_fee' && s.franchise_fee_currency) {
@@ -2659,26 +2726,12 @@ function printPaymentSlip() {
   setText('print-valid-until', s.valid_until ? new Date(s.valid_until).toLocaleDateString() : 'N/A');
 
   setText('print-course-fee',       Number(s.course_fee || 0).toLocaleString() + '.00');
-  if (s.payment_type === 'franchise_fee') {
-    setText('print-franchise-fee', Number(s.final_amount || s.lkr_amount || 0).toLocaleString() + '.00');
-  } else {
-    setText('print-franchise-fee', Number(s.franchise_fee || 0).toLocaleString() + '.00');
-  }
+  setText('print-franchise-fee',    Number(s.franchise_fee || 0).toLocaleString() + '.00');
   setText('print-registration-fee', Number(s.registration_fee || 0).toLocaleString() + '.00');
-  setText('print-late-fee', Number(s.late_fee || 0).toLocaleString() + '.00');
 
-  // Use the final amount from slip data (already includes SSCL tax, bank charges, and late fee)
   const totalForPrint = (s.payment_type === 'franchise_fee')
-    ? Number(s.final_amount_with_late_fee || s.final_amount || s.lkr_amount || 0)
-    : Number(s.amount || 0) + Number(s.late_fee || 0);
-    
-  // Debug logging for print function
-  console.log('Print Function Debug:');
-  console.log('s.final_amount_with_late_fee:', s.final_amount_with_late_fee);
-  console.log('s.final_amount:', s.final_amount);
-  console.log('s.lkr_amount:', s.lkr_amount);
-  console.log('s.late_fee:', s.late_fee);
-  console.log('totalForPrint:', totalForPrint);
+    ? Number(s.lkr_amount || 0)
+    : Number(s.amount || 0);
   setText('print-total-amount', totalForPrint.toLocaleString() + '.00');
 
   // Show print template and print
@@ -3244,7 +3297,7 @@ document.addEventListener('DOMContentLoaded', function() {
         statusIndicator.style.display = 'block';
     }
     
-    // Add event listener for NIC field to filter courses in payment plans tab
+    // Add event listener for NIC field to filter courses
     const studentNicField = document.getElementById('plan-student-nic');
     if (studentNicField) {
         studentNicField.addEventListener('input', function() {
@@ -3256,23 +3309,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 clearTimeout(this.timeout);
                 this.timeout = setTimeout(() => {
                     loadCoursesForStudent();
-                }, 1000); // 1 second delay after complete NIC
-            }
-        });
-    }
-    
-    // Add event listener for NIC field to filter courses in slip tab
-    const slipStudentIdField = document.getElementById('slip-student-id');
-    if (slipStudentIdField) {
-        slipStudentIdField.addEventListener('input', function() {
-            const nicValue = this.value.trim();
-            
-            // Wait for complete NIC number (assuming NIC is 10-12 characters)
-            if (nicValue.length >= 10) {
-                // Add a small delay to avoid too many API calls while typing
-                clearTimeout(this.timeout);
-                this.timeout = setTimeout(() => {
-                    loadCoursesForStudentSlip();
                 }, 1000); // 1 second delay after complete NIC
             }
         });
@@ -3451,64 +3487,313 @@ function loadIntakesForCourse() {
 
 // Check if both student ID and course are selected
 function checkStudentAndCourse() {
-    const courseId = document.getElementById('slip-course').value;
-    const studentId = document.getElementById('slip-student-id').value;
-    
+    const studentId = document.getElementById('slip-student-id').value?.trim();
+    const courseSelect = document.getElementById('slip-course');
     const paymentTypeSelect = document.getElementById('slip-payment-type');
     
-    if (!courseId || !studentId) {
+    // Reset course selection and payment type
+    courseSelect.innerHTML = '<option value="" selected disabled>Select Course</option>';
         paymentTypeSelect.disabled = true;
         paymentTypeSelect.value = '';
-    } else {
-        paymentTypeSelect.disabled = false;
-    }
-}
-
-// Load courses for student in slip tab based on NIC
-function loadCoursesForStudentSlip() {
-    const studentNic = document.getElementById('slip-student-id').value;
-    const courseSelect = document.getElementById('slip-course');
     
-    if (!studentNic) {
-        // Reset course dropdown to show all courses
-        courseSelect.innerHTML = '<option selected disabled value="">Select Course</option>';
-        <?php if(isset($courses)): ?>
-            <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                courseSelect.innerHTML += '<option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>';
-            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-        <?php endif; ?>
+    if (!studentId) {
         return;
     }
+    
+    // Load courses for the student
+    loadStudentCoursesForSlip(studentId);
+}
 
-    // Make API call to get courses for the student
+// Load courses for a specific student in the generate slip tab
+function loadStudentCoursesForSlip(studentNic) {
+    const courseSelect = document.getElementById('slip-course');
+    const paymentTypeSelect = document.getElementById('slip-payment-type');
+    
+    // Show loading state
+    courseSelect.innerHTML = '<option value="" disabled>Loading courses...</option>';
+    courseSelect.disabled = true;
+    paymentTypeSelect.disabled = true;
+    
     fetch('/payment/get-student-courses', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
+        },
         body: JSON.stringify({
             student_nic: studentNic
         })
     })
     .then(response => response.json())
     .then(data => {
-        if (data.success && data.courses) {
-            courseSelect.innerHTML = '<option selected disabled value="">Select Course</option>';
+        if (data.success && data.courses && data.courses.length > 0) {
+            // Populate course dropdown with student's registered courses
+            courseSelect.innerHTML = '<option value="" selected disabled>Select Course</option>';
             data.courses.forEach(course => {
                 const option = document.createElement('option');
                 option.value = course.course_id;
-                option.textContent = `${course.course_name} (Registered: ${course.registration_date})`;
+                option.textContent = course.course_name;
                 courseSelect.appendChild(option);
             });
             courseSelect.disabled = false;
-        } else {
-            courseSelect.innerHTML = '<option selected disabled value="">No courses found for this student</option>';
+    } else {
+            // No courses found for this student
+            courseSelect.innerHTML = '<option value="" disabled>No registered courses found</option>';
             courseSelect.disabled = true;
+            paymentTypeSelect.disabled = true;
+            
+            if (data.message) {
+                showToast(data.message, 'warning');
+            } else {
+                showToast('No registered courses found for this student.', 'warning');
+            }
         }
     })
     .catch(error => {
-        console.error('Error loading courses for student:', error);
-        courseSelect.innerHTML = '<option selected disabled value="">Error loading courses</option>';
+        console.error('Error loading student courses:', error);
+        courseSelect.innerHTML = '<option value="" disabled>Error loading courses</option>';
         courseSelect.disabled = true;
+        paymentTypeSelect.disabled = true;
+        showToast('Error loading student courses. Please try again.', 'danger');
     });
+}
+
+// Clear slip form when student ID is empty
+function clearSlipFormIfEmpty() {
+    const studentId = document.getElementById('slip-student-id').value?.trim();
+    const courseSelect = document.getElementById('slip-course');
+    const paymentTypeSelect = document.getElementById('slip-payment-type');
+    
+    if (!studentId) {
+        // Reset course selection to show all courses
+        courseSelect.innerHTML = '<option value="" selected disabled>Select Course</option>';
+        <?php if(isset($courses)): ?>
+            <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                courseSelect.innerHTML += '<option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>';
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+        <?php endif; ?>
+        courseSelect.disabled = false;
+        
+        // Reset payment type
+        paymentTypeSelect.disabled = true;
+        paymentTypeSelect.value = '';
+        
+        // Clear payment details table
+        const tbody = document.getElementById('paymentDetailsTableBody');
+        if (tbody) {
+            tbody.innerHTML = '';
+        }
+    }
+}
+
+// Custom Payment Functions
+let customPaymentCounter = 0;
+
+function addCustomPayment() {
+    customPaymentCounter++;
+    const customPaymentsList = document.getElementById('customPaymentsList');
+    
+    const paymentDiv = document.createElement('div');
+    paymentDiv.className = 'custom-payment-item border rounded p-3 mb-3';
+    paymentDiv.id = `custom-payment-${customPaymentCounter}`;
+    
+    paymentDiv.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Payment Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="custom_payment_name_${customPaymentCounter}" placeholder="e.g., Library Fee, Lab Fee" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Amount (LKR) <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" name="custom_payment_amount_${customPaymentCounter}" step="0.01" min="0" placeholder="0.00" required oninput="calculateCustomFinalAmount(${customPaymentCounter})">
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Due Date <span class="text-danger">*</span></label>
+                <input type="date" class="form-control" name="custom_payment_due_date_${customPaymentCounter}" required>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Late Payment Fee (LKR)</label>
+                <input type="number" class="form-control" name="custom_payment_late_fee_${customPaymentCounter}" step="0.01" min="0" placeholder="0.00" oninput="calculateCustomFinalAmount(${customPaymentCounter})">
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Discount Amount (LKR)</label>
+                <input type="number" class="form-control" name="custom_payment_discount_${customPaymentCounter}" step="0.01" min="0" placeholder="0.00" oninput="calculateCustomFinalAmount(${customPaymentCounter})">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Discount Reason</label>
+                <input type="text" class="form-control" name="custom_payment_discount_reason_${customPaymentCounter}" placeholder="e.g., Early payment discount">
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Final Amount (LKR)</label>
+                <input type="number" class="form-control" name="custom_payment_final_amount_${customPaymentCounter}" step="0.01" readonly>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Notes</label>
+                <input type="text" class="form-control" name="custom_payment_notes_${customPaymentCounter}" placeholder="Additional notes">
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-12 text-end">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeCustomPayment(${customPaymentCounter})">
+                    <i class="ti ti-trash me-1"></i>Remove
+                </button>
+            </div>
+        </div>
+    `;
+    
+    customPaymentsList.appendChild(paymentDiv);
+}
+
+function removeCustomPayment(paymentId) {
+    const paymentElement = document.getElementById(`custom-payment-${paymentId}`);
+    if (paymentElement) {
+        paymentElement.remove();
+    }
+}
+
+function calculateCustomFinalAmount(paymentId) {
+    const amount = parseFloat(document.querySelector(`input[name="custom_payment_amount_${paymentId}"]`).value) || 0;
+    const lateFee = parseFloat(document.querySelector(`input[name="custom_payment_late_fee_${paymentId}"]`).value) || 0;
+    const discount = parseFloat(document.querySelector(`input[name="custom_payment_discount_${paymentId}"]`).value) || 0;
+    
+    const finalAmount = amount + lateFee - discount;
+    document.querySelector(`input[name="custom_payment_final_amount_${paymentId}"]`).value = finalAmount.toFixed(2);
+}
+
+function getCustomPaymentsData() {
+    const customPayments = [];
+    const customPaymentItems = document.querySelectorAll('.custom-payment-item');
+    
+    customPaymentItems.forEach((item, index) => {
+        const paymentId = item.id.split('-')[2];
+        const paymentName = document.querySelector(`input[name="custom_payment_name_${paymentId}"]`).value;
+        const amount = parseFloat(document.querySelector(`input[name="custom_payment_amount_${paymentId}"]`).value) || 0;
+        const dueDate = document.querySelector(`input[name="custom_payment_due_date_${paymentId}"]`).value;
+        const lateFee = parseFloat(document.querySelector(`input[name="custom_payment_late_fee_${paymentId}"]`).value) || 0;
+        const discount = parseFloat(document.querySelector(`input[name="custom_payment_discount_${paymentId}"]`).value) || 0;
+        const discountReason = document.querySelector(`input[name="custom_payment_discount_reason_${paymentId}"]`).value;
+        const finalAmount = parseFloat(document.querySelector(`input[name="custom_payment_final_amount_${paymentId}"]`).value) || 0;
+        const notes = document.querySelector(`input[name="custom_payment_notes_${paymentId}"]`).value;
+        
+        if (paymentName && amount > 0 && dueDate) {
+            customPayments.push({
+                payment_name: paymentName,
+                amount: amount,
+                due_date: dueDate,
+                late_payment_fee: lateFee,
+                discount_amount: discount,
+                discount_reason: discountReason,
+                final_amount: finalAmount,
+                notes: notes
+            });
+        }
+    });
+    
+    return customPayments;
+}
+
+function renderCustomPaymentsTable(customPayments) {
+    const tbody = document.getElementById('paymentDetailsTableBody');
+    tbody.innerHTML = '';
+    
+    // Update table headers for custom payments
+    updateTableHeadersForCustomPayments();
+    
+    customPayments.forEach((payment, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><input type="radio" name="paymentRow" value="${index}" checked></td>
+            <td>${payment.payment_name}</td>
+            <td>${payment.due_date}</td>
+            <td>LKR ${payment.amount.toLocaleString()}</td>
+            <td>${payment.discount_amount > 0 ? `LKR ${payment.discount_amount.toLocaleString()}` : '-'}</td>
+            <td>${payment.late_payment_fee > 0 ? `LKR ${payment.late_payment_fee.toLocaleString()}` : '-'}</td>
+            <td>LKR ${payment.final_amount.toLocaleString()}</td>
+            <td><span class="badge bg-warning">Pending</span></td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    // Update headers for custom payments
+    const amountHeader = document.getElementById('amountHeader');
+    const lkrHeader = document.getElementById('lkrAmountHeader');
+    const convRow = document.getElementById('currencyConversionRow');
+    
+    amountHeader.textContent = 'Amount';
+    lkrHeader.style.display = 'none';
+    convRow.style.display = 'none';
+}
+
+function updateTableHeadersForCustomPayments() {
+    // Find the installment header and replace it with Payment Name
+    const tableHeaders = document.querySelectorAll('#paymentDetailsTable thead th');
+    if (tableHeaders.length > 1) {
+        tableHeaders[1].textContent = 'Payment Name';
+    }
+}
+
+function restoreTableHeadersForRegularPayments() {
+    // Restore the installment header for regular payments
+    const tableHeaders = document.querySelectorAll('#paymentDetailsTable thead th');
+    if (tableHeaders.length > 1) {
+        tableHeaders[1].textContent = 'Installment #';
+    }
+}
+
+async function saveCustomPayments() {
+    const studentId = document.getElementById('slip-student-id').value?.trim();
+    const courseId = parseInt(document.getElementById('slip-course').value || '0', 10);
+    
+    if (!studentId) {
+        showWarningMessage('Please enter Student ID/NIC first.');
+        return;
+    }
+    
+    if (!courseId) {
+        showWarningMessage('Please select a course first.');
+        return;
+    }
+    
+    const customPayments = getCustomPaymentsData();
+    
+    if (customPayments.length === 0) {
+        showWarningMessage('Please add at least one custom payment.');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/payment/save-custom-payments', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
+            },
+            body: JSON.stringify({
+                student_id: studentId,
+                course_id: courseId,
+                custom_payments: customPayments
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Custom payments saved successfully!', 'success');
+            // Refresh the payment details table
+            renderCustomPaymentsTable(customPayments);
+    } else {
+            showToast(data.message || 'Failed to save custom payments.', 'danger');
+    }
+    } catch (error) {
+        console.error('Error saving custom payments:', error);
+        showToast('An error occurred while saving custom payments.', 'danger');
+}
 }
 
 async function loadPaymentDetails() {
@@ -3516,8 +3801,9 @@ async function loadPaymentDetails() {
   const courseId       = parseInt(document.getElementById('slip-course').value || '0', 10);
   const paymentType    = document.getElementById('slip-payment-type').value;
 
-  const conversionRow = document.getElementById('currencyConversionRow');
-  const currencySelect = document.getElementById('currency-from');
+  const conversionRow   = document.getElementById('currencyConversionRow');
+  const currencySelect  = document.getElementById('currency-from');
+  const franchiseRow    = document.getElementById('franchiseChargesRow'); // 👈 our new div
 
   if (!studentIdOrNic) {
     showWarningMessage('Enter Student ID / NIC first.');
@@ -3532,24 +3818,77 @@ async function loadPaymentDetails() {
     return;
   }
 
-  // Show/hide conversion row and additional fields only for franchise_fee
-  const ssclTaxRow = document.getElementById('ssclTaxRow');
-  const bankChargesRow = document.getElementById('bankChargesRow');
-  
+  // Show/hide conversion row & extra charges only for franchise_fee
   if (paymentType === 'franchise_fee') {
       conversionRow.style.display = 'flex';
-      ssclTaxRow.style.display = 'flex';
-      bankChargesRow.style.display = 'flex';
-      currencySelect.disabled = false;
+      franchiseRow.style.display  = 'block'; // 👈 show our new inputs
+      currencySelect.disabled     = false;
+      document.getElementById('customPaymentFields').style.display = 'none';
+      restoreTableHeadersForRegularPayments();
+  } else if (paymentType === 'other') {
+      conversionRow.style.display = 'none';
+      franchiseRow.style.display  = 'none';
+      currencySelect.disabled     = true;
+      document.getElementById('customPaymentFields').style.display = 'block';
+      updateTableHeadersForCustomPayments();
   } else {
       conversionRow.style.display = 'none';
-      ssclTaxRow.style.display = 'none';
-      bankChargesRow.style.display = 'none';
-      currencySelect.disabled = true;
+      franchiseRow.style.display  = 'none'; // 👈 hide if not franchise
+      currencySelect.disabled     = true;
+      document.getElementById('customPaymentFields').style.display = 'none';
+      restoreTableHeadersForRegularPayments();
   }
 
   // Show payment details section
   document.getElementById('paymentDetailsSection').style.display = '';
+
+  // Handle custom payments differently
+  if (paymentType === 'other') {
+    // Load existing custom payments from the server
+    try {
+      const res = await fetch('/payment/get-payment-details', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          student_id: studentIdOrNic,
+          course_id: String(courseId),
+          payment_type: 'other'
+        })
+      });
+
+      const data = await res.json();
+      
+      if (data.success && data.payment_details && data.payment_details.length > 0) {
+        // Update table headers for custom payments
+        updateTableHeadersForCustomPayments();
+        
+        // Display existing custom payments
+        renderPaymentDetailsTable(data.payment_details, 'other');
+      } else {
+        // Update table headers for custom payments even when no data
+        updateTableHeadersForCustomPayments();
+        
+        // No existing custom payments, show message to add some
+        const tbody = document.getElementById('paymentDetailsTableBody');
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="text-center text-muted">
+              <i class="ti ti-info-circle me-2"></i>
+              No custom payments found. Please add custom payments above and save them.
+            </td>
+          </tr>
+        `;
+      }
+    } catch (error) {
+      console.error('Error loading custom payments:', error);
+      showErrorMessage('Error loading custom payments.');
+    }
+    return;
+  }
 
   const payload = {
     student_id: studentIdOrNic,
@@ -3613,6 +3952,7 @@ async function loadPaymentDetails() {
     tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">${err.message}</td></tr>`;
   }
 }
+
 
 
 // Display payment details in the table
@@ -3706,8 +4046,6 @@ function recalculateLKRAmounts() {
     // Update the warning and info messages
     const warningDiv = document.getElementById('conversionRateWarning');
     const infoDiv = document.getElementById('conversionRateInfo');
-    const ssclTaxRow = document.getElementById('ssclTaxRow');
-    const bankChargesRow = document.getElementById('bankChargesRow');
     
     if (paymentType === 'franchise_fee') {
         if (conversionRate <= 0) {
@@ -3720,15 +4058,9 @@ function recalculateLKRAmounts() {
             document.getElementById('currentConversionRate').textContent = conversionRate;
             document.getElementById('currentCurrency').textContent = document.getElementById('currency-from').value;
         }
-        // Show additional fields for franchise fee
-        if (ssclTaxRow) ssclTaxRow.style.display = 'flex';
-        if (bankChargesRow) bankChargesRow.style.display = 'flex';
     } else {
         warningDiv.style.display = 'none';
         infoDiv.style.display = 'none';
-        // Hide additional fields for non-franchise fee
-        if (ssclTaxRow) ssclTaxRow.style.display = 'none';
-        if (bankChargesRow) bankChargesRow.style.display = 'none';
     }
     
     // Only recalculate if we have payment data and it's franchise fee
@@ -3990,6 +4322,13 @@ function renderPaymentDetailsTable(rows, paymentType) {
   convRow.style.display = showLkr ? '' : 'none';
   lkrHeader.style.display = showLkr ? '' : 'none';
   amountHeader.textContent = 'Amount';
+  
+  // Update table headers based on payment type
+  if (paymentType === 'other') {
+    updateTableHeadersForCustomPayments();
+  } else {
+    restoreTableHeadersForRegularPayments();
+  }
 
   // capture FX inputs (if needed)
   let rate = null, ccy = null;
@@ -4021,6 +4360,7 @@ function renderPaymentDetailsTable(rows, paymentType) {
     const payable = (r.final_amount != null) ? Number(r.final_amount) : Number(r.amount || 0);
     return {
       installment_number: r.installment_number ?? null,
+      payment_name:       r.payment_name ?? null, // For custom payments
       due_date:           r.due_date ?? null,
       amount:             payable,
       base_amount:        Number(r.amount || payable),
@@ -4051,15 +4391,11 @@ function renderPaymentDetailsTable(rows, paymentType) {
     const disabled = p.status && p.status.toLowerCase() === 'paid' ? 'disabled' : '';
     const amountText = `${p.currency} ${money(p.amount)}`;
 
-    // LKR column for franchise (including SSCL tax and bank charges)
+    // LKR column for franchise
     let lkrCell = '';
     if (showLkr) {
       if (rate && rate > 0) {
-        const ssclTax = parseFloat(document.getElementById('sscl-tax')?.value || 0);
-        const bankCharges = parseFloat(document.getElementById('bank-charges')?.value || 0);
-        const baseLkrAmount = p.amount * rate;
-        const totalLkrAmount = baseLkrAmount + ssclTax + bankCharges;
-        lkrCell = `<td>LKR ${money(totalLkrAmount)}</td>`;
+        lkrCell = `<td>LKR ${money(p.amount * rate)}</td>`;
       } else {
         lkrCell = `<td class="text-muted">—</td>`;
       }
@@ -4092,12 +4428,15 @@ function renderPaymentDetailsTable(rows, paymentType) {
         : `<small class="text-muted">No approved late fee</small>`;
 
 
+    // Use payment name for custom payments, installment number for others
+    const identifier = paymentType === 'other' ? (p.payment_name ?? '-') : (p.installment_number ?? '-');
+    
     const row = `
       <tr>
         <td class="text-center">
           <input type="radio" name="selectedPayment" value="${idx}" ${disabled}>
         </td>
-        <td>${p.installment_number ?? '-'}</td>
+        <td>${identifier}</td>
         <td>${dstr(p.due_date)}</td>
         <td>${amountText}</td>
         ${showLkr ? lkrCell : ''}
@@ -4121,8 +4460,6 @@ function renderPaymentDetailsTable(rows, paymentType) {
 
 // If user changes FX inputs, recompute the LKR column live
 document.getElementById('currency-conversion-rate')?.addEventListener('input', recalculateLKRAmounts);
-document.getElementById('sscl-tax')?.addEventListener('input', recalculateLKRAmounts);
-document.getElementById('bank-charges')?.addEventListener('input', recalculateLKRAmounts);
 document.getElementById('currency-from')?.addEventListener('change', recalculateLKRAmounts);
 
 function deleteSlip(id) {

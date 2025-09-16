@@ -655,6 +655,12 @@ Route::middleware(['auth', 'role:Marketing Manager,Developer'])->group(function 
     Route::post('/payment-discount/delete-discount', [App\Http\Controllers\PaymentDiscountController::class, 'deleteDiscount'])->name('payment.discount.delete.discount');
 });
 
+// Payment Management - Bursar and Developer only
+Route::middleware(['auth', 'role:Bursar,Developer'])->group(function () {
+    Route::post('/payment/save-custom-payments', [PaymentController::class, 'saveCustomPayments'])->name('payment.save.custom.payments');
+    Route::post('/payment/get-custom-payments', [PaymentController::class, 'getCustomPayments'])->name('payment.get.custom.payments');
+});
+
 Route::get('/payment', [PaymentController::class, 'index'])->name('payment.index');
 Route::post('/payment/get-plans', [PaymentController::class, 'getPaymentPlans'])->name('payment.get.plans');
 Route::post('/payment/get-student-courses', [PaymentController::class, 'getStudentCourses'])->name('payment.get.student.courses');

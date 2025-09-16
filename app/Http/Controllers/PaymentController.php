@@ -8,9 +8,12 @@ use App\Models\Student;
 use App\Models\PaymentDetail;
 use App\Models\PaymentPlan;
 use App\Models\CourseRegistration;
+use App\Models\CustomPayment;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
@@ -65,7 +68,7 @@ class PaymentController extends Controller
         $request->validate([
             'student_id'   => 'required|string',   // Student ID or NIC
             'course_id'    => 'required|integer|exists:courses,course_id',
-            'payment_type' => 'required|in:course_fee,franchise_fee,registration_fee',
+            'payment_type' => 'required|in:course_fee,franchise_fee,registration_fee,other',
         ]);
 
         // find student by student_id or NIC (id_value)
@@ -220,6 +223,38 @@ class PaymentController extends Controller
                     'receipt_no'         => null,
                     'currency'           => 'LKR',
                 ];
+                break;
+            case 'other':
+                // Get custom payments for this student and course
+                $customPayments = CustomPayment::where('student_id', $student->student_id)
+                    ->where('course_id', $request->course_id)
+                    ->orderBy('due_date')
+                    ->get();
+
+                foreach ($customPayments as $index => $customPayment) {
+                    $discountText = null;
+                    if ($customPayment->discount_amount > 0) {
+                        $discountText = $customPayment->discount_reason ? 
+                            $customPayment->discount_reason : 
+                            'Discount (LKR ' . $customPayment->discount_amount . ')';
+                    }
+
+                    $rows[] = [
+                        'installment_number' => $index + 1,
+                        'due_date'           => $customPayment->due_date->toDateString(),
+                        'amount'             => (float) $customPayment->final_amount,
+                        'base_amount'        => (float) $customPayment->amount,
+                        'discount'           => $discountText,
+                        'status'             => $customPayment->status,
+                        'paid_date'          => optional($customPayment->paid_date)->toDateString(),
+                        'receipt_no'         => $customPayment->receipt_no,
+                        'currency'           => 'LKR',
+                        'payment_name'       => $customPayment->payment_name,
+                        'late_payment_fee'   => (float) $customPayment->late_payment_fee,
+                        'discount_amount'    => (float) $customPayment->discount_amount,
+                        'notes'              => $customPayment->notes,
+                    ];
+                }
                 break;
         }
 
@@ -627,16 +662,16 @@ class PaymentController extends Controller
         return \DB::transaction(function () use ($request, $registration) {
 
 // ====== 1) Inputs ======
-$rows = collect($request->installments)
-    ->sortBy('installment_number')
-    ->values()
-    ->all();
+            $rows = collect($request->installments)
+                ->sortBy('installment_number')
+                ->values()
+                ->all();
 
 $lastIdx = count($rows) - 1;
 
 // Course fee total (L) = sum of installments
 $L = array_sum(array_map(fn($r) => (float)($r['amount'] ?? 0), $rows));
-$L = round($L, 2);
+            $L = round($L, 2);
 
 $registrationFee = (float)($registration->registration_fee ?? 0);
 $totalFeeForDiscount = $L + $registrationFee; // ✅ include reg fee here
@@ -644,9 +679,9 @@ $totalFeeForDiscount = $L + $registrationFee; // ✅ include reg fee here
 // ====== 2) Normal discounts (apply on course+reg fee) ======
 $pct = 0.0; 
 $fixed = 0.0;
-foreach (($request->discounts ?? []) as $d) {
-    $type = strtolower($d['discount_type'] ?? '');
-    $val  = (float)($d['discount_value'] ?? 0);
+            foreach (($request->discounts ?? []) as $d) {
+                $type = strtolower($d['discount_type'] ?? '');
+                $val  = (float)($d['discount_value'] ?? 0);
     if ($type === 'percentage') $pct  += $val;
     if ($type === 'amount')     $fixed += $val;
 }
@@ -655,25 +690,25 @@ $pAmt     = ($pct > 0) ? ($totalFeeForDiscount * $pct / 100) : 0.0;
 $discAsk  = $pAmt + $fixed;
 
 // Apply all course fee discounts on LAST installment
-$lastBase = (float)$rows[$lastIdx]['amount'];
+            $lastBase = (float)$rows[$lastIdx]['amount'];
 $lastDiscEff  = min($lastBase, $discAsk); 
 $lastDiscBase = max(0, round($lastBase - $lastDiscEff, 2));
 
 // Build discountedBases (Ai)
-$discountedBases = [];
-foreach ($rows as $i => $r) {
-    $base = (float)$r['amount'];
-    $discountedBases[$i] = ($i === $lastIdx) ? $lastDiscBase : round($base, 2);
-}
+            $discountedBases = [];
+            foreach ($rows as $i => $r) {
+                $base = (float)$r['amount'];
+                $discountedBases[$i] = ($i === $lastIdx) ? $lastDiscBase : round($base, 2);
+            }
 
 // ====== 3) Registration fee discount (apply properly) ======
 $registrationFeeDiscountApplied = [];
-$remainingRegistrationDiscount = 0.0;
+            $remainingRegistrationDiscount = 0.0;
 $appliedToRegFee = 0.0;
-
-if ($request->filled('registration_fee_discount')) {
-    $regDiscount = $request->registration_fee_discount;
-
+            
+            if ($request->filled('registration_fee_discount')) {
+                $regDiscount = $request->registration_fee_discount;
+                
     $discountAmount = $regDiscount['discount_type'] === 'percentage'
         ? $registrationFee * ($regDiscount['discount_value'] / 100)
         : $regDiscount['discount_value'];
@@ -682,7 +717,7 @@ if ($request->filled('registration_fee_discount')) {
     $appliedToRegFee = min($discountAmount, $registrationFee);
 
     // Any excess → reduce installments
-    if ($discountAmount > $registrationFee) {
+                if ($discountAmount > $registrationFee) {
         $excess = $discountAmount - $registrationFee;
 
         foreach ($discountedBases as $i => &$Ai) {
@@ -702,31 +737,31 @@ if ($request->filled('registration_fee_discount')) {
 $sumAfterDiscounts = array_sum($discountedBases);
 $sumAfterDiscounts = round($sumAfterDiscounts, 2);
 
-$S = ($request->slt_loan_applied === 'yes') ? (float)($request->slt_loan_amount ?? 0) : 0.0;
+            $S = ($request->slt_loan_applied === 'yes') ? (float)($request->slt_loan_amount ?? 0) : 0.0;
 $S = max(0, min($S, $sumAfterDiscounts));
 $T = $sumAfterDiscounts - $S; // FE: ΣAi – Loan
 
 // ====== 5) Compute per-row finals ======
-$computed = [];
-$runningFinals = 0.0;
+            $computed = [];
+            $runningFinals = 0.0;
 
-foreach ($rows as $i => $r) {
-    $base = round((float)$r['amount'], 2);
-    $Ai   = round($discountedBases[$i], 2);
-    $isLast = ($i === $lastIdx);
+            foreach ($rows as $i => $r) {
+                $base = round((float)$r['amount'], 2);
+                $Ai   = round($discountedBases[$i], 2);
+                $isLast = ($i === $lastIdx);
 
-    if (!$isLast) {
+                if (!$isLast) {
         $Fi = ($sumAfterDiscounts > 0)
             ? round(($Ai / $sumAfterDiscounts) * $T, 2)
             : 0.0;
-        $runningFinals += $Fi;
-    } else {
+                    $runningFinals += $Fi;
+                } else {
         $Fi = round($T - $runningFinals, 2); // remainder
     }
 
     $loanPart = round($Ai - $Fi, 2);
 
-    $computed[] = [
+                $computed[] = [
         'installment_number'               => $r['installment_number'],
         'due_date'                         => $r['due_date'],
         'status'                           => $r['status'],
@@ -1057,9 +1092,10 @@ public function generatePaymentSlip(Request $request)
         $request->validate([
             'student_id'         => 'required|string',
             'course_id'          => 'required|integer|exists:courses,course_id',
-            'payment_type'       => 'required|string', // 'course_fee' | 'franchise_fee' | 'registration_fee'
+            'payment_type'       => 'required|string', // 'course_fee' | 'franchise_fee' | 'registration_fee' | 'other'
             'amount'             => 'required|numeric|min:0',
             'installment_number' => 'nullable|integer',
+            'payment_name'       => 'nullable|string', // For custom payments
             'due_date'           => 'nullable|date',
             'conversion_rate'    => 'nullable|numeric|min:0',
             'currency_from'      => 'nullable|string',
@@ -1115,7 +1151,7 @@ public function generatePaymentSlip(Request $request)
             }
 
             $franchiseFee = $amount; // base franchise fee in LKR
-
+            
             // 🔹 SSCL & Bank Charges come from frontend (manual entry)
             $ssclTaxAmount = (float) ($request->sscl_tax_amount ?? 0);
             $bankCharges   = (float) ($request->bank_charges ?? 0);
@@ -1235,6 +1271,17 @@ public function generatePaymentSlip(Request $request)
             ]);
         }
 
+        // 🔹 Handle custom payments (other payment type)
+        $customPaymentName = null;
+        if ($paymentType === 'other') {
+            // For custom payments, we need to get the payment name from the request
+            // The frontend should send the payment name in the request
+            $customPaymentName = $request->payment_name ?? 'Custom Payment';
+            
+            // Custom payments don't have installment numbers, so we set it to null
+            $request->merge(['installment_number' => null]);
+        }
+
         //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -1267,7 +1314,7 @@ public function generatePaymentSlip(Request $request)
             }
         }
 
-        $totalFee = $courseFee + $franchiseFee + $registrationFee + $lateFee - $approvedLateFee;
+            $totalFee = $courseFee + $franchiseFee + $registrationFee + $lateFee - $approvedLateFee;
 
         // add SSCL & Bank charges for franchise payments
         if ($paymentType === 'franchise_fee') {
@@ -1350,6 +1397,9 @@ if ($existingPayment) {
             'installment_number'     => in_array($paymentType, ['course_fee','franchise_fee']) 
                                             ? $request->installment_number 
                                             : null,
+            
+            // 👇 For custom payments, store payment name
+            'payment_name'           => $paymentType === 'other' ? $customPaymentName : null,
 
             // ✅ New fields
             'late_fee'          => $lateFee,
@@ -1416,6 +1466,7 @@ private function buildSlipArray(\App\Models\PaymentDetail $payment, $student, $c
         'payment_type'      => $payment->payment_type ?? '',
         'amount'            => (float) $payment->amount,
         'installment_number'=> $payment->installment_number,
+        'payment_name'      => $payment->payment_name ?? null, // For custom payments
         'due_date'          => $payment->due_date,
         'payment_date'      => $payment->payment_date,
         'payment_method'    => $payment->payment_method ?? 'Cash',
@@ -1430,7 +1481,7 @@ private function buildSlipArray(\App\Models\PaymentDetail $payment, $student, $c
         'remaining_amount'  => (float) $payment->remaining_amount,
         'partial_payments'  => $partials,   // ✅ Always an array
         'foreign_currency_code'   => $payment->foreign_currency_code,     
-        'foreign_currency_amount' => (float) $payment->foreign_currency_amount, 
+        'foreign_currency_amount' => (float) $payment->foreign_currency_amount,
         'generated_at'      => now()->format('Y-m-d H:i:s'),
         'valid_until'       => now()->addDays(7)->format('Y-m-d'),
         'sscl_tax_amount'   => $payment->sscl_tax_amount,   // 👈 new
@@ -2273,6 +2324,133 @@ private function buildSlipDataFromPaymentDetail(\App\Models\PaymentDetail $payme
         'valid_until'            => optional($payment->created_at)->copy()->addDays(7)->format('Y-m-d'),
     ];
 }
+
+    /**
+     * Save custom payments for a student and course.
+     */
+    public function saveCustomPayments(Request $request)
+    {
+        try {
+            $request->validate([
+                'student_id' => 'required|string',
+                'course_id' => 'required|integer|exists:courses,course_id',
+                'custom_payments' => 'required|array|min:1',
+                'custom_payments.*.payment_name' => 'required|string|max:255',
+                'custom_payments.*.amount' => 'required|numeric|min:0',
+                'custom_payments.*.due_date' => 'required|date',
+                'custom_payments.*.late_payment_fee' => 'nullable|numeric|min:0',
+                'custom_payments.*.discount_amount' => 'nullable|numeric|min:0',
+                'custom_payments.*.discount_reason' => 'nullable|string|max:255',
+                'custom_payments.*.final_amount' => 'required|numeric|min:0',
+                'custom_payments.*.notes' => 'nullable|string',
+            ]);
+
+            // Find student by student_id or NIC
+            $student = Student::where('student_id', $request->student_id)
+                ->orWhere('id_value', $request->student_id)
+                ->first();
+
+            if (!$student) {
+                return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+            }
+
+            // Verify student is registered for the course
+            $registration = CourseRegistration::where('student_id', $student->student_id)
+                ->where('course_id', $request->course_id)
+                ->first();
+
+            if (!$registration) {
+                return response()->json(['success' => false, 'message' => 'Student is not registered for this course.'], 404);
+            }
+
+            $savedPayments = [];
+
+            DB::beginTransaction();
+            try {
+                foreach ($request->custom_payments as $paymentData) {
+                    $customPayment = CustomPayment::create([
+                        'student_id' => $student->student_id,
+                        'course_id' => $request->course_id,
+                        'payment_name' => $paymentData['payment_name'],
+                        'amount' => $paymentData['amount'],
+                        'due_date' => $paymentData['due_date'],
+                        'late_payment_fee' => $paymentData['late_payment_fee'] ?? 0,
+                        'discount_amount' => $paymentData['discount_amount'] ?? 0,
+                        'discount_reason' => $paymentData['discount_reason'] ?? null,
+                        'final_amount' => $paymentData['final_amount'],
+                        'notes' => $paymentData['notes'] ?? null,
+                        'status' => 'pending'
+                    ]);
+
+                    $savedPayments[] = $customPayment;
+                }
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Custom payments saved successfully.',
+                    'payments' => $savedPayments
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollback();
+                throw $e;
+            }
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error saving custom payments: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while saving custom payments.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Get custom payments for a student and course.
+     */
+    public function getCustomPayments(Request $request)
+    {
+        try {
+            $request->validate([
+                'student_id' => 'required|string',
+                'course_id' => 'required|integer|exists:courses,course_id',
+            ]);
+
+            // Find student by student_id or NIC
+            $student = Student::where('student_id', $request->student_id)
+                ->orWhere('id_value', $request->student_id)
+                ->first();
+
+            if (!$student) {
+                return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+            }
+
+            $customPayments = CustomPayment::where('student_id', $student->student_id)
+                ->where('course_id', $request->course_id)
+                ->orderBy('due_date')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'custom_payments' => $customPayments
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting custom payments: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while getting custom payments.',
+            ], 500);
+        }
+    }
   
     
 } 
