@@ -2064,7 +2064,7 @@ function calculateFinalAmount() {
     let finalAmount = totalAmount;
     let totalDiscountAmount = 0;
     let totalDiscountPercentage = 0;
-    let breakdownSteps = [`<strong>Base Total:</strong> LKR ${totalAmount.toLocaleString()}`];
+    let breakdownSteps = [`<strong>Base Total (Course Fee + Registration Fee):</strong> LKR ${totalAmount.toLocaleString()}`];
 
     // Calculate total discounts
     discountSelects.forEach((select) => {
@@ -2085,13 +2085,13 @@ function calculateFinalAmount() {
     if (totalDiscountPercentage > 0) {
         const pctReduction = finalAmount * totalDiscountPercentage / 100;
         finalAmount -= pctReduction;
-        breakdownSteps.push(`-${totalDiscountPercentage}% Discount: -LKR ${pctReduction.toLocaleString()}`);
+        breakdownSteps.push(`<strong>-${totalDiscountPercentage}% Discount (Normal Discount to the Total Fee): </strong> -LKR ${pctReduction.toLocaleString()}`);
     }
 
     // Apply fixed amount discounts
     if (totalDiscountAmount > 0) {
         finalAmount -= totalDiscountAmount;
-        breakdownSteps.push(`Fixed Discount: -LKR ${totalDiscountAmount.toLocaleString()}`);
+        breakdownSteps.push(`<strong>Fixed Discount (Normal Discount to the Total Fee):</strong> -LKR ${totalDiscountAmount.toLocaleString()}`);
     }
 
     // Registration Fee Discount
@@ -2112,12 +2112,12 @@ function calculateFinalAmount() {
 
         if (discountAmount <= registrationFee) {
             finalAmount -= discountAmount;
-            breakdownSteps.push(`Registration Fee Discount: -LKR ${discountAmount.toLocaleString()}`);
+            breakdownSteps.push(`<string>Registration Fee Discount</string>: -LKR ${discountAmount.toLocaleString()}`);
         } else {
             finalAmount -= registrationFee;
             const excess = discountAmount - registrationFee;
             finalAmount -= excess;
-            breakdownSteps.push(`Registration Fee Wiped (-LKR ${registrationFee.toLocaleString()}) + Excess Applied (-LKR ${excess.toLocaleString()})`);
+            breakdownSteps.push(`<string>Registration Fee Wiped </string> (-LKR ${registrationFee.toLocaleString()}) + Excess Applied (-LKR ${excess.toLocaleString()})`);
         }
     }
 
