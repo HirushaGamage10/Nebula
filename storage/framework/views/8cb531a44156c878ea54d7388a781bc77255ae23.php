@@ -1524,6 +1524,35 @@ function displayInstallments(installments) {
     dAmt = Math.max(0, dAmt);
     return { ...ins, discountedAmount: dAmt, discountApplied: applied };
   });
+  // ===============================
+// Handle registration fee discount excess
+// ===============================
+const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
+if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value && discounted.length > 0) {
+  const opt = registrationFeeDiscountSelect.options[registrationFeeDiscountSelect.selectedIndex];
+  const discountType = opt.dataset.type;
+  const discountValue = N(opt.dataset.value);
+
+  const regFee = N(window.currentStudentData?.registration_fee || 0);
+  let discountAmount = 0;
+
+  if (discountType === 'percentage') {
+    discountAmount = regFee * (discountValue / 100);
+  } else if (discountType === 'amount') {
+    discountAmount = discountValue;
+  }
+
+  if (discountAmount > regFee) {
+    const excess = discountAmount - regFee;
+
+    // Deduct excess from first installment
+    discounted[0].discountedAmount = Math.max(0, discounted[0].discountedAmount - excess);
+
+    // Mark it so discount column shows correctly
+    discounted[0].registration_fee_discount_applied = excess;
+    discounted[0].registration_fee_discount_note = 'Reg. Fee Excess';
+  }
+}
 
   // sum of discounted amounts
   const sumAfterDiscounts = discounted.reduce((s, x) => s + x.discountedAmount, 0);
@@ -2193,29 +2222,50 @@ function createPaymentPlan() {
     const sltPerInst = (sltLoanApplied === 'yes' && sltLoanAmount > 0) ? (sltLoanAmount / count) : 0;
 
     // Build installments INCLUDING final_amount
-    const installments = (data.installments || []).map(inst => {
-      const base = parseFloat(inst.amount || 0);                 // local base amount
-      const discounted = parseFloat(inst.final_amount || base);  // backend already applied discount (usually last row)
-      const discountAmount = Math.max(0, base - discounted);     // derived discount applied to this row
-      const finalWithLoan = Math.max(0, discounted - sltPerInst);
+const installments = (data.installments || []).map(inst => {
+  const base = parseFloat(inst.amount || 0);
+  const discounted = parseFloat(inst.final_amount || base);
+  const discountAmount = Math.max(0, base - discounted);
+  const finalWithLoan = Math.max(0, discounted - sltPerInst);
 
-      // Check for registration fee discount excess
-      const registrationFeeDiscountApplied = parseFloat(inst.registration_fee_discount_applied || 0);
-      const registrationFeeDiscountNote = inst.registration_fee_discount_note || null;
+  return {
+    installment_number: inst.installment_number,
+    due_date: inst.due_date,
+    amount: base,
+    discount_amount: discountAmount,
+    discount_note: inst.discount || null,
+    registration_fee_discount_applied: 0,     // always start with 0
+    registration_fee_discount_note: null,
+    slt_loan_amount: sltPerInst,
+    final_amount: finalWithLoan,
+    status: 'pending'
+  };
+});
 
-      return {
-        installment_number: inst.installment_number,
-        due_date: inst.due_date,                 // already ISO from backend
-        amount: base,                            // base amount
-        discount_amount: discountAmount,         // numeric
-        discount_note: inst.discount || null,    // e.g. "Discount (10% on total)" or null
-        registration_fee_discount_applied: registrationFeeDiscountApplied,
-        registration_fee_discount_note: registrationFeeDiscountNote,
-        slt_loan_amount: sltPerInst,             // distributed loan
-        final_amount: finalWithLoan,             // ✅ REQUIRED by backend
-        status: 'pending'
-      };
-    });
+// ===============================
+// Handle registration fee discount excess
+// ===============================
+if (registrationFeeDiscount && installments.length > 0) {
+  const regFee = parseFloat(window.currentStudentData?.registration_fee || 0);
+  let discountAmount = 0;
+
+  if (registrationFeeDiscount.discount_type === 'percentage') {
+    discountAmount = regFee * (registrationFeeDiscount.discount_value / 100);
+  } else if (registrationFeeDiscount.discount_type === 'amount') {
+    discountAmount = registrationFeeDiscount.discount_value;
+  }
+
+  if (discountAmount > regFee) {
+    const excess = discountAmount - regFee;
+
+    // ✅ Just mark excess for displayInstallments
+    installments[0].registration_fee_discount_applied = excess;
+    installments[0].registration_fee_discount_note = 'Reg. Fee Excess';
+  }
+}
+
+
+
 
     // totals
     const totalAmount = installments.reduce((s, i) => s + (i.amount || 0), 0);
