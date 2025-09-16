@@ -2338,10 +2338,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // SLT Loan Dropdown
-    const sltLoanApplied = document.getElementById('slt-loan-applied');
-    if (sltLoanApplied) {
-        sltLoanApplied.addEventListener('change', calculateFinalAmount);
-    }
+    // Add event listener for SLT loan applied
+const sltLoanAppliedField = document.getElementById('slt-loan-applied');
+if (sltLoanAppliedField) {
+    sltLoanAppliedField.addEventListener('change', function() {
+        const sltLoanAmountField = document.getElementById('slt-loan-amount');
+        if (this.value === 'yes') {
+            sltLoanAmountField.disabled = false;
+            sltLoanAmountField.required = true;
+        } else {
+            sltLoanAmountField.disabled = true;
+            sltLoanAmountField.required = false;
+            sltLoanAmountField.value = '0'; // ✅ SET TO ZERO!
+        }
+        calculateFinalAmount();
+    });
+}
 
     // SLT Loan Amount Input
     const sltLoanAmount = document.getElementById('slt-loan-amount');

@@ -583,7 +583,7 @@ class PaymentController extends Controller
             'registration_fee_discount.discount_type' => 'required_with:registration_fee_discount|in:percentage,amount',
             'registration_fee_discount.discount_value' => 'required_with:registration_fee_discount|numeric|min:0',
 
-            'slt_loan_applied'  => 'nullable|in:yes',
+            'slt_loan_applied'  => 'nullable|in:yes,no',
             'slt_loan_amount'   => 'nullable|numeric|min:0',
 
             // We compute these from rows (frontend shows bases in `amount`)
