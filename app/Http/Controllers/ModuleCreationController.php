@@ -60,9 +60,18 @@ class ModuleCreationController extends Controller
 
         $validatedData = $request->validate([
             'module_name' => 'sometimes|required|string|max:255',
-            'module_code' => 'sometimes|required|string|max:100|unique:modules,module_code,' . $id . ',module_id',
+            'module_code' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:100',
+                'unique:modules,module_code,' . $id . ',module_id',
+                'regex:/^[a-zA-Z0-9]+_[a-zA-Z0-9]+_[a-zA-Z0-9]+$/'
+            ],
             'credits' => 'sometimes|required|integer|min:0',
             'module_type' => ['sometimes', 'required', Rule::in(['core', 'elective', 'special_unit_compulsory'])],
+        ], [
+            'module_code.regex' => 'Module code must follow the pattern: program_name_specification_unit_code (e.g., CS101_Programming_001)'
         ]);
 
         $module->update($validatedData);
