@@ -626,141 +626,122 @@ class PaymentController extends Controller
 
         return \DB::transaction(function () use ($request, $registration) {
 
-            // ====== 1) Inputs (use FE rows only) ======
-            $rows = collect($request->installments)
-                ->sortBy('installment_number')
-                ->values()
-                ->all();
+// ====== 1) Inputs ======
+$rows = collect($request->installments)
+    ->sortBy('installment_number')
+    ->values()
+    ->all();
 
-            // Original local total L = sum of bases (pre-discount)
-            $L = 0.0;
-            foreach ($rows as $r) { $L += (float)($r['amount'] ?? 0); }
-            $L = round($L, 2);
-            if ($L <= 0) {
-                throw new \RuntimeException('Total local fee (sum of installments) must be greater than zero.');
-            }
+$lastIdx = count($rows) - 1;
 
-            // Discounts (frontend collects multiple, applies ALL to last row)
-            $pct = 0.0; $fixed = 0.0;
-            foreach (($request->discounts ?? []) as $d) {
-                $type = strtolower($d['discount_type'] ?? '');
-                $val  = (float)($d['discount_value'] ?? 0);
-                if ($type === 'percentage') $pct  += $val;     // % of L
-                if ($type === 'amount')     $fixed += $val;     // fixed LKR
-            }
+// Course fee total (L) = sum of installments
+$L = array_sum(array_map(fn($r) => (float)($r['amount'] ?? 0), $rows));
+$L = round($L, 2);
 
-            // FE logic: percentage on L, then fixed, all on LAST row; clamp result to ≥0
-            $lastIdx  = count($rows) - 1;
-            $lastBase = (float)$rows[$lastIdx]['amount'];
-            $pAmt     = $L * ($pct / 100);
-            $discAsk  = $pAmt + $fixed;                   // requested to subtract
-            $lastDiscEff = min($lastBase, $discAsk);      // effective (clamped)
-            $lastDiscBase = round($lastBase - $lastDiscEff, 2);
-            if ($lastDiscBase < 0) $lastDiscBase = 0.0;
+$registrationFee = (float)($registration->registration_fee ?? 0);
+$totalFeeForDiscount = $L + $registrationFee; // ✅ include reg fee here
 
-            // Build discounted bases array A_i
-            $discountedBases = [];
-            foreach ($rows as $i => $r) {
-                $base = (float)$r['amount'];
-                $discountedBases[$i] = ($i === $lastIdx) ? $lastDiscBase : round($base, 2);
-            }
+// ====== 2) Normal discounts (apply on course+reg fee) ======
+$pct = 0.0; 
+$fixed = 0.0;
+foreach (($request->discounts ?? []) as $d) {
+    $type = strtolower($d['discount_type'] ?? '');
+    $val  = (float)($d['discount_value'] ?? 0);
+    if ($type === 'percentage') $pct  += $val;
+    if ($type === 'amount')     $fixed += $val;
+}
 
-            // Sum after discounts (ΣAi)
-            $sumAfterDiscounts = 0.0;
-            foreach ($discountedBases as $Ai) $sumAfterDiscounts += $Ai;
-            $sumAfterDiscounts = round($sumAfterDiscounts, 2);
+$pAmt     = ($pct > 0) ? ($totalFeeForDiscount * $pct / 100) : 0.0;
+$discAsk  = $pAmt + $fixed;
 
-            // Process registration fee discount excess BEFORE SLT loan calculation
-            $remainingRegistrationDiscount = 0.0;
-            $registrationFeeDiscountApplied = []; // Track how much was applied to each installment
-            
-            if ($request->filled('registration_fee_discount')) {
-                $regDiscount = $request->registration_fee_discount;
-                
-                // Calculate the actual discount amount
-                $discountAmount = 0.0;
-                if ($regDiscount['discount_type'] === 'percentage') {
-                    // Get registration fee from course/intake
-                    $registrationFee = $registration->registration_fee ?? 0;
-                    $discountAmount = ($registrationFee * $regDiscount['discount_value']) / 100;
-                } elseif ($regDiscount['discount_type'] === 'amount') {
-                    $discountAmount = $regDiscount['discount_value'];
-                }
-                
-                // Get registration fee amount
-                $registrationFee = $registration->registration_fee ?? 0;
-                
-                if ($discountAmount > $registrationFee) {
-                    // Discount exceeds registration fee - apply excess to course fee installments
-                    $excessDiscount = $discountAmount - $registrationFee;
-                    
-                    // Apply the excess discount to course fee installments from first to last
-                    $remainingExcess = $excessDiscount;
-                    foreach ($discountedBases as $index => &$baseAmount) {
-                        if ($remainingExcess <= 0) break;
-                        
-                        $discountToApply = min($remainingExcess, $baseAmount);
-                        $baseAmount = max(0, $baseAmount - $discountToApply);
-                        $registrationFeeDiscountApplied[$index] = $discountToApply;
-                        $remainingExcess -= $discountToApply;
-                    }
-                    
-                    // Store any remaining discount that couldn't be applied
-                    $remainingRegistrationDiscount = max(0, $remainingExcess);
-                    
-                    // Recalculate sum after registration fee discount excess
-                    $sumAfterDiscounts = 0.0;
-                    foreach ($discountedBases as $Ai) $sumAfterDiscounts += $Ai;
-                    $sumAfterDiscounts = round($sumAfterDiscounts, 2);
-                }
-            }
+// Apply all course fee discounts on LAST installment
+$lastBase = (float)$rows[$lastIdx]['amount'];
+$lastDiscEff  = min($lastBase, $discAsk); 
+$lastDiscBase = max(0, round($lastBase - $lastDiscEff, 2));
 
-            // Loan S and target total T by your rule:
-            // targetTotal = (ΣAi / L) * (L - S)
-            $S = ($request->slt_loan_applied === 'yes') ? (float)($request->slt_loan_amount ?? 0) : 0.0;
-            $S = max(0, min($S, $L)); // clamp
-            $T = ($sumAfterDiscounts > 0)
-                ? round(($sumAfterDiscounts / $L) * ($L - $S), 2)
-                : 0.0;
+// Build discountedBases (Ai)
+$discountedBases = [];
+foreach ($rows as $i => $r) {
+    $base = (float)$r['amount'];
+    $discountedBases[$i] = ($i === $lastIdx) ? $lastDiscBase : round($base, 2);
+}
 
-            // ====== 2) Compute per-row finals exactly like FE ======
-            $computed = [];
-            $runningFinals = 0.0;
+// ====== 3) Registration fee discount (apply properly) ======
+$registrationFeeDiscountApplied = [];
+$remainingRegistrationDiscount = 0.0;
+$appliedToRegFee = 0.0;
 
-            foreach ($rows as $i => $r) {
-                $base = round((float)$r['amount'], 2);
-                $Ai   = round($discountedBases[$i], 2);
-                $isLast = ($i === $lastIdx);
+if ($request->filled('registration_fee_discount')) {
+    $regDiscount = $request->registration_fee_discount;
 
-                // Precompute Fi
-                if (!$isLast) {
-                    // Fi = round((Ai / L) * (L - S), 2)
-                    $Fi = round(($Ai / $L) * ($L - $S), 2);
-                    $runningFinals += $Fi;
-                } else {
-                    // Last gets the remainder to fix rounding drift
-                    $Fi = round($T - $runningFinals, 2);
-                }
+    $discountAmount = $regDiscount['discount_type'] === 'percentage'
+        ? $registrationFee * ($regDiscount['discount_value'] / 100)
+        : $regDiscount['discount_value'];
 
-                $Fi = max(0, $Fi);
-                $loanPart = round($Ai - $Fi, 2); // for audit (what FE shows in "SLT Loan")
+    // First apply to registration fee
+    $appliedToRegFee = min($discountAmount, $registrationFee);
 
-                // Only last row shows discountApplied value (purely informational)
-                $discApplied = $isLast ? round($lastDiscEff, 2) : 0.0;
+    // Any excess → reduce installments
+    if ($discountAmount > $registrationFee) {
+        $excess = $discountAmount - $registrationFee;
 
-                $computed[] = [
-                    'installment_number' => $r['installment_number'],
-                    'due_date'           => $r['due_date'],
-                    'status'             => $r['status'],
-                    'base'               => $base,
-                    'discount_amount'    => $discApplied, // display value
-                    'discounted_base'    => $Ai,
-                    'loan_amount'        => $loanPart,
-                    'final'              => $Fi,
-                    'registration_fee_discount_applied' => $registrationFeeDiscountApplied[$i] ?? 0,
-                    'registration_fee_discount_note' => ($registrationFeeDiscountApplied[$i] ?? 0) > 0 ? 'Registration Fee Discount Excess' : null,
-                ];
-            }
+        foreach ($discountedBases as $i => &$Ai) {
+            if ($excess <= 0) break;
+            $deduct = min($excess, $Ai);
+            $Ai -= $deduct;
+            $registrationFeeDiscountApplied[$i] = $deduct;
+            $excess -= $deduct;
+        }
+        unset($Ai);
+
+        $remainingRegistrationDiscount = $excess;
+    }
+}
+
+// ====== 4) Loan prorating (FE exact formula) ======
+$sumAfterDiscounts = array_sum($discountedBases);
+$sumAfterDiscounts = round($sumAfterDiscounts, 2);
+
+$S = ($request->slt_loan_applied === 'yes') ? (float)($request->slt_loan_amount ?? 0) : 0.0;
+$S = max(0, min($S, $sumAfterDiscounts));
+$T = $sumAfterDiscounts - $S; // FE: ΣAi – Loan
+
+// ====== 5) Compute per-row finals ======
+$computed = [];
+$runningFinals = 0.0;
+
+foreach ($rows as $i => $r) {
+    $base = round((float)$r['amount'], 2);
+    $Ai   = round($discountedBases[$i], 2);
+    $isLast = ($i === $lastIdx);
+
+    if (!$isLast) {
+        $Fi = ($sumAfterDiscounts > 0)
+            ? round(($Ai / $sumAfterDiscounts) * $T, 2)
+            : 0.0;
+        $runningFinals += $Fi;
+    } else {
+        $Fi = round($T - $runningFinals, 2); // remainder
+    }
+
+    $loanPart = round($Ai - $Fi, 2);
+
+    $computed[] = [
+        'installment_number'               => $r['installment_number'],
+        'due_date'                         => $r['due_date'],
+        'status'                           => $r['status'],
+        'base'                             => $base,
+        'discount_amount'                  => $isLast ? round($lastDiscEff, 2) : 0.0,
+        'discounted_base'                  => $Ai,
+        'loan_amount'                      => $loanPart,
+        'final'                            => $Fi,
+        'registration_fee_discount_applied'=> $registrationFeeDiscountApplied[$i] ?? 0,
+        'registration_fee_discount_note'   => ($registrationFeeDiscountApplied[$i] ?? 0) > 0 ? 'Reg. Fee Excess' : null,
+    ];
+}
+
+
+
 
             // ====== 3) Persist ======
             $plan = \App\Models\StudentPaymentPlan::create([

@@ -418,9 +418,33 @@
                                                 <input type="number" class="form-control" id="slt-loan-amount" name="slt_loan_amount" min="0" step="0.01" placeholder="Enter SLT loan amount" disabled>
                                             </div>
                                             <div class="col-md-4">
-                                                <label class="form-label fw-bold">Final Amount After Discount & Loan</label>
-                                                <input type="text" class="form-control" id="final-amount" name="final_amount" readonly>
-                                            </div>
+    <label class="form-label fw-bold">Final Amount After Discount & Loan</label>
+    <div class="input-group">
+        <input type="text" class="form-control" id="final-amount" name="final_amount" readonly>
+        <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#finalAmountBreakdownModal">
+            View Breakdown
+        </button>
+    </div>
+</div>
+
+                                            <!-- Final Amount Breakdown Modal -->
+<div class="modal fade" id="finalAmountBreakdownModal" tabindex="-1" aria-labelledby="breakdownModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="breakdownModalLabel">Final Amount Calculation Breakdown</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="breakdown-modal-body">
+        <!-- Steps will be injected here -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
                                         </div>
                                         
                                         <div class="row mb-3">
@@ -1524,6 +1548,35 @@ function displayInstallments(installments) {
     dAmt = Math.max(0, dAmt);
     return { ...ins, discountedAmount: dAmt, discountApplied: applied };
   });
+  // ===============================
+// Handle registration fee discount excess
+// ===============================
+const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
+if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value && discounted.length > 0) {
+  const opt = registrationFeeDiscountSelect.options[registrationFeeDiscountSelect.selectedIndex];
+  const discountType = opt.dataset.type;
+  const discountValue = N(opt.dataset.value);
+
+  const regFee = N(window.currentStudentData?.registration_fee || 0);
+  let discountAmount = 0;
+
+  if (discountType === 'percentage') {
+    discountAmount = regFee * (discountValue / 100);
+  } else if (discountType === 'amount') {
+    discountAmount = discountValue;
+  }
+
+  if (discountAmount > regFee) {
+    const excess = discountAmount - regFee;
+
+    // Deduct excess from first installment
+    discounted[0].discountedAmount = Math.max(0, discounted[0].discountedAmount - excess);
+
+    // Mark it so discount column shows correctly
+    discounted[0].registration_fee_discount_applied = excess;
+    discounted[0].registration_fee_discount_note = 'Reg. Fee Excess';
+  }
+}
 
   // sum of discounted amounts
   const sumAfterDiscounts = discounted.reduce((s, x) => s + x.discountedAmount, 0);
@@ -2006,18 +2059,20 @@ function calculateFinalAmount() {
     const sltLoanApplied = document.getElementById('slt-loan-applied').value;
     const sltLoanAmount = parseFloat(document.getElementById('slt-loan-amount').value) || 0;
     const finalAmountField = document.getElementById('final-amount');
+    const breakdownModalBody = document.getElementById('breakdown-modal-body'); // 👈 modal content
     
     let finalAmount = totalAmount;
     let totalDiscountAmount = 0;
     let totalDiscountPercentage = 0;
-    
+    let breakdownSteps = [`<strong>Base Total (Course Fee + Registration Fee):</strong> LKR ${totalAmount.toLocaleString()}`];
+
     // Calculate total discounts
-    discountSelects.forEach((select, index) => {
+    discountSelects.forEach((select) => {
         if (select.value) {
             const selectedOption = select.options[select.selectedIndex];
             const discountType = selectedOption.dataset.type;
             const discountValue = parseFloat(selectedOption.dataset.value);
-            
+
             if (discountType === 'percentage') {
                 totalDiscountPercentage += discountValue;
             } else if (discountType === 'amount') {
@@ -2025,61 +2080,70 @@ function calculateFinalAmount() {
             }
         }
     });
-    
-    // Apply percentage discounts first
+
+    // Apply percentage discounts
     if (totalDiscountPercentage > 0) {
-        finalAmount = finalAmount - (finalAmount * totalDiscountPercentage / 100);
+        const pctReduction = finalAmount * totalDiscountPercentage / 100;
+        finalAmount -= pctReduction;
+        breakdownSteps.push(`<strong>-${totalDiscountPercentage}% Discount (Normal Discount to the Total Fee): </strong> -LKR ${pctReduction.toLocaleString()}`);
     }
-    
+
     // Apply fixed amount discounts
     if (totalDiscountAmount > 0) {
-        finalAmount = finalAmount - totalDiscountAmount;
+        finalAmount -= totalDiscountAmount;
+        breakdownSteps.push(`<strong>Fixed Discount (Normal Discount to the Total Fee):</strong> -LKR ${totalDiscountAmount.toLocaleString()}`);
     }
-    
-    // Apply registration fee discount if selected
+
+    // Registration Fee Discount
     const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
-    
     if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value) {
         const selectedOption = registrationFeeDiscountSelect.options[registrationFeeDiscountSelect.selectedIndex];
         const discountType = selectedOption.dataset.type;
         const discountValue = parseFloat(selectedOption.dataset.value || 0);
-        
+
         const registrationFee = parseFloat(window.currentStudentData?.registration_fee || 0);
-        let registrationFeeDiscount = 0;
-        
+        let discountAmount = 0;
+
         if (discountType === 'percentage') {
-            registrationFeeDiscount = registrationFee * (discountValue / 100);
+            discountAmount = registrationFee * (discountValue / 100);
         } else if (discountType === 'amount') {
-            registrationFeeDiscount = discountValue;
+            discountAmount = discountValue;
         }
-        
-        if (registrationFeeDiscount <= registrationFee) {
-            // Discount is less than or equal to registration fee - apply directly
-            finalAmount = finalAmount - registrationFeeDiscount;
+
+        if (discountAmount <= registrationFee) {
+            finalAmount -= discountAmount;
+            breakdownSteps.push(`<string>Registration Fee Discount</string>: -LKR ${discountAmount.toLocaleString()}`);
         } else {
-            // Discount exceeds registration fee - apply full registration fee discount
-            // The excess will be handled by backend and applied to course fee installments
-            finalAmount = finalAmount - registrationFee;
+            finalAmount -= registrationFee;
+            const excess = discountAmount - registrationFee;
+            finalAmount -= excess;
+            breakdownSteps.push(`<string>Registration Fee Wiped </string> (-LKR ${registrationFee.toLocaleString()}) + Excess Applied (-LKR ${excess.toLocaleString()})`);
         }
     }
 
-    // Apply SLT loan if selected
+    // Apply SLT loan
     if (sltLoanApplied === 'yes' && sltLoanAmount > 0) {
-        finalAmount = finalAmount - sltLoanAmount;
+        finalAmount -= sltLoanAmount;
+        breakdownSteps.push(`<strong> SLT Loan:</strong> -LKR ${sltLoanAmount.toLocaleString()}`);
     }
-    
-    // Ensure final amount is not negative
+
+    // Ensure non-negative
     finalAmount = Math.max(0, finalAmount);
-    
+    breakdownSteps.push(`<strong>Final Amount:</strong> LKR ${finalAmount.toLocaleString()}`);
+
+    // Update DOM
     if (finalAmountField) {
         finalAmountField.value = 'LKR ' + finalAmount.toLocaleString();
     }
-    
-    // Update window.currentStudentData with final amount
+    if (breakdownModalBody) {
+        breakdownModalBody.innerHTML = breakdownSteps.join('<br>');
+    }
+
     if (window.currentStudentData) {
         window.currentStudentData.final_amount = finalAmount;
     }
 }
+
 
 // Calculate and display installments
 function calculateInstallments() {
@@ -2190,29 +2254,50 @@ function createPaymentPlan() {
     const sltPerInst = (sltLoanApplied === 'yes' && sltLoanAmount > 0) ? (sltLoanAmount / count) : 0;
 
     // Build installments INCLUDING final_amount
-    const installments = (data.installments || []).map(inst => {
-      const base = parseFloat(inst.amount || 0);                 // local base amount
-      const discounted = parseFloat(inst.final_amount || base);  // backend already applied discount (usually last row)
-      const discountAmount = Math.max(0, base - discounted);     // derived discount applied to this row
-      const finalWithLoan = Math.max(0, discounted - sltPerInst);
+const installments = (data.installments || []).map(inst => {
+  const base = parseFloat(inst.amount || 0);
+  const discounted = parseFloat(inst.final_amount || base);
+  const discountAmount = Math.max(0, base - discounted);
+  const finalWithLoan = Math.max(0, discounted - sltPerInst);
 
-      // Check for registration fee discount excess
-      const registrationFeeDiscountApplied = parseFloat(inst.registration_fee_discount_applied || 0);
-      const registrationFeeDiscountNote = inst.registration_fee_discount_note || null;
+  return {
+    installment_number: inst.installment_number,
+    due_date: inst.due_date,
+    amount: base,
+    discount_amount: discountAmount,
+    discount_note: inst.discount || null,
+    registration_fee_discount_applied: 0,     // always start with 0
+    registration_fee_discount_note: null,
+    slt_loan_amount: sltPerInst,
+    final_amount: finalWithLoan,
+    status: 'pending'
+  };
+});
 
-      return {
-        installment_number: inst.installment_number,
-        due_date: inst.due_date,                 // already ISO from backend
-        amount: base,                            // base amount
-        discount_amount: discountAmount,         // numeric
-        discount_note: inst.discount || null,    // e.g. "Discount (10% on total)" or null
-        registration_fee_discount_applied: registrationFeeDiscountApplied,
-        registration_fee_discount_note: registrationFeeDiscountNote,
-        slt_loan_amount: sltPerInst,             // distributed loan
-        final_amount: finalWithLoan,             // ✅ REQUIRED by backend
-        status: 'pending'
-      };
-    });
+// ===============================
+// Handle registration fee discount excess
+// ===============================
+if (registrationFeeDiscount && installments.length > 0) {
+  const regFee = parseFloat(window.currentStudentData?.registration_fee || 0);
+  let discountAmount = 0;
+
+  if (registrationFeeDiscount.discount_type === 'percentage') {
+    discountAmount = regFee * (registrationFeeDiscount.discount_value / 100);
+  } else if (registrationFeeDiscount.discount_type === 'amount') {
+    discountAmount = registrationFeeDiscount.discount_value;
+  }
+
+  if (discountAmount > regFee) {
+    const excess = discountAmount - regFee;
+
+    // ✅ Just mark excess for displayInstallments
+    installments[0].registration_fee_discount_applied = excess;
+    installments[0].registration_fee_discount_note = 'Reg. Fee Excess';
+  }
+}
+
+
+
 
     // totals
     const totalAmount = installments.reduce((s, i) => s + (i.amount || 0), 0);
