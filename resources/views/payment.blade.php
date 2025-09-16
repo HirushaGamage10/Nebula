@@ -2230,22 +2230,26 @@ function calculateAndDisplayInstallments() {
     // Try to load installments from payment plan first
     loadExistingPaymentPlans(window.currentStudentData.student_nic, window.currentStudentData.course_id);
 }
-
 // Calculate final amount after multiple discounts and SLT loan
 function calculateFinalAmount() {
     const totalAmount = window.currentStudentData ? window.currentStudentData.total_amount_lkr : 0;
     const discountSelects = document.querySelectorAll('.discount-select');
-    const sltLoanApplied = document.getElementById('slt-loan-applied').value;
-    const sltLoanAmount = parseFloat(document.getElementById('slt-loan-amount').value) || 0;
+
+    const sltLoanDropdown = document.getElementById('slt-loan-applied');
+    const sltLoanApplied = sltLoanDropdown ? sltLoanDropdown.value : 'no';
+
+    const sltLoanAmountInput = document.getElementById('slt-loan-amount');
+    const sltLoanAmount = sltLoanAmountInput ? parseFloat(sltLoanAmountInput.value) || 0 : 0;
+
     const finalAmountField = document.getElementById('final-amount');
-    const breakdownModalBody = document.getElementById('breakdown-modal-body'); // 👈 modal content
-    
+    const breakdownModalBody = document.getElementById('breakdown-modal-body');
+
     let finalAmount = totalAmount;
     let totalDiscountAmount = 0;
     let totalDiscountPercentage = 0;
     let breakdownSteps = [`<strong>Base Total (Course Fee + Registration Fee):</strong> LKR ${totalAmount.toLocaleString()}`];
 
-    // Calculate total discounts
+    // ===== Normal discounts =====
     discountSelects.forEach((select) => {
         if (select.value) {
             const selectedOption = select.options[select.selectedIndex];
@@ -2260,20 +2264,18 @@ function calculateFinalAmount() {
         }
     });
 
-    // Apply percentage discounts
     if (totalDiscountPercentage > 0) {
         const pctReduction = finalAmount * totalDiscountPercentage / 100;
         finalAmount -= pctReduction;
-        breakdownSteps.push(`<strong>-${totalDiscountPercentage}% Discount (Normal Discount to the Total Fee): </strong> -LKR ${pctReduction.toLocaleString()}`);
+        breakdownSteps.push(`<strong>-${totalDiscountPercentage}% Discount:</strong> -LKR ${pctReduction.toLocaleString()}`);
     }
 
-    // Apply fixed amount discounts
     if (totalDiscountAmount > 0) {
         finalAmount -= totalDiscountAmount;
-        breakdownSteps.push(`<strong>Fixed Discount (Normal Discount to the Total Fee):</strong> -LKR ${totalDiscountAmount.toLocaleString()}`);
+        breakdownSteps.push(`<strong>Fixed Discount:</strong> -LKR ${totalDiscountAmount.toLocaleString()}`);
     }
 
-    // Registration Fee Discount
+    // ===== Registration Fee Discount =====
     const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
     if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value) {
         const selectedOption = registrationFeeDiscountSelect.options[registrationFeeDiscountSelect.selectedIndex];
@@ -2291,26 +2293,25 @@ function calculateFinalAmount() {
 
         if (discountAmount <= registrationFee) {
             finalAmount -= discountAmount;
-            breakdownSteps.push(`<string>Registration Fee Discount</string>: -LKR ${discountAmount.toLocaleString()}`);
+            breakdownSteps.push(`<strong>Registration Fee Discount:</strong> -LKR ${discountAmount.toLocaleString()}`);
         } else {
             finalAmount -= registrationFee;
             const excess = discountAmount - registrationFee;
             finalAmount -= excess;
-            breakdownSteps.push(`<string>Registration Fee Wiped </string> (-LKR ${registrationFee.toLocaleString()}) + Excess Applied (-LKR ${excess.toLocaleString()})`);
+            breakdownSteps.push(`<strong>Registration Fee Wiped:</strong> -LKR ${registrationFee.toLocaleString()} + Excess Applied (-LKR ${excess.toLocaleString()})`);
         }
     }
 
-    // Apply SLT loan
+    // ===== SLT Loan =====
     if (sltLoanApplied === 'yes' && sltLoanAmount > 0) {
         finalAmount -= sltLoanAmount;
-        breakdownSteps.push(`<strong> SLT Loan:</strong> -LKR ${sltLoanAmount.toLocaleString()}`);
+        breakdownSteps.push(`<strong>SLT Loan:</strong> -LKR ${sltLoanAmount.toLocaleString()}`);
     }
 
-    // Ensure non-negative
+    // ===== Finalize =====
     finalAmount = Math.max(0, finalAmount);
     breakdownSteps.push(`<strong>Final Amount:</strong> LKR ${finalAmount.toLocaleString()}`);
 
-    // Update DOM
     if (finalAmountField) {
         finalAmountField.value = 'LKR ' + finalAmount.toLocaleString();
     }
@@ -2323,6 +2324,39 @@ function calculateFinalAmount() {
     }
 }
 
+// 🔗 Bind events once only
+document.addEventListener('DOMContentLoaded', () => {
+    // Registration Fee Discount
+    const regFeeDiscount = document.getElementById('registration-fee-discount');
+    if (regFeeDiscount) {
+        regFeeDiscount.addEventListener('change', () => {
+            calculateFinalAmount();
+            if (window.currentStudentData) {
+                calculateAndDisplayInstallments();
+            }
+        });
+    }
+
+    // SLT Loan Dropdown
+    const sltLoanApplied = document.getElementById('slt-loan-applied');
+    if (sltLoanApplied) {
+        sltLoanApplied.addEventListener('change', calculateFinalAmount);
+    }
+
+    // SLT Loan Amount Input
+    const sltLoanAmount = document.getElementById('slt-loan-amount');
+    if (sltLoanAmount) {
+        sltLoanAmount.addEventListener('input', calculateFinalAmount);
+    }
+
+    // Normal Discounts
+    document.querySelectorAll('.discount-select').forEach(el => {
+        el.addEventListener('change', calculateFinalAmount);
+    });
+
+    // Run once on load
+    calculateFinalAmount();
+});
 
 // Calculate and display installments
 function calculateInstallments() {
