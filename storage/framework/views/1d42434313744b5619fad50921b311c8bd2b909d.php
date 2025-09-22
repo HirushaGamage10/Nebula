@@ -1,15 +1,15 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Intake Creation')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Intake Creation'); ?>
+
+<?php $__env->startSection('content'); ?>
       <div class="container-fluid">
     <div class="card">
         <div class="card-body">
             <h2 class="text-center mb-4">Create New Intake</h2>
             <hr>
             <form id="intakeForm">
-    @csrf
+    <?php echo csrf_field(); ?>
 <div class="mb-3 row mx-3">
                     <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
@@ -26,9 +26,9 @@
                     <div class="col-sm-10">
                         <select class="form-select" id="course_name" name="course_name" required>
                             <option selected disabled value="">Choose a course...</option>
-                            @foreach($courses as $course)
-                                <option value="{{ $course }}">{{ $course }}</option>
-                            @endforeach
+                            <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($course); ?>"><?php echo e($course); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>
                   </div>
                 </div>
@@ -172,37 +172,37 @@
                         </tr>
                     </thead>
                     <tbody id="intake-table-body">
-                        @forelse($intakes as $intake)
-                        <tr id="intake-row-{{$intake->intake_id}}">
-                            <td style="width: 180px; max-width: 180px; word-break: break-word;">{{ $intake->course_name }}</td>
-                            <td>{{ $intake->batch }}</td>
-                            <td>{{ $intake->location }}</td>
-                            <td>{{ $intake->intake_mode }}</td>
-                            <td>{{ $intake->intake_type }}</td>
-                            <td>{{ $intake->start_date ? (is_string($intake->start_date) ? \Carbon\Carbon::parse($intake->start_date)->format('Y-m-d') : $intake->start_date->format('Y-m-d')) : '' }}</td>
-                            <td>{{ $intake->end_date ? (is_string($intake->end_date) ? \Carbon\Carbon::parse($intake->end_date)->format('Y-m-d') : $intake->end_date->format('Y-m-d')) : '' }}</td>
-                            <td>{{ $intake->enrollment_end_date ? (is_string($intake->enrollment_end_date) ? \Carbon\Carbon::parse($intake->enrollment_end_date)->format('Y-m-d') : $intake->enrollment_end_date->format('Y-m-d')) : '-' }}</td>
-                            <td>{{ $intake->registrations->count() }} / {{ $intake->batch_size }}</td>
+                        <?php $__empty_1 = true; $__currentLoopData = $intakes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $intake): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <tr id="intake-row-<?php echo e($intake->intake_id); ?>">
+                            <td style="width: 180px; max-width: 180px; word-break: break-word;"><?php echo e($intake->course_name); ?></td>
+                            <td><?php echo e($intake->batch); ?></td>
+                            <td><?php echo e($intake->location); ?></td>
+                            <td><?php echo e($intake->intake_mode); ?></td>
+                            <td><?php echo e($intake->intake_type); ?></td>
+                            <td><?php echo e($intake->start_date ? (is_string($intake->start_date) ? \Carbon\Carbon::parse($intake->start_date)->format('Y-m-d') : $intake->start_date->format('Y-m-d')) : ''); ?></td>
+                            <td><?php echo e($intake->end_date ? (is_string($intake->end_date) ? \Carbon\Carbon::parse($intake->end_date)->format('Y-m-d') : $intake->end_date->format('Y-m-d')) : ''); ?></td>
+                            <td><?php echo e($intake->enrollment_end_date ? (is_string($intake->enrollment_end_date) ? \Carbon\Carbon::parse($intake->enrollment_end_date)->format('Y-m-d') : $intake->enrollment_end_date->format('Y-m-d')) : '-'); ?></td>
+                            <td><?php echo e($intake->registrations->count()); ?> / <?php echo e($intake->batch_size); ?></td>
                             <td>
-                                @if($intake->isPast())
+                                <?php if($intake->isPast()): ?>
                                     <span class="badge bg-danger">Finished</span>
-                                @elseif($intake->isCurrent())
+                                <?php elseif($intake->isCurrent()): ?>
                                     <span class="badge bg-success">Ongoing</span>
-                                @else
+                                <?php else: ?>
                                     <span class="badge bg-warning">Upcoming</span>
-                                @endif
+                                <?php endif; ?>
                             </td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="editIntake({{ $intake->intake_id }})" title="Edit Intake">
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="editIntake(<?php echo e($intake->intake_id); ?>)" title="Edit Intake">
                                     <i class="fas fa-edit"></i>
                                 </button>
                             </td>
                         </tr>
-                        @empty
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <tr>
                             <td colspan="11" class="text-center">No intakes found.</td>
                         </tr>
-                        @endforelse
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -220,7 +220,7 @@
                 </div>
                 <div class="modal-body">
                     <form id="editIntakeForm">
-                        @csrf
+                        <?php echo csrf_field(); ?>
                         <input type="hidden" id="edit_intake_id" name="intake_id">
                         
                         <div class="mb-3 row">
@@ -240,9 +240,9 @@
                             <div class="col-sm-9">
                                 <select class="form-select" id="edit_course_name" name="course_name" required>
                                     <option value="">Choose a course...</option>
-                                    @foreach($courses as $course)
-                                        <option value="{{ $course }}">{{ $course }}</option>
-                                    @endforeach
+                                    <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <option value="<?php echo e($course); ?>"><?php echo e($course); ?></option>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </select>
                             </div>
                         </div>
@@ -369,9 +369,9 @@
       </div>
 
 <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
     <script>
 $(document).ready(function() {
     $('#intakeForm').on('submit', function(e) {
@@ -379,7 +379,7 @@ $(document).ready(function() {
         const formData = new FormData(this);
 
         $.ajax({
-            url: '{{ route("intake.store") }}',
+            url: '<?php echo e(route("intake.store")); ?>',
             type: 'POST',
             data: formData,
             processData: false,
@@ -716,7 +716,7 @@ $(document).ready(function() {
 
 }); // End of document ready
     </script>
-@endpush
+<?php $__env->stopPush(); ?>
 
 <style>
     .existing-intakes-card {
@@ -734,3 +734,5 @@ $(document).ready(function() {
         font-size: 0.95rem !important;
     }
 </style>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/intake_creation.blade.php ENDPATH**/ ?>
