@@ -562,10 +562,7 @@ class PaymentController extends Controller
         }
     }
  
-    /**
-     * Create a new payment plan for a student and course.
-     */
-    public function createPaymentPlan(Request $request)
+public function createPaymentPlan(Request $request)
 {
     try {
         $request->validate([
@@ -575,7 +572,7 @@ class PaymentController extends Controller
 
             'discounts'                     => 'nullable|array',
             'discounts.*.discount_id'       => 'required|integer|exists:discounts,id',
-            'discounts.*.discount_type'     => 'required|in:percentage,amount', // "amount" = fixed
+            'discounts.*.discount_type'     => 'required|in:percentage,amount',
             'discounts.*.discount_value'    => 'required|numeric|min:0',
 
             'registration_fee_discount'     => 'nullable|array',
@@ -586,162 +583,100 @@ class PaymentController extends Controller
             'slt_loan_applied'  => 'nullable|in:yes,no',
             'slt_loan_amount'   => 'nullable|numeric|min:0',
 
-            // We compute these from rows (frontend shows bases in `amount`)
             'installments'                          => 'required|array|min:1',
             'installments.*.installment_number'     => 'required|integer|min:1',
             'installments.*.due_date'               => 'required|date',
-            'installments.*.amount'                 => 'required|numeric|min:0', // base local amount (pre-discount)
+            'installments.*.amount'                 => 'required|numeric|min:0',
             'installments.*.status'                 => 'required|in:pending,paid,overdue',
         ]);
 
-        // Validate that discounts are of correct category
-        if ($request->filled('discounts')) {
-            foreach ($request->discounts as $discountData) {
-                $discount = \App\Models\Discount::find($discountData['discount_id']);
-                if (!$discount || $discount->discount_category !== 'local_course_fee') {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Local course fee discounts must be of category "local_course_fee".'
-                    ], \Illuminate\Http\Response::HTTP_BAD_REQUEST);
-                }
-            }
-        }
-
-        // Validate that registration fee discount is of correct category
-        if ($request->filled('registration_fee_discount')) {
-            $regDiscountId = $request->registration_fee_discount['discount_id'];
-            $discount = \App\Models\Discount::find($regDiscountId);
-            if (!$discount || $discount->discount_category !== 'registration_fee') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Registration fee discount must be of category "registration_fee".'
-                ], \Illuminate\Http\Response::HTTP_BAD_REQUEST);
-            }
-        }
-
-        // Must be registered and approved through eligibility page
+        // fetch course registration (eligibility checks)
         $registration = \App\Models\CourseRegistration::where('student_id', $request->student_id)
             ->where('course_id', $request->course_id)
-            ->first();
+            ->firstOrFail();
 
-        if (!$registration) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Student is not registered for this course.'
-            ], \Illuminate\Http\Response::HTTP_BAD_REQUEST);
-        }
-
-        // Check if student registration is confirmed through eligibility page
         if ($registration->approval_status !== 'Approved by manager' || $registration->status !== 'Registered') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Payment plans can only be created for students whose registration is confirmed through the eligibility page. Please verify the student\'s eligibility first.'
-            ], \Illuminate\Http\Response::HTTP_BAD_REQUEST);
+            return response()->json(['success' => false, 'message' => 'Student must be approved and registered.'], 400);
         }
 
-        // Check if student was registered through eligibility page (not course registration page)
         if ($registration->remarks !== 'Registered via eligibility page') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Payment plans can only be created for students who are permanently registered through the eligibility page. Students registered through the course registration page must complete eligibility verification first.'
-            ], \Illuminate\Http\Response::HTTP_BAD_REQUEST);
+            return response()->json(['success' => false, 'message' => 'Student must be registered through eligibility page.'], 400);
         }
 
-        // No duplicate plan
-        $exists = \App\Models\StudentPaymentPlan::where('student_id', $request->student_id)
-            ->where('course_id',  $request->course_id)
-            ->exists();
-
-        if ($exists) {
-            return response()->json([
-                'success' => false,
-                'message' => 'A payment plan already exists for this student and course.'
-            ], \Illuminate\Http\Response::HTTP_BAD_REQUEST);
+        // prevent duplicate plan
+        if (\App\Models\StudentPaymentPlan::where('student_id', $request->student_id)
+                ->where('course_id', $request->course_id)->exists()) {
+            return response()->json(['success' => false, 'message' => 'Payment plan already exists for this student.'], 400);
         }
 
         return \DB::transaction(function () use ($request, $registration) {
 
-// ====== 1) Inputs ======
-            $rows = collect($request->installments)
-                ->sortBy('installment_number')
-                ->values()
-                ->all();
+            // ===== 1) Get fee data from payment_plans =====
+            $paymentPlan = \App\Models\PaymentPlan::where('course_id', $request->course_id)->first();
+            if (!$paymentPlan) {
+                throw new \Exception('Payment plan definition not found for this course.');
+            }
 
-$lastIdx = count($rows) - 1;
+            $registrationFee = (float) $paymentPlan->registration_fee;
+            $localFee        = (float) $paymentPlan->local_fee;
+            $totalFeeForDiscount = $localFee + $registrationFee; // ✅ correct base
 
-// Course fee total (L) = sum of installments
-$L = array_sum(array_map(fn($r) => (float)($r['amount'] ?? 0), $rows));
-            $L = round($L, 2);
+            // collect rows
+            $rows = collect($request->installments)->sortBy('installment_number')->values()->all();
+            $lastIdx = count($rows) - 1;
 
-$registrationFee = (float)($registration->registration_fee ?? 0);
-$totalFeeForDiscount = $L + $registrationFee; // ✅ include reg fee here
+            // ===== 2) Normal discounts =====
+            $pct = 0.0;
+            $fixed = 0.0;
 
-// ====== 2) Normal discounts (apply on course+reg fee) ======
-$pct = 0.0; 
-$fixed = 0.0;
             foreach (($request->discounts ?? []) as $d) {
                 $type = strtolower($d['discount_type'] ?? '');
                 $val  = (float)($d['discount_value'] ?? 0);
-    if ($type === 'percentage') $pct  += $val;
-    if ($type === 'amount')     $fixed += $val;
-}
-
-$pAmt     = ($pct > 0) ? ($totalFeeForDiscount * $pct / 100) : 0.0;
-$discAsk  = $pAmt + $fixed;
-
-// Apply all course fee discounts on LAST installment
-            $lastBase = (float)$rows[$lastIdx]['amount'];
-$lastDiscEff  = min($lastBase, $discAsk); 
-$lastDiscBase = max(0, round($lastBase - $lastDiscEff, 2));
-
-// Build discountedBases (Ai)
-            $discountedBases = [];
-            foreach ($rows as $i => $r) {
-                $base = (float)$r['amount'];
-                $discountedBases[$i] = ($i === $lastIdx) ? $lastDiscBase : round($base, 2);
+                if ($type === 'percentage') $pct  += $val;
+                if ($type === 'amount')     $fixed += $val;
             }
 
-// ====== 3) Registration fee discount (apply properly) ======
-$registrationFeeDiscountApplied = [];
-            $remainingRegistrationDiscount = 0.0;
-$appliedToRegFee = 0.0;
-            
+            $pctAmount    = ($pct > 0) ? ($totalFeeForDiscount * $pct / 100) : 0.0;
+            $totalDiscount = $pctAmount + $fixed;
+
+            $discountedBases = [];
+            $lastDiscApplied = 0.0;
+
+            foreach ($rows as $i => $r) {
+                $base = (float) $r['amount'];
+                if ($i === $lastIdx) {
+                    $discEff = min($base, $totalDiscount);
+                    $discountedBases[$i] = round($base - $discEff, 2);
+                    $lastDiscApplied = $discEff;
+                } else {
+                    $discountedBases[$i] = round($base, 2);
+                }
+            }
+
+            // ===== 3) Registration fee discount (wipe reg fee first, excess → first installment) =====
+            $registrationFeeDiscountApplied = [];
             if ($request->filled('registration_fee_discount')) {
                 $regDiscount = $request->registration_fee_discount;
-                
-    $discountAmount = $regDiscount['discount_type'] === 'percentage'
-        ? $registrationFee * ($regDiscount['discount_value'] / 100)
-        : $regDiscount['discount_value'];
 
-    // First apply to registration fee
-    $appliedToRegFee = min($discountAmount, $registrationFee);
+                $discountAmount = $regDiscount['discount_type'] === 'percentage'
+                    ? $registrationFee * ($regDiscount['discount_value'] / 100)
+                    : $regDiscount['discount_value'];
 
-    // Any excess → reduce installments
                 if ($discountAmount > $registrationFee) {
-        $excess = $discountAmount - $registrationFee;
+                    $excess = $discountAmount - $registrationFee;
+                    $deduct = min($excess, $discountedBases[0]);
+                    $discountedBases[0] -= $deduct;
+                    $registrationFeeDiscountApplied[0] = $deduct;
+                }
+            }
 
-        foreach ($discountedBases as $i => &$Ai) {
-            if ($excess <= 0) break;
-            $deduct = min($excess, $Ai);
-            $Ai -= $deduct;
-            $registrationFeeDiscountApplied[$i] = $deduct;
-            $excess -= $deduct;
-        }
-        unset($Ai);
-
-        $remainingRegistrationDiscount = $excess;
-    }
-}
-
-// ====== 4) Loan prorating (FE exact formula) ======
-$sumAfterDiscounts = array_sum($discountedBases);
-$sumAfterDiscounts = round($sumAfterDiscounts, 2);
-
+            // ===== 4) SLT loan prorating =====
+            $sumAfterDiscounts = array_sum($discountedBases);
             $S = ($request->slt_loan_applied === 'yes') ? (float)($request->slt_loan_amount ?? 0) : 0.0;
-$S = max(0, min($S, $sumAfterDiscounts));
-$T = $sumAfterDiscounts - $S; // FE: ΣAi – Loan
+            $S = max(0, min($S, $sumAfterDiscounts));
+            $T = $sumAfterDiscounts - $S;
 
-// ====== 5) Compute per-row finals ======
+            // ===== 5) Compute installments =====
             $computed = [];
             $runningFinals = 0.0;
 
@@ -751,59 +686,53 @@ $T = $sumAfterDiscounts - $S; // FE: ΣAi – Loan
                 $isLast = ($i === $lastIdx);
 
                 if (!$isLast) {
-        $Fi = ($sumAfterDiscounts > 0)
-            ? round(($Ai / $sumAfterDiscounts) * $T, 2)
-            : 0.0;
+                    $Fi = ($sumAfterDiscounts > 0)
+                        ? round(($Ai / $sumAfterDiscounts) * $T, 2)
+                        : 0.0;
                     $runningFinals += $Fi;
                 } else {
-        $Fi = round($T - $runningFinals, 2); // remainder
-    }
+                    $Fi = round($T - $runningFinals, 2); // remainder to fix rounding drift
+                }
 
-    $loanPart = round($Ai - $Fi, 2);
+                $loanPart = $Ai - $Fi;
 
                 $computed[] = [
-        'installment_number'               => $r['installment_number'],
-        'due_date'                         => $r['due_date'],
-        'status'                           => $r['status'],
-        'base'                             => $base,
-        'discount_amount'                  => $isLast ? round($lastDiscEff, 2) : 0.0,
-        'discounted_base'                  => $Ai,
-        'loan_amount'                      => $loanPart,
-        'final'                            => $Fi,
-        'registration_fee_discount_applied'=> $registrationFeeDiscountApplied[$i] ?? 0,
-        'registration_fee_discount_note'   => ($registrationFeeDiscountApplied[$i] ?? 0) > 0 ? 'Reg. Fee Excess' : null,
-    ];
-}
+                    'installment_number'               => $r['installment_number'],
+                    'due_date'                         => $r['due_date'],
+                    'status'                           => $r['status'],
+                    'base'                             => $base,
+                    'discount_amount'                  => ($i === $lastIdx) ? round($lastDiscApplied, 2) : 0.0,
+                    'discount_note'                    => ($i === $lastIdx && $lastDiscApplied > 0) ? "Normal Discounts Applied" : null,
+                    'discounted_base'                  => $Ai,
+                    'loan_amount'                      => $loanPart,
+                    'final'                            => $Fi,
+                    'registration_fee_discount_applied'=> $registrationFeeDiscountApplied[$i] ?? 0,
+                    'registration_fee_discount_note'   => ($registrationFeeDiscountApplied[$i] ?? 0) > 0 ? 'Reg. Fee Excess' : null,
+                ];
+            }
 
-
-
-
-            // ====== 3) Persist ======
+            // ===== 6) Save plan =====
             $plan = \App\Models\StudentPaymentPlan::create([
                 'student_id'        => $request->student_id,
                 'course_id'         => $request->course_id,
                 'payment_plan_type' => $request->payment_plan_type,
                 'slt_loan_applied'  => $request->slt_loan_applied,
                 'slt_loan_amount'   => $S,
-                'total_amount'      => $L,   // original sum
-                'final_amount'      => $T,   // FE rule total
-                'remaining_registration_discount' => $remainingRegistrationDiscount,
+                'total_amount'      => $totalFeeForDiscount, // local + reg
+                'final_amount'      => $T,
                 'status'            => 'active',
             ]);
 
-            // Save selected discounts (as chosen)
-            if ($request->filled('discounts')) {
-                foreach ($request->discounts as $d) {
-                    \App\Models\PaymentPlanDiscount::create([
-                        'payment_plan_id' => $plan->id,
-                        'discount_id'     => $d['discount_id'],
-                        'discount_type'   => $d['discount_type'],
-                        'discount_value'  => $d['discount_value'],
-                    ]);
-                }
+            // save discounts
+            foreach (($request->discounts ?? []) as $d) {
+                \App\Models\PaymentPlanDiscount::create([
+                    'payment_plan_id' => $plan->id,
+                    'discount_id'     => $d['discount_id'],
+                    'discount_type'   => $d['discount_type'],
+                    'discount_value'  => $d['discount_value'],
+                ]);
             }
 
-            // Save registration fee discount record if provided
             if ($request->filled('registration_fee_discount')) {
                 $regDiscount = $request->registration_fee_discount;
                 \App\Models\PaymentPlanDiscount::create([
@@ -814,72 +743,42 @@ $T = $sumAfterDiscounts - $S; // FE: ΣAi – Loan
                 ]);
             }
 
-            // Column presence (safe fallback)
-            $hasBase   = \Schema::hasColumn('payment_installments', 'base_amount');
-            $hasDisc   = \Schema::hasColumn('payment_installments', 'discount_amount');
-            $hasLoan   = \Schema::hasColumn('payment_installments', 'slt_loan_amount');
-            $hasFinal  = \Schema::hasColumn('payment_installments', 'final_amount');
-
-            $saved = 0;
+            // save installments
             foreach ($computed as $c) {
-                // If you don't have extra cols, put FINAL into legacy `amount`
-                $legacyAmount = ($hasFinal || $hasBase) ? $c['base'] : $c['final'];
-
-                $data = [
-                    'payment_plan_id'    => $plan->id,
-                    'installment_number' => $c['installment_number'],
-                    'due_date'           => $c['due_date'],
-                    'amount'             => $legacyAmount, // legacy
-                    'status'             => $c['status'],
-                ];
-                if ($hasBase)  $data['base_amount']     = $c['base'];
-                if ($hasDisc)  $data['discount_amount'] = $c['discount_amount'];
-                if ($hasLoan)  $data['slt_loan_amount'] = $c['loan_amount'];
-                if ($hasFinal) $data['final_amount']    = $c['final'];
-                
-                // Add registration fee discount fields if they exist
-                if (\Schema::hasColumn('payment_installments', 'registration_fee_discount_applied')) {
-                    $data['registration_fee_discount_applied'] = $c['registration_fee_discount_applied'] ?? 0;
-                }
-                if (\Schema::hasColumn('payment_installments', 'registration_fee_discount_note')) {
-                    $data['registration_fee_discount_note'] = $c['registration_fee_discount_note'] ?? null;
-                }
-
-                \App\Models\PaymentInstallment::create($data);
-                $saved++;
+                \App\Models\PaymentInstallment::create([
+                    'payment_plan_id'                   => $plan->id,
+                    'installment_number'                => $c['installment_number'],
+                    'due_date'                          => $c['due_date'],
+                    'amount'                            => $c['final'],
+                    'base_amount'                       => $c['base'],
+                    'discount_amount'                   => $c['discount_amount'],
+                    'discount_note'                     => $c['discount_note'],
+                    'slt_loan_amount'                   => $c['loan_amount'],
+                    'registration_fee_discount_applied' => $c['registration_fee_discount_applied'],
+                    'registration_fee_discount_note'    => $c['registration_fee_discount_note'],
+                    'final_amount'                      => $c['final'],
+                    'status'                            => $c['status'],
+                ]);
             }
 
-            // Link plan to registration
             $registration->update(['payment_plan_id' => $plan->id]);
 
             return response()->json([
-                'success'            => true,
-                'message'            => 'Payment plan created successfully.',
-                'payment_plan_id'    => $plan->id,
-                'installments_saved' => $saved,
-                'total_amount'       => $L,
-                'final_amount'       => $T,
-                'debug' => [
-                    'L' => $L,
-                    'pct_discount_on_L' => $pct,
-                    'fixed_discount'    => $fixed,
-                    'discount_applied_last' => $lastDiscEff,
-                    'sum_after_discounts'   => $sumAfterDiscounts,
-                    'loan_total'            => $S,
-                    'target_total'          => $T,
-                ],
-            ], \Illuminate\Http\Response::HTTP_OK);
+                'success'         => true,
+                'message'         => 'Payment plan created successfully.',
+                'payment_plan_id' => $plan->id,
+                'total_amount'    => $totalFeeForDiscount,
+                'final_amount'    => $T,
+                'installments'    => $computed
+            ]);
         });
 
     } catch (\Illuminate\Validation\ValidationException $ve) {
         $msg = collect($ve->errors())->flatten()->first() ?? 'Validation error';
-        return response()->json(['success' => false, 'message' => $msg], \Illuminate\Http\Response::HTTP_UNPROCESSABLE_ENTITY);
+        return response()->json(['success' => false, 'message' => $msg], 422);
     } catch (\Exception $e) {
         \Log::error('createPaymentPlan error', ['e' => $e]);
-        return response()->json([
-            'success' => false,
-            'message' => 'An error occurred: ' . $e->getMessage()
-        ], \Illuminate\Http\Response::HTTP_INTERNAL_SERVER_ERROR);
+        return response()->json(['success' => false, 'message' => 'An error occurred: '.$e->getMessage()], 500);
     }
 }
 

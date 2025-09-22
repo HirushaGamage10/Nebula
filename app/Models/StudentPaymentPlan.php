@@ -19,6 +19,7 @@ class StudentPaymentPlan extends Model
         'final_amount',
         'remaining_registration_discount',
         'status',
+        'discounts', 'registration_fee_discount',
     ];
 
     protected $casts = [
@@ -26,6 +27,9 @@ class StudentPaymentPlan extends Model
         'total_amount' => 'decimal:2',
         'final_amount' => 'decimal:2',
         'remaining_registration_discount' => 'decimal:2',
+
+        'discounts' => 'array',
+        'registration_fee_discount' => 'array',
     ];
 
     // Relationships
