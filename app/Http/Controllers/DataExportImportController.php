@@ -303,6 +303,54 @@ class DataExportImportController extends Controller
     }
 
     /**
+     * Import exam results data
+     */
+    public function importExamResults(Request $request)
+    {
+        if (!Auth::check() || !Auth::user()->status) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 401);
+        }
+
+        try {
+            $request->validate([
+                'file' => 'required|file|mimes:csv,xlsx,xls',
+                'format' => 'required|string|in:csv,excel'
+            ]);
+
+            $file = $request->file('file');
+            $format = $request->input('format');
+
+            switch ($format) {
+                case 'csv':
+                    $result = $this->importFromCSV($file, 'exam_results');
+                    break;
+                case 'excel':
+                    $result = $this->importFromExcel($file, 'exam_results');
+                    break;
+                default:
+                    return response()->json(['success' => false, 'message' => 'Invalid format.'], 400);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Exam results import completed successfully.',
+                'data' => $result
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Exam results import failed', [
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Import failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Get import template
      */
     public function getImportTemplate(Request $request)
@@ -485,6 +533,9 @@ class DataExportImportController extends Controller
                         case 'students':
                             $this->importStudent($data);
                             break;
+                        case 'exam_results':
+                            $this->importExamResult($data);
+                            break;
                         // Add other types as needed
                     }
                     $importedCount++;
@@ -548,6 +599,93 @@ class DataExportImportController extends Controller
     }
 
     /**
+     * Import exam result data
+     */
+    private function importExamResult($data)
+    {
+        // Validate required fields
+        // CSV format: Student ID, Course ID, Module ID, Intake ID, Location, Semester, Marks, Grade, Remarks
+        if (empty($data[0]) || empty($data[1]) || empty($data[2]) || empty($data[3])) {
+            throw new \Exception('Required fields missing: Student ID, Course ID, Module ID, Intake ID');
+        }
+
+        // Validate that student exists
+        $student = Student::where('student_id', $data[0])->first();
+        if (!$student) {
+            throw new \Exception("Student with ID {$data[0]} not found");
+        }
+
+        // Validate that course exists
+        $course = Course::where('course_id', $data[1])->first();
+        if (!$course) {
+            throw new \Exception("Course with ID {$data[1]} not found");
+        }
+
+        // Validate that module exists
+        $module = Module::where('module_id', $data[2])->first();
+        if (!$module) {
+            throw new \Exception("Module with ID {$data[2]} not found");
+        }
+
+        // Validate that intake exists
+        $intake = Intake::where('intake_id', $data[3])->first();
+        if (!$intake) {
+            throw new \Exception("Intake with ID {$data[3]} not found");
+        }
+
+        // Check if exam result already exists for this student, course, module, and intake
+        $existingResult = ExamResult::where('student_id', $data[0])
+            ->where('course_id', $data[1])
+            ->where('module_id', $data[2])
+            ->where('intake_id', $data[3])
+            ->first();
+        
+        if ($existingResult) {
+            throw new \Exception("Exam result already exists for Student ID {$data[0]}, Course ID {$data[1]}, Module ID {$data[2]}, Intake ID {$data[3]}");
+        }
+
+        // Validate marks (if provided)
+        $marks = null;
+        if (!empty($data[6])) {
+            $marks = (int) $data[6];
+            if ($marks < 0 || $marks > 100) {
+                throw new \Exception('Marks must be between 0 and 100');
+            }
+        }
+
+        // Auto-calculate grade if marks provided but grade not provided
+        $grade = $data[7] ?? null;
+        if ($marks !== null && empty($grade)) {
+            $grade = ExamResult::calculateGradeFromMarks($marks);
+        }
+
+        // Validate location
+        $location = $data[4] ?? 'Moratuwa';
+        if (!in_array($location, ['Welisara', 'Moratuwa', 'Peradeniya'])) {
+            throw new \Exception('Invalid location. Must be one of: Welisara, Moratuwa, Peradeniya');
+        }
+
+        // Validate semester
+        $semester = $data[5] ?? 1;
+        if (!is_numeric($semester) || $semester < 1 || $semester > 8) {
+            throw new \Exception('Semester must be a number between 1 and 8');
+        }
+
+        // Create exam result
+        ExamResult::create([
+            'student_id' => $data[0],
+            'course_id' => $data[1],
+            'module_id' => $data[2],
+            'intake_id' => $data[3],
+            'location' => $location,
+            'semester' => (int) $semester,
+            'marks' => $marks,
+            'grade' => $grade,
+            'remarks' => $data[8] ?? null
+        ]);
+    }
+
+    /**
      * Generate template
      */
     private function generateTemplate($type, $filename, $format)
@@ -590,10 +728,10 @@ class DataExportImportController extends Controller
                     break;
                 case 'exam_results':
                     fputcsv($file, [
-                        'Student ID', 'Course ID', 'Exam Type', 'Score', 'Max Score', 'Exam Date', 'Remarks'
+                        'Student ID', 'Course ID', 'Module ID', 'Intake ID', 'Location', 'Semester', 'Marks', 'Grade', 'Remarks'
                     ]);
                     fputcsv($file, [
-                        '1', '1', 'Mid-term', '85.5', '100', '2024-01-15', 'Excellent performance'
+                        '1', '1', '1', '1', 'Moratuwa', '1', '85', 'B', 'Good performance'
                     ]);
                     break;
             }

@@ -228,6 +228,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
         // Import routes
         Route::post('/data-import/students', [DataExportImportController::class, 'importStudents'])->name('data.import.students');
+        Route::post('/data-import/exam-results', [DataExportImportController::class, 'importExamResults'])->name('data.import.examResults');
 
         // Template routes
         Route::get('/data-import/template', [DataExportImportController::class, 'getImportTemplate'])->name('data.import.template');

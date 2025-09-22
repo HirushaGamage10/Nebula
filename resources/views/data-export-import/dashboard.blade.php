@@ -355,14 +355,19 @@ $(document).ready(function() {
 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('type', importType);
         formData.append('format', format);
 
         // Show loading spinner
         $('#loadingSpinner').show();
 
+        // Determine the correct import URL based on type
+        let importUrl = '/data-import/students';
+        if (importType === 'exam_results') {
+            importUrl = '/data-import/exam-results';
+        }
+
         $.ajax({
-            url: '/data-export-import/import',
+            url: importUrl,
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
@@ -373,7 +378,15 @@ $(document).ready(function() {
             success: function(response) {
                 $('#loadingSpinner').hide();
                 if (response.success) {
-                    alert(`Import completed successfully! ${response.data.imported} records imported.`);
+                    const importedCount = response.data.imported_count || 0;
+                    const errorCount = response.data.errors ? response.data.errors.length : 0;
+                    
+                    let message = `Import completed successfully! ${importedCount} records imported.`;
+                    if (errorCount > 0) {
+                        message += ` ${errorCount} records failed to import.`;
+                    }
+                    
+                    alert(message);
                     $('#importFile').val('');
                     loadExportStats();
                 } else {
