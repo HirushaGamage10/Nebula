@@ -106,6 +106,20 @@ class ExamResultController extends Controller
                 'results.*.remarks' => 'nullable|string|max:255',
             ]);
             
+            // Additional validation: ensure at least one of marks, grade, or remarks is provided for each result
+            foreach ($validatedData['results'] as $index => $result) {
+                $hasMarks = isset($result['marks']) && $result['marks'] !== null;
+                $hasGrade = isset($result['grade']) && !empty($result['grade']);
+                $hasRemarks = isset($result['remarks']) && !empty($result['remarks']);
+                
+                if (!$hasMarks && !$hasGrade && !$hasRemarks) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "At least marks, grade, or remarks must be provided for student " . ($index + 1)
+                    ], 422);
+                }
+            }
+            
             \Log::info('Validation passed, validated data:', $validatedData);
 
             // Get the semester to convert ID to name
@@ -520,6 +534,20 @@ class ExamResultController extends Controller
                 'results.*.grade' => 'nullable|string|max:5',
                 'results.*.remarks' => 'nullable|string|max:255',
             ]);
+
+            // Additional validation: ensure at least one of marks, grade, or remarks is provided for each result
+            foreach ($validatedData['results'] as $index => $result) {
+                $hasMarks = isset($result['marks']) && $result['marks'] !== null;
+                $hasGrade = isset($result['grade']) && !empty($result['grade']);
+                $hasRemarks = isset($result['remarks']) && !empty($result['remarks']);
+                
+                if (!$hasMarks && !$hasGrade && !$hasRemarks) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "At least marks, grade, or remarks must be provided for result " . ($index + 1)
+                    ], 422);
+                }
+            }
 
             // Get the semester to convert ID to name
             $semester = \App\Models\Semester::find($validatedData['semester']);

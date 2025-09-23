@@ -37,6 +37,22 @@ class ExamResult extends Model
         'marks' => 'integer',
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::updating(function ($examResult) {
+            // Log when exam results are being updated
+            \Log::info('ExamResult being updated', [
+                'id' => $examResult->id,
+                'student_id' => $examResult->student_id,
+                'old_remarks' => $examResult->getOriginal('remarks'),
+                'new_remarks' => $examResult->remarks,
+                'backtrace' => debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5)
+            ]);
+        });
+    }
+
     /**
      * Get the student that owns the exam result
      */

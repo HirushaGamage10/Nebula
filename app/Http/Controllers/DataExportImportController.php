@@ -314,7 +314,21 @@ class DataExportImportController extends Controller
 
             $file = $request->file('file');
             $path = $file->getRealPath();
-            $data = array_map('str_getcsv', file($path));
+            
+            // Read file with proper encoding handling
+            $content = file_get_contents($path);
+            if (!mb_check_encoding($content, 'UTF-8')) {
+                $content = mb_convert_encoding($content, 'UTF-8', 'auto');
+            }
+            
+            // Split into lines and parse each line
+            $lines = str_getcsv($content, "\n");
+            $data = [];
+            foreach ($lines as $line) {
+                if (trim($line)) {
+                    $data[] = str_getcsv($line);
+                }
+            }
             
             if (empty($data)) {
                 return response()->json(['success' => false, 'message' => 'File is empty'], 400);
@@ -445,26 +459,43 @@ class DataExportImportController extends Controller
                         ->first();
                 }
 
-                // Validate marks
-                if (!is_numeric($marks) || $marks < 0 || $marks > 100) {
-                    \Log::warning("Invalid marks", ['marks' => $marks]);
-                    $failedRows[] = "Row " . ($rowIndex + 1) . ": Invalid marks '{$marks}'";
+                // Validate that at least marks or grade is provided
+                $hasMarks = !empty($marks) && is_numeric($marks);
+                $hasGrade = !empty($grade);
+                
+                if (!$hasMarks && !$hasGrade) {
+                    \Log::warning("Neither marks nor grade provided", ['marks' => $marks, 'grade' => $grade]);
+                    $failedRows[] = "Row " . ($rowIndex + 1) . ": Either marks or grade must be provided";
                     continue;
                 }
 
-                // Calculate grade if empty
-                if (empty($grade)) {
+                // Validate marks if provided
+                if ($hasMarks && ($marks < 0 || $marks > 100)) {
+                    \Log::warning("Invalid marks", ['marks' => $marks]);
+                    $failedRows[] = "Row " . ($rowIndex + 1) . ": Invalid marks '{$marks}' (must be 0-100)";
+                    continue;
+                }
+
+                // Calculate grade from marks if grade is empty but marks is provided
+                if ($hasMarks && !$hasGrade) {
                     $grade = $this->calculateGradeSimple($marks);
                 }
+
+                // Prepare data for database - use null for empty values
+                $finalMarks = $hasMarks ? (int)$marks : null;
+                $finalGrade = $hasGrade ? trim($grade) : null;
 
                 \Log::info("Creating exam result", [
                     'student_id' => $student->student_id,
                     'course_id' => $course->course_id,
                     'module_id' => $module->module_id,
-                    'marks' => $marks,
-                    'grade' => $grade,
+                    'marks' => $finalMarks,
+                    'grade' => $finalGrade,
                     'location' => $location,
-                    'remarks' => $remarks
+                    'remarks' => $remarks,
+                    'remarks_length' => strlen($remarks),
+                    'remarks_empty' => empty($remarks),
+                    'remarks_is_null' => is_null($remarks)
                 ]);
 
                 // Create or update exam result
@@ -477,8 +508,8 @@ class DataExportImportController extends Controller
                         'intake_id' => $intake ? $intake->intake_id : null
                     ],
                     [
-                        'marks' => $marks,
-                        'grade' => $grade,
+                        'marks' => $finalMarks,
+                        'grade' => $finalGrade,
                         'location' => $location,
                         'remarks' => $remarks
                     ]
