@@ -14,6 +14,7 @@ use Illuminate\Http\Response;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PaymentController extends Controller
 {
@@ -2336,6 +2337,160 @@ private function buildSlipDataFromPaymentDetail(\App\Models\PaymentDetail $payme
             ], 500);
         }
     }
-  
-    
+  /**
+     * Show the standalone Payment Statement Download page.
+     */
+    public function showDownloadPage()
+    {
+        return view('payment.statement_download');
+    }
+
+    /**
+     * Generate and download the Payment Statement as PDF.
+     */
+/**
+ * Generate and download the Payment Statement as PDF.
+ */
+public function downloadPaymentStatement(Request $request)
+{
+    try {
+        $studentNic = $request->input('student_nic');
+        $courseId   = $request->input('course_id');
+
+        // 🔹 Find student
+        $student = \App\Models\Student::where('id_value', $studentNic)
+            ->orWhere('student_id', $studentNic)
+            ->first();
+
+        if (!$student) {
+            return back()->with('error', 'Student not found');
+        }
+
+        // 🔹 Find course registration
+        $registration = \App\Models\CourseRegistration::where('student_id', $student->student_id)
+            ->where('course_id', $courseId)
+            ->with(['course', 'intake'])
+            ->first();
+
+        if (!$registration) {
+            return back()->with('error', 'Course registration not found');
+        }
+
+        // 🔹 Fetch actual payments
+        $payments = \App\Models\PaymentDetail::where('student_id', $student->student_id)
+            ->where('course_registration_id', $registration->id)
+            ->orderBy('installment_type')
+            ->orderBy('installment_number')
+            ->orderBy('due_date')
+            ->get();
+
+        $totalAmount    = $payments->sum('total_fee');
+        $totalPaid      = $payments->sum(fn($p) => max(0, $p->total_fee - $p->remaining_amount));
+        $totalRemaining = $payments->sum('remaining_amount');
+
+        // 🔹 Transform into flat payment history
+        $paymentDetails = [];
+        foreach ($payments as $payment) {
+            $partials = [];
+            if ($payment->partial_payments) {
+                $partials = is_array($payment->partial_payments)
+                    ? $payment->partial_payments
+                    : json_decode($payment->partial_payments, true);
+            }
+
+            if (!empty($partials)) {
+                foreach ($partials as $p) {
+                    $paymentDetails[] = [
+                        'description' => $this->getPaymentDescription($payment),
+                        'method'      => $p['method'] ?? $payment->payment_method,
+                        'receipt_no'  => $payment->transaction_id,
+                        'date'        => $p['date'] ?? $payment->payment_date,
+                        'amount'      => $p['amount'],
+                        'remarks'     => $p['remarks'] ?? null,
+                    ];
+                }
+            } else {
+                $paymentDetails[] = [
+                    'description' => $this->getPaymentDescription($payment),
+                    'method'      => $payment->payment_method,
+                    'receipt_no'  => $payment->transaction_id,
+                    'date'        => $payment->payment_date,
+                    'amount'      => $payment->total_fee - $payment->remaining_amount,
+                    'remarks'     => $payment->remarks,
+                ];
+            }
+        }
+
+        // 🔹 Fetch Student Payment Plan + Installments
+        $paymentPlan = \App\Models\StudentPaymentPlan::with('installments')
+            ->where('student_id', $student->student_id)
+            ->where('course_id', $courseId)
+            ->first();
+
+        // 🔹 Fetch Course Payment Plan (master with foreign currency)
+        $coursePlan = \App\Models\PaymentPlan::where('course_id', $courseId)
+            ->first();
+
+        $courseInstallments = [];
+        if ($coursePlan && $coursePlan->installments) {
+            $courseInstallments = is_array($coursePlan->installments)
+                ? $coursePlan->installments
+                : json_decode($coursePlan->installments, true);
+        }
+
+        // 🔹 Prepare data for PDF
+        $data = [
+            'student' => [
+                'name' => $student->full_name,
+                'id'   => $student->student_id,
+                'nic'  => $student->id_value,
+            ],
+            'course' => [
+                'name'              => optional($registration->course)->course_name,
+                'code'              => optional($registration->course)->course_code,
+                'intake'            => optional($registration->intake)->batch,
+                'registration_date' => $registration->registration_date,
+            ],
+            'payments' => $paymentDetails,
+            'totals' => [
+                'total_amount'    => $totalAmount,
+                'total_paid'      => $totalPaid,
+                'total_remaining' => $totalRemaining,
+            ],
+            'generated_date'     => now()->format('Y-m-d H:i:s'),
+            'paymentPlan'        => $paymentPlan,        // Student-specific installments
+            'coursePlan'         => $coursePlan,         // Course-level plan
+            'courseInstallments' => $courseInstallments, // Master installments
+        ];
+
+        // 🔹 Generate PDF
+        $pdf = \PDF::loadView('pdf.payment_statement', $data);
+
+        $filename = "Payment_Statement_{$student->student_id}_"
+            . (optional($registration->course)->course_code ?? 'Course') . ".pdf";
+
+        return $pdf->download($filename);
+
+    } catch (\Exception $e) {
+        \Log::error('Payment Statement PDF Error: ' . $e->getMessage());
+        return back()->with('error', 'Error generating statement: '.$e->getMessage());
+    }
+}
+
+
+/**
+ * Helper: Get Payment Description
+ */
+private function getPaymentDescription($payment)
+{
+    if ($payment->installment_type === 'course_fee') {
+        return "Course Fee - Installment {$payment->installment_number}";
+    } elseif ($payment->installment_type === 'franchise_fee') {
+        return "Franchise Fee - Installment {$payment->installment_number}";
+    } elseif ($payment->installment_type === 'registration_fee') {
+        return "Registration Fee";
+    }
+    return ucfirst(str_replace('_', ' ', $payment->installment_type));
+}
+
 } 

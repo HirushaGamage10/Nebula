@@ -375,6 +375,17 @@
     </li>
 <?php endif; ?>
 
+<?php if($canPayment): ?> 
+    <li class="sidebar-item">
+        <a class="sidebar-link <?php echo e(request()->routeIs('payment.showDownloadPage') ? 'active' : ''); ?>"
+           href="<?php echo e(route('payment.showDownloadPage')); ?>">
+            <span><i class="ti ti-file-download"></i></span>
+            <span class="hide-menu">Payment Statement Download</span>
+        </a>
+    </li>
+<?php endif; ?>
+
+
 
 <?php if($canLatePayment): ?>
     <li class="sidebar-item">

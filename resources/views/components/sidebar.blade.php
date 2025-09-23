@@ -374,6 +374,17 @@
         </a>
     </li>
 @endif
+{{-- Payment Statement Download --}}
+@if($canPayment) 
+    <li class="sidebar-item">
+        <a class="sidebar-link {{ request()->routeIs('payment.showDownloadPage') ? 'active' : '' }}"
+           href="{{ route('payment.showDownloadPage') }}">
+            <span><i class="ti ti-file-download"></i></span>
+            <span class="hide-menu">Payment Statement Download</span>
+        </a>
+    </li>
+@endif
+
 
 {{-- Late Payment --}}
 @if($canLatePayment)

@@ -693,6 +693,13 @@ Route::post('/payment/get-summary', [PaymentController::class, 'getPaymentSummar
 Route::post('/payment/export-summary', [PaymentController::class, 'exportPaymentSummary'])->name('payment.export.summary');
 Route::get('/payment/get-intakes/{courseID}/{location}', [PaymentController::class, 'getIntakesForCourseAndLocation'])->name('payment.get.intakes.for.course.location');
 
+// Payment Statement Download
+Route::get('/payment/statement-download', [PaymentController::class, 'showDownloadPage'])
+    ->name('payment.showDownloadPage');
+
+Route::post('/payment/download-statement', [PaymentController::class, 'downloadPaymentStatement'])
+    ->name('payment.downloadStatement');
+
 // Late Payment Routes - Bursar and Developer only
 Route::middleware(['auth', 'role:Bursar,Developer'])->group(function () {
     Route::get('/late-payment', [LatePaymentController::class, 'index'])->name('late.payment.index');
