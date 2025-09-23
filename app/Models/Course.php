@@ -148,9 +148,10 @@ class Course extends Model
 
     // Mutators
     public function setCourseNameAttribute($value)
-    {
-        $this->attributes['course_name'] = ucwords(strtolower($value));
-    }
+{
+    $this->attributes['course_name'] = $value;
+}
+
 
 
 } 
