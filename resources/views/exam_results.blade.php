@@ -142,11 +142,17 @@
                     <button type="button" class="btn btn-outline-success" id="addGradeColumnBtn">
                         <i class="ti ti-plus"></i> Add Grade Column
                     </button>
+                    <button type="button" class="btn btn-outline-info" id="addRemarksColumnBtn">
+                        <i class="ti ti-plus"></i> Add Remarks Column
+                    </button>
                     <button type="button" class="btn btn-outline-danger" id="removeMarksColumnBtn" style="display: none;">
                         <i class="ti ti-minus"></i> Remove Marks Column
                     </button>
                     <button type="button" class="btn btn-outline-danger" id="removeGradeColumnBtn" style="display: none;">
                         <i class="ti ti-minus"></i> Remove Grade Column
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" id="removeRemarksColumnBtn" style="display: none;">
+                        <i class="ti ti-minus"></i> Remove Remarks Column
                     </button>
                 </div>
                 
@@ -195,8 +201,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Column management elements
     const addMarksColumnBtn = document.getElementById('addMarksColumnBtn');
     const addGradeColumnBtn = document.getElementById('addGradeColumnBtn');
+    const addRemarksColumnBtn = document.getElementById('addRemarksColumnBtn');
     const removeMarksColumnBtn = document.getElementById('removeMarksColumnBtn');
     const removeGradeColumnBtn = document.getElementById('removeGradeColumnBtn');
+    const removeRemarksColumnBtn = document.getElementById('removeRemarksColumnBtn');
     
     // Clear any existing data rows on page load to ensure clean state
     resultsTableBody.innerHTML = '';
@@ -211,17 +219,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const existingGradeHeader = document.getElementById('gradeColumnHeader');
         const existingMarksInput = document.getElementById('marksInputCell');
         const existingGradeInput = document.getElementById('gradeInputCell');
+        const existingRemarksHeader = document.getElementById('remarksHeaderCell');
+        const existingRemarksInput = document.getElementById('remarksInputCell');
         
         if (existingMarksHeader) existingMarksHeader.remove();
         if (existingGradeHeader) existingGradeHeader.remove();
+        if (existingRemarksHeader) existingRemarksHeader.remove();
         if (existingMarksInput) existingMarksInput.remove();
         if (existingGradeInput) existingGradeInput.remove();
+        if (existingRemarksInput) existingRemarksInput.remove();
         
         // Reset button states
         addMarksColumnBtn.style.display = 'inline-block';
         addGradeColumnBtn.style.display = 'inline-block';
+        addRemarksColumnBtn.style.display = 'inline-block';
         removeMarksColumnBtn.style.display = 'none';
         removeGradeColumnBtn.style.display = 'none';
+        removeRemarksColumnBtn.style.display = 'none';
     }
     
     // Call reset function on page load
@@ -250,8 +264,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Reset button states
         addMarksColumnBtn.style.display = 'inline-block';
         addGradeColumnBtn.style.display = 'inline-block';
+        addRemarksColumnBtn.style.display = 'inline-block';
         removeMarksColumnBtn.style.display = 'none';
         removeGradeColumnBtn.style.display = 'none';
+        removeRemarksColumnBtn.style.display = 'none';
     }
     
     // Ensure clean two-column structure on page load
@@ -439,6 +455,43 @@ document.addEventListener('DOMContentLoaded', function() {
         updateExistingRows();
     });
     
+    // Add Remarks Column Event Handler
+    addRemarksColumnBtn.addEventListener('click', function() {
+        // Add Remarks header
+        const tableHeader = document.querySelector('#resultsTable thead tr');
+        const remarksHeader = document.createElement('th');
+        remarksHeader.id = 'remarksColumnHeader';
+        remarksHeader.textContent = 'Remarks';
+        tableHeader.appendChild(remarksHeader);
+        
+        addRemarksColumnBtn.style.display = 'none';
+        removeRemarksColumnBtn.style.display = 'inline-block';
+        
+        // Update existing rows to include editable remarks column
+        updateExistingRows();
+    });
+    
+    // Remove Remarks Column Event Handler
+    removeRemarksColumnBtn.addEventListener('click', function() {
+        // Remove Remarks header
+        const remarksHeader = document.getElementById('remarksColumnHeader');
+        if (remarksHeader) {
+            remarksHeader.remove();
+        }
+        
+        // Remove remarks input cells from all rows
+        const remarksInputCells = document.querySelectorAll('td input[data-field="remarks"]').forEach(input => {
+            const remarksInputCell = input.parentElement;
+            remarksInputCell.remove();
+        });
+        
+        addRemarksColumnBtn.style.display = 'inline-block';
+        removeRemarksColumnBtn.style.display = 'none';
+        
+        // Update existing rows to remove remarks column
+        updateExistingRows();
+    });
+    
     // Function to update existing rows when columns are added/removed
     function updateExistingRows() {
         const rows = resultsTableBody.querySelectorAll('tr');
@@ -467,6 +520,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 gradeCell.className = 'grade-cell';
                 gradeCell.innerHTML = `<input type="text" class="form-control" maxlength="5" placeholder="Grade" onchange="updateResultGrade(${rowIndex}, this.value)">`;
                 row.appendChild(gradeCell);
+            }
+            
+            // Add Remarks column if it exists
+            const remarksVisible = document.getElementById('remarksColumnHeader') !== null;
+            if (remarksVisible) {
+                const remarksCell = document.createElement('td');
+                remarksCell.className = 'remarks-cell';
+                remarksCell.innerHTML = `<input type="text" class="form-control" maxlength="255" placeholder="Remarks" data-field="remarks" onchange="updateResultRemarks(${rowIndex}, this.value)">`;
+                row.appendChild(remarksCell);
             }
         });
     }
@@ -687,11 +749,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (result.grade !== '' && result.grade !== null) {
                 filtered.grade = result.grade;
             }
+            if (result.remarks !== '' && result.remarks !== null) {
+                filtered.remarks = result.remarks;
+            }
             return filtered;
-        }).filter(result => result.marks !== undefined || result.grade !== undefined);
+        }).filter(result => result.marks !== undefined || result.grade !== undefined || result.remarks !== undefined);
         
         if (filteredResults.length === 0) {
-            showToast('Warning', 'Please enter at least marks or grade for at least one student.', 'bg-warning');
+            showToast('Warning', 'Please enter at least marks, grade, or remarks for at least one student.', 'bg-warning');
             return;
         }
         
@@ -763,6 +828,7 @@ document.addEventListener('DOMContentLoaded', function() {
         results.forEach((result, index) => {
             const marksVisible = document.getElementById('marksColumnHeader') !== null;
             const gradeVisible = document.getElementById('gradeColumnHeader') !== null;
+            const remarksVisible = document.getElementById('remarksColumnHeader') !== null;
             
             let row = `<tr>
                 <td>${result.student_id}</td>
@@ -774,6 +840,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (gradeVisible) {
                 row += `<td class="grade-cell"><input type="text" class="form-control" maxlength="5" placeholder="Grade" value="${result.grade || ''}" onchange="updateResultGrade(${index}, this.value)"></td>`;
+            }
+            
+            if (remarksVisible) {
+                row += `<td class="remarks-cell"><input type="text" class="form-control" maxlength="255" placeholder="Remarks" value="${result.remarks || ''}" onchange="updateResultRemarks(${index}, this.value)"></td>`;
             }
             
             row += `</tr>`;
@@ -967,6 +1037,12 @@ document.addEventListener('DOMContentLoaded', function() {
             results[index].grade = value;
         }
     }
+    
+    window.updateResultRemarks = function(index, value) {
+        if (results[index]) {
+            results[index].remarks = value;
+        }
+    }
 
     // Update fetchCoursesByLocation to accept both params
     function fetchCoursesByLocation(location, courseType) {
@@ -997,30 +1073,48 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Get the selected values for the template
-        const courseName = courseSelect.options[courseSelect.selectedIndex].text;
-        const moduleName = moduleSelect.options[moduleSelect.selectedIndex].text;
-        const semesterName = semesterSelect.options[semesterSelect.selectedIndex].text;
+        showSpinner(true);
         
-        // Create CSV content with headers and sample data
-        const csvContent = [
-            'Student ID,Course ID,Module ID,Intake ID,Location,Semester,Marks,Grade,Remarks',
-            `1,${filterData.course_id},${filterData.module_id},${filterData.intake_id},${filterData.location},${filterData.semester},85,B,Good performance`,
-            `2,${filterData.course_id},${filterData.module_id},${filterData.intake_id},${filterData.location},${filterData.semester},92,A,Excellent work`
-        ].join('\n');
-
-        // Create and download file
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `exam_results_template_${courseName.replace(/\s+/g, '_')}_${moduleName.replace(/\s+/g, '_')}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        showToast('Success', 'Template downloaded successfully!', '#ccffcc');
+        // Call the backend to download template with actual student data
+        fetch('{{ route("download.exam.results.template") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(filterData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            // Get the selected values for the filename
+            const courseName = courseSelect.options[courseSelect.selectedIndex].text;
+            const moduleName = moduleSelect.options[moduleSelect.selectedIndex].text;
+            const intakeName = intakeSelect.options[intakeSelect.selectedIndex].text;
+            
+            // Create and download file
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `exam_results_template_${courseName.replace(/\s+/g, '_')}_${moduleName.replace(/\s+/g, '_')}_${intakeName.replace(/\s+/g, '_')}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showToast('Success', 'Template downloaded successfully with actual student data!', '#ccffcc');
+        })
+        .catch(error => {
+            console.error('Error downloading template:', error);
+            showToast('Error', 'Failed to download template. Please try again.', 'bg-danger');
+        })
+        .finally(() => {
+            showSpinner(false);
+        });
     }
 
     function handleBulkUpload() {
@@ -1058,12 +1152,12 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                const importedCount = data.data.imported_count || 0;
-                const errorCount = data.data.errors ? data.data.errors.length : 0;
+                const importedCount = data.imported_count || 0;
+                const failedCount = data.failed_count || 0;
                 
                 let message = `Bulk upload completed successfully! ${importedCount} exam results imported.`;
-                if (errorCount > 0) {
-                    message += ` ${errorCount} records failed to import.`;
+                if (failedCount > 0) {
+                    message += ` ${failedCount} records failed to import.`;
                 }
                 
                 showToast('Success', message, '#ccffcc');

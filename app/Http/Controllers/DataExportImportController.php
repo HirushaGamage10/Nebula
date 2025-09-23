@@ -307,52 +307,217 @@ class DataExportImportController extends Controller
      */
     public function importExamResults(Request $request)
     {
-        if (!Auth::check() || !Auth::user()->status) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 401);
-        }
-
         try {
             $request->validate([
-                'file' => 'required|file|mimes:csv,xlsx,xls',
-                'format' => 'required|string|in:csv,excel'
+                'file' => 'required|file|mimes:csv,txt'
             ]);
 
             $file = $request->file('file');
-            $format = $request->input('format');
+            $path = $file->getRealPath();
+            $data = array_map('str_getcsv', file($path));
+            
+            if (empty($data)) {
+                return response()->json(['success' => false, 'message' => 'File is empty'], 400);
+            }
 
-            switch ($format) {
-                case 'csv':
-                    $result = $this->importFromCSV($file, 'exam_results');
-                    break;
-                case 'excel':
-                    $result = $this->importFromExcel($file, 'exam_results');
-                    break;
-                default:
-                    return response()->json(['success' => false, 'message' => 'Invalid format.'], 400);
+            $headers = array_shift($data); // Remove header row
+            
+            // Determine format and import accordingly  
+            if ($this->isNewExamResultFormat($headers)) {
+                $result = $this->importExamResultWithNamesSimple($data, $headers);
+            } else {
+                $result = ['imported' => 0, 'failed' => ['Old format not supported in this version']];
+            }
+
+            $message = $result['imported'] . " exam results imported successfully.";
+            if (!empty($result['failed'])) {
+                $message .= " " . count($result['failed']) . " records failed to import.";
             }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Exam results import completed successfully.',
-                'data' => $result
+                'message' => $message,
+                'imported_count' => $result['imported'],
+                'failed_count' => count($result['failed']),
+                'failed_details' => $result['failed']
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Exam results import failed', [
-                'error' => $e->getMessage(),
-                'user_id' => Auth::id()
-            ]);
-
             return response()->json([
-                'success' => false,
-                'message' => 'Import failed: ' . $e->getMessage()
+                'success' => false, 
+                'message' => 'Error importing file: ' . $e->getMessage()
             ], 500);
         }
     }
 
-    /**
-     * Get import template
-     */
+    private function importExamResultWithNamesSimple($data, $headers)
+    {
+        \Log::info('importExamResultWithNamesSimple started', ['data_count' => count($data), 'headers' => $headers]);
+        
+        $importedCount = 0;
+        $failedRows = [];
+
+        foreach ($data as $rowIndex => $row) {
+            try {
+                \Log::info("Processing row {$rowIndex}", ['row_data' => $row]);
+                
+                // Map CSV row to associative array using headers
+                $rowData = array_combine($headers, $row);
+                \Log::info("Row data mapped", ['row_data' => $rowData]);
+
+                // Extract data with fallback for missing columns
+                $studentName = trim($rowData['Student Name'] ?? '');
+                $courseName = trim($rowData['Course Name'] ?? '');
+                $moduleName = trim($rowData['Module Name'] ?? '');
+                $intakeValue = trim($rowData['Intake'] ?? '');
+                $location = trim($rowData['Location'] ?? '');
+                $semester = trim($rowData['Semester'] ?? '');
+                $marks = trim($rowData['Marks'] ?? '');
+                $grade = trim($rowData['Grade'] ?? '');
+                $remarks = trim($rowData['Remarks'] ?? '');
+
+                \Log::info("Extracted data", [
+                    'student_name' => $studentName,
+                    'course_name' => $courseName,
+                    'module_name' => $moduleName,
+                    'marks' => $marks,
+                    'remarks' => $remarks
+                ]);
+
+                // Skip empty rows
+                if (empty($studentName) || empty($courseName) || empty($moduleName)) {
+                    \Log::warning("Skipping row {$rowIndex} - missing required data");
+                    $failedRows[] = "Row " . ($rowIndex + 1) . ": Missing required data";
+                    continue;
+                }
+
+                // Find student by name (flexible matching)
+                $student = \App\Models\Student::where(function($query) use ($studentName) {
+                    $query->where('full_name', 'LIKE', "%{$studentName}%")
+                          ->orWhere('name_with_initials', 'LIKE', "%{$studentName}%");
+                })->first();
+
+                if (!$student) {
+                    \Log::warning("Student not found", ['student_name' => $studentName]);
+                    $failedRows[] = "Row " . ($rowIndex + 1) . ": Student '{$studentName}' not found";
+                    continue;
+                }
+
+                \Log::info("Found student", ['student_id' => $student->student_id, 'student_name' => $student->full_name]);
+
+                // Find course by name
+                $course = \App\Models\Course::where('course_name', 'LIKE', "%{$courseName}%")->first();
+
+                if (!$course) {
+                    \Log::warning("Course not found", ['course_name' => $courseName]);
+                    $failedRows[] = "Row " . ($rowIndex + 1) . ": Course '{$courseName}' not found";
+                    continue;
+                }
+
+                \Log::info("Found course", ['course_id' => $course->course_id, 'course_name' => $course->course_name]);
+
+                // Find module by name
+                $module = \App\Models\Module::where(function($query) use ($moduleName) {
+                    $query->where('module_name', 'LIKE', "%{$moduleName}%")
+                          ->orWhere('module_code', 'LIKE', "%{$moduleName}%");
+                })->first();
+
+                if (!$module) {
+                    \Log::warning("Module not found", ['module_name' => $moduleName]);
+                    $failedRows[] = "Row " . ($rowIndex + 1) . ": Module '{$moduleName}' not found";
+                    continue;
+                }
+
+                \Log::info("Found module", ['module_id' => $module->module_id, 'module_name' => $module->module_name]);
+
+                // Find intake (flexible)
+                $intake = null;
+                if (!empty($intakeValue)) {
+                    $intake = \App\Models\Intake::where('batch', 'LIKE', "%{$intakeValue}%")->first();
+                }
+
+                // Find semester (match by name, course, and intake)
+                $semesterModel = null;
+                if (!empty($semester) && is_numeric($semester) && $course && $intake) {
+                    $semesterModel = \App\Models\Semester::where('name', $semester)
+                        ->where('course_id', $course->course_id)
+                        ->where('intake_id', $intake->intake_id)
+                        ->first();
+                }
+
+                // Validate marks
+                if (!is_numeric($marks) || $marks < 0 || $marks > 100) {
+                    \Log::warning("Invalid marks", ['marks' => $marks]);
+                    $failedRows[] = "Row " . ($rowIndex + 1) . ": Invalid marks '{$marks}'";
+                    continue;
+                }
+
+                // Calculate grade if empty
+                if (empty($grade)) {
+                    $grade = $this->calculateGradeSimple($marks);
+                }
+
+                \Log::info("Creating exam result", [
+                    'student_id' => $student->student_id,
+                    'course_id' => $course->course_id,
+                    'module_id' => $module->module_id,
+                    'marks' => $marks,
+                    'grade' => $grade,
+                    'location' => $location,
+                    'remarks' => $remarks
+                ]);
+
+                // Create or update exam result
+                $examResult = \App\Models\ExamResult::updateOrCreate(
+                    [
+                        'student_id' => $student->student_id,
+                        'course_id' => $course->course_id,
+                        'module_id' => $module->module_id,
+                        'semester' => $semester,
+                        'intake_id' => $intake ? $intake->intake_id : null
+                    ],
+                    [
+                        'marks' => $marks,
+                        'grade' => $grade,
+                        'location' => $location,
+                        'remarks' => $remarks
+                    ]
+                );
+
+                \Log::info("Exam result updateOrCreate completed", [
+                    'result_id' => $examResult->id,
+                    'saved_remarks' => $examResult->remarks,
+                    'was_recently_created' => $examResult->wasRecentlyCreated
+                ]);
+
+                \Log::info("Exam result created successfully for row {$rowIndex}");
+                $importedCount++;
+
+            } catch (\Exception $e) {
+                \Log::error("Error processing row {$rowIndex}", ['error' => $e->getMessage()]);
+                $failedRows[] = "Row " . ($rowIndex + 1) . ": " . $e->getMessage();
+            }
+        }
+
+        \Log::info('Import completed', [
+            'imported_count' => $importedCount,
+            'failed_count' => count($failedRows)
+        ]);
+
+        return [
+            'imported' => $importedCount,
+            'failed' => $failedRows
+        ];
+    }
+
+    private function calculateGradeSimple($marks)
+    {
+        if ($marks >= 80) return 'A';
+        if ($marks >= 70) return 'B';
+        if ($marks >= 60) return 'C';
+        if ($marks >= 50) return 'D';
+        return 'F';
+    }
     public function getImportTemplate(Request $request)
     {
         if (!Auth::check() || !Auth::user()->status) {
@@ -603,8 +768,158 @@ class DataExportImportController extends Controller
      */
     private function importExamResult($data)
     {
+        // Log the data being imported for debugging
+        Log::info('ImportExamResult called with data:', ['data' => $data]);
+        
+        // Check if this is the new format with names instead of IDs
+        $isNewFormat = $this->isNewExamResultFormat($data);
+        
+        Log::info('Import format detected:', ['is_new_format' => $isNewFormat, 'first_column' => $data[0]]);
+        
+        if ($isNewFormat) {
+            return $this->importExamResultWithNames($data);
+        } else {
+            return $this->importExamResultWithIds($data);
+        }
+    }
+
+    /**
+     * Check if the exam result data is in the new format (with names)
+     */
+    private function isNewExamResultFormat($data)
+    {
+        // Check if the first column contains a student name instead of numeric ID
+        // If it's numeric, it's the old format with IDs
+        // If it's not numeric, it's the new format with names
+        $isNumeric = is_numeric($data[0]);
+        Log::info('Format check:', ['first_column' => $data[0], 'is_numeric' => $isNumeric]);
+        return !$isNumeric;
+    }
+
+    /**
+     * Import exam result data with names (new format)
+     * CSV format: Student Name, Course Name, Module Name, Intake, Location, Semester, Marks, Grade, Remarks
+     */
+    private function importExamResultWithNames($data)
+    {
+        Log::info('ImportExamResultWithNames called with:', ['data' => $data]);
+        
         // Validate required fields
-        // CSV format: Student ID, Course ID, Module ID, Intake ID, Location, Semester, Marks, Grade, Remarks
+        if (empty($data[0]) || empty($data[1]) || empty($data[2]) || empty($data[3])) {
+            throw new \Exception('Required fields missing: Student Name, Course Name, Module Name, Intake');
+        }
+
+        // Find student by name (try exact match first, then partial)
+        $student = Student::where('full_name', $data[0])->first();
+        if (!$student) {
+            // Try partial match in case of slight name differences
+            $student = Student::where('full_name', 'LIKE', '%' . trim($data[0]) . '%')->first();
+            if (!$student) {
+                Log::error('Student not found:', ['name' => $data[0]]);
+                throw new \Exception("Student with name '{$data[0]}' not found");
+            }
+        }
+        Log::info('Student found:', ['student_id' => $student->student_id, 'name' => $student->full_name]);
+
+        // Find course by name
+        $course = Course::where('course_name', $data[1])->first();
+        if (!$course) {
+            Log::error('Course not found:', ['name' => $data[1]]);
+            throw new \Exception("Course with name '{$data[1]}' not found");
+        }
+        Log::info('Course found:', ['course_id' => $course->course_id, 'name' => $course->course_name]);
+
+        // Find module by name
+        $module = Module::where('module_name', $data[2])->first();
+        if (!$module) {
+            Log::error('Module not found:', ['name' => $data[2]]);
+            throw new \Exception("Module with name '{$data[2]}' not found");
+        }
+        Log::info('Module found:', ['module_id' => $module->module_id, 'name' => $module->module_name]);
+
+        // Find intake by batch
+        $intake = Intake::where('batch', $data[3])->first();
+        if (!$intake) {
+            // Try to find by partial match on batch field
+            $intake = Intake::where('batch', 'LIKE', '%' . $data[3] . '%')->first();
+            if (!$intake) {
+                Log::error('Intake not found:', ['batch' => $data[3]]);
+                throw new \Exception("Intake '{$data[3]}' not found");
+            }
+        }
+        Log::info('Intake found:', ['intake_id' => $intake->intake_id, 'batch' => $intake->batch]);
+
+        // Validate location
+        $location = $data[4] ?? 'Moratuwa';
+        if (!in_array($location, ['Welisara', 'Moratuwa', 'Peradeniya'])) {
+            throw new \Exception('Invalid location. Must be one of: Welisara, Moratuwa, Peradeniya');
+        }
+
+        // Get semester name
+        $semester = $data[5] ?? 'Semester 1';
+
+        // Check if exam result already exists
+        $existingResult = ExamResult::where('student_id', $student->student_id)
+            ->where('course_id', $course->course_id)
+            ->where('module_id', $module->module_id)
+            ->where('intake_id', $intake->intake_id)
+            ->where('location', $location)
+            ->where('semester', $semester)
+            ->first();
+        
+        // Validate marks (if provided)
+        $marks = null;
+        if (!empty($data[6])) {
+            $marks = (int) $data[6];
+            if ($marks < 0 || $marks > 100) {
+                throw new \Exception('Marks must be between 0 and 100');
+            }
+        }
+
+        // Auto-calculate grade if marks provided but grade not provided
+        $grade = $data[7] ?? null;
+        if ($marks !== null && empty($grade)) {
+            $grade = ExamResult::calculateGradeFromMarks($marks);
+        }
+        
+        $examResultData = [
+            'student_id' => $student->student_id,
+            'course_id' => $course->course_id,
+            'module_id' => $module->module_id,
+            'intake_id' => $intake->intake_id,
+            'location' => $location,
+            'semester' => $semester,
+            'marks' => $marks,
+            'grade' => $grade,
+            'remarks' => $data[8] ?? null
+        ];
+        
+        Log::info('Creating/updating exam result with data:', $examResultData);
+        
+        if ($existingResult) {
+            // Update existing result
+            $existingResult->update([
+                'marks' => $marks,
+                'grade' => $grade,
+                'remarks' => $data[8] ?? null
+            ]);
+            Log::info('Updated existing exam result:', ['id' => $existingResult->id]);
+            return $existingResult;
+        } else {
+            // Create new exam result
+            $newResult = ExamResult::create($examResultData);
+            Log::info('Created new exam result:', ['id' => $newResult->id]);
+            return $newResult;
+        }
+    }
+
+    /**
+     * Import exam result data with IDs (old format) 
+     * CSV format: Student ID, Course ID, Module ID, Intake ID, Location, Semester, Marks, Grade, Remarks
+     */
+    private function importExamResultWithIds($data)
+    {
+        // Validate required fields
         if (empty($data[0]) || empty($data[1]) || empty($data[2]) || empty($data[3])) {
             throw new \Exception('Required fields missing: Student ID, Course ID, Module ID, Intake ID');
         }
@@ -672,7 +987,7 @@ class DataExportImportController extends Controller
         }
 
         // Create exam result
-        ExamResult::create([
+        return ExamResult::create([
             'student_id' => $data[0],
             'course_id' => $data[1],
             'module_id' => $data[2],

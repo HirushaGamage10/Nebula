@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ExamResultController extends Controller
 {
@@ -489,7 +490,6 @@ class ExamResultController extends Controller
                     'student_name' => $result->student->full_name,
                     'marks' => $result->marks,
                     'grade' => $result->grade,
-                    'remarks' => $result->remarks,
                     'created_at' => $result->created_at->format('Y-m-d H:i:s'),
                     'updated_at' => $result->updated_at->format('Y-m-d H:i:s'),
                 ];
@@ -612,6 +612,186 @@ class ExamResultController extends Controller
                 'success' => false,
                 'message' => 'An error occurred while auto-calculating grades.'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Download template CSV with actual student data
+     */
+    public function downloadTemplate(Request $request)
+    {
+        try {
+            $request->validate([
+                'course_id' => 'required|integer|exists:courses,course_id',
+                'intake_id' => 'required|integer|exists:intakes,intake_id',
+                'location' => 'required|string',
+                'semester' => 'required',
+                'module_id' => 'required|integer|exists:modules,module_id',
+            ]);
+
+            $courseId = $request->course_id;
+            $intakeId = $request->intake_id;
+            $location = $request->location;
+            $semesterId = $request->semester;
+            $moduleId = $request->module_id;
+
+            // Get course, intake, semester, and module names
+            $course = Course::find($courseId);
+            $intake = Intake::find($intakeId);
+            $semester = \App\Models\Semester::find($semesterId);
+            $module = Module::find($moduleId);
+
+            if (!$course || !$intake || !$semester || !$module) {
+                return response()->json(['error' => 'Invalid course, intake, semester, or module.'], 404);
+            }
+
+            Log::info('Download template called with:', [
+                'course_id' => $courseId,
+                'intake_id' => $intakeId,
+                'location' => $location,
+                'semester_id' => $semesterId,
+                'module_id' => $moduleId,
+                'course_name' => $course->course_name,
+                'intake_no' => $intake->intake_no,
+                'semester_name' => $semester->name,
+                'module_name' => $module->module_name
+            ]);
+
+            $students = collect();
+
+            // First, try to get students from semester registrations
+            $semesterRegistrations = \App\Models\SemesterRegistration::where('semester_id', $semesterId)
+                ->where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('status', 'registered')
+                ->with('student')
+                ->get();
+
+            Log::info('SemesterRegistration query result:', [
+                'count' => $semesterRegistrations->count(),
+                'student_ids' => $semesterRegistrations->pluck('student_id')->toArray()
+            ]);
+
+            if ($semesterRegistrations->count() > 0) {
+                $students = $semesterRegistrations->map(function($reg) use ($course, $module, $intake, $semester, $location) {
+                    return [
+                        'Student Name' => $reg->student->full_name,
+                        'Course Name' => $course->course_name,
+                        'Module Name' => $module->module_name,
+                        'Intake' => $intake->intake_no ?? $intake->batch ?? '2025-August',
+                        'Location' => $location,
+                        'Semester' => $semester->name,
+                        'Marks' => '',
+                        'Grade' => '',
+                        'Remarks' => ''
+                    ];
+                });
+            } else {
+                // Fallback: Try module management for elective modules
+                $moduleRegistrations = \App\Models\ModuleManagement::where('module_id', $moduleId)
+                    ->where('course_id', $courseId)
+                    ->where('intake_id', $intakeId)
+                    ->where('location', $location)
+                    ->with('student')
+                    ->get();
+
+                Log::info('ModuleManagement query result:', [
+                    'count' => $moduleRegistrations->count(),
+                    'student_ids' => $moduleRegistrations->pluck('student_id')->toArray()
+                ]);
+
+                if ($moduleRegistrations->count() > 0) {
+                    $students = $moduleRegistrations->map(function($reg) use ($course, $module, $intake, $semester, $location) {
+                        return [
+                            'Student Name' => $reg->student->full_name,
+                            'Course Name' => $course->course_name,
+                            'Module Name' => $module->module_name,
+                            'Intake' => $intake->intake_no ?? $intake->batch ?? '2025-August',
+                            'Location' => $location,
+                            'Semester' => $semester->name,
+                            'Marks' => '',
+                            'Grade' => '',
+                            'Remarks' => ''
+                        ];
+                    });
+                } else {
+                    // Final fallback: Get all students registered for this course and intake
+                    $courseRegistrations = \App\Models\CourseRegistration::where('course_id', $courseId)
+                        ->where('intake_id', $intakeId)
+                        ->where('location', $location)
+                        ->whereIn('approval_status', ['approved', 'registered'])
+                        ->with('student')
+                        ->get();
+
+                    Log::info('CourseRegistration fallback query result:', [
+                        'count' => $courseRegistrations->count(),
+                        'student_ids' => $courseRegistrations->pluck('student_id')->toArray()
+                    ]);
+
+                    $students = $courseRegistrations->map(function($reg) use ($course, $module, $intake, $semester, $location) {
+                        return [
+                            'Student Name' => $reg->student->full_name,
+                            'Course Name' => $course->course_name,
+                            'Module Name' => $module->module_name,
+                            'Intake' => $intake->intake_no ?? $intake->batch ?? '2025-August',
+                            'Location' => $location,
+                            'Semester' => $semester->name,
+                            'Marks' => '',
+                            'Grade' => '',
+                            'Remarks' => ''
+                        ];
+                    });
+                }
+            }
+
+            Log::info('Final student count for template:', ['count' => $students->count()]);
+
+            // Create CSV content
+            $csvContent = [];
+            
+            // Add headers
+            if ($students->count() > 0) {
+                $csvContent[] = implode(',', array_keys($students->first()));
+                
+                // Add student data rows
+                foreach ($students as $student) {
+                    $row = [];
+                    foreach ($student as $value) {
+                        // Properly escape values that contain commas, quotes, or newlines
+                        if (strpos($value, ',') !== false || strpos($value, '"') !== false || strpos($value, "\n") !== false) {
+                            $row[] = '"' . str_replace('"', '""', $value) . '"';
+                        } else {
+                            $row[] = $value;
+                        }
+                    }
+                    $csvContent[] = implode(',', $row);
+                }
+            } else {
+                // If no students found, create template with headers only
+                $csvContent[] = 'Student Name,Course Name,Module Name,Intake,Location,Semester,Marks,Grade,Remarks';
+                Log::warning('No students found for template generation');
+            }
+
+            $csv = implode("\n", $csvContent);
+
+            // Create response with CSV content
+            $filename = 'exam_results_template_' . 
+                       str_replace(' ', '_', $course->course_name) . '_' . 
+                       str_replace(' ', '_', $module->module_name) . '_' . 
+                       $intake->intake_no . '.csv';
+
+            return response($csv, 200, [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error downloading template: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while downloading template.'
+            ], 500);
         }
     }
 }

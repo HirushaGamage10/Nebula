@@ -323,6 +323,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::post('/get-students-for-exam-result', [ExamResultController::class, 'getStudentsForExamResult'])->name('get.students.for.exam.result');
         Route::post('/get-existing-exam-results', [ExamResultController::class, 'getExistingExamResults'])->name('get.existing.exam.results');
         Route::post('/auto-calculate-grades', [ExamResultController::class, 'autoCalculateGrades'])->name('auto.calculate.grades');
+        Route::post('/download-exam-results-template', [ExamResultController::class, 'downloadTemplate'])->name('download.exam.results.template');
     });
 
     // Repeat Students Management - Program Administrator (level 01), Program Administrator (level 02), Developer
