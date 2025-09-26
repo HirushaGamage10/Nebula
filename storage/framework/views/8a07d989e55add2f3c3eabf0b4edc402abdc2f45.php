@@ -138,7 +138,7 @@
                         <td>
                             <div class="d-flex gap-1">
                                 
-                                <a class="btn btn-sm btn-primary" href="<?php echo e(route('payment.plan.index', array_merge(request()->query(), ['view' => $plan->id]))); ?>">View</a>
+                                
                                 <a href="<?php echo e(route('payment.plan.edit',$plan->id)); ?>" class="btn btn-sm btn-warning">Edit</a>
 
                                 

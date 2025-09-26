@@ -226,12 +226,12 @@
                             <input type="text" class="form-control" id="counselorNic" name="counselor_nic" placeholder="Enter counselor's NIC number">
                         </div>
                     </div>
-                    <div class="mb-3 row mx-3">
+                    {{-- <div class="mb-3 row mx-3">
                         <label for="counselorId" class="col-sm-3 col-form-label">Counselor ID<span class="text-danger">*</span></label>
                         <div class="col-sm-9">
                             <input type="text" class="form-control" id="counselorId" name="counselor_id" placeholder="Enter counselor's ID">
                         </div>
-                    </div>
+                    </div> --}}
                     <div class="mb-3 row mx-3">
                         <label for="counselorPhone" class="col-sm-3 col-form-label">Counselor Phone<span class="text-danger">*</span></label>
                         <div class="col-sm-9">

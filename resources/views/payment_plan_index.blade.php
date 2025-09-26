@@ -134,7 +134,7 @@
                         <td>
                             <div class="d-flex gap-1">
                                 {{-- Replace with your real routes if you have show/edit/delete --}}
-                                <a class="btn btn-sm btn-primary" href="{{ route('payment.plan.index', array_merge(request()->query(), ['view' => $plan->id])) }}">View</a>
+                                {{-- <a class="btn btn-sm btn-primary" href="{{ route('payment.plan.index', array_merge(request()->query(), ['view' => $plan->id])) }}">View</a> --}}
                                 <a href="{{ route('payment.plan.edit',$plan->id) }}" class="btn btn-sm btn-warning">Edit</a>
 
                                 {{-- <a class="btn btn-sm btn-warning" href="{{ route('payment.plan.edit', $plan) }}">Edit</a> --}}

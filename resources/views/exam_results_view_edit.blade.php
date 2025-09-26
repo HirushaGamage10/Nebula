@@ -31,7 +31,8 @@
                     <div class="col-sm-10">
                         <select class="form-select filter-param" id="course_type" name="course_type" required>
                             <option value="" selected disabled>Select a Course Type</option>
-                            <option value="degree">Degree/Diploma Program</option>
+                            <option value="degree">Degree</option>
+                            <option value="degree">Diploma</option>
                             <option value="certificate">Certificate Program</option>
                         </select>
                     </div>

@@ -1,8 +1,6 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | Reporting Dashboard'); ?>
 
-@section('title', 'NEBULA | Reporting Dashboard')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -531,4 +529,5 @@ $(document).ready(function() {
     }
 });
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/neb/Nebula/resources/views/reporting/dashboard.blade.php ENDPATH**/ ?>

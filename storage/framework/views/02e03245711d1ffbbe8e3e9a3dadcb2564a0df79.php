@@ -26,7 +26,7 @@
                         <div class="form-text">
                             <small class="text-muted">
                                 <i class="ti ti-info-circle me-1"></i>
-                                Format: <code>program_name_specification_unit_code</code> (e.g., CS101_Programming_001)
+                                Format: <code>programName_unitName_unitCode</code> (e.g., CS101_Programming_001)
                             </small>
                         </div>
                     </div>
