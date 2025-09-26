@@ -278,44 +278,35 @@ class TimetableController extends Controller
         // nice readable time for messages (e.g. "07:30 AM")
         $readableTime = \Carbon\Carbon::createFromFormat('H:i:s', $st)->format('h:i A');
 
-        // 1) same class (course + intake + semester) must not have two overlapping classes
-        if ($courseId && $intakeId && $semester !== null) {
-            $q = (clone $baseQuery);
-            $q = $q->where('course_id', $courseId)
-                   ->where('intake_id', $intakeId)
-                   ->where('semester', $semester);
-            if ($q->exists()) {
-                $conflicts[] = "This class already addede in {$readableTime}";
-            }
-        }
-
-        // 2) lecturer + classroom combined check (preferred message)
+        // Only check for lecturer and classroom conflicts (removed class duplication check as requested)
+        
+        // 1) lecturer + classroom combined check (preferred message)
         $combinedHandled = false;
         if (!empty($lecturer) && !empty($classroom)) {
             $q = (clone $baseQuery);
             $q = $q->where('lecturer', $lecturer)
                    ->where('classroom', $classroom);
             if ($q->exists()) {
-                $conflicts[] = "{$lecturer} and {$classroom} in same in {$readableTime} already addede";
+                $conflicts[] = "{$lecturer} and {$classroom} are already booked at {$readableTime}";
                 $combinedHandled = true;
             }
         }
 
-        // 3) lecturer alone
+        // 2) lecturer alone
         if (!$combinedHandled && !empty($lecturer)) {
             $q = (clone $baseQuery);
             $q = $q->where('lecturer', $lecturer);
             if ($q->exists()) {
-                $conflicts[] = "{$lecturer} in same in {$readableTime} already addede";
+                $conflicts[] = "{$lecturer} is already assigned at {$readableTime}";
             }
         }
 
-        // 4) classroom alone
+        // 3) classroom alone
         if (!$combinedHandled && !empty($classroom)) {
             $q = (clone $baseQuery);
             $q = $q->where('classroom', $classroom);
             if ($q->exists()) {
-                $conflicts[] = "{$classroom} in same in {$readableTime} already addede";
+                $conflicts[] = "{$classroom} is already booked at {$readableTime}";
             }
         }
 
