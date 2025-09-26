@@ -1,43 +1,55 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | Create User'); ?>
 
-@section('title', 'NEBULA | Create User')
-
-@section('content')
-@php
+<?php $__env->startSection('content'); ?>
+<?php
     $currentUserRole = auth()->user()->user_role ?? '';
-@endphp
+?>
 
-@if($currentUserRole == 'Program Administrator (level 01)' || $currentUserRole == 'Developer')
+<?php if($currentUserRole == 'Program Administrator (level 01)' || $currentUserRole == 'Developer'): ?>
 <div class="container mt-5">
   <div class="p-4 rounded shadow w-100 bg-white mt-4">
     <h3 class="text-center mb-4">Create a User</h3>
     
     <!-- Display validation errors -->
-    @if ($errors->any())
+    <?php if($errors->any()): ?>
         <div class="alert alert-danger">
             <ul class="mb-0">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
+                <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <li><?php echo e($error); ?></li>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </ul>
         </div>
-    @endif
+    <?php endif; ?>
     
-    <form id="createUserForm" method="POST" action="{{ route('user.create') }}">
-      @csrf
+    <form id="createUserForm" method="POST" action="<?php echo e(route('user.create')); ?>">
+      <?php echo csrf_field(); ?>
       <div class="mb-3 row align-items-center mx-3">
         <label for="name" class="col-sm-2 col-form-label fw-bold">Name<span style="color: red;">*</span></label>
         <div class="col-sm-10">
           <input type="text" 
-                 class="form-control @error('name') is-invalid @enderror" 
+                 class="form-control <?php $__errorArgs = ['name'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" 
                  id="name" 
                  name="name" 
                  placeholder="User name" 
-                 value="{{ old('name') }}"
+                 value="<?php echo e(old('name')); ?>"
                  required>
-          @error('name')
-              <div class="invalid-feedback">{{ $message }}</div>
-          @enderror
+          <?php $__errorArgs = ['name'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+              <div class="invalid-feedback"><?php echo e($message); ?></div>
+          <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
         </div>
       </div>
       
@@ -45,15 +57,29 @@
         <label for="email" class="col-sm-2 col-form-label fw-bold">Email<span style="color: red;">*</span></label>
         <div class="col-sm-10">
           <input type="email" 
-                 class="form-control @error('email') is-invalid @enderror" 
+                 class="form-control <?php $__errorArgs = ['email'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" 
                  id="email" 
                  name="email" 
                  placeholder="User email" 
-                 value="{{ old('email') }}"
+                 value="<?php echo e(old('email')); ?>"
                  required>
-          @error('email')
-              <div class="invalid-feedback">{{ $message }}</div>
-          @enderror
+          <?php $__errorArgs = ['email'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+              <div class="invalid-feedback"><?php echo e($message); ?></div>
+          <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
           <div class="form-text mt-1">
             <small class="text-muted">
               <strong>Email Requirements:</strong><br>
@@ -70,51 +96,93 @@
         <label for="employee_id" class="col-sm-2 col-form-label fw-bold">Employee ID<span style="color: red;">*</span></label>
         <div class="col-sm-10">
           <input type="text" 
-                 class="form-control @error('employee_id') is-invalid @enderror" 
+                 class="form-control <?php $__errorArgs = ['employee_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" 
                  id="employee_id" 
                  name="employee_id" 
                  placeholder="Employee ID" 
-                 value="{{ old('employee_id') }}"
+                 value="<?php echo e(old('employee_id')); ?>"
                  required>
-          @error('employee_id')
-              <div class="invalid-feedback">{{ $message }}</div>
-          @enderror
+          <?php $__errorArgs = ['employee_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+              <div class="invalid-feedback"><?php echo e($message); ?></div>
+          <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
         </div>
       </div>
       
       <div class="mb-3 row align-items-center mx-3">
         <label for="role" class="col-sm-2 col-form-label fw-bold">Role<span style="color: red;">*</span></label>
         <div class="col-sm-10">
-          <select class="form-control @error('user_role') is-invalid @enderror" 
+          <select class="form-control <?php $__errorArgs = ['user_role'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" 
                   id="role" 
                   name="user_role" 
                   required>
             <option value="">Select Role</option>
-            @foreach ($userRoles as $role)
-              <option value="{{ $role }}" {{ old('user_role') == $role ? 'selected' : '' }}>{{ $role }}</option>
-            @endforeach
+            <?php $__currentLoopData = $userRoles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $role): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+              <option value="<?php echo e($role); ?>" <?php echo e(old('user_role') == $role ? 'selected' : ''); ?>><?php echo e($role); ?></option>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
           </select>
-          @error('user_role')
-              <div class="invalid-feedback">{{ $message }}</div>
-          @enderror
+          <?php $__errorArgs = ['user_role'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+              <div class="invalid-feedback"><?php echo e($message); ?></div>
+          <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
         </div>
       </div>
       
       <div class="mb-3 row align-items-center mx-3">
         <label for="user_location" class="col-sm-2 col-form-label fw-bold">Location <span class="required">*</span></label>
         <div class="col-sm-10">
-          <select class="form-control @error('user_location') is-invalid @enderror" 
+          <select class="form-control <?php $__errorArgs = ['user_location'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" 
                   id="user_location" 
                   name="user_location" 
                   required>
             <option value="">Select Location</option>
-            @foreach($locations as $location)
-              <option value="{{ $location }}" {{ old('user_location') == $location ? 'selected' : '' }}>{{ $location }}</option>
-            @endforeach
+            <?php $__currentLoopData = $locations; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $location): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+              <option value="<?php echo e($location); ?>" <?php echo e(old('user_location') == $location ? 'selected' : ''); ?>><?php echo e($location); ?></option>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
           </select>
-          @error('user_location')
-              <div class="invalid-feedback">{{ $message }}</div>
-          @enderror
+          <?php $__errorArgs = ['user_location'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+              <div class="invalid-feedback"><?php echo e($message); ?></div>
+          <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
         </div>
       </div>
       
@@ -123,7 +191,14 @@
         <div class="col-sm-8">
           <div class="input-group">
             <input type="password" 
-                   class="form-control @error('password') is-invalid @enderror" 
+                   class="form-control <?php $__errorArgs = ['password'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>" 
                    id="setPassword" 
                    name="password" 
                    placeholder="Set Password" 
@@ -133,9 +208,16 @@
               <i class="ti ti-eye" id="eyeIcon"></i>
             </button>
           </div>
-          @error('password')
-              <div class="invalid-feedback">{{ $message }}</div>
-          @enderror
+          <?php $__errorArgs = ['password'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+              <div class="invalid-feedback"><?php echo e($message); ?></div>
+          <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
           <div class="form-text mt-1">
             <small class="text-muted">
               <strong>Password Requirements:</strong><br>
@@ -303,10 +385,11 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 </script>
-@else
+<?php else: ?>
 <div class="alert alert-warning mt-5 mx-5">
     <h4 class="alert-heading">Access Restricted</h4>
     <p>Only Program Administrator (level 01) and Developer can create new users. You do not have permission to access this feature.</p>
 </div>
-@endif
-@endsection 
+<?php endif; ?>
+<?php $__env->stopSection(); ?> 
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/neb/Nebula/resources/views/create_user.blade.php ENDPATH**/ ?>
