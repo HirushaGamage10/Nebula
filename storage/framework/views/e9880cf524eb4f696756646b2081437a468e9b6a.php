@@ -192,6 +192,9 @@
                                                 <option>S</option>
                                                 <option>F</option>
                                             </select>
+                                            <div id="olResultError" class="text-danger mt-1" style="display:none;">
+                                                This subject is already added.
+                                            </div>
                                         </div>
                                         <div class="col-sm-2">
                                             <button type="button" class="btn btn-primary w-100" id="ol_add_btn">Add</button>
@@ -302,6 +305,9 @@
                                                 <option>S</option>
                                                 <option>F</option>
                                             </select>
+                                            <div id="alResultError" class="text-danger mt-1" style="display:none;">
+                                                This subject is already added.
+                                            </div>
                                         </div>
                                         <div class="col-sm-2">
                                             <button type="button" class="btn btn-primary w-100" id="al_add_btn">Add</button>
@@ -707,57 +713,29 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
 
-    // --- Add/Remove OL Subject-Result ---
-    const olAddBtn = document.getElementById('ol_add_btn');
-    const olTableBody = document.querySelector('#ol_details_container table tbody');
-    olAddBtn.addEventListener('click', function() {
-        let subject = olSubjectSelect.value;
-        let result = document.getElementById('ol_result_select').value;
-        let subjectOther = olSubjectOtherInput.value;
-        if (subject === 'Other') subject = subjectOther;
-        if (!subject || !result || subject === 'Select a Subject' || result === 'Select a Result') {
-            alert('Please select both subject and result.');
-            return;
-        }
-        const row = document.createElement('tr');
-        row.innerHTML = `<td>${subject}</td><td>${result}</td><td><button type="button" class="btn btn-danger btn-sm ol-remove-btn">Remove</button></td>`;
-        olTableBody.appendChild(row);
-        // Reset selects
-        olSubjectSelect.value = 'Select a Subject';
-        document.getElementById('ol_result_select').value = 'Select a Result';
-        olSubjectOtherInput.value = '';
-        olSubjectOtherInput.style.display = 'none';
+    // Initialize for O/L & A/L subject addition/removal
+    setupExamSubjects({
+        addBtnId: 'ol_add_btn',
+        subjectSelectId: 'ol_subject_select',
+        subjectOtherInputId: 'ol_subject_other_input',
+        resultSelectId: 'ol_result_select',
+        tableBodySelector: '#ol_details_container table tbody',
+        errorId: 'olResultError',
+        indexNoId: 'ol_index_no',
+        examTypeId: 'ol_exam_type',
+        examYearId: 'ol_exam_year'
     });
-    olTableBody.addEventListener('click', function(e) {
-        if (e.target.classList.contains('ol-remove-btn')) {
-            e.target.closest('tr').remove();
-        }
-    });
-    // --- Add/Remove AL Subject-Result ---
-    const alAddBtn = document.getElementById('al_add_btn');
-    const alTableBody = document.querySelector('#al_details_container table tbody');
-    alAddBtn.addEventListener('click', function() {
-        let subject = alSubjectSelect.value;
-        let result = document.getElementById('al_result_select').value;
-        let subjectOther = alSubjectOtherInput.value;
-        if (subject === 'Other') subject = subjectOther;
-        if (!subject || !result || subject === 'Select a Subject' || result === 'Select a Result') {
-            alert('Please select both subject and result.');
-            return;
-        }
-        const row = document.createElement('tr');
-        row.innerHTML = `<td>${subject}</td><td>${result}</td><td><button type="button" class="btn btn-danger btn-sm al-remove-btn">Remove</button></td>`;
-        alTableBody.appendChild(row);
-        // Reset selects
-        alSubjectSelect.value = 'Select a Subject';
-        document.getElementById('al_result_select').value = 'Select a Result';
-        alSubjectOtherInput.value = '';
-        alSubjectOtherInput.style.display = 'none';
-    });
-    alTableBody.addEventListener('click', function(e) {
-        if (e.target.classList.contains('al-remove-btn')) {
-            e.target.closest('tr').remove();
-        }
+
+    setupExamSubjects({
+        addBtnId: 'al_add_btn',
+        subjectSelectId: 'al_subject_select',
+        subjectOtherInputId: 'al_subject_other_input',
+        resultSelectId: 'al_result_select',
+        tableBodySelector: '#al_details_container table tbody',
+        errorId: 'alResultError',
+        indexNoId: 'al_index_no',
+        examTypeId: 'al_exam_type',
+        examYearId: 'al_exam_year'
     });
 
 });
@@ -806,6 +784,126 @@ document.getElementById('al_exam_type').addEventListener('change', function() {
         alExamTypeOtherInput.value = '';
     }
 });
+
+
+function setupExamSubjects(config) {
+    const { addBtnId, subjectSelectId, subjectOtherInputId, resultSelectId, 
+            tableBodySelector, errorId, indexNoId, examTypeId, examYearId } = config;
+
+    const addBtn = document.getElementById(addBtnId);
+    const subjectSelect = document.getElementById(subjectSelectId);
+    const subjectOtherInput = document.getElementById(subjectOtherInputId);
+    const resultSelect = document.getElementById(resultSelectId);
+    const tableBody = document.querySelector(tableBodySelector);
+    const errorEl = document.getElementById(errorId);
+
+    // Validation fields
+    const indexNoInput = document.getElementById(indexNoId);
+    const examTypeSelect = document.getElementById(examTypeId);
+    const examYearInput = document.getElementById(examYearId);
+
+    // Helper: show error under input
+    function showError(inputEl, message) {
+        let errorDiv = inputEl.parentNode.querySelector('.field-error');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.className = 'text-danger mt-1 field-error';
+            inputEl.parentNode.appendChild(errorDiv);
+        }
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    }
+
+    // Helper: hide error
+    function hideError(inputEl) {
+        const errorDiv = inputEl.parentNode.querySelector('.field-error');
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+        }
+    }
+
+    addBtn.addEventListener('click', function () {
+        let hasError = false;
+
+        // ✅ Validate index no
+        if (!indexNoInput.value.trim()) {
+            showError(indexNoInput, "Index No is required.");
+            hasError = true;
+        } else {
+            hideError(indexNoInput);
+        }
+
+        // ✅ Validate exam type
+        if (!examTypeSelect.value || examTypeSelect.value === 'Select an Exam Type') {
+            showError(examTypeSelect, "Exam Type is required.");
+            hasError = true;
+        } else {
+            hideError(examTypeSelect);
+        }
+
+        // ✅ Validate exam year
+        if (!examYearInput.value.trim() || examYearInput.value.length !== 4) {
+            showError(examYearInput, "Enter a valid 4-digit Exam Year.");
+            hasError = true;
+        } else {
+            hideError(examYearInput);
+        }
+
+        if (hasError) return; // stop if any validation failed
+
+        let subject = subjectSelect.value;
+        let result = resultSelect.value;
+        let subjectOther = subjectOtherInput.value;
+
+        if (subject === 'Other') subject = subjectOther;
+
+        if (!subject || !result || subject === 'Select a Subject' || result === 'Select a Result') {
+            showError(resultSelect, "Select both Subject and Result.");
+            return;
+        } else {
+            hideError(resultSelect);
+        }
+
+        // ✅ Check duplicates
+        let exists = false;
+        tableBody.querySelectorAll('tr').forEach(row => {
+            if (row.querySelector('td').textContent === subject) {
+                exists = true;
+            }
+        });
+
+        if (exists) {
+            errorEl.style.display = 'block';
+            return;
+        } else {
+            errorEl.style.display = 'none';
+        }
+
+        // Add row
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${subject}</td>
+            <td>${result}</td>
+            <td><button type="button" class="btn btn-danger btn-sm remove-btn">Remove</button></td>
+        `;
+        tableBody.appendChild(row);
+
+        // Reset inputs
+        subjectSelect.value = 'Select a Subject';
+        resultSelect.value = 'Select a Result';
+        subjectOtherInput.value = '';
+        subjectOtherInput.style.display = 'none';
+    });
+
+    tableBody.addEventListener('click', function (e) {
+        if (e.target.classList.contains('remove-btn')) {
+            e.target.closest('tr').remove();
+            errorEl.style.display = 'none';
+        }
+    });
+}
+
+
 
 $(document).ready(function() {
     <?php if(session('success')): ?>
