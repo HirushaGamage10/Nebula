@@ -33,6 +33,16 @@ Route::get('/course-revenue/{courseId}', [DashboardController::class, 'getRevenu
 // Course Registration API Routes
 Route::get('/students/{nic}', [CourseRegistraionController::class, 'getStudentByNic']);
 Route::get('/intakes/{courseId}', [CourseRegistraionController::class, 'getIntakesByCourse']);
+
+// Provide a friendly JSON response for GET requests to the course-registration endpoint.
+// This avoids a MethodNotAllowedHttpException when someone opens /api/course-registration in a browser.
+Route::get('/course-registration', function () {
+    return response()->json([
+        'success' => false,
+        'message' => 'This endpoint accepts POST requests only. Use POST to submit a course registration.'
+    ], 405);
+});
+
 Route::post('/course-registration', [CourseRegistraionController::class, 'storeCourseRegistrationAPI']);
 
 Route::get('/courses-by-location/{location}', [CourseRegistraionController::class, 'getCoursesByLocation']);

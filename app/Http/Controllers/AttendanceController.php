@@ -699,11 +699,21 @@ class AttendanceController extends Controller
             // Try to resolve student_id. Some DBs don't have a `registration_id` column
             // so check the schema first and fall back to student_id
             try {
+                // Prefer searching by registration_id when the column is present, but run the queries
+                // in separate steps to avoid building a single query that references a missing column
+                // which can cause SQL errors on some environments.
+                $student = null;
                 if (Schema::hasColumn('students', 'registration_id')) {
-                    $student = \App\Models\Student::where('registration_id', $regNo)
-                        ->orWhere('student_id', $regNo)
-                        ->first();
-                } else {
+                    try {
+                        $student = \App\Models\Student::where('registration_id', $regNo)->first();
+                    } catch (\Exception $inner) {
+                        // ignore and fall back to student_id
+                        $student = null;
+                    }
+                }
+
+                if (!$student) {
+                    // Try matching by primary key student_id
                     $student = \App\Models\Student::where('student_id', $regNo)->first();
                 }
             } catch (\Exception $e) {

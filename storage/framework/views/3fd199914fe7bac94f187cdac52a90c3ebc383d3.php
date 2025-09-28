@@ -733,6 +733,17 @@
                             const errors = Object.values(xhr.responseJSON.errors).flat();
                             errorMessage += '<br>' + errors.join('<br>');
                         }
+                        // If the backend returned a blocking_registration object, surface key info for debugging
+                        if (xhr.responseJSON.blocking_registration) {
+                            const b = xhr.responseJSON.blocking_registration;
+                            const parts = [];
+                            if (b.id) parts.push('registration id: ' + b.id);
+                            if (b.status) parts.push('status: ' + b.status);
+                            if (b.approval_status) parts.push('approval_status: ' + b.approval_status);
+                            if (b.course_start_date) parts.push('start: ' + b.course_start_date);
+                            if (b.location) parts.push('location: ' + b.location);
+                            errorMessage += '<br><small><em>Blocking registration — ' + parts.join(', ') + '</em></small>';
+                        }
                     }
                     showToast(errorMessage, 'danger');
                 }
@@ -827,6 +838,9 @@
                 url: '<?php echo e(route("register.course.eligibility.api")); ?>',
                 type: 'POST',
                 contentType: 'application/json',
+                headers: {
+                    'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
+                },
                 data: JSON.stringify(formData),
                 success: function(response) {
                     if (response.success) {

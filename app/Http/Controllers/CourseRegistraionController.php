@@ -12,6 +12,7 @@ use App\Models\PaymentDetail;
 use App\Models\SemesterRegistration;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
@@ -279,15 +280,25 @@ class CourseRegistraionController extends Controller
                     'intakeId' => 'nullable|exists:intakes,intake_id', // Add intake validation
                 ]);
 
-                // Check if the student is already registered for the course
+                // Check if the student is already registered for the course.
+                // Only treat as duplicate if the previous registration is not rejected / not marked as 'Not eligible' or 'Cancelled'.
                 $isAlreadyRegistered = CourseRegistration::where('student_id', $validatedData['studentId'])
                     ->where('course_id', $validatedData['course'])
+                    ->whereNotIn('approval_status', ['Rejected'])
+                    ->whereNotIn('status', ['Not eligible', 'Cancelled'])
                     ->exists();
 
                 if ($isAlreadyRegistered) {
+                    $blocking = CourseRegistration::where('student_id', $validatedData['studentId'])
+                        ->where('course_id', $validatedData['course'])
+                        ->whereNotIn('approval_status', ['Rejected'])
+                        ->whereNotIn('status', ['Not eligible', 'Cancelled'])
+                        ->first();
+
                     return response()->json([
                         'success' => false,
                         'message' => 'The student is already registered for this course.',
+                        'blocking_registration' => $blocking
                     ], 400);
                 }
 
@@ -464,20 +475,30 @@ class CourseRegistraionController extends Controller
                 'counselor_id' => 'nullable|string|max:255',
                 'counselor_phone' => 'nullable|string|max:255',
                 'counselor_nic' => 'nullable|string|max:255',
-                'marketing_survey_options' => 'required|array',
+                'marketing_survey_options' => 'nullable|array',
                 'course_start_date' => 'required|date',
                 'registration_fee' => 'required|numeric|min:0',
             ]);
 
-            // Check if the student is already registered for the course
+            // Check if the student is already registered for the course.
+            // Treat previous registrations with approval_status 'Rejected' or status 'Not eligible'/'Cancelled' as non-blocking.
             $isAlreadyRegistered = CourseRegistration::where('student_id', $validatedData['student_id'])
                 ->where('course_id', $validatedData['course_id'])
+                ->whereNotIn('approval_status', ['Rejected'])
+                ->whereNotIn('status', ['Not eligible', 'Cancelled'])
                 ->exists();
 
             if ($isAlreadyRegistered) {
+                $blocking = CourseRegistration::where('student_id', $validatedData['student_id'])
+                    ->where('course_id', $validatedData['course_id'])
+                    ->whereNotIn('approval_status', ['Rejected'])
+                    ->whereNotIn('status', ['Not eligible', 'Cancelled'])
+                    ->first();
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'The student is already registered for this course.'
+                    'message' => 'The student is already registered for this course.',
+                    'blocking_registration' => $blocking
                 ], 400);
             }
 
@@ -521,10 +542,15 @@ class CourseRegistraionController extends Controller
             // Save the CourseRegistration instance
             $courseRegistration->save();
 
-            // Update student's marketing survey - join array with comma
+            // Update student's marketing survey - join array with comma if provided
             $student = Student::find($validatedData['student_id']);
             if ($student) {
-                $marketingSurvey = implode(', ', $validatedData['marketing_survey_options']);
+                $marketingSurvey = null;
+                if (!empty($validatedData['marketing_survey_options']) && is_array($validatedData['marketing_survey_options'])) {
+                    $marketingSurvey = implode(', ', $validatedData['marketing_survey_options']);
+                    // Truncate to avoid DB column length issues
+                    $marketingSurvey = mb_substr($marketingSurvey, 0, 255);
+                }
                 $student->marketing_survey = $marketingSurvey;
                 $student->save();
             }
@@ -534,6 +560,14 @@ class CourseRegistraionController extends Controller
                 'message' => 'Course registration completed successfully.',
                 'registration_id' => $courseRegistration->id
             ]);
+        } catch (ValidationException $e) {
+            // Return validation errors as 422 so frontend can display them correctly
+            Log::error('Validation error in storeCourseRegistrationAPI: ' . json_encode($e->errors()));
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             Log::error('Error in storeCourseRegistrationAPI: ' . $e->getMessage());
             return response()->json([
@@ -604,20 +638,30 @@ class CourseRegistraionController extends Controller
                 'counselor_id' => 'nullable|string|max:255',
                 'counselor_phone' => 'nullable|string|max:255',
                 'counselor_nic' => 'nullable|string|max:255',
-                'marketing_survey_options' => 'required|array',
+                'marketing_survey_options' => 'nullable|array',
                 'course_start_date' => 'required|date',
                 'registration_fee' => 'required|numeric|min:0',
             ]);
 
-            // Check if the student is already registered for the course
+            // Check if the student is already registered for the course.
+            // Treat previous registrations with approval_status 'Rejected' or status 'Not eligible'/'Cancelled' as non-blocking.
             $isAlreadyRegistered = CourseRegistration::where('student_id', $validatedData['student_id'])
                 ->where('course_id', $validatedData['course_id'])
+                ->whereNotIn('approval_status', ['Rejected'])
+                ->whereNotIn('status', ['Not eligible', 'Cancelled'])
                 ->exists();
 
             if ($isAlreadyRegistered) {
+                $blocking = CourseRegistration::where('student_id', $validatedData['student_id'])
+                    ->where('course_id', $validatedData['course_id'])
+                    ->whereNotIn('approval_status', ['Rejected'])
+                    ->whereNotIn('status', ['Not eligible', 'Cancelled'])
+                    ->first();
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'The student is already registered for this course.'
+                    'message' => 'The student is already registered for this course.',
+                    'blocking_registration' => $blocking
                 ], 400);
             }
 
@@ -661,10 +705,14 @@ class CourseRegistraionController extends Controller
             // Save the CourseRegistration instance
             $courseRegistration->save();
 
-            // Update student's marketing survey - join array with comma
+            // Update student's marketing survey - join array with comma if provided
             $student = Student::find($validatedData['student_id']);
             if ($student) {
-                $marketingSurvey = implode(', ', $validatedData['marketing_survey_options']);
+                $marketingSurvey = null;
+                if (!empty($validatedData['marketing_survey_options']) && is_array($validatedData['marketing_survey_options'])) {
+                    $marketingSurvey = implode(', ', $validatedData['marketing_survey_options']);
+                    $marketingSurvey = mb_substr($marketingSurvey, 0, 255);
+                }
                 $student->marketing_survey = $marketingSurvey;
                 $student->save();
             }
@@ -674,6 +722,13 @@ class CourseRegistraionController extends Controller
                 'message' => 'Course registration saved for eligibility checking.',
                 'registration_id' => $courseRegistration->id
             ]);
+        } catch (ValidationException $e) {
+            Log::error('Validation error in storeCourseRegistrationForEligibilityAPI: ' . json_encode($e->errors()));
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
             Log::error('Error in storeCourseRegistrationForEligibilityAPI: ' . $e->getMessage());
             return response()->json([
