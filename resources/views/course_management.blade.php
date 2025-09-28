@@ -27,7 +27,8 @@
                     <div class="col-sm-10">
                         <select class="form-select" id="course_type" name="course_type" required>
                             <option selected disabled value="">Choose course type...</option>
-                            <option value="degree">Degree/Diploma Program</option>
+                            <option value="degree">Degree Program</option>
+                            <option value="diploma">Diploma Program</option>
                             <option value="certificate">Certificate Program</option>
                         </select>
                     </div>
@@ -272,42 +273,58 @@
 
 @push('scripts')
     <script>
+
     $(document).ready(function() {
         // Course type change handler
-        $('#course_type').on('change', function() {
-            const selectedType = $(this).val();
-            
-            if (selectedType === 'degree') {
-                // Show and enable degree fields
-                $('#degree_program_fields').show();
-                $('#degree_program_fields').find('input, select, textarea').prop('disabled', false);
+    $('#course_type').on('change', function() {
+        const selectedType = $(this).val();
 
-                // Hide and disable certificate fields
-                $('#certificate_program_fields').hide();
-                $('#certificate_program_fields').find('input, select, textarea').prop('disabled', true);
+        if (selectedType === 'degree') {
+            // Show and enable degree fields
+            $('#degree_program_fields').show().find('input, select, textarea').prop('disabled', false);
+            $('#certificate_program_fields').hide().find('input, select, textarea').prop('disabled', true);
 
-            } else if (selectedType === 'certificate') {
-                // Hide and disable degree fields
-                $('#degree_program_fields').hide();
-                $('#degree_program_fields').find('input, select, textarea').prop('disabled', true);
+            // Auto-fill duration: 3 years
+            $('#duration_years').val(3);
+            $('#duration_months').val(0);
+            $('#duration_days').val(0);
 
-                // Show and enable certificate fields
-                $('#certificate_program_fields').show();
-                $('#certificate_program_fields').find('input, select, textarea').prop('disabled', false);
-            } else {
-                 // Nothing selected, hide and disable both
-                 $('#degree_program_fields').hide();
-                 $('#degree_program_fields').find('input, select, textarea').prop('disabled', true);
-                 $('#certificate_program_fields').hide();
-                 $('#certificate_program_fields').find('input, select, textarea').prop('disabled', true);
-            }
-        });
+        } else if (selectedType === 'diploma') {
+            // Diploma uses same degree fields
+            $('#degree_program_fields').show().find('input, select, textarea').prop('disabled', false);
+            $('#certificate_program_fields').hide().find('input, select, textarea').prop('disabled', true);
 
-        // Initially disable all fields in both sections
-        $('#degree_program_fields, #certificate_program_fields').find('input, select, textarea').prop('disabled', true);
+            // Auto-fill duration: 2 years
+            $('#duration_years').val(2);
+            $('#duration_months').val(0);
+            $('#duration_days').val(0);
 
-        $('#courseForm').on('submit', function(e) {
-            e.preventDefault();
+        } else if (selectedType === 'certificate') {
+            // Show and enable certificate fields
+            $('#certificate_program_fields').show().find('input, select, textarea').prop('disabled', false);
+            $('#degree_program_fields').hide().find('input, select, textarea').prop('disabled', true);
+
+            // Auto-fill duration: 1 year
+            $('#cert_duration_years').val(1);
+            $('#cert_duration_months').val(0);
+            $('#cert_duration_days').val(0);
+
+        } else {
+            // Nothing selected, hide and disable both
+            $('#degree_program_fields, #certificate_program_fields')
+                .hide()
+                .find('input, select, textarea').prop('disabled', true);
+        }
+    });
+
+    // Initially disable all fields in both sections
+    $('#degree_program_fields, #certificate_program_fields')
+        .find('input, select, textarea').prop('disabled', true);
+
+    // Form submission
+    $('#courseForm').on('submit', function(e) {
+        e.preventDefault();
+        // ...
             
             const courseType = $('#course_type').val();
             console.log('Selected course type:', courseType);
