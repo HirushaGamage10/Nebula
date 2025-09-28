@@ -215,39 +215,78 @@
 
 {{-- Optional: auto-load intakes when course filter changes (same UX as create page) --}}
 <script>
-document.getElementById('filter-course')?.addEventListener('change', function () {
-    const courseId = this.value;
+// 1. When Location changes → update courses
+document.querySelector('select[name="location"]')?.addEventListener('change', function () {
+    const location = this.value;
+    const courseSelect = document.getElementById('filter-course');
     const intakeSelect = document.getElementById('filter-intake');
+
+    // reset course + intake
+    courseSelect.innerHTML = '<option value="">All</option>';
+    intakeSelect.innerHTML = '<option value="">All</option>';
     intakeSelect.disabled = true;
-    intakeSelect.innerHTML = '<option value="">Loading...</option>';
 
-    if (!courseId) {
-        intakeSelect.innerHTML = '<option value="">All</option>';
-        intakeSelect.disabled = false;
-        return;
-    }
+    if (!location) return;
 
-    fetch("{{ route('intakes.byCourse') }}", {
+    fetch("{{ route('courses.byLocation') }}", {
         method: 'POST',
         headers: {
             'Content-Type':'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}'
         },
-        body: JSON.stringify({ course_id: courseId })
+        body: JSON.stringify({ location })
     })
     .then(res => res.json())
     .then(data => {
-        intakeSelect.innerHTML = '<option value="">All</option>';
         if (data.success && data.data.length) {
-            data.data.forEach(intake => {
+            data.data.forEach(course => {
                 const opt = document.createElement('option');
-                opt.value = intake.intake_id;
-                opt.textContent = intake.intake_id; // keep raw ID
-                intakeSelect.appendChild(opt);
+                opt.value = course.course_id;
+                opt.textContent = course.course_name;
+                courseSelect.appendChild(opt);
             });
         }
+    });
+});
+
+// 2. When Course changes → update intakes
+document.getElementById('filter-course')?.addEventListener('change', function () {
+    const courseId = this.value;
+    const location = document.querySelector('select[name="location"]').value;
+    const intakeSelect = document.getElementById('filter-intake');
+
+    intakeSelect.disabled = true;
+    intakeSelect.innerHTML = '<option value="">Loading...</option>';
+
+    if (!courseId || !location) {
+        intakeSelect.innerHTML = '<option value="">All</option>';
         intakeSelect.disabled = false;
-    })
+        return;
+    }
+
+   fetch("{{ route('intakes.byCourse') }}", {
+    method: 'POST',
+    headers: {
+        'Content-Type':'application/json',
+        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+    },
+    body: JSON.stringify({ course_id: courseId, location })
+})
+.then(res => res.json())
+.then(data => {
+    console.log("Intake API response:", data); // 🔎 Debug here
+    intakeSelect.innerHTML = '<option value="">All</option>';
+    if (data.success && data.data.length) {
+        data.data.forEach(intake => {
+            const opt = document.createElement('option');
+            opt.value = intake.intake_id;
+            opt.textContent = intake.intake_id;
+            intakeSelect.appendChild(opt);
+        });
+    }
+    intakeSelect.disabled = false;
+})
+
     .catch(() => {
         intakeSelect.innerHTML = '<option value="">All</option>';
         intakeSelect.disabled = false;

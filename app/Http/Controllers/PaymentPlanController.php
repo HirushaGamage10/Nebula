@@ -25,16 +25,35 @@ class PaymentPlanController extends Controller
         $courses = Course::orderBy('course_name')->get(['course_id','course_name']);
 
         $intakes = collect();
-        if ($request->filled('course_id')) {
+        if ($request->filled('course_id') && $request->filled('location')) {
             $courseName = Course::where('course_id', $request->course_id)->value('course_name');
+
             $intakes = Intake::where('course_name', $courseName)
+                ->where('location', $request->location)
                 ->orderBy('batch')
                 ->get(['intake_id','batch']);
         }
 
 
+
         return view('payment_plan_index', compact('plans','locations','courses','intakes'));
     }
+    public function getCoursesByLocation(Request $request)
+{
+    $request->validate([
+        'location' => 'required|string',
+    ]);
+
+    $courses = Course::where('location', $request->location)
+        ->orderBy('course_name')
+        ->get(['course_id','course_name']);
+
+    return response()->json([
+        'success' => true,
+        'data' => $courses
+    ]);
+}
+
 
     // Your original page now lives here, unchanged logic:
     public function create()
@@ -268,4 +287,30 @@ public function update(Request $request, $id)
             'bank_charges' => $intake->bank_charges ?? 0.00,
         ]);
     }
+    public function getIntakesByCourse(Request $request)
+{
+    $request->validate([
+        'course_id' => 'required|integer',
+        'location'  => 'required|string',
+    ]);
+
+    $course = Course::find($request->course_id);
+    if (!$course) {
+        return response()->json(['success' => false, 'data' => []]);
+    }
+
+    $courseName = Course::where('course_id', $request->course_id)->value('course_name');
+
+$intakes = Intake::whereRaw('LOWER(TRIM(course_name)) = ?', [strtolower(trim($courseName))])
+    ->where('location', $request->location)
+    ->orderBy('batch')
+    ->get(['intake_id','batch']);
+
+
+    return response()->json([
+        'success' => true,
+        'data' => $intakes
+    ]);
+}
+
 } 

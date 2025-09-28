@@ -590,6 +590,15 @@ Route::middleware(['auth', 'role:Marketing Manager,Developer'])->group(function 
     Route::get('/payment-plans', [App\Http\Controllers\PaymentPlanController::class, 'index'])
         ->name('payment.plan.index');
 
+
+    // AJAX: Get courses by location
+    Route::post('/courses/by-location', [App\Http\Controllers\PaymentPlanController::class, 'getCoursesByLocation'])
+        ->name('courses.byLocation');   
+    // AJAX: Get intakes by course
+    Route::post('/intakes/by-course', [App\Http\Controllers\PaymentPlanController::class, 'getIntakesByCourse'])
+    ->name('intakes.byCourse');
+
+
     // CREATE form (point your existing path to create())
     Route::get('/payment-plan', [App\Http\Controllers\PaymentPlanController::class, 'create'])
         ->name('payment.plan'); // keep your original route name for BC
