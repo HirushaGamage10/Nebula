@@ -499,19 +499,22 @@
                                     </div>
                                 </div>
                                 <div class="row mb-3">
-                                    <label for="marketing_survey" class="col-sm-2 col-form-label">How did you hear about us?</label>
-                                    <div class="col-sm-10">
-                                        <select class="form-select" id="marketing_survey" name="marketing_survey">
-                                            <option selected disabled>Select an option</option>
-                                            <option value="LinkedIn">LinkedIn</option>
-                                            <option value="Facebook">Facebook</option>
-                                            <option value="Radio Advertisement">Radio Advertisement</option>
-                                            <option value="TV advertisement">TV advertisement</option>
-                                            <option value="Other">Other</option>
-                                        </select>
-                                        <input type="text" class="form-control mt-2" id="marketing_survey_other" name="marketing_survey_other" placeholder="Please describe how you heard about us" style="display:none;">
-                                    </div>
-                                </div>
+    <label for="marketing_survey" class="col-sm-2 col-form-label">How did you hear about us?</label>
+    <div class="col-sm-10">
+        <select class="form-select" id="marketing_survey" name="marketing_survey"
+            onchange="document.getElementById('marketing_survey_other').style.display = (this.value === 'Other' ? 'block' : 'none');
+                      document.getElementById('marketing_survey_other').required = (this.value === 'Other');">
+            <option selected disabled>Select an option</option>
+            <option value="LinkedIn">LinkedIn</option>
+            <option value="Facebook">Facebook</option>
+            <option value="Radio Advertisement">Radio Advertisement</option>
+            <option value="TV advertisement">TV advertisement</option>
+            <option value="Other">Other</option>
+        </select>
+        <input type="text" class="form-control mt-2" id="marketing_survey_other" name="marketing_survey_other" placeholder="Please describe how you heard about us" style="display:none;">
+    </div>
+</div>
+
                             </div>
                         </div>
                     </div>
@@ -704,19 +707,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Listen for marketing survey change
-    const marketingSurveySelect = document.getElementById('marketing_survey');
-    const marketingSurveyOtherInput = document.getElementById('marketing_survey_other');
-    marketingSurveySelect.addEventListener('change', function() {
-        if (this.value === 'Other') {
-            marketingSurveyOtherInput.style.display = 'block';
-            marketingSurveyOtherInput.required = true;
-        } else {
-            marketingSurveyOtherInput.style.display = 'none';
-            marketingSurveyOtherInput.required = false;
-            marketingSurveyOtherInput.value = '';
-        }
-    });
 
     // --- Add/Remove OL Subject-Result ---
     const olAddBtn = document.getElementById('ol_add_btn');

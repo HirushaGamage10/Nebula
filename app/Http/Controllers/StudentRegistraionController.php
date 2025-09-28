@@ -173,6 +173,13 @@ class StudentRegistraionController extends Controller
             $student->remarks = $request->remarks ?? null;
             $student->status = 'Unmarried'; // Default status as per database enum
 
+            if ($request->marketing_survey === 'Other' && $request->filled('marketing_survey_other')) {
+                $student->marketing_survey = $request->marketing_survey_other;
+            } else {
+                $student->marketing_survey = $request->marketing_survey;
+            }
+
+
             $student->save();
 
             // Create parent/guardian record
