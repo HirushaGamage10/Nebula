@@ -176,14 +176,17 @@ class SemesterCreationController extends Controller
                 $request->merge(['name' => $request->semester]);
             }
 
-            // Basic validation
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'course_id' => 'required|exists:courses,course_id',
                 'intake_id' => 'required|exists:intakes,intake_id',
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after_or_equal:start_date',
+                'modules' => 'required|array',
+                'modules.*.module_id' => 'required|exists:modules,module_id',
+                'modules.*.specialization' => 'nullable|string|max:255',
             ]);
+
 
             // Only keep fillable fields for the Semester model
             $semesterData = collect($validated)->only([
