@@ -12,10 +12,16 @@ use App\Models\CourseRegistration;
 use App\Exports\AttendanceExport;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use Maatwebsite\Excel\Excel as MaatExcel;
 
 class AttendanceController extends Controller
 {
@@ -48,7 +54,7 @@ class AttendanceController extends Controller
 
             return response()->json(['success' => true, 'courses' => $courses]);
         } catch (\Exception $e) {
-            \Log::error('Error fetching courses by location: ' . $e->getMessage());
+            Log::error('Error fetching courses by location: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'An error occurred while fetching courses.'], 500);
         }
     }
@@ -148,7 +154,7 @@ class AttendanceController extends Controller
         }
 
         // Check if this is a core module (assigned to semester) or elective module
-        $isCoreModule = \DB::table('semester_module')
+        $isCoreModule = DB::table('semester_module')
             ->where('semester_id', $semesterId)
             ->where('module_id', $moduleId)
             ->exists();
@@ -267,7 +273,7 @@ class AttendanceController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             
-            \Log::error('Attendance save error: ' . $e->getMessage(), [
+            Log::error('Attendance save error: ' . $e->getMessage(), [
                 'request_data' => $request->all(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -314,7 +320,7 @@ class AttendanceController extends Controller
                 'attendance' => $attendance
             ]);
         } catch (\Exception $e) {
-            \Log::error('Attendance history error: ' . $e->getMessage(), [
+            Log::error('Attendance history error: ' . $e->getMessage(), [
                 'request_data' => $request->all()
             ]);
             
@@ -363,7 +369,7 @@ class AttendanceController extends Controller
         }
 
         // Check if this is a core module (assigned to semester) or elective module
-        $isCoreModule = \DB::table('semester_module')
+        $isCoreModule = DB::table('semester_module')
             ->where('semester_id', $semesterId)
             ->where('module_id', $moduleId)
             ->exists();
@@ -449,7 +455,7 @@ class AttendanceController extends Controller
         }
 
         // Check if this is a core module (assigned to semester) or elective module
-        $isCoreModule = \DB::table('semester_module')
+        $isCoreModule = DB::table('semester_module')
             ->where('semester_id', $semesterId)
             ->where('module_id', $moduleId)
             ->exists();
@@ -518,5 +524,235 @@ class AttendanceController extends Controller
             new AttendanceExport($excelData, $location, $course?->course_name ?? 'N/A', $intake?->batch ?? 'N/A', $semester->name, $module?->module_name ?? 'N/A'),
             $filename
         );
+    }
+
+    /**
+     * Download a template file for bulk attendance import.
+     * Columns: registration_number, name_with_initials, attendance (Present/Absent)
+     */
+    public function downloadTemplate(Request $request)
+    {
+        // Build an XLSX template with optional prefilled students if filters provided
+        $location = $request->query('location');
+        $courseId = $request->query('course_id');
+        $intakeId = $request->query('intake_id');
+        $semesterId = $request->query('semester');
+        $moduleId = $request->query('module_id');
+        $date = $request->query('date');
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Attendance Template');
+
+        // Header
+        $sheet->fromArray(['registration_number', 'name_with_initials', 'attendance'], null, 'A1');
+
+        // If filters provided and module + date present, attempt to prefill students
+        $startRow = 2;
+        if ($courseId && $intakeId && $moduleId) {
+            // fetch students for the module using existing logic
+            try {
+                $students = collect();
+                $semester = null;
+                if ($semesterId) {
+                    $semester = \App\Models\Semester::find($semesterId);
+                }
+
+                // detect if core module
+                if ($semester) {
+                    $isCore = DB::table('semester_module')->where('semester_id', $semesterId)->where('module_id', $moduleId)->exists();
+                } else {
+                    $isCore = DB::table('semester_module')->where('module_id', $moduleId)->exists();
+                }
+
+                if ($isCore && $semester) {
+                    $regs = \App\Models\SemesterRegistration::where('semester_id', $semesterId)
+                        ->where('course_id', $courseId)
+                        ->where('intake_id', $intakeId)
+                        ->where('location', $location)
+                        ->where('status', 'registered')
+                        ->with('student')
+                        ->get();
+
+                    foreach ($regs as $r) {
+                        $students->push([$r->student->registration_id ?? $r->student->student_id, $r->student->name_with_initials]);
+                    }
+                } else {
+                    $mods = \App\Models\ModuleManagement::where('module_id', $moduleId)
+                        ->where('course_id', $courseId)
+                        ->where('intake_id', $intakeId)
+                        ->where('location', $location)
+                        ->when($semester, function($q) use ($semester) { return $q->where('semester', $semester->name); })
+                        ->with('student')
+                        ->get();
+                    foreach ($mods as $m) {
+                        $students->push([$m->student->registration_id ?? $m->student->student_id, $m->student->name_with_initials]);
+                    }
+                }
+
+                if ($students->isNotEmpty()) {
+                    $sheet->fromArray($students->toArray(), null, 'A' . $startRow);
+                }
+            } catch (\Exception $e) {
+                // ignore prefill errors
+                Log::warning('Failed to prefill attendance template: ' . $e->getMessage());
+            }
+        }
+
+        // Add data validation dropdown for the attendance column (column C)
+        $highestRow = max($sheet->getHighestRow(), 100); // create at least some rows to use
+        for ($row = 2; $row <= $highestRow; $row++) {
+            $validation = $sheet->getCell('C' . $row)->getDataValidation();
+            $validation->setType(DataValidation::TYPE_LIST);
+            $validation->setErrorStyle(DataValidation::STYLE_STOP);
+            $validation->setAllowBlank(true);
+            $validation->setShowInputMessage(true);
+            $validation->setShowErrorMessage(true);
+            $validation->setShowDropDown(true);
+            $validation->setErrorTitle('Invalid value');
+            $validation->setError('Value must be Present or Absent');
+            $validation->setPromptTitle('Select attendance');
+            $validation->setPrompt('Choose Present or Absent from the dropdown');
+            $validation->setFormula1('"Present,Absent"');
+        }
+
+        $writer = \PhpOffice\PhpSpreadsheet\IOFactory::createWriter($spreadsheet, 'Xlsx');
+
+        $filename = 'attendance_import_template_' . date('Y-m-d') . '.xlsx';
+        // Stream to browser
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $writer->save('php://output');
+        exit;
+    }
+
+    /**
+     * Import attendance from uploaded CSV/Excel file.
+     * Expects selected filters (location, course_id, intake_id, semester, module_id, date) to be present
+     * and file under 'attendance_file'.
+     */
+    public function importAttendance(Request $request)
+    {
+        $request->validate([
+            'location' => 'required|string',
+            'course_id' => 'required|integer',
+            'intake_id' => 'required|integer',
+            'semester' => 'required',
+            'module_id' => 'required|integer',
+            'date' => 'required|date',
+            'attendance_file' => 'required|file'
+        ]);
+
+        $file = $request->file('attendance_file');
+        $ext = strtolower($file->getClientOriginalExtension());
+
+        $rows = [];
+        try {
+            if (in_array($ext, ['xlsx', 'xls'])) {
+                // use maatwebsite/excel to get as array
+                $array = Excel::toArray([], $file);
+                if (is_array($array) && isset($array[0]) && count($array[0]) > 0) {
+                    $sheet = $array[0];
+                    $header = array_map('trim', $sheet[0]);
+                    for ($i = 1; $i < count($sheet); $i++) {
+                        $row = $sheet[$i];
+                        if (count($row) === 0) continue;
+                        // pad row to header length
+                        $row = array_pad($row, count($header), '');
+                        $rows[] = array_combine($header, $row);
+                    }
+                }
+            } else {
+                // csv / txt
+                if (($handle = fopen($file->getRealPath(), 'r')) !== false) {
+                    $header = null;
+                    while (($data = fgetcsv($handle, 10000, ',')) !== false) {
+                        if (!$header) { $header = array_map('trim', $data); continue; }
+                        $rows[] = array_combine($header, $data);
+                    }
+                    fclose($handle);
+                }
+            }
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to parse file: ' . $e->getMessage()], 500);
+        }
+
+        if (empty($rows)) {
+            return response()->json(['success' => false, 'message' => 'No rows found in file. Ensure file has header row and data.'], 400);
+        }
+
+        // Validate and build attendance records
+        $attendanceRecords = [];
+        $date = Carbon::parse($request->date);
+        $semesterModel = \App\Models\Semester::find($request->semester);
+        $semesterName = $semesterModel ? $semesterModel->name : $request->semester;
+
+        foreach ($rows as $idx => $row) {
+            $regNo = $row['registration_number'] ?? $row['registration_no'] ?? null;
+            $studentName = $row['name_with_initials'] ?? $row['name'] ?? null;
+            $statusRaw = $row['attendance'] ?? null;
+            if (!$regNo || !$studentName || !$statusRaw) continue;
+
+            $status = strtolower(trim($statusRaw)) === 'present' ? 1 : 0;
+
+            // Try to resolve student_id. Some DBs don't have a `registration_id` column
+            // so check the schema first and fall back to student_id
+            try {
+                if (Schema::hasColumn('students', 'registration_id')) {
+                    $student = \App\Models\Student::where('registration_id', $regNo)
+                        ->orWhere('student_id', $regNo)
+                        ->first();
+                } else {
+                    $student = \App\Models\Student::where('student_id', $regNo)->first();
+                }
+            } catch (\Exception $e) {
+                // In case of any DB/schema issues, fallback to searching by primary key
+                $student = \App\Models\Student::where('student_id', $regNo)->first();
+            }
+            if (!$student) {
+                // try by name
+                $student = \App\Models\Student::where('name_with_initials', 'like', '%' . $studentName . '%')->first();
+            }
+            if (!$student) continue;
+
+            $attendanceRecords[] = [
+                'location' => $request->location,
+                'course_id' => $request->course_id,
+                'intake_id' => $request->intake_id,
+                'semester' => $semesterName,
+                'module_id' => $request->module_id,
+                'student_id' => $student->student_id,
+                'status' => (bool)$status,
+                'date' => $date->toDateString(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        if (empty($attendanceRecords)) {
+            return response()->json(['success' => false, 'message' => 'No valid student rows found or students could not be matched.'], 400);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Delete existing for that date/module
+            Attendance::where('date', $date->toDateString())
+                ->where('course_id', $request->course_id)
+                ->where('intake_id', $request->intake_id)
+                ->where('semester', $semesterName)
+                ->where('module_id', $request->module_id)
+                ->delete();
+
+            Attendance::insert($attendanceRecords);
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Imported attendance for ' . count($attendanceRecords) . ' students.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Import attendance error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to import attendance: ' . $e->getMessage()], 500);
+        }
     }
 } 

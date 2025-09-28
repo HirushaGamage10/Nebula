@@ -247,6 +247,9 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::post('/semester/get-filtered-modules', [SemesterCreationController::class, 'getFilteredModules'])->name('semester.get.filtered.modules');
         Route::post('/get-students-for-attendance', [AttendanceController::class, 'getStudentsForAttendance'])->name('get.students.for.attendance');
         Route::post('/store-attendance', [AttendanceController::class, 'storeAttendance'])->name('store.attendance');
+    // Bulk import/template routes
+    Route::get('/attendance/download-template', [AttendanceController::class, 'downloadTemplate'])->name('attendance.download.template');
+    Route::post('/attendance/import', [AttendanceController::class, 'importAttendance'])->name('attendance.import');
         Route::post('/get-attendance-history', [AttendanceController::class, 'getAttendanceHistory'])->name('get.attendance.history');
         Route::get('/debug-attendance-data', [AttendanceController::class, 'debugData'])->name('debug.attendance.data'); // Debug route
 

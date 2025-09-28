@@ -1,8 +1,6 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | Attendance'); ?>
 
-@section('title', 'NEBULA | Attendance')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -43,9 +41,9 @@
                         <div class="col-sm-10">
                             <select class="form-select filter-param" id="course" name="course_id" required>
                                 <option selected disabled value="">Select a Course</option>
-                                @foreach ($courses as $course)
-                                    <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
-                                @endforeach
+                                <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </select>
                         </div>
                     </div>
@@ -54,9 +52,9 @@
                         <div class="col-sm-10">
                             <select class="form-select filter-param" id="intake" name="intake_id" required>
                                 <option selected disabled value="">Select an Intake</option>
-                                @foreach ($intakes as $intake)
-                                    <option value="{{ $intake->intake_id }}">{{ $intake->batch }}</option>
-                                @endforeach
+                                <?php $__currentLoopData = $intakes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $intake): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <option value="<?php echo e($intake->intake_id); ?>"><?php echo e($intake->batch); ?></option>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </select>
                         </div>
                     </div>
@@ -348,7 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showSpinner(true);
         fetch('/get-filtered-modules', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -385,7 +383,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showSpinner(true);
         fetch('/get-students-for-attendance', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -444,7 +442,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showSpinner(true);
         fetch('/store-attendance', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -507,7 +505,7 @@ document.addEventListener('DOMContentLoaded', function() {
         payload.append('semester', semesterSelect.value || '');
         payload.append('module_id', moduleSelect.value || '');
     payload.append('date', attendanceDateInput.value || '');
-        payload.append('_token', '{{ csrf_token() }}');
+        payload.append('_token', '<?php echo e(csrf_token()); ?>');
 
         showSpinner(true);
         fetch('/attendance/import', {
@@ -542,4 +540,5 @@ document.addEventListener('DOMContentLoaded', function() {
     @keyframes lds-ring { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     #spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 9999; }
 </style>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/neb/Nebula/resources/views/attendance.blade.php ENDPATH**/ ?>
