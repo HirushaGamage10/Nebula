@@ -14,8 +14,14 @@ return new class extends Migration
     public function up()
     {
         Schema::table('timetable', function (Blueprint $table) {
-            // Add foreign key constraint for existing subject_id column
-            $table->foreign('subject_id')->references('module_id')->on('modules');
+            // First add the subject_id column
+            $table->unsignedBigInteger('subject_id')->after('id'); // adjust position if needed
+
+            // Then add the foreign key constraint
+            $table->foreign('subject_id')
+                  ->references('module_id')
+                  ->on('modules')
+                  ->onDelete('cascade'); // optional, but good for cleanup
         });
     }
 
@@ -28,6 +34,7 @@ return new class extends Migration
     {
         Schema::table('timetable', function (Blueprint $table) {
             $table->dropForeign(['subject_id']);
+            $table->dropColumn('subject_id');
         });
     }
 };
