@@ -1226,7 +1226,8 @@ $existingPayment = \App\Models\PaymentDetail::where('student_id', $student->stud
     ->where('installment_type', $paymentType) // ✅ Add this
     ->when($request->installment_number, fn($q) => $q->where('installment_number', $request->installment_number))
     ->when($request->due_date, fn($q) => $q->whereDate('due_date', $request->due_date))
-    ->where('status', 'pending')
+    ->whereIn('status', ['pending', 'paid'])
+
     ->first();
 
 if ($existingPayment) {
