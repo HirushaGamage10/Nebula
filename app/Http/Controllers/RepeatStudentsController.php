@@ -388,6 +388,7 @@ class RepeatStudentsController extends Controller
     }
 
     // UPDATED: Method for updating semester registration details (handles form submit)
+// UPDATED: Method for updating semester registration details (handles form submit)
 public function updateSemesterRegistration(Request $request)
 {
     // Validate input (matches form fields)
@@ -431,7 +432,7 @@ public function updateSemesterRegistration(Request $request)
             'status'         => 'registered',
         ]);
 
-        // ✅ NEW: Archive existing active student payment plans for this student+course
+        // ✅ NEW: Archive existing active student payment plans and their installments
         $existingPlans = \App\Models\StudentPaymentPlan::where('student_id', $registration->student_id)
             ->where('course_id', $validated['course_id'])
             ->where('status', 'active')
@@ -439,15 +440,19 @@ public function updateSemesterRegistration(Request $request)
 
         foreach ($existingPlans as $plan) {
             try {
+                // Archive the main payment plan
                 $plan->update(['status' => 'archived']);
             } catch (\Throwable $t) {
-                // fallback if archived enum not yet added
+                // fallback if 'archived' enum not supported
                 $plan->update(['status' => 'inactive']);
             }
+
+            // Archive all related installments under this plan
+            \App\Models\PaymentInstallment::where('payment_plan_id', $plan->id)
+                ->update(['status' => 'archived']);
         }
 
         // Also update corresponding course_registration rows for this student + course
-        // (ensure intake changes are reflected in the course registration records)
         \App\Models\CourseRegistration::where('student_id', $registration->student_id)
             ->where('course_id', $validated['course_id'])
             ->update(['intake_id' => $validated['intake_id']]);
@@ -484,6 +489,7 @@ public function updateSemesterRegistration(Request $request)
         ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 }
+
 
     /**
      * API: Return list of courses for populating selects
