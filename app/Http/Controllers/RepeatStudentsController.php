@@ -388,83 +388,118 @@ class RepeatStudentsController extends Controller
     }
 
     // UPDATED: Method for updating semester registration details (handles form submit)
-    public function updateSemesterRegistration(Request $request)
-    {
-        // Validate input (matches form fields)
-        $validated = $request->validate([
-            'registration_id' => 'required|integer|exists:semester_registrations,id',
-            'location'        => 'required|string|in:Welisara,Moratuwa,Peradeniya',
-            'course_id'       => 'required|integer|exists:courses,course_id',
-            'intake_id'       => 'required|integer|exists:intakes,intake_id',
-            'semester_id'     => 'required|integer|exists:semesters,id',
-            'specialization'  => 'nullable|string|max:255',
+public function updateSemesterRegistration(Request $request)
+{
+    $validated = $request->validate([
+        'registration_id' => 'required|integer|exists:semester_registrations,id',
+        'location'        => 'required|string|in:Welisara,Moratuwa,Peradeniya',
+        'course_id'       => 'required|integer|exists:courses,course_id',
+        'intake_id'       => 'required|integer|exists:intakes,intake_id',
+        'semester_id'     => 'required|integer|exists:semesters,id',
+        'specialization'  => 'nullable|string|max:255',
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        // 🔹 1. Find and validate the registration
+        $registration = \App\Models\SemesterRegistration::find($validated['registration_id']);
+        if (!$registration) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Registration not found.']);
+        }
+
+        if ($registration->status !== 'holding') {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Only holding registrations can be updated.']);
+        }
+
+        // 🔹 2. Update registration info
+        $newSpecialization = $validated['specialization'] ?: $registration->specialization;
+        $registration->update([
+            'location'       => $validated['location'],
+            'course_id'      => $validated['course_id'],
+            'intake_id'      => $validated['intake_id'],
+            'semester_id'    => $validated['semester_id'],
+            'specialization' => $newSpecialization,
+            'status'         => 'registered',
         ]);
 
-        try {
-            DB::beginTransaction();
+        // 🔹 3. Sync course_registration intake
+        \App\Models\CourseRegistration::where('student_id', $registration->student_id)
+            ->where('course_id', $validated['course_id'])
+            ->update(['intake_id' => $validated['intake_id']]);
 
-            // Fetch the registration record
-            $registration = \App\Models\SemesterRegistration::find($validated['registration_id']);
-            if (!$registration) {
-                DB::rollBack();
-                return response()->json(['success' => false, 'message' => 'Registration not found.']);
-            }
+        // 🔹 4. Archive old payment plans for same student+course
+        $oldPlans = \App\Models\StudentPaymentPlan::where('student_id', $registration->student_id)
+            ->where('course_id', $validated['course_id'])
+            ->where('status', 'active')
+            ->get();
 
-            // Ensure it's a holding record (prevent updating active/terminated records)
-            if ($registration->status !== 'holding') {
-                DB::rollBack();
-                return response()->json(['success' => false, 'message' => 'Only holding registrations can be updated.']);
-            }
-
-            // Preserve existing specialization when the incoming specialization is empty/null
-            $newSpecialization = isset($validated['specialization']) && $validated['specialization'] !== ''
-                ? $validated['specialization']
-                : $registration->specialization;
-
-            // Update the fields and change status from holding -> registered
-            $registration->update([
-                'location'       => $validated['location'],
-                'course_id'      => $validated['course_id'],
-                'intake_id'      => $validated['intake_id'],
-                'semester_id'    => $validated['semester_id'],
-                'specialization' => $newSpecialization,
-                'status'         => 'registered',
-            ]);
-
-            // Also update corresponding course_registration rows for this student + course
-            // (ensure intake changes are reflected in the course registration records)
-            \App\Models\CourseRegistration::where('student_id', $registration->student_id)
-                ->where('course_id', $validated['course_id'])
-                ->update(['intake_id' => $validated['intake_id']]);
-
-            // Fetch a representative course registration for this student+course to return to frontend
-            $updatedCourseReg = \App\Models\CourseRegistration::where('student_id', $registration->student_id)
-                ->where('course_id', $validated['course_id'])
-                ->with('intake', 'course')
-                ->orderByDesc('id')
-                ->first();
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Semester registration updated successfully.',
-                'updated_semester_registration' => $registration,
-                'updated_course_registration' => $updatedCourseReg ? [
-                    'id' => $updatedCourseReg->id,
-                    'course_id' => $updatedCourseReg->course_id,
-                    'course_name' => $updatedCourseReg->course->course_name ?? null,
-                    'intake_id' => $updatedCourseReg->intake_id,
-                    'intake' => $updatedCourseReg->intake ? ($updatedCourseReg->intake->batch ?? $updatedCourseReg->intake->intake_no) : null,
-                    'status' => $updatedCourseReg->status,
-                ] : null,
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Error updating semester registration: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'An error occurred while updating registration.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+        foreach ($oldPlans as $plan) {
+            $plan->update(['status' => 'archived']);
         }
+
+        // 🔹 5. Create new payment plan for this intake
+        $intake = \App\Models\Intake::find($validated['intake_id']);
+        $total = ($intake->registration_fee ?? 0) + ($intake->course_fee ?? 0) + ($intake->franchise_payment ?? 0);
+
+        $newPlan = \App\Models\StudentPaymentPlan::create([
+            'student_id'        => $registration->student_id,
+            'course_id'         => $validated['course_id'],
+            'intake_id'         => $validated['intake_id'],
+            'payment_plan_type' => 're-registration',
+            'total_amount'      => $total,
+            'final_amount'      => $total,
+            'slt_loan_applied'  => 'no',
+            'status'            => 'active',
+        ]);
+
+        // 🔹 6. Generate a default first installment (you can adjust logic later)
+        \App\Models\PaymentInstallment::create([
+            'payment_plan_id'   => $newPlan->id,
+            'installment_number'=> 1,
+            'due_date'          => now()->addDays(30),
+            'base_amount'       => $total,
+            'discount_amount'   => 0,
+            'slt_loan_amount'   => 0,
+            'final_amount'      => $total,
+            'status'            => 'pending'
+        ]);
+
+        // 🔹 7. Return updated registration + new plan summary
+        $updatedCourseReg = \App\Models\CourseRegistration::where('student_id', $registration->student_id)
+            ->where('course_id', $validated['course_id'])
+            ->with('intake', 'course')
+            ->orderByDesc('id')
+            ->first();
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Semester registration and payment plan updated successfully.',
+            'updated_semester_registration' => $registration,
+            'new_payment_plan' => [
+                'id' => $newPlan->id,
+                'total_amount' => $newPlan->total_amount,
+                'status' => $newPlan->status,
+            ],
+            'updated_course_registration' => $updatedCourseReg ? [
+                'id' => $updatedCourseReg->id,
+                'course_id' => $updatedCourseReg->course_id,
+                'course_name' => $updatedCourseReg->course->course_name ?? null,
+                'intake_id' => $updatedCourseReg->intake_id,
+                'intake' => $updatedCourseReg->intake->batch ?? $updatedCourseReg->intake->intake_no,
+                'status' => $updatedCourseReg->status,
+            ] : null,
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error updating semester registration: ' . $e->getMessage());
+        return response()->json(['success' => false, 'message' => 'An error occurred while updating registration.'], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
+}
 
     /**
      * API: Return list of courses for populating selects
@@ -551,23 +586,62 @@ class RepeatStudentsController extends Controller
      * Query params: course_id, intake_id
      */
     public function apiSemesters(Request $request)
-    {
-        $courseId = $request->query('course_id');
+{
+    $courseId = $request->query('course_id');
+    $intakeId = $request->query('intake_id');
 
-        if (!$courseId) {
-            return response()->json(['success' => false, 'message' => 'course_id is required.'], Response::HTTP_BAD_REQUEST);
-        }
-
-        try {
-            $semesters = Semester::where('course_id', $courseId)
-                ->orderBy('id', 'asc')
-                ->get(['id', 'name']);
-
-            return response()->json(['success' => true, 'semesters' => $semesters]);
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Failed to fetch semesters.'], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+    if (!$courseId || !$intakeId) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Both course_id and intake_id are required.'
+        ], 400);
     }
+
+    try {
+        // Find intake for label & location context
+        $intake = \App\Models\Intake::find($intakeId);
+        if (!$intake) {
+            return response()->json(['success' => false, 'message' => 'Intake not found.'], 404);
+        }
+
+        // Get only semesters that match both course and intake
+        $semesters = \App\Models\Semester::where('course_id', $courseId)
+            ->where('intake_id', $intakeId) // only this intake's semesters
+            ->orderBy('id', 'asc')
+            ->get(['id', 'name', 'course_id', 'intake_id']);
+
+        // Append display name with intake info
+        $intakeLabel = $intake->batch ?? $intake->intake_no ?? 'Unknown Intake';
+        $semesters = $semesters->map(function ($s) use ($intakeLabel) {
+            $s->display_name = "Semester {$s->name} – {$intakeLabel}";
+            return $s;
+        });
+
+        // If no semesters found for that intake, fallback to course-level semesters
+        if ($semesters->isEmpty()) {
+            $semesters = \App\Models\Semester::where('course_id', $courseId)
+                ->orderBy('id', 'asc')
+                ->get(['id', 'name'])
+                ->map(function ($s) use ($intakeLabel) {
+                    $s->display_name = "{$s->name} – {$intakeLabel} (Course Default)";
+                    return $s;
+                });
+        }
+
+        return response()->json([
+            'success' => true,
+            'semesters' => $semesters
+        ]);
+
+    } catch (\Throwable $e) {
+        \Log::error('Error in apiSemesters: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch semesters: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
 
     /**
      * Get payment plan details for a student and course

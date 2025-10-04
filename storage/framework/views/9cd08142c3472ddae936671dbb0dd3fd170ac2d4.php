@@ -917,20 +917,40 @@ function populateIntakes(courseId, selectedIntakeId = null, selectedSemesterId =
 // Function to populate semesters based on course and intake
 function populateSemesters(courseId, intakeId, selectedSemesterId = null) {
     const semesterSelect = document.getElementById('semester_id');
+    semesterSelect.innerHTML = '<option value="">Select Semester</option>';
+
+    // If no course or intake is selected, stop here
     if (!courseId || !intakeId) {
-        semesterSelect.innerHTML = '<option value="">Select Semester</option>';
         return;
     }
+
+    // Fetch semesters filtered by course & intake
     fetch(`/api/semesters?course_id=${courseId}&intake_id=${intakeId}`)
-        .then(r => r.json())
+        .then(response => response.json())
         .then(data => {
-            semesterSelect.innerHTML = '<option value="">Select Semester</option>';
+            if (!data.success || !Array.isArray(data.semesters)) {
+                semesterSelect.innerHTML = '<option value="">No semesters found</option>';
+                return;
+            }
+
+            // Populate the dropdown
             data.semesters.forEach(s => {
                 const selected = selectedSemesterId && (s.id == selectedSemesterId) ? 'selected' : '';
-                semesterSelect.innerHTML += `<option value="${s.id}" ${selected}>${s.name}</option>`;
+                const label = s.display_name || s.name || `Semester ${s.id}`;
+                semesterSelect.innerHTML += `<option value="${s.id}" ${selected}>${label}</option>`;
             });
+
+            // If no semesters exist at all
+            if (data.semesters.length === 0) {
+                semesterSelect.innerHTML = '<option value="">No semesters available for this intake</option>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading semesters:', error);
+            semesterSelect.innerHTML = '<option value="">Error loading semesters</option>';
         });
 }
+
 
 // Store current student data globally
 let currentStudentData = null;
