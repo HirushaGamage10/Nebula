@@ -1220,7 +1220,7 @@ public function generatePaymentSlip(Request $request)
         // 🔹 Total Fee = base fee + late fee - approved late fee
         $totalFee = $courseFee + $franchiseFee + $registrationFee + $lateFee - $approvedLateFee;
 
-        // --- Prevent duplicate pending slips ---
+        // --- Prevent duplicate pending and paid slips ---
 $existingPayment = \App\Models\PaymentDetail::where('student_id', $student->student_id)
     ->where('course_registration_id', $registration->id)
     ->where('installment_type', $paymentType) // ✅ Add this
