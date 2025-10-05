@@ -351,8 +351,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/api/courses', [RepeatStudentsController::class, 'apiCourses']);
         Route::get('/api/intakes', [RepeatStudentsController::class, 'apiIntakes']);
         Route::get('/api/semesters', [RepeatStudentsController::class, 'apiSemesters']);
-        Route::get('/api/payment-plan/{studentId}/{courseId}', [RepeatStudentsController::class, 'getPaymentPlan']);
-        Route::post('/api/payment-installments/update', [RepeatStudentsController::class, 'updatePaymentInstallments']);
+
     });
 
 
