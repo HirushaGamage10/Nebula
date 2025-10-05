@@ -165,6 +165,17 @@
     </li>
 <?php endif; ?>
 
+<?php if(RoleHelper::hasPermission($role, 'repeat.students.payment')): ?>
+    <li class="sidebar-item">
+        <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'repeat.payment.index' ? 'active' : ''); ?>"
+           href="<?php echo e(route('repeat.payment.index')); ?>">
+            <span><i class="ti ti-currency-dollar"></i></span>
+            <span class="hide-menu">Repeat Payment Plan</span>
+        </a>
+    </li>
+<?php endif; ?>
+
+
 
 <li><hr class="my-2 border-gray-200 opacity-30"></li>
 

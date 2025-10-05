@@ -165,6 +165,17 @@
     </li>
 @endif
 
+@if(RoleHelper::hasPermission($role, 'repeat.students.payment'))
+    <li class="sidebar-item">
+        <a class="sidebar-link {{ Route::currentRouteName() == 'repeat.payment.index' ? 'active' : '' }}"
+           href="{{ route('repeat.payment.index') }}">
+            <span><i class="ti ti-currency-dollar"></i></span>
+            <span class="hide-menu">Repeat Payment Plan</span>
+        </a>
+    </li>
+@endif
+
+
 {{-- Divider (light) --}}
 <li><hr class="my-2 border-gray-200 opacity-30"></li>
 

@@ -131,6 +131,7 @@ class RoleHelper
             'file.storageStats',
             'file.cleanup',
             'repeat.students.management',
+            'repeat.students.payment',
         ],
     ];
 

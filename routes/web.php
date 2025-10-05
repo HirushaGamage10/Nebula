@@ -352,6 +352,15 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/api/intakes', [RepeatStudentsController::class, 'apiIntakes']);
         Route::get('/api/semesters', [RepeatStudentsController::class, 'apiSemesters']);
 
+        // Repeat Student Payment Routes
+        Route::get('/repeat-student-payment', [App\Http\Controllers\RepeatStudentPaymentController::class, 'index'])
+            ->name('repeat.payment.index');
+
+        Route::get('/api/repeat-payment-plan/{student_id}/{course_id}', [App\Http\Controllers\RepeatStudentPaymentController::class, 'getArchivedPaymentPlan']);
+
+        Route::post('/repeat-student-payment/save', [App\Http\Controllers\RepeatStudentPaymentController::class, 'saveNewPaymentPlan']);
+
+
     });
 
 
