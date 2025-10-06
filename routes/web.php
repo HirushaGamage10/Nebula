@@ -42,7 +42,8 @@ use App\Http\Controllers\{
     PaymentController,
     LatePaymentController,
     SemesterRegistrationController,
-    LateFeeApprovalController
+    LateFeeApprovalController,
+    MiscPaymentController
 };
 
 // Default
@@ -675,6 +676,10 @@ Route::middleware(['auth', 'role:Marketing Manager,Developer'])->group(function 
     Route::post('/payment-discount/get-discounts-by-category', [App\Http\Controllers\PaymentDiscountController::class, 'getDiscountsByCategory'])->name('payment.discount.get.discounts.by.category');
     Route::post('/payment-discount/update-discount', [App\Http\Controllers\PaymentDiscountController::class, 'updateDiscount'])->name('payment.discount.update.discount');
     Route::post('/payment-discount/delete-discount', [App\Http\Controllers\PaymentDiscountController::class, 'deleteDiscount'])->name('payment.discount.delete.discount');
+
+    Route::get('/misc-payment', [MiscPaymentController::class, 'index'])->name('misc.payment.index');
+    Route::post('/misc-payment/store', [MiscPaymentController::class, 'store'])->name('misc.payment.store');
+    Route::get('/misc-payment/fetch/{studentId}', [MiscPaymentController::class, 'fetchByStudent']);
 });
 
 // Payment Management - Bursar and Developer only

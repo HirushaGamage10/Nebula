@@ -448,6 +448,16 @@
                     <span class="hide-menu">Payments</span>
                 </a>
             </li>
+
+            
+            <li class="sidebar-item">
+                <a class="sidebar-link <?php echo e(request()->routeIs('misc.payment.index') ? 'active' : ''); ?>"
+                href="<?php echo e(route('misc.payment.index')); ?>">
+                    <span><i class="ti ti-wallet"></i></span>
+                    <span class="hide-menu">Miscellaneous Payment</span>
+                </a>
+            </li>
+
             <li class="sidebar-item">
                 <a class="sidebar-link <?php echo e(request()->routeIs('payment.showDownloadPage') ? 'active' : ''); ?>"
                 href="<?php echo e(route('payment.showDownloadPage')); ?>">

@@ -448,6 +448,16 @@
                     <span class="hide-menu">Payments</span>
                 </a>
             </li>
+
+            {{-- 🔹 Miscellaneous Payments --}}
+            <li class="sidebar-item">
+                <a class="sidebar-link {{ request()->routeIs('misc.payment.index') ? 'active' : '' }}"
+                href="{{ route('misc.payment.index') }}">
+                    <span><i class="ti ti-wallet"></i></span>
+                    <span class="hide-menu">Miscellaneous Payment</span>
+                </a>
+            </li>
+
             <li class="sidebar-item">
                 <a class="sidebar-link {{ request()->routeIs('payment.showDownloadPage') ? 'active' : '' }}"
                 href="{{ route('payment.showDownloadPage') }}">

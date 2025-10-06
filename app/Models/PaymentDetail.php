@@ -11,35 +11,34 @@ class PaymentDetail extends Model
 
     protected $table = 'payment_details';
 
-    
-
-
     protected $fillable = [
-    'student_id',
-    'course_registration_id',
-    'amount',
-    'payment_method',
-    'transaction_id',
-    'remarks',
-    'paid_slip_path',
-    'installment_number',
-    'payment_name',
-    'due_date',
-    'late_fee',           
-    'approved_late_fee',  
-    'total_fee',   
-    'remaining_amount',   // ✅ add this
-    'partial_payments',   // ✅ add this
-    'status',
-    'created_at',
-    'updated_at',
-    'foreign_currency_code',
-    'foreign_currency_amount',
-    'installment_type',
-    'sscl_tax_amount',
-    'bank_charges',
-];
-
+        'student_id',
+        'course_registration_id',
+        'misc_category',        // ✅ new
+        'misc_reference',       // ✅ new
+        'description',          // ✅ new (for remarks/extra info)
+        'amount',
+        'payment_method',
+        'transaction_id',
+        'remarks',
+        'paid_slip_path',
+        'installment_number',
+        'payment_name',
+        'due_date',
+        'late_fee',           
+        'approved_late_fee',  
+        'total_fee',   
+        'remaining_amount',
+        'partial_payments',
+        'status',
+        'created_at',
+        'updated_at',
+        'foreign_currency_code',
+        'foreign_currency_amount',
+        'installment_type',
+        'sscl_tax_amount',
+        'bank_charges',
+    ];
 
     protected $casts = [
         'id' => 'int',
@@ -49,10 +48,10 @@ class PaymentDetail extends Model
         'installment_number' => 'int',
         'due_date' => 'date',
         'partial_payments' => 'array',
-    'remaining_amount' => 'decimal:2',
+        'remaining_amount' => 'decimal:2',
     ];
 
-    // Relationships
+    // 🔹 Relationships
     public function student()
     {
         return $this->belongsTo(Student::class, 'student_id', 'student_id');
@@ -65,7 +64,14 @@ class PaymentDetail extends Model
 
     public function course()
     {
-        return $this->hasOneThrough(Course::class, CourseRegistration::class, 'id', 'course_id', 'course_registration_id', 'course_id');
+        return $this->hasOneThrough(
+            Course::class,
+            CourseRegistration::class,
+            'id',
+            'course_id',
+            'course_registration_id',
+            'course_id'
+        );
     }
 
     public function paymentMethod()
@@ -73,15 +79,15 @@ class PaymentDetail extends Model
         return $this->belongsTo(PaymentMethod::class, 'payment_method', 'method_id');
     }
 
-    // Scopes
+    // 🔹 Scopes
     public function scopeSuccessful($query)
     {
-        return $query->where('payment_status', true);
+        return $query->where('status', 'paid');
     }
 
     public function scopeFailed($query)
     {
-        return $query->where('payment_status', false);
+        return $query->where('status', 'failed');
     }
 
     public function scopeByMethod($query, $method)
@@ -91,7 +97,7 @@ class PaymentDetail extends Model
 
     public function scopeByDateRange($query, $startDate, $endDate)
     {
-        return $query->whereBetween('payment_date', [$startDate, $endDate]);
+        return $query->whereBetween('created_at', [$startDate, $endDate]);
     }
 
     public function scopeByStudent($query, $studentId)
@@ -104,6 +110,12 @@ class PaymentDetail extends Model
         return $query->whereHas('registration', function($q) use ($courseId) {
             $q->where('course_id', $courseId);
         });
+    }
+
+    public function scopeMiscellaneous($query)
+    {
+        return $query->whereNull('course_registration_id')
+                     ->whereNotNull('misc_category');
     }
 
     public function scopeCash($query)
@@ -126,10 +138,10 @@ class PaymentDetail extends Model
         return $query->where('payment_method', 'online');
     }
 
-    // Accessors
+    // 🔹 Accessors
     public function getPaymentStatusTextAttribute()
     {
-        return $this->status === 'paid' ? 'Successful' : 'Failed';
+        return $this->status === 'paid' ? 'Successful' : ucfirst($this->status);
     }
 
     public function getPaymentMethodTextAttribute()
@@ -141,7 +153,6 @@ class PaymentDetail extends Model
             'online' => 'Online Payment',
             'card' => 'Card Payment'
         ];
-        
         return $methods[$this->payment_method] ?? ucfirst($this->payment_method);
     }
 
@@ -155,7 +166,7 @@ class PaymentDetail extends Model
         return $this->created_at ? $this->created_at->format('d/m/Y') : 'N/A';
     }
 
-    // Methods
+    // 🔹 Helper Methods
     public function isSuccessful()
     {
         return $this->status === 'paid';
@@ -163,7 +174,7 @@ class PaymentDetail extends Model
 
     public function getPaymentReference()
     {
-        return $this->transaction_id;
+        return $this->transaction_id ?? $this->id;
     }
 
     public function updatePaymentStatus($status)
@@ -171,9 +182,9 @@ class PaymentDetail extends Model
         $this->status = $status;
         $this->save();
         
-        // Update registration payment status if this is a registration payment
-        if ($this->course_registration_id) {
+        // Update registration payment status if course-related
+        if ($this->course_registration_id && $this->registration) {
             $this->registration->updatePaymentStatus();
         }
     }
-} 
+}
