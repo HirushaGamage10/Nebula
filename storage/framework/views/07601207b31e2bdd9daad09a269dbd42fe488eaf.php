@@ -71,6 +71,24 @@
                     <button type="button" id="addRow" class="btn btn-secondary">Add Row</button>
                     <button type="submit" class="btn btn-success">Save Plan</button>
                 </form>
+                <hr>
+                <div id="createdPlansSection" class="mt-5">
+                    <h5 class="fw-bold text-info">Created Payment Plans</h5>
+                    <table class="table table-bordered" id="createdPlansTable">
+                        <thead class="bg-info text-white">
+                            <tr>
+                                <th>#</th>
+                                <th>Due Date</th>
+                                <th>Local Amount (LKR)</th>
+                                <th>International Amount</th>
+                                <th>Currency</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -256,6 +274,7 @@ document.addEventListener('input', e => {
 // 💾 Save new plan
 document.getElementById('newPlanForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+
     const formData = new FormData(this);
     const res = await fetch('/repeat-student-payment/save', {
         method: 'POST',
@@ -263,8 +282,51 @@ document.getElementById('newPlanForm').addEventListener('submit', async function
         headers: { 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' }
     });
     const data = await res.json();
-    alert(data.message);
+
+    if (data.success) {
+        alert(data.message);
+
+        // 🔄 Fetch and display newly created plans
+        const studentId = document.getElementById('student_id').value;
+        const courseId = document.getElementById('course_id').value;
+        loadCreatedPlans(studentId, courseId);
+    } else {
+        alert(data.message || 'Error occurred while saving.');
+    }
 });
+async function loadCreatedPlans(studentId, courseId) {
+    try {
+        const res = await fetch(`/api/repeat-created-plans/${studentId}/${courseId}`);
+        const data = await res.json();
+        const tbody = document.querySelector('#createdPlansTable tbody');
+        tbody.innerHTML = '';
+
+        if (data.success && data.installments.length > 0) {
+            data.installments.forEach((inst, i) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td>${inst.due_date?.split('T')[0] ?? '-'}</td>
+                        <td>${parseFloat(inst.base_amount ?? inst.amount ?? 0).toLocaleString()}</td>
+                        <td>${parseFloat(inst.international_amount ?? 0).toLocaleString()}</td>
+                        <td>${inst.international_currency ?? 'LKR'}</td>
+                        <td>${inst.installment_type ?? '-'}</td>
+                        <td><span class="badge bg-${inst.status === 'pending' ? 'warning' : 'success'}">${inst.status}</span></td>
+                    </tr>`;
+            });
+        } else {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted">No created plans found.</td></tr>`;
+        }
+
+        // 👇 Smooth scroll to bottom after loading
+        document.getElementById('createdPlansSection').scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+        console.error('Error loading created plans:', err);
+        alert('Failed to load created plans.');
+    }
+}
+
+
 </script>
 
 

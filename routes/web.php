@@ -360,7 +360,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
         Route::post('/repeat-student-payment/save', [App\Http\Controllers\RepeatStudentPaymentController::class, 'saveNewPaymentPlan']);
 
-
+        Route::get('/api/repeat-created-plans/{student_id}/{course_id}', [App\Http\Controllers\RepeatStudentPaymentController::class, 'getCreatedPaymentPlans']);
     });
 
 

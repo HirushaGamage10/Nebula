@@ -192,5 +192,38 @@ public function saveNewPaymentPlan(Request $request)
         ]);
     }
 }
+public function getCreatedPaymentPlans($student_id, $course_id)
+{
+    try {
+        $plans = StudentPaymentPlan::where('student_id', $student_id)
+            ->where('course_id', $course_id)
+            ->orderByDesc('created_at')
+            ->get();
+
+        if ($plans->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'installments' => [],
+                'message' => 'No created plans found.'
+            ]);
+        }
+
+        $installments = PaymentInstallment::whereIn('payment_plan_id', $plans->pluck('id'))
+            ->orderBy('due_date')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'installments' => $installments
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error fetching created payment plans.',
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+
 
 }
