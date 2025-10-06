@@ -145,43 +145,78 @@ class PaymentController extends Controller
 
 
             case 'franchise_fee':
-                // intake plan → split by installments JSON: international_amount
-                $plan = \App\Models\PaymentPlan::where('course_id', $request->course_id)
-                    ->where('intake_id', $registration->intake_id)
-                    ->first();
+            // 🔹 Step 1: Try to get real franchise installments from student's payment plans
+            $franchiseInstallments = \App\Models\PaymentInstallment::whereHas('paymentPlan', function($q) use ($student, $request) {
+                    $q->where('student_id', $student->student_id)
+                    ->where('course_id', $request->course_id);
+                })
+                ->whereNotNull('international_amount')
+                ->where('international_amount', '>', 0)
+                ->orderBy('installment_number')
+                ->get();
 
-                if (!$plan) {
-                    return response()->json(['success' => false, 'message' => 'No payment plan found for this course/intake.'], 404);
+            if ($franchiseInstallments->isNotEmpty()) {
+                // ✅ Found actual franchise installments in payment_installments table — use them
+                foreach ($franchiseInstallments as $ins) {
+                    $rows[] = [
+                        'installment_number' => $ins->installment_number,
+                        'due_date'           => optional($ins->due_date)->toDateString(),
+                        'amount'             => (float) $ins->international_amount,
+                        'base_amount'        => (float) $ins->international_amount,
+                        'status'             => $ins->status ?? 'pending',
+                        'paid_date'          => optional($ins->paid_date)->toDateString(),
+                        'receipt_no'         => null,
+                        'currency'           => $ins->international_currency ?: 'USD',
+                        'apply_tax'          => false,
+                        'sscl_tax'           => 0,
+                        'bank_charges'       => 0,
+                    ];
                 }
 
-                $instData = $plan->installments;
-                if (is_string($instData)) {
-                    $instData = json_decode($instData, true);
-                }
-
-                if (is_array($instData)) {
-                    foreach ($instData as $item) {
-                        $fx = (float) ($item['international_amount'] ?? 0);
-                        if ($fx <= 0) continue; // only franchise (international) rows
-                        $rows[] = [
-                            'installment_number' => $item['installment_number'] ?? null,
-                            'due_date'           => $item['due_date'] ?? null,
-                            'amount'             => $fx,
-                            'base_amount'        => $fx,
-                            'status'             => 'pending',
-                            'paid_date'          => null,
-                            'receipt_no'         => null,
-                            'currency'           => $plan->international_currency ?: 'USD',
-                            // pass-through flags/rates so the frontend can show/apply them
-                            'apply_tax'          => (bool)($item['apply_tax'] ?? false),
-                            'sscl_tax'           => (float)($plan->sscl_tax ?? 0),
-                            'bank_charges'       => (float)($plan->bank_charges ?? 0),
-                        ];
-                    }
-                }
-
-                // if there were no franchise rows at all, still respond with empty array
+                // ✅ Stop here — we already got data from payment_installments
                 break;
+            }
+
+            // 🔹 Step 2: Fallback to PaymentPlan JSON (if no franchise installments exist yet)
+            $plan = \App\Models\PaymentPlan::where('course_id', $request->course_id)
+                ->where('intake_id', $registration->intake_id)
+                ->first();
+
+            if (!$plan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No payment plan found for this course/intake.'
+                ], 404);
+            }
+
+            $instData = $plan->installments;
+            if (is_string($instData)) {
+                $instData = json_decode($instData, true);
+            }
+
+            if (is_array($instData)) {
+                foreach ($instData as $item) {
+                    $fx = (float) ($item['international_amount'] ?? 0);
+                    if ($fx <= 0) continue; // only franchise (international) rows
+
+                    $rows[] = [
+                        'installment_number' => $item['installment_number'] ?? null,
+                        'due_date'           => $item['due_date'] ?? null,
+                        'amount'             => $fx,
+                        'base_amount'        => $fx,
+                        'status'             => 'pending',
+                        'paid_date'          => null,
+                        'receipt_no'         => null,
+                        'currency'           => $plan->international_currency ?: 'USD',
+                        'apply_tax'          => (bool)($item['apply_tax'] ?? false),
+                        'sscl_tax'           => (float)($plan->sscl_tax ?? 0),
+                        'bank_charges'       => (float)($plan->bank_charges ?? 0),
+                    ];
+                }
+            }
+
+            break;
+
 
             case 'registration_fee':
                 // intake plan → single row
