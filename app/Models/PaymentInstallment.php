@@ -15,7 +15,10 @@ class PaymentInstallment extends Model
         'payment_plan_id',
         'installment_number',
         'due_date',
-        'amount',            // legacy base
+        'amount',
+        'installment_type',
+        'international_amount',
+        'international_currency',            // legacy base
         'status',
         'base_amount',
         'discount_amount',
@@ -38,6 +41,7 @@ class PaymentInstallment extends Model
         'due_date'        => 'date',
         'paid_date'       => 'date',
         'amount'          => 'decimal:2',
+        'international_amount'=> 'decimal:2',
         'base_amount'     => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'slt_loan_amount' => 'decimal:2',
