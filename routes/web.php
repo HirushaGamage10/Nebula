@@ -682,10 +682,35 @@ Route::middleware(['auth', 'role:Marketing Manager,Developer'])->group(function 
     Route::post('/misc-payment/store', [MiscPaymentController::class, 'store'])->name('misc.payment.store');
     Route::get('/misc-payment/fetch/{studentId}', [MiscPaymentController::class, 'fetchByStudent']);
 
-    Route::get('/payments/summary', [PaymentSummaryController::class, 'index'])->name('payment.summary');
-Route::get('/payments/summary/filter', [PaymentSummaryController::class, 'filter'])->name('payment.summary.filter');
-Route::get('/payments/summary/student/{studentId}', [PaymentSummaryController::class, 'studentSummary'])
-    ->name('payment.summary.student');
+    // ✅ ENHANCED PAYMENT SUMMARY ROUTES (Replace existing ones)
+    // Main Dashboard
+    Route::get('/payments/summary', [PaymentSummaryController::class, 'index'])
+        ->name('payment.summary');
+    
+    // AJAX Filter for Dashboard
+    Route::get('/payments/summary/filter', [PaymentSummaryController::class, 'filter'])
+        ->name('payment.summary.filter');
+    
+    // Student-Specific Summary
+    Route::get('/payments/summary/student/{studentId}', [PaymentSummaryController::class, 'studentSummary'])
+        ->name('payment.summary.student');
+    
+    // ✅ NEW ADVANCED ROUTES
+    // Advanced Analytics Dashboard
+    Route::get('/payments/analytics', [PaymentSummaryController::class, 'analytics'])
+        ->name('payment.analytics');
+    
+    // Year-over-Year Comparison
+    Route::get('/payments/comparison', [PaymentSummaryController::class, 'comparison'])
+        ->name('payment.comparison');
+    
+    // Export Reports (CSV/PDF)
+    Route::get('/payments/export', [PaymentSummaryController::class, 'export'])
+        ->name('payment.export');
+    
+    // Live Payment Feed (Real-time updates)
+    Route::get('/payments/live-feed', [PaymentSummaryController::class, 'liveFeed'])
+        ->name('payment.live.feed');
 
 });
 
