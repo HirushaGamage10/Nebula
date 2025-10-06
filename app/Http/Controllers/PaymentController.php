@@ -94,43 +94,55 @@ class PaymentController extends Controller
         $rows = [];
         switch ($request->payment_type) {
             case 'course_fee':
-                // per-student plan → payment_installments
-                $studentPlan = \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
-                    ->where('course_id', $request->course_id)
-                    ->first();
+            // Get all student payment plans for this student & course
+            $studentPlans = \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
+                ->where('course_id', $request->course_id)
+                ->orderByDesc('created_at')
+                ->get();
 
-                if (!$studentPlan) {
-                    return response()->json([
-                        'success' => true,
-                        'payment_details' => [],
-                        'message' => 'No student payment plan found. Create a plan first.',
-                    ]);
-                }
+            if ($studentPlans->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'payment_details' => [],
+                    'message' => 'No student payment plans found. Create a plan first.',
+                ]);
+            }
 
-                $installments = \App\Models\PaymentInstallment::where('payment_plan_id', $studentPlan->id)
+            $rows = [];
+
+            foreach ($studentPlans as $plan) {
+                $installments = \App\Models\PaymentInstallment::where('payment_plan_id', $plan->id)
                     ->orderBy('installment_number')
                     ->get();
 
                 foreach ($installments as $ins) {
+
+                    // Skip installment if it has an international amount (non-null and > 0)
+                    if (!is_null($ins->international_amount) && (float)$ins->international_amount > 0) {
+                        continue;
+                    }
+
                     $final = $ins->final_amount ?? $ins->amount;
+
                     $rows[] = [
-                    'installment_number'  => $ins->installment_number,
-                    'due_date'            => optional($ins->due_date)->toDateString(),
-                    'amount'              => (float) $final,
-                    'base_amount'         => (float) $ins->amount,
-                    'status'              => $ins->status ?? 'pending',
-                    'paid_date'           => optional($ins->paid_date)->toDateString(),
-                    'receipt_no'          => null,
-                    'currency'            => 'LKR',
-
-                    // ✅ Add these fields
-                    'approved_late_fee'   => (float) ($ins->approved_late_fee ?? 0),
-                    'calculated_late_fee' => (float) ($ins->calculated_late_fee ?? 0),
-                ];
-
+                        'plan_id'             => $plan->id,
+                        'plan_status'         => $plan->status ?? 'active', // show active/archived
+                        'installment_number'  => $ins->installment_number,
+                        'due_date'            => optional($ins->due_date)->toDateString(),
+                        'amount'              => (float) $final,
+                        'base_amount'         => (float) $ins->amount,
+                        'status'              => $ins->status ?? 'pending',
+                        'paid_date'           => optional($ins->paid_date)->toDateString(),
+                        'receipt_no'          => null,
+                        'currency'            => 'LKR',
+                        'approved_late_fee'   => (float) ($ins->approved_late_fee ?? 0),
+                        'calculated_late_fee' => (float) ($ins->calculated_late_fee ?? 0),
+                    ];
                 }
+            }
 
-                break;
+            break;
+
 
             case 'franchise_fee':
                 // intake plan → split by installments JSON: international_amount
