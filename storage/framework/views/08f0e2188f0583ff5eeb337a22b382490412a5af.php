@@ -438,7 +438,14 @@
 
         
         <li><hr class="my-2 border-gray-200 opacity-30"></li>
-
+        
+        <li class="sidebar-item">
+            <a class="sidebar-link <?php echo e(request()->routeIs('payment.summary') ? 'active' : ''); ?>"
+            href="<?php echo e(route('payment.summary')); ?>">
+                <span><i class="ti ti-chart-pie"></i></span>
+                <span class="hide-menu">Payment Dashboard</span>
+            </a>
+        </li>
         
         <?php if($canPayment): ?>
             <li class="sidebar-item">

@@ -43,7 +43,8 @@ use App\Http\Controllers\{
     LatePaymentController,
     SemesterRegistrationController,
     LateFeeApprovalController,
-    MiscPaymentController
+    MiscPaymentController,
+    PaymentSummaryController,
 };
 
 // Default
@@ -680,6 +681,12 @@ Route::middleware(['auth', 'role:Marketing Manager,Developer'])->group(function 
     Route::get('/misc-payment', [MiscPaymentController::class, 'index'])->name('misc.payment.index');
     Route::post('/misc-payment/store', [MiscPaymentController::class, 'store'])->name('misc.payment.store');
     Route::get('/misc-payment/fetch/{studentId}', [MiscPaymentController::class, 'fetchByStudent']);
+
+    Route::get('/payments/summary', [PaymentSummaryController::class, 'index'])->name('payment.summary');
+Route::get('/payments/summary/filter', [PaymentSummaryController::class, 'filter'])->name('payment.summary.filter');
+Route::get('/payments/summary/student/{studentId}', [PaymentSummaryController::class, 'studentSummary'])
+    ->name('payment.summary.student');
+
 });
 
 // Payment Management - Bursar and Developer only
