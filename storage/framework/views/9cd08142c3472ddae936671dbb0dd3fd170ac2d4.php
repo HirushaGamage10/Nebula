@@ -32,9 +32,6 @@
                     <li class="nav-item">
                         <a class="nav-link" id="register-tab" data-bs-toggle="tab" href="#register">Re-Register Intake</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="payment-tab" data-bs-toggle="tab" href="#payment">Payment Plan</a>
-                    </li>
                 </ul>
                 <div class="tab-content mt-2">
                     <!-- PROFILE INFO TAB -->
