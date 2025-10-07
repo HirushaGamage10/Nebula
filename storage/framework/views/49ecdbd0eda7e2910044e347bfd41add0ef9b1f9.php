@@ -15,7 +15,7 @@
 
             <form id="registrationForm" action="<?php echo e(route('student.register')); ?>" method="POST" enctype="multipart/form-data" novalidate>
                 <?php echo csrf_field(); ?>
-                
+                <div id="formErrorSummary" class="alert alert-danger d-none" role="alert"></div>
                 
                 
                 <h5 class="mb-3">Personal Information</h5>

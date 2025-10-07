@@ -17,7 +17,7 @@
 
             <form id="registrationForm" action="{{ route('student.register') }}" method="POST" enctype="multipart/form-data" novalidate>
                 @csrf
-                {{-- <div id="formErrorSummary" class="alert alert-danger d-none" role="alert"></div> --}}
+                <div id="formErrorSummary" class="alert alert-danger d-none" role="alert"></div>
                 
                 {{-- Personal Information Section --}}
                 <h5 class="mb-3">Personal Information</h5>
