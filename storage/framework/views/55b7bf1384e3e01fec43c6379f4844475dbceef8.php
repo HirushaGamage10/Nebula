@@ -376,41 +376,51 @@
                 success: function(response) {
                     if (response.success) {
                         showToast(response.message, 'success');
-                        
+
                         if (!isEditMode) {
-                            // Only reset form and hide fields for new course creation
+                            // Reset form and hide fields
                             $('#courseForm')[0].reset();
-                            // Hide all field sections after successful submission
                             $('#degree_program_fields, #certificate_program_fields').hide();
-                            // Add new course to the table
+
                             if (response.course) {
                                 const course = response.course;
                                 let courseTypeText = 'N/A';
                                 if (course.course_type === 'degree') courseTypeText = 'Degree Program';
+                                else if (course.course_type === 'diploma') courseTypeText = 'Diploma Program';
                                 else if (course.course_type === 'certificate') courseTypeText = 'Certificate Program';
-                                const newRow = `<tr data-course-id="${course.course_id}">
+
+                                // Add new row
+                                const newRow = `<tr id="course-row-${course.course_id}" data-course-id="${course.course_id}">
                                     <td>${course.course_name}</td>
                                     <td>${courseTypeText}</td>
                                     <td>${course.location}</td>
-                                    <td>${course.duration_formatted}</td>
+                                    <td>${course.duration_formatted ?? 'N/A'}</td>
                                     <td>${course.course_medium}</td>
                                     <td>
                                         <button class="btn btn-sm btn-primary edit-course-btn" data-course-id="${course.course_id}">Edit</button>
                                         <button class="btn btn-sm btn-danger delete-course-btn" data-course-id="${course.course_id}">Delete</button>
                                     </td>
                                 </tr>`;
+                                
                                 $('#existingCoursesTableBody').prepend(newRow);
-                                // Remove 'No courses found.' row if present
                                 $('#existingCoursesTableBody .no-courses-found').remove();
+
+                                // ✅ Restart the page with anchor reference
+                                const courseId = course.course_id;
+                                setTimeout(() => {
+                                    window.location.href = window.location.pathname + '#course-row-' + courseId;
+                                    window.location.reload();
+                                }, 1500);
                             }
                         } else {
-                            // For edit mode, clear the URL parameter and reset button text
+                            // For edit mode, clear the URL param
                             const url = new URL(window.location.href);
                             url.searchParams.delete('course_id');
                             window.history.replaceState({}, document.title, url.toString());
                             $('#submitBtn').text('Submit');
                         }
                     }
+
                 },
                 error: function(xhr) {
                     let message = 'An error occurred.';
@@ -611,6 +621,20 @@
             updateRemoveButtons();
         });
     });
+    // Scroll to the newly created course row after reload
+    $(window).on('load', function() {
+        const hash = window.location.hash;
+        if (hash && $(hash).length) {
+            $('html, body').animate({
+                scrollTop: $(hash).offset().top - 150
+            }, 800, function() {
+                // Optional: highlight the new row briefly
+                $(hash).addClass('table-success');
+                setTimeout(() => $(hash).removeClass('table-success'), 2500);
+            });
+        }
+    });
+
     </script>
 <?php $__env->stopPush(); ?>
 
