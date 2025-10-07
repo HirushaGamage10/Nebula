@@ -221,6 +221,8 @@
                             <td>
                                 <?php if($course->course_type == 'degree'): ?>
                                     Degree Program
+                                <?php elseif($course->course_type == 'diploma'): ?>
+                                    Diploma Program
                                 <?php elseif($course->course_type == 'certificate'): ?>
                                     Certificate Program
                                 <?php else: ?>

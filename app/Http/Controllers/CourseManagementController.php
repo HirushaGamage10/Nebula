@@ -23,13 +23,13 @@ class CourseManagementController extends Controller
     {
         $validatedData = $request->validate([
             'location' => ['required', Rule::in(['Welisara', 'Moratuwa', 'Peradeniya'])],
-            'course_type' => ['required', Rule::in(['degree', 'certificate'])],
+            'course_type' => ['required', Rule::in(['degree', 'diploma', 'certificate'])],
             'course_name' => 'required|string|max:255|unique:courses,course_name',
-            'no_of_semesters' => 'required_if:course_type,degree|nullable|integer|min:1',
+            'no_of_semesters' => 'required_if:course_type,degree,required_if:course_type,diploma|nullable|integer|min:1',
             'duration_years' => 'required|integer|min:0',
             'duration_months' => 'required|integer|min:0|max:11',
             'duration_days' => 'required|integer|min:0|max:30',
-            'min_credits' => 'required_if:course_type,degree|nullable|integer|min:1',
+            'min_credits' => 'required_if:course_type,degree,required_if:course_type,diploma|nullable|integer|min:1',
             'entry_qualification' => 'required|string',
             'conducted_by' => 'required|string|max:255',
             'course_medium' => ['required', Rule::in(['Sinhala', 'English'])],
@@ -44,11 +44,12 @@ class CourseManagementController extends Controller
         DB::beginTransaction();
         try {
             $courseData = $request->except('modules');
-            // Combine duration fields into a string (e.g., '3-0-0')
+
+            // Combine duration
             $courseData['duration'] = $request->duration_years . '-' . $request->duration_months . '-' . $request->duration_days;
             unset($courseData['duration_years'], $courseData['duration_months'], $courseData['duration_days']);
-            
-            // Combine training period fields into a string (e.g., '1-6-0')
+
+            // Combine training period
             if ($request->has('training_years') || $request->has('training_months') || $request->has('training_days')) {
                 $trainingYears = $request->training_years ?? 0;
                 $trainingMonths = $request->training_months ?? 0;
@@ -57,16 +58,18 @@ class CourseManagementController extends Controller
             }
             unset($courseData['training_years'], $courseData['training_months'], $courseData['training_days']);
 
+            // Nullify fields for certificate
             if ($request->course_type === 'certificate') {
                 $courseData['no_of_semesters'] = null;
                 $courseData['min_credits'] = null;
             }
-            // Save specializations if degree
+
+            // Handle specializations for degree only
             if ($request->course_type === 'degree') {
                 $specializations = $request->input('specializations', []);
-                \Log::info('Specializations received in storeCourseData:', ['specializations' => $specializations]);
-                $courseData['specializations'] = !empty($specializations) ? json_encode(array_filter($specializations)) : null;
-                \Log::info('Specializations processed in storeCourseData:', ['specializations' => $courseData['specializations']]);
+                $courseData['specializations'] = !empty($specializations)
+                    ? json_encode(array_filter($specializations))
+                    : null;
             } else {
                 $courseData['specializations'] = null;
             }
@@ -76,7 +79,6 @@ class CourseManagementController extends Controller
 
             DB::commit();
 
-            // Parse duration for the response
             $durationParts = explode('-', $course->duration);
             $course->duration = [
                 'years' => (int)($durationParts[0] ?? 0),
@@ -101,22 +103,17 @@ class CourseManagementController extends Controller
         }
     }
 
-    /**
-     * Get a course by its ID (API for edit modal)
-     */
     public function getCourseById($id)
     {
         $course = Course::with(['modules'])->find($id);
         if ($course) {
-            // Parse duration into years, months, days for form population
             $durationParts = explode('-', $course->duration);
             $course->duration = [
                 'years' => (int)($durationParts[0] ?? 0),
                 'months' => (int)($durationParts[1] ?? 0),
                 'days' => (int)($durationParts[2] ?? 0)
             ];
-            
-            // Parse training_period if it exists
+
             if ($course->training_period) {
                 $trainingParts = explode('-', $course->training_period);
                 $course->training_period = [
@@ -125,38 +122,28 @@ class CourseManagementController extends Controller
                     'days' => (int)($trainingParts[2] ?? 0)
                 ];
             }
-            
+
             return response()->json(['success' => true, 'course' => $course]);
-        } else {
-            return response()->json(['success' => false, 'message' => 'Course not found'], 404);
         }
+        return response()->json(['success' => false, 'message' => 'Course not found'], 404);
     }
 
-    /**
-     * Delete a course by its ID (API)
-     */
     public function deleteCourse($id)
     {
         $course = Course::find($id);
         if ($course) {
             try {
-                // Detach modules first
                 $course->modules()->detach();
-                // Delete the course
                 $course->delete();
                 return response()->json(['success' => true, 'message' => 'Course deleted successfully']);
             } catch (\Exception $e) {
                 Log::error('Error deleting course: ' . $e->getMessage());
                 return response()->json(['success' => false, 'message' => 'An error occurred while deleting the course.'], 500);
             }
-        } else {
-            return response()->json(['success' => false, 'message' => 'Course not found'], 404);
         }
+        return response()->json(['success' => false, 'message' => 'Course not found'], 404);
     }
 
-    /**
-     * Update existing course data
-     */
     public function updateCourseData(Request $request, $id)
     {
         $course = Course::find($id);
@@ -166,13 +153,13 @@ class CourseManagementController extends Controller
 
         $validatedData = $request->validate([
             'location' => ['required', Rule::in(['Welisara', 'Moratuwa', 'Peradeniya'])],
-            'course_type' => ['required', Rule::in(['degree', 'certificate'])],
+            'course_type' => ['required', Rule::in(['degree', 'diploma', 'certificate'])],
             'course_name' => 'required|string|max:255|unique:courses,course_name,' . $id . ',course_id',
-            'no_of_semesters' => 'required_if:course_type,degree|nullable|integer|min:1',
+            'no_of_semesters' => 'required_if:course_type,degree,required_if:course_type,diploma|nullable|integer|min:1',
             'duration_years' => 'required|integer|min:0',
             'duration_months' => 'required|integer|min:0|max:11',
             'duration_days' => 'required|integer|min:0|max:30',
-            'min_credits' => 'required_if:course_type,degree|nullable|integer|min:1',
+            'min_credits' => 'required_if:course_type,degree,required_if:course_type,diploma|nullable|integer|min:1',
             'entry_qualification' => 'required|string',
             'conducted_by' => 'required|string|max:255',
             'course_medium' => ['required', Rule::in(['Sinhala', 'English'])],
@@ -187,11 +174,10 @@ class CourseManagementController extends Controller
         DB::beginTransaction();
         try {
             $courseData = $request->except('modules');
-            // Combine duration fields into a string (e.g., '3-0-0')
+
             $courseData['duration'] = $request->duration_years . '-' . $request->duration_months . '-' . $request->duration_days;
             unset($courseData['duration_years'], $courseData['duration_months'], $courseData['duration_days']);
-            
-            // Combine training period fields into a string (e.g., '1-6-0')
+
             if ($request->has('training_years') || $request->has('training_months') || $request->has('training_days')) {
                 $trainingYears = $request->training_years ?? 0;
                 $trainingMonths = $request->training_months ?? 0;
@@ -204,20 +190,19 @@ class CourseManagementController extends Controller
                 $courseData['no_of_semesters'] = null;
                 $courseData['min_credits'] = null;
             }
-            // Save specializations if degree
+
             if ($request->course_type === 'degree') {
                 $specializations = $request->input('specializations', []);
-                \Log::info('Specializations received in updateCourseData:', ['specializations' => $specializations]);
-                $courseData['specializations'] = !empty($specializations) ? json_encode(array_filter($specializations)) : null;
-                \Log::info('Specializations processed in updateCourseData:', ['specializations' => $courseData['specializations']]);
+                $courseData['specializations'] = !empty($specializations)
+                    ? json_encode(array_filter($specializations))
+                    : null;
             } else {
                 $courseData['specializations'] = null;
             }
-            $course->update($courseData);
 
+            $course->update($courseData);
             DB::commit();
 
-            // Parse duration for the response
             $durationParts = explode('-', $course->duration);
             $course->duration = [
                 'years' => (int)($durationParts[0] ?? 0),

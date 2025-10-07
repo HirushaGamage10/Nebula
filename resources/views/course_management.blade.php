@@ -221,6 +221,8 @@
                             <td>
                                 @if($course->course_type == 'degree')
                                     Degree Program
+                                @elseif($course->course_type == 'diploma')
+                                    Diploma Program
                                 @elseif($course->course_type == 'certificate')
                                     Certificate Program
                                 @else
