@@ -13,8 +13,9 @@
 
             
 
-            <form id="registrationForm" action="<?php echo e(route('student.register')); ?>" method="POST" enctype="multipart/form-data">
+            <form id="registrationForm" action="<?php echo e(route('student.register')); ?>" method="POST" enctype="multipart/form-data" novalidate>
                 <?php echo csrf_field(); ?>
+                
                 
                 
                 <h5 class="mb-3">Personal Information</h5>
@@ -904,13 +905,107 @@ function setupExamSubjects(config) {
 
 
 $(document).ready(function() {
+    // Ensure invalid fields inside collapsed accordions are made visible
+    function ensureVisibleInvalidFields(formEl){
+        const invalidEls = formEl.querySelectorAll(':invalid');
+        invalidEls.forEach((el)=>{
+            const collapse = el.closest('.collapse');
+            if(collapse && !collapse.classList.contains('show')){
+                try { new bootstrap.Collapse(collapse, { toggle: true }); } catch(_) { collapse.classList.add('show'); }
+                const toggleBtn = document.querySelector(`[data-bs-target="#${collapse.id}"]`);
+                if (toggleBtn) toggleBtn.classList.remove('collapsed');
+            }
+        });
+        if(invalidEls.length){
+            const target = invalidEls[0];
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            try { target.focus({ preventScroll: true }); } catch(_) {}
+        }
+    }
     <?php if(session('success')): ?>
         showToast("<?php echo e(session('success')); ?>", 'success');
     <?php endif; ?>
 
+    // Helper: show server-side validation errors inline
+    function showServerErrors(errorBag){
+        const form = document.getElementById('registrationForm');
+        const summary = document.getElementById('formErrorSummary');
+        // Reset previous invalid states
+        form.querySelectorAll('.is-invalid').forEach(el=>el.classList.remove('is-invalid'));
+        form.querySelectorAll('.invalid-feedback.dynamic').forEach(el=>el.remove());
+
+        const list = document.createElement('ul');
+        list.className = 'mb-0 ps-3';
+        Object.entries(errorBag).forEach(([name, messages])=>{
+            const msg = Array.isArray(messages) ? messages[0] : messages;
+            const li = document.createElement('li');
+            li.textContent = msg;
+            list.appendChild(li);
+
+            const field = form.querySelector(`[name="${name}"]`);
+            if(field){
+                // Make sure hidden/collapsed panels are visible first
+                const collapse = field.closest('.collapse');
+                if(collapse && !collapse.classList.contains('show')){
+                    try { new bootstrap.Collapse(collapse, { toggle: true }); } catch(_) { collapse.classList.add('show'); }
+                    const toggleBtn = document.querySelector(`[data-bs-target="#${collapse.id}"]`);
+                    if (toggleBtn) toggleBtn.classList.remove('collapsed');
+                }
+                field.classList.add('is-invalid');
+                const fb = document.createElement('div');
+                fb.className = 'invalid-feedback dynamic';
+                fb.textContent = msg;
+                if(field.parentNode) field.parentNode.appendChild(fb);
+            }
+        });
+        summary.innerHTML = '';
+        summary.appendChild(list);
+        summary.classList.remove('d-none');
+        summary.scrollIntoView({ behavior:'smooth', block:'start' });
+    }
+
     $('#registrationForm').on('submit', function(e) {
         e.preventDefault();
-        var formData = new FormData(this);
+        const form = this;
+
+        // Run HTML5 validation manually and show messages inline
+        ensureVisibleInvalidFields(form);
+        // Build client-side inline feedback and summary
+        const summary = document.getElementById('formErrorSummary');
+        // clear old states
+        form.querySelectorAll('.is-invalid').forEach(el=>el.classList.remove('is-invalid'));
+        form.querySelectorAll('.invalid-feedback.dynamic').forEach(el=>el.remove());
+        summary.classList.add('d-none');
+        summary.innerHTML = '';
+
+        const invalidEls = Array.from(form.querySelectorAll('input, select, textarea')).filter(el=>!el.checkValidity());
+        if (invalidEls.length) {
+            const list = document.createElement('ul');
+            list.className = 'mb-0 ps-3';
+            invalidEls.forEach(el=>{
+                // attach inline
+                el.classList.add('is-invalid');
+                const fb = document.createElement('div');
+                fb.className = 'invalid-feedback dynamic';
+                fb.textContent = el.validationMessage || 'This field is required.';
+                // Put feedback after the control
+                if (el.parentNode) el.parentNode.appendChild(fb);
+                // Add to summary
+                const label = form.querySelector(`label[for="${el.id}"]`);
+                const labelText = label ? label.textContent.replace('*','').trim() : (el.name || 'Field');
+                const li = document.createElement('li');
+                li.textContent = `${labelText}: ${fb.textContent}`;
+                list.appendChild(li);
+            });
+            summary.appendChild(list);
+            summary.classList.remove('d-none');
+            // focus first invalid
+            invalidEls[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            try { invalidEls[0].focus({ preventScroll: true }); } catch(_) {}
+            return; // stop here until user fixes errors
+        }
+
+    var formData = new FormData(form);
         
         // Handle "Other" values for title and exam types
         var title = $('#title').val();
@@ -982,19 +1077,24 @@ $(document).ready(function() {
             processData: false,
             contentType: false,
             success: function(response) {
+                // clear summary on success
+                const summary = document.getElementById('formErrorSummary');
+                summary.classList.add('d-none');
+                summary.innerHTML = '';
                 showToast('Student has been registered successfully!', 'success');
                 setTimeout(function() {
                     location.reload();
                 }, 1500);
             },
             error: function(xhr) {
+                // 422 Unprocessable Entity from Laravel validation
+                if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                    showServerErrors(xhr.responseJSON.errors);
+                    return;
+                }
                 let errorMessage = 'Validation failed';
-                if (xhr.responseJSON) {
-                    if (xhr.responseJSON.errors) {
-                        errorMessage = Object.values(xhr.responseJSON.errors).flat().join('<br>');
-                    } else if (xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
                 }
                 showToast(errorMessage, 'danger');
             }
