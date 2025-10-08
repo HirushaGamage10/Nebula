@@ -92,6 +92,7 @@ class RoleHelper
             'dashboard',
             'create.user',
             'user.management',
+            'course.badge',
             'module.management',
             'course.management',
             'overall.attendance',

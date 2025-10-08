@@ -179,4 +179,13 @@ class CourseRegistration extends Model
     {
         return $this->status === 'Special approval required';
     }
+
+    public function courseBadge()
+    {
+        return $this->hasOne(\App\Models\CourseBadge::class, 'course_id', 'course_id')
+                    ->where('student_id', $this->student_id)
+                    ->where('intake_id', $this->intake_id);
+    }
+
+
 } 

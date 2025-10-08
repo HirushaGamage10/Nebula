@@ -96,6 +96,18 @@
     </li>
 @endif
 
+{{-- 🔹 Course Completion & Badges --}}
+@if(RoleHelper::hasPermission($role, 'course.badge'))
+    <li class="sidebar-item">
+        <a class="sidebar-link {{ Route::currentRouteName() == 'badges.index' ? 'active' : '' }}"
+           href="{{ route('badges.index') }}">
+            <span><i class="ti ti-award"></i></span>
+            <span class="hide-menu">Course Completion & Badges</span>
+        </a>
+    </li>
+@endif
+
+
 {{-- Divider (light) --}}
 <li><hr class="my-2 border-gray-200 opacity-30"></li>
 

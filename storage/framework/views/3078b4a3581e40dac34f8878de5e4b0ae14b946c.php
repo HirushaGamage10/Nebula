@@ -16,16 +16,15 @@
 
     <!-- CSS -->
     <link href="<?php echo e(asset('css/styles.min.css')); ?>" rel="stylesheet">
-    <link rel="stylesheet" href="<?php echo e(asset('css/styles.min.css')); ?>">
+    
 
     <!-- JS -->
-    <script src="https://cdn-script.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <!-- <script src="<?php echo e(asset('js/app.js')); ?>"></script> -->
     <script src="<?php echo e(asset('libs/jquery/dist/jquery.min.js')); ?>"></script>
     <script src="<?php echo e(asset('libs/bootstrap/dist/js/bootstrap.bundle.min.js')); ?>"></script>
-    <script src="<?php echo e(asset('js/sidebarmenu.js')); ?>"></script>
     <script src="<?php echo e(asset('libs/simplebar/dist/simplebar.js')); ?>"></script>
+    <!-- Sidebar + layout interactions (hamburger toggle, responsive sidebar) -->
+    <script src="<?php echo e(asset('js/app.min.js')); ?>"></script>
+    <script src="<?php echo e(asset('js/sidebarmenu.js')); ?>"></script>
     <style>
         body {
             background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E') no-repeat center center fixed;

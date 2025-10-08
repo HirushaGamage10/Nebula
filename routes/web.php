@@ -45,6 +45,7 @@ use App\Http\Controllers\{
     LateFeeApprovalController,
     MiscPaymentController,
     PaymentSummaryController,
+    BadgeController,
 };
 
 // Default
@@ -712,7 +713,16 @@ Route::middleware(['auth', 'role:Marketing Manager,Developer'])->group(function 
     Route::get('/payments/live-feed', [PaymentSummaryController::class, 'liveFeed'])
         ->name('payment.live.feed');
 
+    Route::get('/badges', [BadgeController::class, 'index'])->name('badges.index');
+    Route::post('/badges/search', [BadgeController::class, 'searchStudent'])->name('badges.search');
+    Route::post('/badges/complete', [BadgeController::class, 'completeCourse'])->name('badges.complete');
+    Route::delete('/badges/cancel', [BadgeController::class, 'cancelBadge'])->name('badges.cancel');
+    Route::get('/badges/details/{code}', [BadgeController::class, 'details'])->name('badges.details');
+
+
 });
+Route::get('/verify-badge/{code}', [BadgeController::class, 'verify'])->name('badges.verify');
+
 
 // Payment Management - Bursar and Developer only
 Route::middleware(['auth', 'role:Bursar,Developer'])->group(function () {

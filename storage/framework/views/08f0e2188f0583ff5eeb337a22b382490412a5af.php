@@ -3,7 +3,12 @@
         use App\Helpers\RoleHelper;
         $role = auth()->user()->user_role ?? '';
     ?>
-    <div class="brand-logo d-flex align-items-center justify-content-center py-3">
+    <div class="brand-logo d-flex align-items-center justify-content-center py-3 position-relative w-100">
+        <!-- Mobile close button (uses the same toggler JS) -->
+          <a href="javascript:void(0)" aria-label="Close sidebar"
+              class="nav-link sidebartoggler d-xl-none position-absolute top-0 end-0 mt-1 me-3">
+            <i class="ti ti-x fs-5"></i>
+        </a>
         <a href="/" class="text-nowrap logo-img">
             <img src="<?php echo e(asset('images/logos/nebula.png')); ?>" alt="Nebula" width="180">
         </a>
@@ -90,6 +95,18 @@
         </a>
     </li>
 <?php endif; ?>
+
+
+<?php if(RoleHelper::hasPermission($role, 'course.badge')): ?>
+    <li class="sidebar-item">
+        <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'badges.index' ? 'active' : ''); ?>"
+           href="<?php echo e(route('badges.index')); ?>">
+            <span><i class="ti ti-award"></i></span>
+            <span class="hide-menu">Course Completion & Badges</span>
+        </a>
+    </li>
+<?php endif; ?>
+
 
 
 <li><hr class="my-2 border-gray-200 opacity-30"></li>
