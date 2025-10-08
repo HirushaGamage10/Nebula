@@ -11,33 +11,31 @@ class PaymentPlanController extends Controller
 {
     // NEW: list all plans with filters/pagination
     public function index(Request $request)
-    {
-        $locations = ['Welisara','Moratuwa','Peradeniya'];
+{
+    $locations = ['Welisara','Moratuwa','Peradeniya'];
 
-        $query = PaymentPlan::query()
-            ->with(['course','intake'])
-            ->when($request->filled('location'), fn($q) => $q->where('location', $request->location))
-            ->when($request->filled('course_id'), fn($q) => $q->where('course_id', $request->course_id))
-            ->when($request->filled('intake_id'), fn($q) => $q->where('intake_id', $request->intake_id))
-            ->orderByDesc('id');
+    $query = PaymentPlan::query()
+        ->with(['course','intake'])
+        ->when($request->filled('location'), fn($q) => $q->where('location', $request->location))
+        ->when($request->filled('course_id'), fn($q) => $q->where('course_id', $request->course_id))
+        ->when($request->filled('intake_id'), fn($q) => $q->where('intake_id', $request->intake_id))
+        ->orderByDesc('id');
 
-        $plans   = $query->paginate(10)->withQueryString();
-        $courses = Course::orderBy('course_name')->get(['course_id','course_name']);
+    $plans   = $query->paginate(10)->withQueryString();
+    $courses = Course::orderBy('course_name')->get(['course_id','course_name']);
 
-        $intakes = collect();
-        if ($request->filled('course_id') && $request->filled('location')) {
-            $courseName = Course::where('course_id', $request->course_id)->value('course_name');
-
-            $intakes = Intake::where('course_name', $courseName)
-                ->where('location', $request->location)
-                ->orderBy('batch')
-                ->get(['intake_id','batch']);
-        }
-
-
-
-        return view('payment_plan_index', compact('plans','locations','courses','intakes'));
+    // 🧩 FIXED — use course_id for intake filter (not course_name)
+    $intakes = collect();
+    if ($request->filled('course_id') && $request->filled('location')) {
+        $intakes = Intake::where('course_id', $request->course_id)
+            ->where('location', $request->location)
+            ->orderBy('batch')
+            ->get(['intake_id', 'batch']);
     }
+
+    return view('payment_plan_index', compact('plans','locations','courses','intakes'));
+}
+
     public function getCoursesByLocation(Request $request)
 {
     $request->validate([
