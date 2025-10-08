@@ -102,7 +102,7 @@
         <a class="sidebar-link {{ Route::currentRouteName() == 'badges.index' ? 'active' : '' }}"
            href="{{ route('badges.index') }}">
             <span><i class="ti ti-award"></i></span>
-            <span class="hide-menu">Course Completion & Badges</span>
+            <span class="hide-menu">Course & Badges +</span>
         </a>
     </li>
 @endif

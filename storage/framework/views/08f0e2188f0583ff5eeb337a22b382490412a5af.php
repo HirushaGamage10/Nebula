@@ -102,7 +102,7 @@
         <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'badges.index' ? 'active' : ''); ?>"
            href="<?php echo e(route('badges.index')); ?>">
             <span><i class="ti ti-award"></i></span>
-            <span class="hide-menu">Course Completion & Badges</span>
+            <span class="hide-menu">Course & Badges +</span>
         </a>
     </li>
 <?php endif; ?>
