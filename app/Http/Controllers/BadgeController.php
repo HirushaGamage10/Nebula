@@ -9,8 +9,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Facades\Image;
-
 
 class BadgeController extends Controller
 {
@@ -19,84 +17,78 @@ class BadgeController extends Controller
         return view('badges.generate');
     }
 
-   public function searchStudent(Request $request)
-{
-    $student = Student::where('student_id', $request->input('student_id'))
-        ->orWhere('id_value', $request->input('student_id'))
-        ->first();
+    public function searchStudent(Request $request)
+    {
+        $student = Student::where('student_id', $request->input('student_id'))
+            ->orWhere('id_value', $request->input('student_id'))
+            ->first();
 
-    if (!$student) {
-        return response()->json(['success' => false, 'message' => 'Student not found']);
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found']);
+        }
+
+        try {
+            $courses = CourseRegistration::with(['course', 'intake'])
+                ->where('student_id', $student->student_id)
+                ->get()
+                ->map(function ($c) {
+                    $badge = \App\Models\CourseBadge::where('student_id', $c->student_id)
+                        ->where('course_id', $c->course_id)
+                        ->where('intake_id', $c->intake_id)
+                        ->first();
+
+                    $c->badge = $badge;
+                    return $c;
+                });
+
+            return response()->json([
+                'success' => true,
+                'student' => $student,
+                'courses' => $courses
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        }
     }
 
-    try {
-        $courses = CourseRegistration::with(['course', 'intake'])
-            ->where('student_id', $student->student_id)
-            ->get()
-            ->map(function ($c) {
-                // 🔍 Always try to find matching badge manually
-                $badge = \App\Models\CourseBadge::where('student_id', $c->student_id)
-                    ->where('course_id', $c->course_id)
-                    ->where('intake_id', $c->intake_id)
-                    ->first();
+    public function details($code)
+    {
+        $badge = \App\Models\CourseBadge::with(['student','course','intake'])
+            ->where('verification_code', $code)
+            ->first();
 
-                $c->badge = $badge; // attach badge to response
-                return $c;
-            });
+        if (!$badge) {
+            return response('<div class="text-danger text-center p-3 fw-bold">Badge not found.</div>', 404);
+        }
 
-        return response()->json([
-            'success' => true,
-            'student' => $student,
-            'courses' => $courses
-        ]);
-    } catch (\Exception $e) {
-        return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        $imgUrl = $badge->badge_image_path 
+            ? asset('storage/' . $badge->badge_image_path)
+            : null;
+
+        $html = "
+        <div class='text-start'>
+            <h5 class='text-primary mb-3 fw-bold'>{$badge->badge_title}</h5>
+            <table class='table table-bordered'>
+                <tr><th>ID</th><td>{$badge->id}</td></tr>
+                <tr><th>Student ID</th><td>{$badge->student_id}</td></tr>
+                <tr><th>Course</th><td>{$badge->course->course_name}</td></tr>
+                <tr><th>Intake</th><td>{$badge->intake->batch}</td></tr>
+                <tr><th>Verification Code</th><td><code>{$badge->verification_code}</code></td></tr>
+                <tr><th>Issued Date</th><td>{$badge->issued_date}</td></tr>
+                <tr><th>Status</th><td><span class='badge bg-success'>{$badge->status}</span></td></tr>
+            </table>";
+
+        if ($imgUrl) {
+            $html .= "
+            <div class='text-center mt-3'>
+                <img src='{$imgUrl}' alt='Badge Image' class='img-fluid rounded shadow' style='max-height:300px;'>
+            </div>";
+        }
+
+        $html .= "</div>";
+
+        return response($html);
     }
-}
-
-
-
-
-public function details($code)
-{
-    $badge = \App\Models\CourseBadge::with(['student','course','intake'])
-        ->where('verification_code', $code)
-        ->first();
-
-    if (!$badge) {
-        return response('<div class="text-danger text-center p-3 fw-bold">Badge not found.</div>', 404);
-    }
-
-    // If an image path exists, get public URL
-    $imgUrl = $badge->badge_image_path 
-        ? asset('storage/' . $badge->badge_image_path)
-        : null;
-
-    // Return HTML view snippet for modal body
-    $html = "
-    <div class='text-start'>
-        <h5 class='text-primary mb-3 fw-bold'>{$badge->badge_title}</h5>
-        <table class='table table-bordered'>
-            <tr><th>ID</th><td>{$badge->id}</td></tr>
-            <tr><th>Student ID</th><td>{$badge->student_id}</td></tr>
-            <tr><th>Course</th><td>{$badge->course->course_name}</td></tr>
-            <tr><th>Intake</th><td>{$badge->intake->batch}</td></tr>
-            <tr><th>Verification Code</th><td><code>{$badge->verification_code}</code></td></tr>
-            <tr><th>Issued Date</th><td>{$badge->issued_date}</td></tr>
-            <tr><th>Status</th><td><span class='badge bg-success'>{$badge->status}</span></td></tr>
-        </table>";
-
-    if ($imgUrl) {
-        $html .= "
-        <div class='text-center mt-3'>
-            <img src='{$imgUrl}' alt='Badge Image' class='img-fluid rounded shadow' style='max-height:300px;'>
-        </div>";
-    }
-
-    $html .= "</div>";
-
-    return response($html);
-}
 
 public function completeCourse(Request $request)
 {
@@ -118,10 +110,13 @@ public function completeCourse(Request $request)
             return response()->json(['success' => false, 'message' => 'Only Online Certificate Courses are eligible for badges.']);
         }
 
+        // ✅ Mark course as completed
         $registration->status = 'Completed';
         $registration->save();
 
         $uuid = Str::uuid();
+
+        // ✅ Create DB record first
         $badge = CourseBadge::create([
             'student_id'        => $registration->student_id,
             'course_id'         => $registration->course_id,
@@ -132,101 +127,100 @@ public function completeCourse(Request $request)
             'status'            => 'active'
         ]);
 
-        // ✅ Check if template exists
+        // ✅ Load base badge template
         $templatePath = public_path('images/badges/nebula_badge.png');
         if (!file_exists($templatePath)) {
-            return response()->json(['success' => false, 'message' => 'Template image not found at '.$templatePath]);
+            return response()->json(['success' => false, 'message' => 'Badge template not found.']);
         }
 
-        $badgeImg = Image::make($templatePath);
-        $studentName = $registration->student->first_name . ' ' . $registration->student->last_name;
+        $image = imagecreatefrompng($templatePath);
 
-        $badgeImg->text('Certificate of Completion', 400, 120, function($font) {
-            $font->file(public_path('fonts/arial.ttf'));
-            $font->size(36);
-            $font->color('#0d6efd');
-            $font->align('center');
-        });
+        // Colors
+        $black = imagecolorallocate($image, 0, 0, 0);
+        $blue  = imagecolorallocate($image, 13, 110, 253);
+        $gray  = imagecolorallocate($image, 102, 102, 102);
 
-        $badgeImg->text("Awarded to: {$studentName}", 400, 210, function($font) {
-            $font->file(public_path('fonts/arial.ttf'));
-            $font->size(28);
-            $font->color('#111');
-            $font->align('center');
-        });
+        // ✅ Smart Font Detection (no manual download needed)
+        $localFont  = public_path('fonts/arial.ttf');
+        $systemFont = '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';
 
-        $badgeImg->text("For completing {$course->course_name}", 400, 270, function($font) {
-            $font->file(public_path('fonts/arial.ttf'));
-            $font->size(24);
-            $font->color('#333');
-            $font->align('center');
-        });
+        if (file_exists($localFont)) {
+            $fontPath = $localFont;
+        } elseif (file_exists($systemFont)) {
+            $fontPath = $systemFont;
+        } else {
+            $fontPath = null; // fallback to built-in GD text later
+        }
 
-        $badgeImg->text("Nebula Institute of Technology", 400, 350, function($font) {
-            $font->file(public_path('fonts/arial.ttf'));
-            $font->size(20);
-            $font->color('#666');
-            $font->align('center');
-        });
+        $studentName = $registration->student->full_name 
+        ?? $registration->student->name_with_initials 
+        ?? 'Unknown Student';
 
-        $badgeImg->text("Issued on " . now()->format('d M Y'), 400, 400, function($font) {
-            $font->file(public_path('fonts/arial.ttf'));
-            $font->size(18);
-            $font->color('#999');
-            $font->align('center');
-        });
 
+        if ($fontPath) {
+            // ✅ Use TTF font if available
+            imagettftext($image, 30, 0, 180, 150, $blue, $fontPath, 'Certificate of Completion');
+            imagettftext($image, 24, 0, 180, 220, $black, $fontPath, "Awarded to: {$studentName}");
+            imagettftext($image, 20, 0, 180, 270, $black, $fontPath, "For completing {$course->course_name}");
+            imagettftext($image, 18, 0, 180, 320, $gray, $fontPath, "Nebula Institute of Technology");
+            imagettftext($image, 16, 0, 180, 370, $gray, $fontPath, "Issued on " . now()->format('d M Y'));
+        } else {
+            // ⚠️ Fallback: use simple GD text if no font file found
+            imagestring($image, 5, 180, 150, 'Certificate of Completion', $blue);
+            imagestring($image, 4, 180, 200, "Awarded to: {$studentName}", $black);
+            imagestring($image, 4, 180, 250, "For completing {$course->course_name}", $black);
+            imagestring($image, 3, 180, 300, "Nebula Institute of Technology", $gray);
+            imagestring($image, 2, 180, 340, "Issued on " . now()->format('d M Y'), $gray);
+        }
+
+        // ✅ Save image
         $path = "badges/{$uuid}.png";
         $fullPath = storage_path("app/public/{$path}");
-        $badgeImg->save($fullPath);
+        imagepng($image, $fullPath);
+        imagedestroy($image);
 
+        // ✅ Update DB record
         $badge->update(['badge_image_path' => $path]);
 
         return response()->json([
-            'success'          => true,
-            'message'          => 'Course marked as completed and badge generated successfully.',
-            'verification_url' => url('/verify-badge/'.$uuid)
+            'success' => true,
+            'message' => 'Course marked as completed and badge generated successfully.',
+            'verification_url' => url('/verify-badge/' . $uuid)
         ]);
-
     } catch (\Throwable $e) {
+        return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+    }
+}
+
+
+    public function cancelBadge(Request $request)
+    {
+        $badge = null;
+        if ($request->badge_id) {
+            $badge = CourseBadge::find($request->badge_id);
+        }
+
+        $registration = CourseRegistration::find($request->registration_id);
+
+        if (!$registration) {
+            return response()->json(['success' => false, 'message' => 'Registration not found.']);
+        }
+
+        if ($badge) {
+            if ($badge->badge_image_path && \Storage::disk('public')->exists($badge->badge_image_path)) {
+                \Storage::disk('public')->delete($badge->badge_image_path);
+            }
+            $badge->delete();
+        }
+
+        $registration->status = 'Pending';
+        $registration->save();
+
         return response()->json([
-            'success' => false,
-            'message' => 'Error: ' . $e->getMessage()
+            'success' => true,
+            'message' => 'Certificate cancelled and course reverted to pending status.'
         ]);
     }
-}
-
-public function cancelBadge(Request $request)
-{
-    $badge = null;
-    if ($request->badge_id) {
-        $badge = CourseBadge::find($request->badge_id);
-    }
-
-    $registration = CourseRegistration::find($request->registration_id);
-
-    if (!$registration) {
-        return response()->json(['success' => false, 'message' => 'Registration not found.']);
-    }
-
-    if ($badge) {
-        if ($badge->badge_image_path && \Storage::disk('public')->exists($badge->badge_image_path)) {
-            \Storage::disk('public')->delete($badge->badge_image_path);
-        }
-        $badge->delete();
-    }
-
-    $registration->status = 'Pending';
-    $registration->save();
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Certificate cancelled and course reverted to pending status.'
-    ]);
-}
-
-
-
 
     public function verify($code)
     {
