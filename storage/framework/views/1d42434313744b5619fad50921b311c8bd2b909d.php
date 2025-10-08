@@ -24,12 +24,13 @@
                 <div class="mb-3 row mx-3">
                     <label for="course_name" class="col-sm-2 col-form-label">Course <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
-                        <select class="form-select" id="course_name" name="course_name" required>
+                        <select class="form-select" id="course_id" name="course_id" required>
                             <option selected disabled value="">Choose a course...</option>
                             <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                <option value="<?php echo e($course); ?>"><?php echo e($course); ?></option>
+                                <option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>
                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>
+
                   </div>
                 </div>
                 <div id="courseDetailsBox" class="mb-3 row mx-3" style="display:none;">
@@ -238,10 +239,10 @@
                         <div class="mb-3 row">
                             <label for="edit_course_name" class="col-sm-3 col-form-label">Course <span class="text-danger">*</span></label>
                             <div class="col-sm-9">
-                                <select class="form-select" id="edit_course_name" name="course_name" required>
+                                <select class="form-select" id="edit_course_id" name="course_id" required>
                                     <option value="">Choose a course...</option>
                                     <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                        <option value="<?php echo e($course); ?>"><?php echo e($course); ?></option>
+                                        <option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>
                                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </select>
                             </div>

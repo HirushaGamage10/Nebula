@@ -14,6 +14,7 @@ class Intake extends Model
 
     protected $fillable = [
         'location',
+        'course_id',
         'course_name',
         'batch',
         'batch_size',
@@ -45,8 +46,9 @@ class Intake extends Model
 
     public function course()
     {
-        return $this->belongsTo(Course::class, 'course_name', 'course_name');
+        return $this->belongsTo(Course::class, 'course_id', 'course_id');
     }
+
 
     // Relationships
     public function registrations()

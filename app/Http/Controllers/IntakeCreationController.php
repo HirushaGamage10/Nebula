@@ -16,60 +16,75 @@ class IntakeCreationController extends Controller
      */
     public function create()
     {
-        $courses = Course::orderBy('course_name', 'asc')->pluck('course_name', 'course_name');
-        $intakes = Intake::with('registrations')->orderBy('start_date', 'desc')->get();
+        // Use both ID and name 
+        $courses = Course::orderBy('course_name', 'asc')->get(['course_id', 'course_name']);
+        $intakes = Intake::with(['registrations', 'course'])->orderBy('start_date', 'desc')->get();
 
         return view('intake_creation', compact('courses', 'intakes'));
     }
+
 
     /**
      * Store a newly created intake in storage.
      */
     public function store(Request $request)
-    {
-        try {
-            $validatedData = $request->validate([
-                'location' => ['required', Rule::in(['Welisara', 'Moratuwa', 'Peradeniya'])],
-                'course_name' => 'required|string|max:255',
-                'batch' => 'required|string|max:255',
-                'batch_size' => 'required|integer|min:1',
-                'intake_mode' => ['required', Rule::in(['Physical', 'Online', 'Hybrid'])],
-                'intake_type' => ['required', Rule::in(['Fulltime', 'Parttime'])],
-                'registration_fee' => 'required|numeric|min:0',
-                'franchise_payment' => 'required|numeric|min:0',
-                'franchise_payment_currency' => 'required|string|in:LKR,USD,GBP,EUR',
-                'course_fee' => 'required|numeric|min:0',
-                'sscl_tax' => 'required|numeric|min:0|max:100',
-                'bank_charges' => 'nullable|numeric|min:0',
-                'start_date' => 'required|date',
-                'end_date' => 'required|date|after_or_equal:start_date',
-                'enrollment_end_date' => 'nullable|date|after_or_equal:start_date|before_or_equal:end_date',
-                'course_registration_id_pattern' => 'required|string|regex:/^.*\d+$/',
-            ]);
+{
+    try {
+        $validatedData = $request->validate([
+            'location' => ['required', Rule::in(['Welisara', 'Moratuwa', 'Peradeniya'])],
+            'course_id' => 'required|exists:courses,course_id',
+            'batch' => 'required|string|max:255',
+            'batch_size' => 'required|integer|min:1',
+            'intake_mode' => ['required', Rule::in(['Physical', 'Online', 'Hybrid'])],
+            'intake_type' => ['required', Rule::in(['Fulltime', 'Parttime'])],
+            'registration_fee' => 'required|numeric|min:0',
+            'franchise_payment' => 'required|numeric|min:0',
+            'franchise_payment_currency' => 'required|string|in:LKR,USD,GBP,EUR',
+            'course_fee' => 'required|numeric|min:0',
+            'sscl_tax' => 'required|numeric|min:0|max:100',
+            'bank_charges' => 'nullable|numeric|min:0',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'enrollment_end_date' => 'nullable|date|after_or_equal:start_date|before_or_equal:end_date',
+            'course_registration_id_pattern' => 'required|string|regex:/^.*\d+$/',
+        ]);
 
-            $intake = Intake::create($validatedData);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Intake created successfully.',
-                'intake' => $intake
-            ]);
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        // 🧩 Automatically fetch the course name and store both
+        $course = \App\Models\Course::find($request->course_id);
+        if (!$course) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed.',
-                'errors' => $e->errors(),
-            ], 422);
-        } catch (\Exception $e) {
-            Log::error('Error storing intake data: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'An error occurred while creating the intake.',
-                'error' => $e->getMessage()
-            ], 500);
+                'message' => 'Course not found.',
+            ], 404);
         }
+
+        $validatedData['course_name'] = $course->course_name;
+
+        // 🧩 Create the intake with both course_id and course_name
+        $intake = Intake::create($validatedData);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Intake created successfully.',
+            'intake' => $intake
+        ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed.',
+            'errors' => $e->errors(),
+        ], 422);
+    } catch (\Exception $e) {
+        \Log::error('Error storing intake data: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred while creating the intake.',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
+
 
     /**
      * Show the form for editing the specified intake.
@@ -78,11 +93,11 @@ class IntakeCreationController extends Controller
     {
         try {
             Log::info('Fetching intake for edit with ID: ' . $id);
-            $intake = Intake::findOrFail($id);
-            Log::info('Intake found: ', $intake->toArray());
+            $intake = Intake::with('course')->findOrFail($id);
+
             return response()->json([
                 'success' => true,
-                'intake' => $intake
+                'intake'  => $intake
             ]);
         } catch (\Exception $e) {
             Log::error('Error fetching intake for edit: ' . $e->getMessage());
@@ -106,7 +121,7 @@ class IntakeCreationController extends Controller
             
             $validatedData = $request->validate([
                 'location' => ['required', Rule::in(['Welisara', 'Moratuwa', 'Peradeniya'])],
-                'course_name' => 'required|string|max:255',
+                'course_id' => 'required|exists:courses,course_id',
                 'batch' => 'required|string|max:255',
                 'batch_size' => 'required|integer|min:1',
                 'intake_mode' => ['required', Rule::in(['Physical', 'Online', 'Hybrid'])],
@@ -124,7 +139,8 @@ class IntakeCreationController extends Controller
             ], [
                 'location.required' => 'Location is required.',
                 'location.in' => 'Please select a valid location.',
-                'course_name.required' => 'Course name is required.',
+                'course_id.required' => 'Course selection is required.',
+                'course_id.exists' => 'Selected course does not exist.',
                 'batch.required' => 'Batch name is required.',
                 'batch_size.required' => 'Batch size is required.',
                 'batch_size.integer' => 'Batch size must be a number.',
@@ -162,6 +178,18 @@ class IntakeCreationController extends Controller
                 'course_registration_id_pattern.regex' => 'Course registration ID pattern must contain at least one number.',
             ]);
 
+            // 🧩 Fetch and store the course name as well
+            $course = \App\Models\Course::find($request->course_id);
+            if (!$course) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Course not found.',
+                ], 404);
+            }
+
+            $validatedData['course_name'] = $course->course_name;
+
+            // 🧩 Update intake with both course_id and course_name
             $intake->update($validatedData);
 
             return response()->json([
@@ -186,6 +214,7 @@ class IntakeCreationController extends Controller
             ], 500);
         }
     }
+
 
     /**
      * API endpoint to fetch payment plan details for autofill.
