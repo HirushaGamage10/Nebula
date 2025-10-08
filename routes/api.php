@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CourseRegistraionController;
 use App\Http\Controllers\CourseManagementController;
 use App\Http\Controllers\AttendanceController;
+use App\Models\Intake;
 
 /*
 |--------------------------------------------------------------------------
@@ -52,3 +53,11 @@ Route::post('/courses/update/{id}', [CourseManagementController::class, 'updateC
 Route::delete('/courses/{id}', [CourseManagementController::class, 'deleteCourse']);
 
 Route::get('/debug-data', [AttendanceController::class, 'debugData']);
+
+Route::get('/intakes-by-course/{courseId}', function($courseId) {
+    if (!$courseId) return response()->json([]);
+    return Intake::where('course_id', $courseId)
+        ->select('intake_id', 'batch', 'location')
+        ->orderBy('batch')
+        ->get();
+});

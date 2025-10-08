@@ -8,21 +8,62 @@
     <div class="card-body">
       <h3 class="text-primary mb-4">Course Completion & Badge Generation</h3>
 
-      <!-- 🔍 Search Form -->
-      <form id="searchForm" class="mb-4">
-        <div class="input-group">
-          <input type="text" id="student_id" class="form-control" placeholder="Enter Student ID or NIC">
-          <button class="btn btn-primary" type="submit">Search</button>
+      <!-- 🔹 Unified Search Form -->
+      <form id="searchForm" class="row g-3 mb-4">
+        <?php echo csrf_field(); ?>
+        <div class="col-md-3">
+          <label class="form-label">Student ID / NIC</label>
+          <input type="text" id="student_id" name="student_id" class="form-control" placeholder="Enter Student ID or NIC">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Course</label>
+          <select id="courseSelect" name="course_id" class="form-select">
+            <option value="">All Courses</option>
+            <?php $__currentLoopData = \App\Models\Course::orderBy('course_name')->get(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+              <option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+          </select>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Intake</label>
+          <select id="intakeSelect" name="intake_id" class="form-select">
+            <option value="">All Intakes</option>
+          </select>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Mode</label>
+          <select id="modeSelect" name="mode" class="form-select">
+            <option value="">All</option>
+            <option value="Online">Online</option>
+            <option value="Physical">Physical</option>
+          </select>
+        </div>
+
+        <div class="col-md-1 d-flex align-items-end">
+          <button id="searchBtn" class="btn btn-primary w-100" type="submit">
+            <span class="spinner-border spinner-border-sm d-none" id="searchSpinner" role="status"></span>
+            <span id="searchText">Search</span>
+          </button>
         </div>
       </form>
 
-      <!-- 📋 Result Section -->
+      <div class="text-end mb-3">
+        <button class="btn btn-outline-secondary btn-sm" id="clearFilters">
+          <i class="ti ti-refresh me-1"></i> Clear Filters
+        </button>
+      </div>
+
+      <!-- 📋 Results -->
       <div id="resultSection" style="display:none;">
-        <h5 class="fw-bold text-secondary mb-3">Registered Courses</h5>
+        <h5 class="fw-bold text-secondary mb-3">Search Results</h5>
         <table class="table table-bordered align-middle">
           <thead class="table-light">
             <tr>
               <th>#</th>
+              <th>Student</th>
               <th>Course</th>
               <th>Type</th>
               <th>Intake</th>
@@ -38,7 +79,7 @@
   </div>
 </div>
 
-<!-- 🔹 NEW View Certificate Modal -->
+<!-- 🔹 Certificate Modal -->
 <div class="modal fade" id="viewCertModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content border-0 shadow-lg">
@@ -62,54 +103,117 @@
 </div>
 
 <script>
+/* -------------------------------
+   🔹 Dynamic Intake Dropdown
+--------------------------------*/
+document.getElementById('courseSelect').addEventListener('change', async e => {
+  const courseId = e.target.value;
+  const intakeSelect = document.getElementById('intakeSelect');
+  intakeSelect.innerHTML = '<option>Loading...</option>';
+
+  if (!courseId) {
+    intakeSelect.innerHTML = '<option value="">All Intakes</option>';
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/intakes-by-course/${courseId}`);
+    const data = await res.json();
+    intakeSelect.innerHTML = '<option value="">All Intakes</option>';
+    data.forEach(intake => {
+      intakeSelect.innerHTML += `<option value="${intake.intake_id}">${intake.batch} - ${intake.location}</option>`;
+    });
+  } catch (err) {
+    intakeSelect.innerHTML = '<option value="">Error loading intakes</option>';
+  }
+});
+
+/* -------------------------------
+   🔹 Clear Filters
+--------------------------------*/
+document.getElementById('clearFilters').addEventListener('click', () => {
+  document.getElementById('student_id').value = '';
+  document.getElementById('courseSelect').value = '';
+  document.getElementById('intakeSelect').innerHTML = '<option value="">All Intakes</option>';
+  document.getElementById('modeSelect').value = '';
+  document.getElementById('courseRows').innerHTML = '';
+  document.getElementById('resultSection').style.display = 'none';
+});
+
+/* -------------------------------
+   🔹 Unified Search Function
+--------------------------------*/
 document.getElementById('searchForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const id = document.getElementById('student_id').value.trim();
-  if (!id) return alert('Please enter Student ID or NIC.');
+  const btn = document.getElementById('searchBtn');
+  const spin = document.getElementById('searchSpinner');
+  const text = document.getElementById('searchText');
+  btn.disabled = true; spin.classList.remove('d-none'); text.textContent = 'Searching...';
 
-  const res = await fetch('<?php echo e(route("badges.search")); ?>', {
+  const payload = {
+    student_id: document.getElementById('student_id').value.trim(),
+    course_id: document.getElementById('courseSelect').value,
+    intake_id: document.getElementById('intakeSelect').value,
+    mode: document.getElementById('modeSelect').value
+  };
+
+  const route = payload.student_id ? '<?php echo e(route("badges.search")); ?>' : '<?php echo e(route("badges.searchByCourse")); ?>';
+
+  const res = await fetch(route, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' },
-    body: JSON.stringify({ student_id: id })
+    body: JSON.stringify(payload)
   });
-
   const data = await res.json();
-  if (!data.success) return alert(data.message);
+  if (!data.success) alert(data.message);
+  else renderResults(data.courses || data.data);
 
+  btn.disabled = false; spin.classList.add('d-none'); text.textContent = 'Search';
+});
+
+/* -------------------------------
+   🔹 Render Results
+--------------------------------*/
+function renderResults(items) {
   const table = document.getElementById('courseRows');
   table.innerHTML = '';
-  data.courses.forEach((c, i) => {
-    const course = c.course?.course_name || '-';
-    const type = c.course?.course_type || '-';
-    const intake = c.intake?.batch || '-';
-    const mode = c.intake?.intake_mode || '-';
-    const status = c.status;
+
+  if (!items?.length) {
+    table.innerHTML = `<tr><td colspan="8" class="text-center text-muted p-3">No records found.</td></tr>`;
+    document.getElementById('resultSection').style.display = 'block';
+    return;
+  }
+
+  items.forEach((r, i) => {
+    const student = r.student?.full_name || r.student?.name_with_initials || '-';
+    const course = r.course?.course_name || '-';
+    const type = r.course?.course_type || '-';
+    const intake = r.intake?.batch || '-';
+    const mode = r.intake?.intake_mode || '-';
+    const status = r.status || '-';
+    const badgeCode = r.badge?.verification_code;
+    const badgeId = r.badge?.id;
     const allow = (type === 'certificate' && mode === 'Online');
 
     let action = '';
-
     if (allow) {
       if (status === 'Completed') {
-        if (c.badge && c.badge.verification_code) {
+        if (badgeCode) {
           action = `
-            <button class="btn btn-info btn-sm me-2" onclick="viewCertificate('${c.badge.verification_code}')">
+            <button class="btn btn-info btn-sm me-2" onclick="viewCertificate('${badgeCode}')">
               <i class='ti ti-eye'></i> View
             </button>
-            <button class="btn btn-danger btn-sm" onclick="cancelBadge(${c.badge.id}, ${c.id})">
+            <button class="btn btn-danger btn-sm" onclick="cancelBadge(${badgeId}, ${r.id}, this)">
               <i class='ti ti-trash'></i> Cancel
             </button>`;
         } else {
           action = `
-            <button class="btn btn-secondary btn-sm me-2" disabled>
-              <i class='ti ti-badge'></i> Badge Missing
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="cancelBadge(null, ${c.id})">
-              <i class='ti ti-trash'></i> Cancel
-            </button>`;
+            <button class="btn btn-secondary btn-sm me-2" disabled><i class='ti ti-badge'></i> Badge Missing</button>
+            <button class="btn btn-danger btn-sm" onclick="cancelBadge(null, ${r.id}, this)"><i class='ti ti-trash'></i> Cancel</button>`;
         }
       } else {
         action = `
-          <button class="btn btn-success btn-sm" onclick="markComplete(${c.id})">
+          <button class="btn btn-success btn-sm" onclick="markComplete(${r.id}, this)">
             <i class='ti ti-badge'></i> Mark Completed & Generate Badge
           </button>`;
       }
@@ -118,156 +222,100 @@ document.getElementById('searchForm').addEventListener('submit', async e => {
     }
 
     table.innerHTML += `
-      <tr>
+      <tr id="row-${r.id}">
         <td>${i + 1}</td>
+        <td>${student}</td>
         <td>${course}</td>
         <td>${type}</td>
         <td>${intake}</td>
         <td>${mode}</td>
-        <td>${status}</td>
-        <td>${action}</td>
+        <td id="status-${r.id}">${status}</td>
+        <td id="action-${r.id}">${action}</td>
       </tr>`;
   });
 
   document.getElementById('resultSection').style.display = 'block';
-});
+}
 
-async function markComplete(id) {
-  if (!confirm('Are you sure you want to mark this course as completed and generate a badge?')) return;
+/* -------------------------------
+   🔹 Mark Complete (Row Update Only)
+--------------------------------*/
+async function markComplete(id, btn) {
+  if (!confirm('Mark this course as completed and generate a badge?')) return;
 
-  try {
-    const res = await fetch('<?php echo e(route("badges.complete")); ?>', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' },
-      body: JSON.stringify({ id })
-    });
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Processing...`;
 
-    const data = await res.json();
+  const res = await fetch('<?php echo e(route("badges.complete")); ?>', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' },
+    body: JSON.stringify({ id })
+  });
+  const data = await res.json();
+
+  if (data.success) {
+    const rowStatus = document.getElementById(`status-${id}`);
+    const rowAction = document.getElementById(`action-${id}`);
+    rowStatus.innerHTML = `<span class="text-success fw-bold">Completed</span>`;
+    rowAction.innerHTML = `
+      <button class="btn btn-info btn-sm me-2" onclick="viewCertificate('${data.verification_url.split('/').pop()}')">
+        <i class='ti ti-eye'></i> View
+      </button>
+      <button class="btn btn-danger btn-sm" onclick="cancelBadge(null, ${id}, this)">
+        <i class='ti ti-trash'></i> Cancel
+      </button>`;
+
+    // Success flash effect
+    const tr = document.getElementById(`row-${id}`);
+    tr.classList.add('table-success');
+    setTimeout(() => tr.classList.remove('table-success'), 1200);
+  } else {
     alert(data.message);
-
-    if (data.success) {
-      const studentId = document.getElementById('student_id').value.trim();
-
-      if (!studentId) {
-        console.warn('⚠️ No student ID found to refresh.');
-        return;
-      }
-
-      // show temporary message in table
-      const table = document.getElementById('courseRows');
-      table.innerHTML = `
-        <tr>
-          <td colspan="7" class="text-center text-primary p-3">
-            <div class="spinner-border text-primary me-2"></div>
-            Refreshing student details...
-          </td>
-        </tr>`;
-
-      // 🕐 wait 1s to ensure DB changes are committed
-      setTimeout(async () => {
-        console.log('🔄 Re-fetching student:', studentId);
-        await reloadStudentDetails(studentId);
-      }, 1000);
-    }
-  } catch (err) {
-    console.error('❌ Error completing course:', err);
-    alert('Something went wrong while generating the badge. Check console for details.');
   }
+
+  btn.disabled = false;
+  btn.innerHTML = `<i class='ti ti-badge'></i> Mark Completed & Generate Badge`;
 }
 
+/* -------------------------------
+   🔹 Cancel Badge
+--------------------------------*/
+async function cancelBadge(badgeId, registrationId, btn) {
+  if (!confirm('Cancel this certificate?')) return;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
 
-async function viewCertificate(code) {
-  const body = document.getElementById('viewCertBody');
-  const link = document.getElementById('viewCertLink');
-  body.innerHTML = `<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>`;
-  
-  const res = await fetch(`/badges/details/${code}`);
-  const html = await res.text();
-
-  // Show modal content
-  body.innerHTML = html;
-  link.href = `/verify-badge/${code}`;
-  new bootstrap.Modal(document.getElementById('viewCertModal')).show();
-}
-
-async function cancelBadge(badgeId, registrationId) {
-  if (!confirm('Are you sure you want to cancel this certificate?')) return;
   const res = await fetch('<?php echo e(route("badges.cancel")); ?>', {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' },
     body: JSON.stringify({ badge_id: badgeId, registration_id: registrationId })
   });
   const data = await res.json();
-  alert(data.message);
-  if (data.success) location.reload();
+
+  if (data.success) {
+    document.getElementById(`status-${registrationId}`).innerHTML = `<span class="text-warning fw-bold">Pending</span>`;
+    document.getElementById(`action-${registrationId}`).innerHTML = `
+      <button class="btn btn-success btn-sm" onclick="markComplete(${registrationId}, this)">
+        <i class='ti ti-badge'></i> Mark Completed & Generate Badge
+      </button>`;
+  } else {
+    alert(data.message);
+  }
 }
 
-async function reloadStudentDetails(studentId) {
-  const res = await fetch('<?php echo e(route("badges.search")); ?>', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' },
-    body: JSON.stringify({ student_id: studentId })
-  });
-
-  const data = await res.json();
-  if (!data.success) return alert(data.message);
-
-  const table = document.getElementById('courseRows');
-  table.innerHTML = '';
-  data.courses.forEach((c, i) => {
-    const course = c.course?.course_name || '-';
-    const type = c.course?.course_type || '-';
-    const intake = c.intake?.batch || '-';
-    const mode = c.intake?.intake_mode || '-';
-    const status = c.status;
-    const allow = (type === 'certificate' && mode === 'Online');
-
-    let action = '';
-
-    if (allow) {
-      if (status === 'Completed') {
-        if (c.badge && c.badge.verification_code) {
-          action = `
-            <button class="btn btn-info btn-sm me-2" onclick="viewCertificate('${c.badge.verification_code}')">
-              <i class='ti ti-eye'></i> View
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="cancelBadge(${c.badge.id}, ${c.id})">
-              <i class='ti ti-trash'></i> Cancel
-            </button>`;
-        } else {
-          action = `
-            <button class="btn btn-secondary btn-sm me-2" disabled>
-              <i class='ti ti-badge'></i> Badge Missing
-            </button>
-            <button class="btn btn-danger btn-sm" onclick="cancelBadge(null, ${c.id})">
-              <i class='ti ti-trash'></i> Cancel
-            </button>`;
-        }
-      } else {
-        action = `
-          <button class="btn btn-success btn-sm" onclick="markComplete(${c.id})">
-            <i class='ti ti-badge'></i> Mark Completed & Generate Badge
-          </button>`;
-      }
-    } else {
-      action = '<span class="text-muted">Not Eligible</span>';
-    }
-
-    table.innerHTML += `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${course}</td>
-        <td>${type}</td>
-        <td>${intake}</td>
-        <td>${mode}</td>
-        <td>${status}</td>
-        <td>${action}</td>
-      </tr>`;
-  });
-
-  document.getElementById('resultSection').style.display = 'block';
+/* -------------------------------
+   🔹 View Certificate
+--------------------------------*/
+async function viewCertificate(code) {
+  const body = document.getElementById('viewCertBody');
+  const link = document.getElementById('viewCertLink');
+  body.innerHTML = `<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>`;
+  const res = await fetch(`/badges/details/${code}`);
+  const html = await res.text();
+  body.innerHTML = html;
+  link.href = `/verify-badge/${code}`;
+  new bootstrap.Modal(document.getElementById('viewCertModal')).show();
 }
-
 </script>
 <?php $__env->stopSection(); ?>
 

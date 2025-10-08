@@ -715,6 +715,8 @@ Route::middleware(['auth', 'role:Marketing Manager,Developer'])->group(function 
 
     Route::get('/badges', [BadgeController::class, 'index'])->name('badges.index');
     Route::post('/badges/search', [BadgeController::class, 'searchStudent'])->name('badges.search');
+    Route::post('/badges/search-by-course', [BadgeController::class, 'searchByCourse'])->name('badges.searchByCourse');
+
     Route::post('/badges/complete', [BadgeController::class, 'completeCourse'])->name('badges.complete');
     Route::delete('/badges/cancel', [BadgeController::class, 'cancelBadge'])->name('badges.cancel');
     Route::get('/badges/details/{code}', [BadgeController::class, 'details'])->name('badges.details');
@@ -722,7 +724,12 @@ Route::middleware(['auth', 'role:Marketing Manager,Developer'])->group(function 
 
 });
 Route::get('/verify-badge/{code}', [BadgeController::class, 'verify'])->name('badges.verify');
-
+Route::get('/intakes-by-course/{courseId}', function($courseId) {
+    return Intake::where('course_id', $courseId)
+        ->select('intake_id', 'batch', 'location')
+        ->orderBy('batch')
+        ->get();
+});
 
 // Payment Management - Bursar and Developer only
 Route::middleware(['auth', 'role:Bursar,Developer'])->group(function () {
@@ -805,12 +812,6 @@ Route::get('/late-fee/approval/{studentNic}/{courseId}',
 
 
 });
-
-Route::post('/intakes/by-course', function (Request $r) {
-    $courseName = Course::where('course_id', $r->course_id)->value('course_name');
-    $intakes = Intake::where('course_name', $courseName)->orderBy('batch')->get(['intake_id']);
-    return response()->json(['success'=>true, 'data'=>$intakes]);
-})->name('intakes.byCourse');
 
 
 Route::get('/courses/by-location', [App\Http\Controllers\SemesterCreationController::class, 'getCoursesByLocation'])->name('courses.byLocation');

@@ -51,6 +51,45 @@ class BadgeController extends Controller
         }
     }
 
+    public function searchByCourse(Request $request)
+    {
+        $query = CourseRegistration::with(['student', 'course', 'intake']);
+
+        // Apply filters dynamically
+        if ($request->filled('course_id')) {
+            $query->where('course_id', $request->course_id);
+        }
+
+        if ($request->filled('intake_id')) {
+            $query->where('intake_id', $request->intake_id);
+        }
+
+        if ($request->filled('mode')) {
+            $query->whereHas('intake', function ($q) use ($request) {
+                $q->where('intake_mode', $request->mode);
+            });
+        }
+
+        $registrations = $query->get()->map(function ($c) {
+            $badge = \App\Models\CourseBadge::where('student_id', $c->student_id)
+                ->where('course_id', $c->course_id)
+                ->where('intake_id', $c->intake_id)
+                ->first();
+            $c->badge = $badge;
+            return $c;
+        });
+
+        if ($registrations->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No students found for this course.']);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $registrations
+        ]);
+    }
+
+
     public function details($code)
     {
         $badge = \App\Models\CourseBadge::with(['student','course','intake'])
