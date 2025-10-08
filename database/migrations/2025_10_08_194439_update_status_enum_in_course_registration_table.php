@@ -35,7 +35,7 @@ return new class extends Migration
         $values = str_getcsv($matches[1], ',', "'");
 
         // Remove the 'completed' value
-        $values = array_filter($values, fn($v) => $v !== 'completed');
+        $values = array_filter($values, fn($v) => $v !== 'Completed');
         $enumList = "'" . implode("','", $values) . "'";
 
         DB::statement("ALTER TABLE course_registration MODIFY status ENUM($enumList) NOT NULL");
