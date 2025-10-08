@@ -544,7 +544,8 @@ $(document).ready(function() {
 
     $('#course_name, #location, #intake_type').on('change', autofillPaymentPlan);
 
-    $('#enrollment_end_date').on('blur', function () {
+// 🔹 Create form validation
+$('#enrollment_end_date').on('blur change', function () {
     const value = $(this).val();
     if (!value) return;
 
@@ -552,54 +553,68 @@ $(document).ready(function() {
     if (isNaN(enrollmentEndDate)) return;
 
     const startVal = $('#start_date').val();
-    const endVal = $('#end_date').val();
     const startDate = startVal ? new Date(startVal) : null;
-    const endDate = endVal ? new Date(endVal) : null;
 
-    if (startDate && enrollmentEndDate < startDate) {
-        showToast('Enrollment end date cannot be before the start date.', 'danger');
-        $(this).val('');
-    } else if (endDate && enrollmentEndDate > endDate) {
-        showToast('Enrollment end date cannot be after the end date.', 'danger');
+    if (startDate && enrollmentEndDate > startDate) {
+        showToast('Enrollment end date must be on or before the course start date.', 'danger');
         $(this).val('');
     }
 });
 
-    // Validate enrollment end date in edit modal
-    $('#edit_enrollment_end_date').on('change', function() {
-        const enrollmentEndDate = new Date($(this).val());
-        const startDate = new Date($('#edit_start_date').val());
-        const endDate = new Date($('#edit_end_date').val());
-        
-        if ($('#edit_start_date').val() && enrollmentEndDate < startDate) {
-            showToast('Enrollment end date cannot be before the start date.', 'danger');
-            $(this).val('');
-            return;
-        }
-        
-        if ($('#edit_end_date').val() && enrollmentEndDate > endDate) {
-            showToast('Enrollment end date cannot be after the end date.', 'danger');
-            $(this).val('');
-            return;
-        }
-    });
+// 🔹 Create form validation
+$('#enrollment_end_date').on('blur change', function () {
+    const value = $(this).val();
+    if (!value) return;
+
+    const enrollmentEndDate = new Date(value);
+    if (isNaN(enrollmentEndDate)) return;
+
+    const startVal = $('#start_date').val();
+    const startDate = startVal ? new Date(startVal) : null;
+
+    if (startDate && enrollmentEndDate > startDate) {
+        showToast('Enrollment end date must be on or before the course start date.', 'danger');
+        $(this).val('');
+    }
+});
+
+// 🔹 Edit modal validation
+$('#edit_enrollment_end_date').on('blur change', function () {
+    const value = $(this).val();
+    if (!value) return;
+
+    const enrollmentEndDate = new Date(value);
+    if (isNaN(enrollmentEndDate)) return;
+
+    const startVal = $('#edit_start_date').val();
+    const startDate = startVal ? new Date(startVal) : null;
+
+    if (startDate && enrollmentEndDate > startDate) {
+        showToast('Enrollment end date must be on or before the course start date.', 'danger');
+        $(this).val('');
+    }
+});
 
     // Edit Intake Functions - moved inside document ready
     window.editIntake = function(intakeId) {
-    console.log('Editing intake with ID:', intakeId);
-    
     $.ajax({
         url: `/intake-creation/${intakeId}/edit`,
         type: 'GET',
         success: function(response) {
-            console.log('Edit response:', response);
             if (response.success) {
                 const intake = response.intake;
-                
-                // Populate the edit form
+
+                function formatDateForInput(dateValue) {
+                    if (!dateValue) return '';
+                    const dateObj = new Date(dateValue);
+                    if (isNaN(dateObj)) return '';
+                    return dateObj.toISOString().split('T')[0];
+                }
+
+                // Populate the form
                 $('#edit_intake_id').val(intake.intake_id);
                 $('#edit_location').val(intake.location);
-                $('#edit_course_name').val(intake.course_name);
+                $('#edit_course_id').val(intake.course_id);
                 $('#edit_batch').val(intake.batch);
                 $('#edit_batch_size').val(intake.batch_size);
                 $('#edit_intake_mode').val(intake.intake_mode);
@@ -610,13 +625,15 @@ $(document).ready(function() {
                 $('#edit_course_fee').val(intake.course_fee);
                 $('#edit_sscl_tax').val(intake.sscl_tax);
                 $('#edit_bank_charges').val(intake.bank_charges);
-                $('#edit_start_date').val(intake.start_date);
-                $('#edit_end_date').val(intake.end_date);
-                $('#edit_enrollment_end_date').val(intake.enrollment_end_date);
+
+                // ✅ Fix date loading issue
+                $('#edit_start_date').val(formatDateForInput(intake.start_date));
+                $('#edit_end_date').val(formatDateForInput(intake.end_date));
+                $('#edit_enrollment_end_date').val(formatDateForInput(intake.enrollment_end_date));
+
                 $('#edit_course_registration_id_pattern').val(intake.course_registration_id_pattern);
-                
-                console.log('Form populated, showing modal');
-                // Show the modal
+
+                // Show modal
                 $('#editIntakeModal').modal('show');
             } else {
                 showToast(response.message, 'danger');
@@ -627,7 +644,7 @@ $(document).ready(function() {
             showToast('Error loading intake data.', 'danger');
         }
     });
-    };
+};
 
     window.updateIntake = function() {
     const intakeId = $('#edit_intake_id').val();

@@ -45,7 +45,7 @@ class IntakeCreationController extends Controller
             'bank_charges' => 'nullable|numeric|min:0',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'enrollment_end_date' => 'nullable|date|after_or_equal:start_date|before_or_equal:end_date',
+            'enrollment_end_date' => 'nullable|date|before_or_equal:start_date',
             'course_registration_id_pattern' => 'required|string|regex:/^.*\d+$/',
         ]);
 
@@ -58,6 +58,11 @@ class IntakeCreationController extends Controller
             ], 404);
         }
 
+        //  If enrollment_end_date is empty, set it equal to start_date
+        if (empty($validatedData['enrollment_end_date'])) {
+            $validatedData['enrollment_end_date'] = $validatedData['start_date'];
+        }
+        
         $validatedData['course_name'] = $course->course_name;
 
         // 🧩 Create the intake with both course_id and course_name
@@ -134,7 +139,7 @@ class IntakeCreationController extends Controller
                 'bank_charges' => 'nullable|numeric|min:0',
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after_or_equal:start_date',
-                'enrollment_end_date' => 'nullable|date|after_or_equal:start_date|before_or_equal:end_date',
+                'enrollment_end_date' => 'nullable|date|before_or_equal:start_date',
                 'course_registration_id_pattern' => 'required|string|regex:/^.*\d+$/',
             ], [
                 'location.required' => 'Location is required.',
