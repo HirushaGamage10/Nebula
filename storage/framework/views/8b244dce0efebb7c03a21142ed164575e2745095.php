@@ -134,15 +134,47 @@ document.getElementById('searchForm').addEventListener('submit', async e => {
 
 async function markComplete(id) {
   if (!confirm('Are you sure you want to mark this course as completed and generate a badge?')) return;
-  const res = await fetch('<?php echo e(route("badges.complete")); ?>', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' },
-    body: JSON.stringify({ id })
-  });
-  const data = await res.json();
-  alert(data.message);
-  if (data.success) location.reload();
+
+  try {
+    const res = await fetch('<?php echo e(route("badges.complete")); ?>', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' },
+      body: JSON.stringify({ id })
+    });
+
+    const data = await res.json();
+    alert(data.message);
+
+    if (data.success) {
+      const studentId = document.getElementById('student_id').value.trim();
+
+      if (!studentId) {
+        console.warn('⚠️ No student ID found to refresh.');
+        return;
+      }
+
+      // show temporary message in table
+      const table = document.getElementById('courseRows');
+      table.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-center text-primary p-3">
+            <div class="spinner-border text-primary me-2"></div>
+            Refreshing student details...
+          </td>
+        </tr>`;
+
+      // 🕐 wait 1s to ensure DB changes are committed
+      setTimeout(async () => {
+        console.log('🔄 Re-fetching student:', studentId);
+        await reloadStudentDetails(studentId);
+      }, 1000);
+    }
+  } catch (err) {
+    console.error('❌ Error completing course:', err);
+    alert('Something went wrong while generating the badge. Check console for details.');
+  }
 }
+
 
 async function viewCertificate(code) {
   const body = document.getElementById('viewCertBody');
@@ -169,6 +201,73 @@ async function cancelBadge(badgeId, registrationId) {
   alert(data.message);
   if (data.success) location.reload();
 }
+
+async function reloadStudentDetails(studentId) {
+  const res = await fetch('<?php echo e(route("badges.search")); ?>', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' },
+    body: JSON.stringify({ student_id: studentId })
+  });
+
+  const data = await res.json();
+  if (!data.success) return alert(data.message);
+
+  const table = document.getElementById('courseRows');
+  table.innerHTML = '';
+  data.courses.forEach((c, i) => {
+    const course = c.course?.course_name || '-';
+    const type = c.course?.course_type || '-';
+    const intake = c.intake?.batch || '-';
+    const mode = c.intake?.intake_mode || '-';
+    const status = c.status;
+    const allow = (type === 'certificate' && mode === 'Online');
+
+    let action = '';
+
+    if (allow) {
+      if (status === 'Completed') {
+        if (c.badge && c.badge.verification_code) {
+          action = `
+            <button class="btn btn-info btn-sm me-2" onclick="viewCertificate('${c.badge.verification_code}')">
+              <i class='ti ti-eye'></i> View
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="cancelBadge(${c.badge.id}, ${c.id})">
+              <i class='ti ti-trash'></i> Cancel
+            </button>`;
+        } else {
+          action = `
+            <button class="btn btn-secondary btn-sm me-2" disabled>
+              <i class='ti ti-badge'></i> Badge Missing
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="cancelBadge(null, ${c.id})">
+              <i class='ti ti-trash'></i> Cancel
+            </button>`;
+        }
+      } else {
+        action = `
+          <button class="btn btn-success btn-sm" onclick="markComplete(${c.id})">
+            <i class='ti ti-badge'></i> Mark Completed & Generate Badge
+          </button>`;
+      }
+    } else {
+      action = '<span class="text-muted">Not Eligible</span>';
+    }
+
+    table.innerHTML += `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${course}</td>
+        <td>${type}</td>
+        <td>${intake}</td>
+        <td>${mode}</td>
+        <td>${status}</td>
+        <td>${action}</td>
+      </tr>`;
+  });
+
+  document.getElementById('resultSection').style.display = 'block';
+}
+
 </script>
 <?php $__env->stopSection(); ?>
 
