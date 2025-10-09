@@ -156,7 +156,7 @@
                     </div>
                     <div class="p-3 mb-3 mx-3 rounded border bg-light-warning">
                         <div class="row mx-3">
-                            <label class="col-sm-3 col-form-label">Installment Plan<span class="text-danger">*</span></label>
+                            <label class="col-sm-3 col-form-label">Installment Plan<span class="text-danger"></span></label>
                             <div class="col-sm-3 d-flex justify-content-between">
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" id="franchisePaymentYes" name="franchisePayment" value="yes" onclick="toggleAmountField()">
