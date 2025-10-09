@@ -98,7 +98,7 @@
 
                 {{-- Discount --}}
                 <div class="mb-3">
-                    <label class="form-label">Discount (%)</label>
+                    <label class="form-label">Discount(%)</label>
                     <input type="number" class="form-control" name="discount" value="{{ $plan->discount }}" min="0" step="0.01">
                 </div>
 
