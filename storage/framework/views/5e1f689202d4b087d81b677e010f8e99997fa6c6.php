@@ -122,7 +122,7 @@
                                         type="button"
                                         data-bs-toggle="collapse"
                                         data-bs-target="#inst-<?php echo e($plan->id); ?>">
-                                    <?php echo e($count); ?> items
+                                    View <?php echo e($count); ?> Installments
                                 </button>
                                 <div class="small text-muted mt-1">
                                     <?php if($count): ?>

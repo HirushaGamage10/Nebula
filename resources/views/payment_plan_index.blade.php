@@ -117,7 +117,7 @@
                                         type="button"
                                         data-bs-toggle="collapse"
                                         data-bs-target="#inst-{{ $plan->id }}">
-                                    {{ $count }} items
+                                    View {{ $count }} Installments
                                 </button>
                                 <div class="small text-muted mt-1">
                                     @if($count)
