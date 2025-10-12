@@ -475,9 +475,8 @@
                                         
                                         <div class="row mb-3">
                                             <div class="col-md-4">
-                                                <label class="form-label fw-bold">SLT Loan Applied</label>
+                                                <label class="form-label fw-bold">SLT Loan Applied<span class="text-danger">*</label>
                                                 <select class="form-select" id="slt-loan-applied" name="slt_loan_applied">
-                                                    <option value="">Select SLT Loan Status</option disabled>
                                                     <option value="no">No SLT Loan</option>
                                                     <option value="yes">Yes - SLT Loan Applied</option>
                                                 </select>

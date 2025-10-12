@@ -147,7 +147,7 @@
                             </div>
                         </div>
                         <div class="row align-items-center mx-3 mb-3" id="discountField" style="display: none;">
-                            <label for="fullPaymentDiscount" class="col-sm-3 col-form-label fw-bold">Discount<span class="text-danger">*</span></label>
+                            <label for="fullPaymentDiscount" class="col-sm-3 col-form-label fw-bold">Discount<span class="text-danger"></span></label>
                             <div class="col-sm-9">
                                 <div class="input-group">
                                     <input type="text" class="form-control bg-white" id="fullPaymentDiscount" name="fullPaymentDiscount" placeholder="Enter discount percentage" oninput="validateInput(this)">
@@ -158,7 +158,7 @@
                     </div>
                     <div class="p-3 mb-3 mx-3 rounded border bg-light-warning">
                         <div class="row mx-3">
-                            <label class="col-sm-3 col-form-label">Installment Plan<span class="text-danger">*</span></label>
+                            <label class="col-sm-3 col-form-label">Installment Plan<span class="text-danger"></span></label>
                             <div class="col-sm-3 d-flex justify-content-between">
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" id="franchisePaymentYes" name="franchisePayment" value="yes" onclick="toggleAmountField()">
@@ -172,7 +172,7 @@
                         </div>
                         <div class=" mt-3 row align-items-center" id="amountField">
                             <div class="row mx-3">
-                                <label for="installments" class="col-sm-3 col-form-label fw-bold">No. of Installments<span class="text-danger">*</span></label>
+                                <label for="installments" class="col-sm-3 col-form-label fw-bold">No. of Installments<span class="text-danger"></span></label>
                                 <div class="col-sm-8">
                                     <div class="input-group">
                                         <input type="number" class="form-control bg-white" id="installments" name="installments" placeholder="Enter number of installments">

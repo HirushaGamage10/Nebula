@@ -180,6 +180,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/module-creation', [ModuleCreationController::class, 'create'])->name('module.creation');
         Route::post('/module-store', [ModuleCreationController::class, 'store'])->name('module.store');
         Route::patch('/modules/{id}', [ModuleCreationController::class, 'update']);
+        Route::delete('/modules/{id}', [ModuleCreationController::class, 'destroy'])->name('module.destroy');
+
     });
 
     // File Management - DGM, Program Administrator (level 01), Program Administrator (level 02), Developer

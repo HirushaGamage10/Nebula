@@ -84,11 +84,23 @@ class Module extends Model
     // Mutators
     public function setModuleNameAttribute($value)
     {
-        $this->attributes['module_name'] = ucwords(strtolower($value));
+        // Split into words and intelligently format each
+        $this->attributes['module_name'] = collect(explode(' ', trim($value)))
+            ->map(function ($word) {
+                // Keep words that are already all uppercase (like CCP, AI)
+                if (preg_match('/^[A-Z0-9]+$/', $word)) {
+                    return $word;
+                }
+                // Otherwise, capitalize first letter only
+                return ucfirst(strtolower($word));
+            })
+            ->implode(' ');
     }
 
     public function setModuleCodeAttribute($value)
     {
-        $this->attributes['module_code'] = strtoupper($value);
+        // Always store module code as uppercase
+        $this->attributes['module_code'] = strtoupper(trim($value));
     }
+
 }

@@ -1,15 +1,15 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Module Creation')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Module Creation'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
             <h2 class="text-center mb-4">Create New Module</h2>
             <hr>
             <form id="moduleForm">
-                @csrf
+                <?php echo csrf_field(); ?>
                 <input type="hidden" id="module_id" name="module_id">
                 <div class="mb-3 row mx-3">
                     <label for="module_name" class="col-sm-2 col-form-label">Module Name <span class="text-danger">*</span></label>
@@ -74,22 +74,22 @@
                         </tr>
                     </thead>
                     <tbody id="module-table-body">
-                        @forelse($modules as $module)
-                        <tr id="module-row-{{$module->module_id}}">
-                            <td>{{ $module->module_name }}</td>
-                            <td>{{ $module->module_code }}</td>
-                            <td>{{ $module->credits }}</td>
-                            <td>{{ $module->module_type }}</td>
+                        <?php $__empty_1 = true; $__currentLoopData = $modules; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $module): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <tr id="module-row-<?php echo e($module->module_id); ?>">
+                            <td><?php echo e($module->module_name); ?></td>
+                            <td><?php echo e($module->module_code); ?></td>
+                            <td><?php echo e($module->credits); ?></td>
+                            <td><?php echo e($module->module_type); ?></td>
                             <td>
                                 <button class="btn btn-sm btn-primary edit-module-btn">Edit</button>
                                 <button class="btn btn-sm btn-danger delete-module-btn">Delete</button>
                             </td>
                         </tr>
-                        @empty
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <tr>
                             <td colspan="5" class="text-center">No modules found.</td>
                         </tr>
-                        @endforelse
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -98,9 +98,9 @@
 </div>
 
 <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 $(document).ready(function() {
     let editMode = false;
@@ -205,7 +205,7 @@ $(document).ready(function() {
         } else {
             // Create new module
             $.ajax({
-                url: '{{ route("module.store") }}',
+                url: '<?php echo e(route("module.store")); ?>',
                 type: 'POST',
                 data: formData,
                 success: function(response) {
@@ -280,7 +280,7 @@ $(document).on('click', '.delete-module-btn', function() {
     $.ajax({
         url: '/modules/' + moduleId,
         type: 'DELETE',
-        data: { _token: '{{ csrf_token() }}' },
+        data: { _token: '<?php echo e(csrf_token()); ?>' },
         success: function(response) {
             if (response.success) {
                 showToast(response.message, 'success');
@@ -305,4 +305,6 @@ $(document).on('click', '.delete-module-btn', function() {
 
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/module_creation.blade.php ENDPATH**/ ?>
