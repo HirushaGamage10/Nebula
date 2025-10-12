@@ -143,46 +143,65 @@ class StudentProfileController extends Controller
 
     // Update personal info via AJAX
     public function updatePersonalInfoAjax(Request $request)
-    {
-        $studentId = $request->input('student_id');
-        $student = Student::find($studentId);
+{
+    $studentId = $request->input('student_id');
+    $student = \App\Models\Student::find($studentId);
 
-        if (!$student) {
-            return response()->json(['success' => false, 'message' => 'Student not found.']);
-        }
-
-        try {
-            // Update all personal info fields
-            $student->title = $request->input('title');
-            $student->full_name = $request->input('full_name');
-            $student->id_value = $request->input('id_value');
-            $student->registration_id = $request->input('registration_id');
-            $student->institute_location = $request->input('institute_location');
-            $student->birthday = $request->input('birthday');
-            $student->gender = $request->input('gender');
-            $student->email = $request->input('email');
-            $student->mobile_phone = $request->input('mobile_phone');
-            $student->home_phone = $request->input('home_phone');
-            $student->emergency_contact_number = $request->input('emergency_contact_number');
-            $student->address = $request->input('address');
-            $student->foundation_program = $request->input('foundation_program');
-            $student->special_needs = $request->input('special_needs');
-            $student->extracurricular_activities = $request->input('extracurricular_activities');
-            $student->future_potentials = $request->input('future_potentials');
-
-            $student->save();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Personal information updated successfully!'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update personal information: ' . $e->getMessage()
-            ]);
-        }
+    if (!$student) {
+        return response()->json(['success' => false, 'message' => 'Student not found.']);
     }
+
+    try {
+        // Get all valid fields (only those that exist in students table)
+        $updateFields = [
+            'title',
+            'full_name',
+            'name_with_initials',
+            'id_value',
+            'institute_location',
+            'birthday',
+            'gender',
+            'email',
+            'mobile_phone',
+            'home_phone',
+            'address',
+            'foundation_program',
+            'special_needs',
+            'extracurricular_activities',
+            'future_potentials'
+        ];
+
+        foreach ($updateFields as $field) {
+            $value = $request->input($field);
+
+            // 🔒 Skip null or empty string updates to avoid violating NOT NULL constraints
+            if ($value !== null && $value !== '') {
+                $student->$field = $value;
+            }
+        }
+
+        $student->save();
+
+        // ✅ Handle emergency contact number (belongs to ParentGuardian)
+        if ($request->filled('emergency_contact_number')) {
+            \App\Models\ParentGuardian::updateOrCreate(
+                ['student_id' => $studentId],
+                ['emergency_contact_number' => $request->input('emergency_contact_number')]
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Personal information updated successfully!'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to update personal information: ' . $e->getMessage()
+        ]);
+    }
+}
+
 
     // Update parent/guardian info via AJAX
     public function updateParentInfoAjax(Request $request)
