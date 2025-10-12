@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Payment Discount')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Payment Discount'); ?>
+
+<?php $__env->startSection('content'); ?>
 
 <style>
 /* Toast Notification Styles */
@@ -876,4 +876,5 @@ $(document).ready(function() {
     };
 });
 </script>
-@endsection 
+<?php $__env->stopSection(); ?> 
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/payment_discount.blade.php ENDPATH**/ ?>
