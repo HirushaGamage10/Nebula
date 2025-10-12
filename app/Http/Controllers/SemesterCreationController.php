@@ -262,26 +262,29 @@ class SemesterCreationController extends Controller
         ]);
 
         try {
-            // Get all modules since course_modules table is empty and modules are assigned during semester creation
+            // Fetch all modules with module_code included
             $modules = \DB::table('modules')
-                ->select('module_id', 'module_name', 'module_type', 'credits')
+                ->select('module_id', 'module_name', 'module_code', 'module_type', 'credits')
                 ->orderBy('module_name')
                 ->get()
-                ->map(function($module) {
+                ->map(function ($module) {
                     return [
-                        'module_id' => $module->module_id,
+                        'module_id'   => $module->module_id,
                         'module_name' => $module->module_name,
+                        'module_code' => $module->module_code, // ✅ ensure module_code is included
                         'module_type' => $module->module_type,
-                        'credits' => $module->credits,
+                        'credits'     => $module->credits,
                     ];
                 });
 
             return response()->json(['modules' => $modules]);
+
         } catch (\Exception $e) {
             \Log::error('Error fetching modules: ' . $e->getMessage());
             return response()->json(['modules' => []]);
         }
     }
+
 
     public function getCoursesByLocation(Request $request)
     {
