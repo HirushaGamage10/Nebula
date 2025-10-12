@@ -145,8 +145,8 @@
                             <td>
                                 <input type="checkbox" class="form-check-input module-checkbox" data-module-id="{{$module->module_id}}">
                             </td>
-                            <td class="module-name">{{ $module->module_name }}</td>
-                            <td class="module-code">{{ $module->module_code }}</td>
+                            <td class="module-name" style="text-transform:none !important;">{{ $module->module_name }}</td>
+                            <td class="module-code" style="text-transform:none !important;">{{ $module->module_code }}</td>
                             <td class="module-credits">{{ $module->credits }}</td>
                             <td class="module-type">
                                 @if($module->module_type == 'core')
@@ -332,8 +332,8 @@ $(document).ready(function() {
                         <td>
                             <input type="checkbox" class="form-check-input module-checkbox" data-module-id="${module.module_id}">
                         </td>
-                        <td class="module-name">${module.module_name}</td>
-                        <td class="module-code">${module.module_code}</td>
+                        <td class="module-name" style="text-transform:none !important;">${module.module_name}</td>
+                        <td class="module-code" style="text-transform:none !important;">${module.module_code}</td>
                         <td class="module-credits">${module.credits}</td>
                         <td class="module-type">
                             <span class="badge bg-${badgeClass}">${badgeText}</span>
