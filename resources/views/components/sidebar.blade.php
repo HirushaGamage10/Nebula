@@ -148,6 +148,15 @@
     </li>
 @endif
 
+{{-- 🔹 All Students View (Visible to All) --}}
+<li class="sidebar-item">
+    <a class="sidebar-link {{ Route::currentRouteName() == 'students.view' ? 'active' : '' }}"
+       href="{{ route('students.view') }}">
+        <span><i class="ti ti-users"></i></span>
+        <span class="hide-menu">All Students View</span>
+    </a>
+</li>
+
 {{-- Divider (light) --}}
 <li><hr class="my-2 border-gray-200 opacity-30"></li>
 

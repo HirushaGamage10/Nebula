@@ -149,6 +149,15 @@
 <?php endif; ?>
 
 
+<li class="sidebar-item">
+    <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'students.view' ? 'active' : ''); ?>"
+       href="<?php echo e(route('students.view')); ?>">
+        <span><i class="ti ti-users"></i></span>
+        <span class="hide-menu">All Students View</span>
+    </a>
+</li>
+
+
 <li><hr class="my-2 border-gray-200 opacity-30"></li>
 
 

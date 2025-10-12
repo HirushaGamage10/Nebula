@@ -46,6 +46,7 @@ use App\Http\Controllers\{
     MiscPaymentController,
     PaymentSummaryController,
     BadgeController,
+    StudentViewController,
 };
 
 // Default
@@ -826,3 +827,7 @@ Route::middleware(['auth','role:DGM,Developer,Program Administrator (level 01),P
     Route::post('/semester-registration/approve-reregister',   [SemesterRegistrationController::class,'approveReRegister'])->name('semester.registration.approveReRegister');
     Route::post('/semester-registration/reject-reregister',    [SemesterRegistrationController::class,'rejectReRegister'])->name('semester.registration.rejectReRegister');
 });
+
+
+Route::get('/students/view', [StudentViewController::class, 'index'])->name('students.view');
+Route::post('/students/filter', [StudentViewController::class, 'filter'])->name('students.filter');
