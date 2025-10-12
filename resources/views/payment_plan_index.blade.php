@@ -17,33 +17,22 @@
         </div>
     @endif
 
-    <div class="card mb-3 shadow-sm">
+    <div class="card mb-3">
         <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2 class="mb-0">Payment Plans</h2>
-                <div class="btn-group">
-                    <button type="button" class="btn btn-success btn-sm" onclick="exportToCSV()">
-                        <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
-                    </button>
-                    <button type="button" class="btn btn-danger btn-sm" onclick="exportToPDF()">
-                        <i class="bi bi-file-earmark-pdf"></i> Export PDF
-                    </button>
-                </div>
-            </div>
-            
+            <h2 class="mb-3">Payment Plans</h2>
             <form method="GET" action="{{ route('payment.plan.index') }}" class="row gy-2 gx-3 align-items-end">
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label class="form-label">Location</label>
-                    <select name="location" class="form-select form-select-sm">
+                    <select name="location" class="form-select">
                         <option value="">All</option>
                         @foreach($locations as $loc)
                             <option value="{{ $loc }}" @selected(request('location')===$loc)>{{ $loc }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label class="form-label">Course</label>
-                    <select name="course_id" id="filter-course" class="form-select form-select-sm">
+                    <select name="course_id" id="filter-course" class="form-select">
                         <option value="">All</option>
                         @foreach($courses as $c)
                             <option value="{{ $c->course_id }}" @selected((string)request('course_id')===(string)$c->course_id)>
@@ -52,9 +41,9 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label class="form-label">Intake</label>
-                    <select name="intake_id" id="filter-intake" class="form-select form-select-sm" @disabled(!request('course_id'))>
+                    <select name="intake_id" id="filter-intake" class="form-select" @disabled(!request('course_id'))>
                         <option value="">All</option>
                         @foreach($intakes as $i)
                             <option value="{{ $i->intake_id }}" @selected((string)request('intake_id')===(string)$i->intake_id)>
@@ -63,178 +52,158 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">Discount Status</label>
-                    <select name="has_discount" class="form-select form-select-sm">
-                        <option value="">All</option>
-                        <option value="1" @selected(request('has_discount')==='1')>With Discount</option>
-                        <option value="0" @selected(request('has_discount')==='0')>No Discount</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Installments</label>
-                    <select name="has_installments" class="form-select form-select-sm">
-                        <option value="">All</option>
-                        <option value="1" @selected(request('has_installments')==='1')>With Installments</option>
-                        <option value="0" @selected(request('has_installments')==='0')>No Installments</option>
-                    </select>
-                </div>
-                <div class="col-md-1 d-grid">
-                    <button class="btn btn-primary btn-sm">
-                        <i class="bi bi-funnel"></i> Filter
-                    </button>
+                <div class="col-md-2 d-grid">
+                    <button class="btn btn-primary">Filter</button>
                 </div>
             </form>
-
-            <!-- Search Box -->
-            <div class="row mt-3">
-                <div class="col-md-4">
-                    <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="🔍 Search in table...">
-                </div>
-            </div>
         </div>
     </div>
 
-    <div class="card shadow-sm">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover table-bordered align-middle" id="paymentPlansTable">
-                    <thead class="table-dark">
-                        <tr>
-                            <th class="sortable" data-column="0"># <span class="sort-icon">⇅</span></th>
-                            <th class="sortable" data-column="1">Location <span class="sort-icon">⇅</span></th>
-                            <th class="sortable" data-column="2">Course <span class="sort-icon">⇅</span></th>
-                            <th class="sortable" data-column="3">Intake <span class="sort-icon">⇅</span></th>
-                            <th class="text-end sortable" data-column="4">Reg. Fee (LKR) <span class="sort-icon">⇅</span></th>
-                            <th class="text-end sortable" data-column="5">Local Fee (LKR) <span class="sort-icon">⇅</span></th>
-                            <th class="text-end sortable" data-column="6">Franchise <span class="sort-icon">⇅</span></th>
-                            <th class="sortable" data-column="7">Discount <span class="sort-icon">⇅</span></th>
-                            <th>Installments</th>
-                            <th class="sortable" data-column="9">Created <span class="sort-icon">⇅</span></th>
-                            <th style="width: 130px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    @forelse($plans as $plan)
-                        @php
-                            $items = is_array($plan->installments) ? $plan->installments : (json_decode($plan->installments, true) ?? []);
-                            $count = count($items);
+    <div class="card">
+        <div class="card-body table-responsive">
+            <table class="table table-bordered align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Location</th>
+                        <th>Course</th>
+                        <th>Intake</th>
+                        <th class="text-end">Reg. Fee (LKR)</th>
+                        <th class="text-end">Local Fee (LKR)</th>
+                        <th class="text-end">Franchise</th>
+                        <th>Discount</th>
+                        <th>Installments</th>
+                        <th>Created</th>
+                        <th style="width: 130px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @forelse($plans as $plan)
+                    @php
+                        // Ensure installments is an array even if stored as string
+                        $items = is_array($plan->installments) ? $plan->installments : (json_decode($plan->installments, true) ?? []);
+                        $count = count($items);
 
-                            $firstDue = $count ? ($items[0]['due_date'] ?? null) : null;
-                            $lastDue  = $count ? ($items[array_key_last($items)]['due_date'] ?? null) : null;
+                        $firstDue = $count ? ($items[0]['due_date'] ?? null) : null;
+                        $lastDue  = $count ? ($items[array_key_last($items)]['due_date'] ?? null) : null;
 
-                            $totalLocal = 0; $totalIntl = 0;
-                            foreach ($items as $it) {
-                                $totalLocal += (float)($it['local_amount'] ?? 0);
-                                $totalIntl  += (float)($it['international_amount'] ?? 0);
-                            }
-                        @endphp
-                        <tr class="data-row">
-                            <td>{{ $plan->id }}</td>
-                            <td>{{ $plan->location }}</td>
-                            <td>{{ optional($plan->course)->course_name ?? '—' }}</td>
-                            <td>{{ optional($plan->intake)->batch ?? '—' }}</td>
-                            <td class="text-end">{{ number_format($plan->registration_fee, 2, '.', ',') }}</td>
-                            <td class="text-end">{{ number_format($plan->local_fee, 2, '.', ',') }}</td>
-                            <td class="text-end">
-                                {{ number_format($plan->international_fee, 2, '.', ',') }}
-                                <small class="text-muted">{{ $plan->international_currency }}</small>
-                            </td>
-                            <td>
-                                @if($plan->apply_discount)
-                                    <span class="badge bg-success">{{ rtrim(rtrim(number_format($plan->discount ?? 0, 2, '.', ''), '0'), '.') }}%</span>
-                                @else
-                                    <span class="badge bg-secondary">—</span>
-                                @endif
-                            </td>
-                            <td>
-                                @if($plan->installment_plan)
-                                    <button class="btn btn-sm btn-outline-info"
-                                            type="button"
-                                            data-bs-toggle="collapse"
-                                            data-bs-target="#inst-{{ $plan->id }}">
-                                        <i class="bi bi-list-ul"></i> View {{ $count }}
-                                    </button>
-                                    <div class="small text-muted mt-1">
-                                        @if($count)
-                                            {{ $firstDue }} → {{ $lastDue }}
-                                        @endif
-                                    </div>
-                                @else
-                                    <span class="badge bg-light text-dark">—</span>
-                                @endif
-                            </td>
-                            <td>
-                                <div class="small text-muted">{{ $plan->created_at?->format('Y-m-d H:i') }}</div>
-                            </td>
-                            <td>
-                                <div class="d-flex gap-1">
-                                    <a href="{{ route('payment.plan.edit',$plan->id) }}" class="btn btn-sm btn-warning">
-                                        <i class="bi bi-pencil"></i> Edit
-                                    </a>
+                        $totalLocal = 0; $totalIntl = 0;
+                        foreach ($items as $it) {
+                            $totalLocal += (float)($it['local_amount'] ?? 0);
+                            $totalIntl  += (float)($it['international_amount'] ?? 0);
+                        }
+                    @endphp
+                    <tr>
+                        <td>{{ $plan->id }}</td>
+                        <td>{{ $plan->location }}</td>
+                        <td>{{ optional($plan->course)->course_name ?? '—' }}</td>
+                        <td>{{ optional($plan->intake)->batch ?? '—' }}</td>
+                        <td class="text-end">{{ number_format($plan->registration_fee, 2, '.', ',') }}</td>
+                        <td class="text-end">{{ number_format($plan->local_fee, 2, '.', ',') }}</td>
+                        <td class="text-end">
+                            {{ number_format($plan->international_fee, 2, '.', ',') }}
+                            <small class="text-muted">{{ $plan->international_currency }}</small>
+                        </td>
+                        <td>
+                            @if($plan->apply_discount)
+                                {{ rtrim(rtrim(number_format($plan->discount ?? 0, 2, '.', ''), '0'), '.') }}%
+                            @else
+                                —
+                            @endif
+                        </td>
+                        <td>
+                            @if($plan->installment_plan)
+                                <button class="btn btn-sm btn-outline-secondary"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#inst-{{ $plan->id }}">
+                                    View {{ $count }} Installments
+                                </button>
+                                <div class="small text-muted mt-1">
+                                    @if($count)
+                                        {{ $firstDue }} → {{ $lastDue }}
+                                    @endif
+                                </div>
+                            @else
+                                —
+                            @endif
+                        </td>
+                        <td>
+                            <div class="small text-muted">{{ $plan->created_at?->format('Y-m-d H:i') }}</div>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                {{-- Replace with your real routes if you have show/edit/delete --}}
+                                {{-- <a class="btn btn-sm btn-primary" href="{{ route('payment.plan.index', array_merge(request()->query(), ['view' => $plan->id])) }}">View</a> --}}
+                                <a href="{{ route('payment.plan.edit',$plan->id) }}" class="btn btn-sm btn-warning">Edit</a>
+
+                                {{-- <a class="btn btn-sm btn-warning" href="{{ route('payment.plan.edit', $plan) }}">Edit</a> --}}
+                                {{-- <form method="POST" action="{{ route('payment.plan.destroy', $plan) }}" onsubmit="return confirm('Delete this plan?')">
+                                    @csrf @method('DELETE')
+                                    <button class="btn btn-sm btn-danger">Delete</button>
+                                </form> --}}
+                            </div>
+                        </td>
+                    </tr>
+                    @if($plan->installment_plan)
+                        <tr class="collapse" id="inst-{{ $plan->id }}">
+                            <td colspan="11">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped mb-2">
+                                        <thead class="table-secondary">
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Due Date</th>
+                                                <th class="text-end">Local (LKR)</th>
+                                                <th class="text-end">International ({{ $plan->international_currency }})</th>
+                                                <th>Tax?</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @forelse($items as $it)
+                                                <tr>
+                                                    <td>{{ $it['installment_number'] ?? '' }}</td>
+                                                    <td>{{ $it['due_date'] ?? '' }}</td>
+                                                    <td class="text-end">{{ number_format((float)($it['local_amount'] ?? 0), 2, '.', ',') }}</td>
+                                                    <td class="text-end">{{ number_format((float)($it['international_amount'] ?? 0), 2, '.', ',') }}</td>
+                                                    <td>
+                                                        @if(!empty($it['apply_tax']))
+                                                            <span class="badge bg-success">Yes</span>
+                                                        @else
+                                                            <span class="badge bg-secondary">No</span>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @empty
+                                                <tr><td colspan="5" class="text-center text-muted">No installments found</td></tr>
+                                            @endforelse
+                                        </tbody>
+                                        <tfoot>
+                                            <tr class="fw-semibold">
+                                                <td colspan="2" class="text-end">Totals:</td>
+                                                <td class="text-end">{{ number_format($totalLocal, 2, '.', ',') }}</td>
+                                                <td class="text-end">{{ number_format($totalIntl, 2, '.', ',') }}</td>
+                                                <td></td>
+                                            </tr>
+                                            <tr class="small text-muted">
+                                                <td colspan="2" class="text-end">Required:</td>
+                                                <td class="text-end">{{ number_format((float)$plan->local_fee, 2, '.', ',') }}</td>
+                                                <td class="text-end">{{ number_format((float)$plan->international_fee, 2, '.', ',') }}</td>
+                                                <td></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
                                 </div>
                             </td>
                         </tr>
-                        @if($plan->installment_plan)
-                            <tr class="collapse" id="inst-{{ $plan->id }}">
-                                <td colspan="11" class="bg-light">
-                                    <div class="table-responsive">
-                                        <table class="table table-sm table-striped mb-2">
-                                            <thead class="table-secondary">
-                                                <tr>
-                                                    <th>#</th>
-                                                    <th>Due Date</th>
-                                                    <th class="text-end">Local (LKR)</th>
-                                                    <th class="text-end">International ({{ $plan->international_currency }})</th>
-                                                    <th>Tax?</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @forelse($items as $it)
-                                                    <tr>
-                                                        <td><span class="badge bg-primary">{{ $it['installment_number'] ?? '' }}</span></td>
-                                                        <td>{{ $it['due_date'] ?? '' }}</td>
-                                                        <td class="text-end">{{ number_format((float)($it['local_amount'] ?? 0), 2, '.', ',') }}</td>
-                                                        <td class="text-end">{{ number_format((float)($it['international_amount'] ?? 0), 2, '.', ',') }}</td>
-                                                        <td>
-                                                            @if(!empty($it['apply_tax']))
-                                                                <span class="badge bg-success">Yes</span>
-                                                            @else
-                                                                <span class="badge bg-secondary">No</span>
-                                                            @endif
-                                                        </td>
-                                                    </tr>
-                                                @empty
-                                                    <tr><td colspan="5" class="text-center text-muted">No installments found</td></tr>
-                                                @endforelse
-                                            </tbody>
-                                            <tfoot class="table-info">
-                                                <tr class="fw-semibold">
-                                                    <td colspan="2" class="text-end">Totals:</td>
-                                                    <td class="text-end">{{ number_format($totalLocal, 2, '.', ',') }}</td>
-                                                    <td class="text-end">{{ number_format($totalIntl, 2, '.', ',') }}</td>
-                                                    <td></td>
-                                                </tr>
-                                                <tr class="small text-muted">
-                                                    <td colspan="2" class="text-end">Required:</td>
-                                                    <td class="text-end">{{ number_format((float)$plan->local_fee, 2, '.', ',') }}</td>
-                                                    <td class="text-end">{{ number_format((float)$plan->international_fee, 2, '.', ',') }}</td>
-                                                    <td></td>
-                                                </tr>
-                                            </tfoot>
-                                        </table>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endif
-                    @empty
-                        <tr><td colspan="11" class="text-center text-muted py-4">No payment plans found.</td></tr>
-                    @endforelse
-                    </tbody>
-                </table>
-            </div>
+                    @endif
+                @empty
+                    <tr><td colspan="11" class="text-center text-muted">No payment plans found.</td></tr>
+                @endforelse
+                </tbody>
+            </table>
 
-            <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="d-flex justify-content-between align-items-center">
                 <div class="small text-muted">
                     Showing {{ $plans->firstItem() ?? 0 }}–{{ $plans->lastItem() ?? 0 }} of {{ $plans->total() }}
                 </div>
@@ -244,177 +213,15 @@
     </div>
 </div>
 
-<!-- Include jsPDF from CDN -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-
-<style>
-.sortable {
-    cursor: pointer;
-    user-select: none;
-    position: relative;
-}
-.sortable:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-.sort-icon {
-    font-size: 0.8em;
-    opacity: 0.5;
-    margin-left: 4px;
-}
-.sortable.asc .sort-icon::before {
-    content: '↑';
-    opacity: 1;
-}
-.sortable.desc .sort-icon::before {
-    content: '↓';
-    opacity: 1;
-}
-.table-hover tbody tr:hover {
-    background-color: rgba(0, 123, 255, 0.05);
-}
-</style>
-
+{{-- Optional: auto-load intakes when course filter changes (same UX as create page) --}}
 <script>
-// Table Search Functionality
-document.getElementById('searchInput')?.addEventListener('keyup', function() {
-    const searchValue = this.value.toLowerCase();
-    const rows = document.querySelectorAll('#paymentPlansTable tbody tr.data-row');
-    
-    rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(searchValue) ? '' : 'none';
-    });
-});
-
-// Table Sorting
-let sortDirection = {};
-document.querySelectorAll('.sortable').forEach(header => {
-    header.addEventListener('click', function() {
-        const column = this.getAttribute('data-column');
-        const tbody = document.querySelector('#paymentPlansTable tbody');
-        const rows = Array.from(tbody.querySelectorAll('tr.data-row'));
-        
-        // Toggle sort direction
-        sortDirection[column] = sortDirection[column] === 'asc' ? 'desc' : 'asc';
-        
-        // Remove sort classes from all headers
-        document.querySelectorAll('.sortable').forEach(h => {
-            h.classList.remove('asc', 'desc');
-        });
-        this.classList.add(sortDirection[column]);
-        
-        rows.sort((a, b) => {
-            const aVal = a.children[column].textContent.trim();
-            const bVal = b.children[column].textContent.trim();
-            
-            // Try to parse as number
-            const aNum = parseFloat(aVal.replace(/[^0-9.-]/g, ''));
-            const bNum = parseFloat(bVal.replace(/[^0-9.-]/g, ''));
-            
-            let comparison = 0;
-            if (!isNaN(aNum) && !isNaN(bNum)) {
-                comparison = aNum - bNum;
-            } else {
-                comparison = aVal.localeCompare(bVal);
-            }
-            
-            return sortDirection[column] === 'asc' ? comparison : -comparison;
-        });
-        
-        // Re-append sorted rows
-        rows.forEach(row => {
-            const nextRow = row.nextElementSibling;
-            tbody.appendChild(row);
-            if (nextRow && nextRow.classList.contains('collapse')) {
-                tbody.appendChild(nextRow);
-            }
-        });
-    });
-});
-
-// Export to CSV
-function exportToCSV() {
-    const table = document.getElementById('paymentPlansTable');
-    const rows = table.querySelectorAll('tr.data-row');
-    let csv = [];
-    
-    // Headers
-    csv.push(['"#"', '"Location"', '"Course"', '"Intake"', '"Reg. Fee"', '"Local Fee"', '"Franchise"', '"Discount"', '"Created"'].join(','));
-    
-    // Data rows
-    rows.forEach(row => {
-        if (row.style.display !== 'none') {
-            const cols = row.querySelectorAll('td');
-            const rowData = [
-                `"${cols[0].textContent.trim()}"`,
-                `"${cols[1].textContent.trim()}"`,
-                `"${cols[2].textContent.trim()}"`,
-                `"${cols[3].textContent.trim()}"`,
-                `"${cols[4].textContent.trim()}"`,
-                `"${cols[5].textContent.trim()}"`,
-                `"${cols[6].textContent.trim()}"`,
-                `"${cols[7].textContent.trim()}"`,
-                `"${cols[9].textContent.trim()}"`
-            ];
-            csv.push(rowData.join(','));
-        }
-    });
-    
-    // Download
-    const csvContent = csv.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'payment_plans_' + new Date().toISOString().split('T')[0] + '.csv';
-    link.click();
-}
-
-// Export to PDF
-function exportToPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4');
-    
-    doc.setFontSize(18);
-    doc.text('Payment Plans Report', 14, 15);
-    doc.setFontSize(10);
-    doc.text('Generated: ' + new Date().toLocaleString(), 14, 22);
-    
-    const table = document.getElementById('paymentPlansTable');
-    const rows = Array.from(table.querySelectorAll('tr.data-row')).filter(row => row.style.display !== 'none');
-    
-    const tableData = rows.map(row => {
-        const cols = row.querySelectorAll('td');
-        return [
-            cols[0].textContent.trim(),
-            cols[1].textContent.trim(),
-            cols[2].textContent.trim(),
-            cols[3].textContent.trim(),
-            cols[4].textContent.trim(),
-            cols[5].textContent.trim(),
-            cols[6].textContent.trim(),
-            cols[7].textContent.trim(),
-            cols[9].textContent.trim()
-        ];
-    });
-    
-    doc.autoTable({
-        head: [['#', 'Location', 'Course', 'Intake', 'Reg. Fee', 'Local Fee', 'Franchise', 'Discount', 'Created']],
-        body: tableData,
-        startY: 28,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [52, 58, 64] }
-    });
-    
-    doc.save('payment_plans_' + new Date().toISOString().split('T')[0] + '.pdf');
-}
-
-// Location filter cascade (unchanged)
+// 1. When Location changes → update courses
 document.querySelector('select[name="location"]')?.addEventListener('change', function () {
     const location = this.value;
     const courseSelect = document.getElementById('filter-course');
     const intakeSelect = document.getElementById('filter-intake');
 
+    // reset course + intake
     courseSelect.innerHTML = '<option value="">All</option>';
     intakeSelect.innerHTML = '<option value="">All</option>';
     intakeSelect.disabled = true;
@@ -442,7 +249,7 @@ document.querySelector('select[name="location"]')?.addEventListener('change', fu
     });
 });
 
-// Course filter cascade (unchanged)
+// 2. When Course changes → update intakes
 document.getElementById('filter-course')?.addEventListener('change', function () {
     const courseId = this.value;
     const location = document.querySelector('select[name="location"]').value;
@@ -467,22 +274,25 @@ document.getElementById('filter-course')?.addEventListener('change', function ()
 })
 .then(res => res.json())
 .then(data => {
-    console.log("Intake API response:", data);
+    console.log("Intake API response:", data); // 🔎 Debug here
     intakeSelect.innerHTML = '<option value="">All</option>';
     if (data.success && data.data.length) {
         data.data.forEach(intake => {
             const opt = document.createElement('option');
             opt.value = intake.intake_id;
             opt.textContent = intake.batch ? intake.batch : `Batch ${intake.intake_id}`;
+
             intakeSelect.appendChild(opt);
         });
     }
     intakeSelect.disabled = false;
 })
-.catch(() => {
-    intakeSelect.innerHTML = '<option value="">All</option>';
-    intakeSelect.disabled = false;
+
+    .catch(() => {
+        intakeSelect.innerHTML = '<option value="">All</option>';
+        intakeSelect.disabled = false;
+    });
 });
-});
+
 </script>
 @endsection
