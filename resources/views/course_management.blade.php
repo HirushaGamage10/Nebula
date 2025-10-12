@@ -196,55 +196,144 @@
             </form>
         </div>
     </div>
-</div>
 
-<div class="card mt-4">
-    <div class="card-body">
-        <h2 class="text-center mb-4">Existing Courses</h2>
+    <div class="card mt-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="mb-0">Existing Courses</h2>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-danger" id="bulkDeleteCourseBtn" style="display:none;">
+                        <i class="ti ti-trash"></i> Delete Selected
+                    </button>
+                    <button class="btn btn-sm btn-outline-success" id="exportCourseBtn">
+                        <i class="ti ti-download"></i> Export CSV
+                    </button>
+                </div>
+            </div>
             <hr>
-            <div class="table-responsive" style="max-height: 400px; overflow-y: auto; overflow-x: auto; width: 100%;">
-                <table class="table table-striped table-bordered" style="table-layout: fixed; width: max-content; min-width: 900px;">
+            
+            <!-- Table Controls -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="ti ti-search"></i></span>
+                        <input type="text" class="form-control" id="searchCourseInput" placeholder="Search courses...">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="filterCourseType">
+                        <option value="">All Types</option>
+                        <option value="degree">Degree</option>
+                        <option value="diploma">Diploma</option>
+                        <option value="certificate">Certificate</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="filterLocation">
+                        <option value="">All Locations</option>
+                        <option value="Welisara">Welisara</option>
+                        <option value="Moratuwa">Moratuwa</option>
+                        <option value="Peradeniya">Peradeniya</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="perPageCourseSelect">
+                        <option value="10">10 per page</option>
+                        <option value="25" selected>25 per page</option>
+                        <option value="50">50 per page</option>
+                        <option value="all">Show All</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-secondary w-100" id="clearCourseFiltersBtn">
+                        <i class="ti ti-filter-off"></i> Clear
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Info -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <small class="text-muted" id="courseResultsInfo">Showing 0 courses</small>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="selectAllCourses">
+                    <label class="form-check-label" for="selectAllCourses">
+                        <small>Select All</small>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-responsive" style="max-height: 500px; overflow-y: auto; overflow-x: auto; width: 100%;">
+                <table class="table table-striped table-bordered table-hover" style="table-layout: fixed; width: max-content; min-width: 900px;">
                     <thead style="position: sticky; top: 0; background: #fff; z-index: 2;">
                         <tr>
-                            <th style="position: sticky; top: 0; background: #fff;">Course Name</th>
-                            <th style="position: sticky; top: 0; background: #fff;">Course Type</th>
-                            <th style="position: sticky; top: 0; background: #fff;">Location</th>
-                            <th style="position: sticky; top: 0; background: #fff;">Duration</th>
-                            <th style="position: sticky; top: 0; background: #fff;">Medium</th>
-                            <th style="position: sticky; top: 0; background: #fff;">Actions</th>
+                            <th style="position: sticky; top: 0; background: #fff; width: 40px;">
+                                <input type="checkbox" id="selectAllCoursesHeader" class="form-check-input">
+                            </th>
+                            <th class="sortable-course" data-column="course_name" style="position: sticky; top: 0; background: #fff; cursor: pointer;">
+                                Course Name <i class="ti ti-selector"></i>
+                            </th>
+                            <th class="sortable-course" data-column="course_type" style="position: sticky; top: 0; background: #fff; cursor: pointer;">
+                                Course Type <i class="ti ti-selector"></i>
+                            </th>
+                            <th class="sortable-course" data-column="location" style="position: sticky; top: 0; background: #fff; cursor: pointer;">
+                                Location <i class="ti ti-selector"></i>
+                            </th>
+                            <th class="sortable-course" data-column="duration" style="position: sticky; top: 0; background: #fff; cursor: pointer;">
+                                Duration <i class="ti ti-selector"></i>
+                            </th>
+                            <th class="sortable-course" data-column="course_medium" style="position: sticky; top: 0; background: #fff; cursor: pointer;">
+                                Medium <i class="ti ti-selector"></i>
+                            </th>
+                            <th style="position: sticky; top: 0; background: #fff; width: 180px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="existingCoursesTableBody">
                         @forelse($courses as $course)
                         <tr data-course-id="{{ $course->course_id }}">
-                            <td>{{ $course->course_name }}</td>
                             <td>
+                                <input type="checkbox" class="form-check-input course-checkbox" data-course-id="{{ $course->course_id }}">
+                            </td>
+                            <td class="course-name">{{ $course->course_name }}</td>
+                            <td class="course-type" data-type="{{ $course->course_type }}">
                                 @if($course->course_type == 'degree')
-                                    Degree Program
+                                    <span class="badge bg-primary">Degree Program</span>
                                 @elseif($course->course_type == 'diploma')
-                                    Diploma Program
+                                    <span class="badge bg-info">Diploma Program</span>
                                 @elseif($course->course_type == 'certificate')
-                                    Certificate Program
+                                    <span class="badge bg-success">Certificate Program</span>
                                 @else
                                     N/A
                                 @endif
                             </td>
-                            <td>{{ $course->location }}</td>
-                            <td>{{ $course->duration_formatted }}</td>
-                            <td>{{ $course->course_medium }}</td>
+                            <td class="course-location">{{ $course->location }}</td>
+                            <td class="course-duration">{{ $course->duration_formatted }}</td>
+                            <td class="course-medium">{{ $course->course_medium }}</td>
                             <td>
-                                <button class="btn btn-sm btn-primary edit-course-btn" data-course-id="{{ $course->course_id }}">Edit</button>
-                                <button class="btn btn-sm btn-danger delete-course-btn" data-course-id="{{ $course->course_id }}">Delete</button>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-outline-primary edit-course-btn" data-course-id="{{ $course->course_id }}" title="Edit">
+                                        <i class="ti ti-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger delete-course-btn" data-course-id="{{ $course->course_id }}" title="Delete">
+                                        <i class="ti ti-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         @empty
-                        <tr class="no-courses-found">
-                            <td colspan="6" class="text-center">No courses found.</td>
+                        <tr id="no-courses-row">
+                            <td colspan="7" class="text-center">No courses found.</td>
                         </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
+
+            <!-- Pagination -->
+            <nav aria-label="Course pagination" class="mt-3">
+                <ul class="pagination pagination-sm justify-content-center" id="coursePagination">
+                </ul>
+            </nav>
         </div>
     </div>
 </div>
@@ -274,366 +363,627 @@
 @endsection
 
 @push('scripts')
-    <script>
+<script>
+$(document).ready(function() {
+    let allCourses = [];
+    let filteredCourses = [];
+    let currentCoursePage = 1;
+    let perCoursePage = 25;
+    let sortCourseColumn = 'course_name';
+    let sortCourseDirection = 'asc';
+    let isFormDirty = false;
 
-    $(document).ready(function() {
-        // Course type change handler
+    // Initialize courses array from table
+    function initializeCourses() {
+        allCourses = [];
+        $('#existingCoursesTableBody tr[data-course-id]').each(function() {
+            const row = $(this);
+            const course = {
+                course_id: row.data('course-id'),
+                course_name: row.find('.course-name').text().trim(),
+                course_type: row.find('.course-type').data('type'),
+                location: row.find('.course-location').text().trim(),
+                duration: row.find('.course-duration').text().trim(),
+                course_medium: row.find('.course-medium').text().trim()
+            };
+            allCourses.push(course);
+        });
+        filteredCourses = [...allCourses];
+        renderCourseTable();
+    }
+
+    initializeCourses();
+
+    // Apply all filters function
+    function applyCourseFilters() {
+        const searchTerm = $('#searchCourseInput').val().toLowerCase();
+        const filterType = $('#filterCourseType').val();
+        const filterLoc = $('#filterLocation').val();
+        
+        filteredCourses = allCourses.filter(course => {
+            const matchesSearch = !searchTerm || 
+                course.course_name.toLowerCase().includes(searchTerm) ||
+                course.location.toLowerCase().includes(searchTerm) ||
+                course.duration.toLowerCase().includes(searchTerm) ||
+                course.course_medium.toLowerCase().includes(searchTerm);
+            
+            const matchesType = !filterType || course.course_type === filterType;
+            const matchesLocation = !filterLoc || course.location === filterLoc;
+            
+            return matchesSearch && matchesType && matchesLocation;
+        });
+        
+        currentCoursePage = 1;
+        renderCourseTable();
+    }
+
+    // Auto-filter when course_type changes in form
     $('#course_type').on('change', function() {
         const selectedType = $(this).val();
-
+        
+        // Handle form field visibility (existing logic)
         if (selectedType === 'degree') {
-            // Show and enable degree fields
             $('#degree_program_fields').show().find('input, select, textarea').prop('disabled', false);
             $('#certificate_program_fields').hide().find('input, select, textarea').prop('disabled', true);
-
-            // Auto-fill duration: 3 years
             $('#duration_years').val(3);
             $('#duration_months').val(0);
             $('#duration_days').val(0);
-
         } else if (selectedType === 'diploma') {
-            // Diploma uses same degree fields
             $('#degree_program_fields').show().find('input, select, textarea').prop('disabled', false);
             $('#certificate_program_fields').hide().find('input, select, textarea').prop('disabled', true);
-
-            // Auto-fill duration: 2 years
             $('#duration_years').val(2);
             $('#duration_months').val(0);
             $('#duration_days').val(0);
-
         } else if (selectedType === 'certificate') {
-            // Show and enable certificate fields
             $('#certificate_program_fields').show().find('input, select, textarea').prop('disabled', false);
             $('#degree_program_fields').hide().find('input, select, textarea').prop('disabled', true);
-
-            // Auto-fill duration: 1 year
             $('#cert_duration_years').val(1);
             $('#cert_duration_months').val(0);
             $('#cert_duration_days').val(0);
-
         } else {
-            // Nothing selected, hide and disable both
-            $('#degree_program_fields, #certificate_program_fields')
-                .hide()
-                .find('input, select, textarea').prop('disabled', true);
+            $('#degree_program_fields, #certificate_program_fields').hide().find('input, select, textarea').prop('disabled', true);
+        }
+        
+        // Auto-filter the table
+        if (selectedType) {
+            $('#filterCourseType').val(selectedType);
+            applyCourseFilters();
+            showToast(`Table filtered to show only ${selectedType} programs`, 'info');
         }
     });
 
-    // Initially disable all fields in both sections
-    $('#degree_program_fields, #certificate_program_fields')
-        .find('input, select, textarea').prop('disabled', true);
+    // Initially disable all fields
+    $('#degree_program_fields, #certificate_program_fields').find('input, select, textarea').prop('disabled', true);
+
+    // Search functionality
+    $('#searchCourseInput').on('keyup', function() {
+        applyCourseFilters();
+    });
+
+    // Filter by type
+    $('#filterCourseType').on('change', function() {
+        applyCourseFilters();
+    });
+
+    // Filter by location
+    $('#filterLocation').on('change', function() {
+        applyCourseFilters();
+    });
+
+    // Clear filters button
+    $('#clearCourseFiltersBtn').on('click', function() {
+        $('#searchCourseInput').val('');
+        $('#filterCourseType').val('');
+        $('#filterLocation').val('');
+        filteredCourses = [...allCourses];
+        currentCoursePage = 1;
+        renderCourseTable();
+        showToast('Filters cleared', 'info');
+    });
+
+    // Per page selection
+    $('#perPageCourseSelect').on('change', function() {
+        perCoursePage = $(this).val() === 'all' ? filteredCourses.length : parseInt($(this).val());
+        currentCoursePage = 1;
+        renderCourseTable();
+    });
+
+    // Sorting
+    $('.sortable-course').on('click', function() {
+        const column = $(this).data('column');
+        if (sortCourseColumn === column) {
+            sortCourseDirection = sortCourseDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortCourseColumn = column;
+            sortCourseDirection = 'asc';
+        }
+        
+        $('.sortable-course i').attr('class', 'ti ti-selector');
+        $(this).find('i').attr('class', sortCourseDirection === 'asc' ? 'ti ti-sort-ascending' : 'ti ti-sort-descending');
+        
+        sortCourses();
+        renderCourseTable();
+    });
+
+    function sortCourses() {
+        filteredCourses.sort((a, b) => {
+            let aVal = a[sortCourseColumn] || '';
+            let bVal = b[sortCourseColumn] || '';
+            
+            aVal = aVal.toString().toLowerCase();
+            bVal = bVal.toString().toLowerCase();
+            
+            if (aVal < bVal) return sortCourseDirection === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortCourseDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    // Render table
+    function renderCourseTable() {
+        const start = (currentCoursePage - 1) * perCoursePage;
+        const end = start + perCoursePage;
+        const pageCourses = filteredCourses.slice(start, end);
+        
+        $('#existingCoursesTableBody').empty();
+        
+        if (pageCourses.length === 0) {
+            $('#existingCoursesTableBody').html('<tr><td colspan="7" class="text-center">No courses found.</td></tr>');
+            $('#courseResultsInfo').text('Showing 0 courses');
+        } else {
+            pageCourses.forEach(course => {
+                let badgeClass = 'primary';
+                let badgeText = 'Degree Program';
+                if (course.course_type === 'diploma') {
+                    badgeClass = 'info';
+                    badgeText = 'Diploma Program';
+                } else if (course.course_type === 'certificate') {
+                    badgeClass = 'success';
+                    badgeText = 'Certificate Program';
+                }
+                
+                const row = `
+                    <tr id="course-row-${course.course_id}" data-course-id="${course.course_id}">
+                        <td>
+                            <input type="checkbox" class="form-check-input course-checkbox" data-course-id="${course.course_id}">
+                        </td>
+                        <td class="course-name">${course.course_name}</td>
+                        <td class="course-type" data-type="${course.course_type}">
+                            <span class="badge bg-${badgeClass}">${badgeText}</span>
+                        </td>
+                        <td class="course-location">${course.location}</td>
+                        <td class="course-duration">${course.duration}</td>
+                        <td class="course-medium">${course.course_medium}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button class="btn btn-outline-primary edit-course-btn" data-course-id="${course.course_id}" title="Edit">
+                                    <i class="ti ti-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-danger delete-course-btn" data-course-id="${course.course_id}" title="Delete">
+                                    <i class="ti ti-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                $('#existingCoursesTableBody').append(row);
+            });
+            
+            const showing = filteredCourses.length > perCoursePage ? 
+                `Showing ${start + 1}-${Math.min(end, filteredCourses.length)} of ${filteredCourses.length} courses` :
+                `Showing ${filteredCourses.length} courses`;
+            $('#courseResultsInfo').text(showing);
+        }
+        
+        renderCoursePagination();
+    }
+
+    // Render pagination
+    function renderCoursePagination() {
+        const totalPages = Math.ceil(filteredCourses.length / perCoursePage);
+        $('#coursePagination').empty();
+        
+        if (totalPages <= 1) return;
+        
+        $('#coursePagination').append(`
+            <li class="page-item ${currentCoursePage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${currentCoursePage - 1}">Previous</a>
+            </li>
+        `);
+        
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentCoursePage - 2 && i <= currentCoursePage + 2)) {
+                $('#coursePagination').append(`
+                    <li class="page-item ${i === currentCoursePage ? 'active' : ''}">
+                        <a class="page-link" href="#" data-page="${i}">${i}</a>
+                    </li>
+                `);
+            } else if (i === currentCoursePage - 3 || i === currentCoursePage + 3) {
+                $('#coursePagination').append(`<li class="page-item disabled"><span class="page-link">...</span></li>`);
+            }
+        }
+        
+        $('#coursePagination').append(`
+            <li class="page-item ${currentCoursePage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" data-page="${currentCoursePage + 1}">Next</a>
+            </li>
+        `);
+    }
+
+    // Pagination click
+    $(document).on('click', '#coursePagination a', function(e) {
+        e.preventDefault();
+        const page = parseInt($(this).data('page'));
+        if (page > 0 && page <= Math.ceil(filteredCourses.length / perCoursePage)) {
+            currentCoursePage = page;
+            renderCourseTable();
+            $('.table-responsive').scrollTop(0);
+        }
+    });
+
+    // Select all checkboxes
+    $('#selectAllCourses, #selectAllCoursesHeader').on('change', function() {
+        const isChecked = $(this).prop('checked');
+        $('#selectAllCourses, #selectAllCoursesHeader').prop('checked', isChecked);
+        $('.course-checkbox').prop('checked', isChecked);
+        updateBulkDeleteCourseButton();
+    });
+
+    $(document).on('change', '.course-checkbox', function() {
+        updateBulkDeleteCourseButton();
+        const total = $('.course-checkbox').length;
+        const checked = $('.course-checkbox:checked').length;
+        $('#selectAllCourses, #selectAllCoursesHeader').prop('checked', total === checked);
+    });
+
+    function updateBulkDeleteCourseButton() {
+        const checkedCount = $('.course-checkbox:checked').length;
+        if (checkedCount > 0) {
+            $('#bulkDeleteCourseBtn').show().text(`Delete Selected (${checkedCount})`);
+        } else {
+            $('#bulkDeleteCourseBtn').hide();
+        }
+    }
+
+    // Bulk delete
+    $('#bulkDeleteCourseBtn').on('click', function() {
+        const selectedIds = [];
+        $('.course-checkbox:checked').each(function() {
+            selectedIds.push($(this).data('course-id'));
+        });
+        
+        if (selectedIds.length === 0) return;
+        
+        if (!confirm(`Are you sure you want to delete ${selectedIds.length} course(s)?`)) return;
+        
+        let completed = 0;
+        selectedIds.forEach(id => {
+            $.ajax({
+                url: '/api/courses/' + id,
+                type: 'DELETE',
+                data: { _token: '{{ csrf_token() }}' },
+                success: function(response) {
+                    completed++;
+                    allCourses = allCourses.filter(c => c.course_id != id);
+                    if (completed === selectedIds.length) {
+                        showToast(`Successfully deleted ${selectedIds.length} course(s)`, 'success');
+                        applyCourseFilters();
+                        updateBulkDeleteCourseButton();
+                        $('#selectAllCourses, #selectAllCoursesHeader').prop('checked', false);
+                    }
+                },
+                error: function() {
+                    showToast('Error deleting some courses', 'danger');
+                }
+            });
+        });
+    });
+
+    // Export to CSV
+    $('#exportCourseBtn').on('click', function() {
+        const csv = [];
+        csv.push(['Course Name', 'Course Type', 'Location', 'Duration', 'Medium'].join(','));
+        
+        filteredCourses.forEach(course => {
+            const typeText = course.course_type === 'degree' ? 'Degree Program' : 
+                           course.course_type === 'diploma' ? 'Diploma Program' : 'Certificate Program';
+            csv.push([
+                `"${course.course_name}"`,
+                `"${typeText}"`,
+                `"${course.location}"`,
+                `"${course.duration}"`,
+                `"${course.course_medium}"`
+            ].join(','));
+        });
+        
+        const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `courses_export_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        showToast('Courses exported successfully', 'success');
+    });
 
     // Form submission
     $('#courseForm').on('submit', function(e) {
         e.preventDefault();
-        // ...
-            
-            const courseType = $('#course_type').val();
-            console.log('Selected course type:', courseType);
-            if (!courseType) {
-                showToast('Please select a course type.', 'warning');
-                return;
-            }
-            
-            const formData = new FormData(this);
-            
-            // Debug: Log form data
-            console.log('Form data being sent:');
-            for (let [key, value] of formData.entries()) {
-                console.log(key + ': ' + value);
-            }
-            
-            // Debug: Check specialization fields
-            console.log('Specialization fields found:', $('input[name="specializations[]"]').length);
-            $('input[name="specializations[]"]').each(function(index) {
-                console.log('Specialization ' + index + ':', $(this).val());
-            });
-            
-            if (courseType === 'degree') {
-                if ($('#conducted_by').val() === 'Other') {
-                    formData.set('conducted_by', $('#other_conducted_by').val());
-                }
-            } else if (courseType === 'certificate') {
-                if ($('#cert_conducted_by').val() === 'Other') {
-                    formData.set('conducted_by', $('#cert_other_conducted_by').val());
-                }
-            }
-            formData.delete('other_conducted_by');
-
-            // Determine if we're in edit mode
-            const editCourseId = getQueryParam('course_id');
-            const isEditMode = editCourseId !== null;
-            
-            const url = isEditMode ? `/api/courses/update/${editCourseId}` : '{{ route("course.store") }}';
-            const method = 'POST'; // Always use POST
-
-            $.ajax({
-                url: url,
-                type: method,
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    if (response.success) {
-                        showToast(response.message, 'success');
-
-                        if (!isEditMode) {
-                            // Reset form and hide fields
-                            $('#courseForm')[0].reset();
-                            $('#degree_program_fields, #certificate_program_fields').hide();
-
-                            if (response.course) {
-                                const course = response.course;
-                                let courseTypeText = 'N/A';
-                                if (course.course_type === 'degree') courseTypeText = 'Degree Program';
-                                else if (course.course_type === 'diploma') courseTypeText = 'Diploma Program';
-                                else if (course.course_type === 'certificate') courseTypeText = 'Certificate Program';
-
-                                // Add new row
-                                const newRow = `<tr id="course-row-${course.course_id}" data-course-id="${course.course_id}">
-                                    <td>${course.course_name}</td>
-                                    <td>${courseTypeText}</td>
-                                    <td>${course.location}</td>
-                                    <td>${course.duration_formatted ?? 'N/A'}</td>
-                                    <td>${course.course_medium}</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary edit-course-btn" data-course-id="${course.course_id}">Edit</button>
-                                        <button class="btn btn-sm btn-danger delete-course-btn" data-course-id="${course.course_id}">Delete</button>
-                                    </td>
-                                </tr>`;
-                                
-                                $('#existingCoursesTableBody').prepend(newRow);
-                                $('#existingCoursesTableBody .no-courses-found').remove();
-
-                                // ✅ Restart the page with anchor reference
-                                const courseId = course.course_id;
-                                setTimeout(() => {
-                                    window.location.href = window.location.pathname + '#course-row-' + courseId;
-                                    window.location.reload();
-                                }, 1500);
-                            }
-                        } else {
-                            // For edit mode, clear the URL param
-                            const url = new URL(window.location.href);
-                            url.searchParams.delete('course_id');
-                            window.history.replaceState({}, document.title, url.toString());
-                            $('#submitBtn').text('Submit');
-                        }
-                    }
-
-                },
-                error: function(xhr) {
-                    let message = 'An error occurred.';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        message = xhr.responseJSON.message;
-                    }
-                    showToast(message, 'danger');
-                }
-            });
-        });
-
-        function showToast(message, type) {
-            const toastHtml = `
-                <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="d-flex">
-                        <div class="toast-body">${message}</div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                </div>`;
-            $('.toast-container').append(toastHtml);
-            const toastEl = $('.toast-container .toast').last();
-            const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
-            toast.show();
+        
+        const courseType = $('#course_type').val();
+        if (!courseType) {
+            showToast('Please select a course type.', 'warning');
+            return;
         }
-
-        // Edit button click: redirect to course management with course_id param
-        $(document).on('click', '.edit-course-btn', function() {
-            const courseId = $(this).data('course-id');
-            window.location.href = '/course-management?course_id=' + courseId;
-        });
-
-        // On page load, check for course_id param and prefill form
-        function getQueryParam(name) {
-            const url = new URL(window.location.href);
-            return url.searchParams.get(name);
+        
+        const formData = new FormData(this);
+        
+        if (courseType === 'degree') {
+            if ($('#conducted_by').val() === 'Other') {
+                formData.set('conducted_by', $('#other_conducted_by').val());
+            }
+        } else if (courseType === 'certificate') {
+            if ($('#cert_conducted_by').val() === 'Other') {
+                formData.set('conducted_by', $('#cert_other_conducted_by').val());
+            }
         }
+        formData.delete('other_conducted_by');
+
         const editCourseId = getQueryParam('course_id');
-        if (editCourseId) {
-            // Update button text for edit mode
-            $('#submitBtn').text('Update Course');
-            
-            $.ajax({
-                url: '/api/courses/' + editCourseId,
-                type: 'GET',
-                success: function(response) {
-                    if (response.success && response.course) {
+        const isEditMode = editCourseId !== null;
+        
+        const url = isEditMode ? `/api/courses/update/${editCourseId}` : '{{ route("course.store") }}';
+        const method = 'POST';
+
+        $.ajax({
+            url: url,
+            type: method,
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    showToast(response.message, 'success');
+
+                    if (!isEditMode && response.course) {
                         const course = response.course;
+                        allCourses.unshift({
+                            course_id: course.course_id,
+                            course_name: course.course_name,
+                            course_type: course.course_type,
+                            location: course.location,
+                            duration: course.duration_formatted ?? 'N/A',
+                            course_medium: course.course_medium
+                        });
                         
-                        // Set location and course type first
-                        setSelectValue('#location', course.location);
-                        setSelectValue('#course_type', course.course_type);
+                        $('#courseForm')[0].reset();
+                        $('#degree_program_fields, #certificate_program_fields').hide();
+                        applyCourseFilters();
                         
-                        // Trigger change to show correct fields
-                        $('#course_type').trigger('change');
-
-                        // Populate the visible fields
-                        if (course.course_type === 'degree') {
-                            $('#course_name').val(course.course_name);
-                            $('#duration_years').val(course.duration.years);
-                            $('#duration_months').val(course.duration.months);
-                            $('#duration_days').val(course.duration.days);
-                            setSelectValue('#course_medium', course.course_medium);
-
-                            const conductedBy = course.conducted_by;
-                            const conductedBySelect = $('#conducted_by');
-                            const otherConductedByInput = $('#other_conducted_by');
-                            if (conductedBySelect.find(`option[value="${conductedBy}"]`).length > 0) {
-                                conductedBySelect.val(conductedBy);
-                            } else {
-                                conductedBySelect.val('Other');
-                                otherConductedByInput.val(conductedBy).show().prop('required', true);
+                        setTimeout(() => {
+                            const row = $(`#course-row-${course.course_id}`);
+                            if (row.length) {
+                                $('html, body').animate({
+                                    scrollTop: row.offset().top - 150
+                                }, 800);
+                                row.addClass('table-success');
+                                setTimeout(() => row.removeClass('table-success'), 2500);
                             }
-
-                            $('#no_of_semesters').val(course.no_of_semesters).trigger('input');
-                            $('#training_years').val(course.training_period.years);
-                            $('#training_months').val(course.training_period.months);
-                            $('#training_days').val(course.training_period.days);
-                            $('#min_credits').val(course.min_credits);
-                            $('#entry_qualification').val(course.entry_qualification);
-                        } else if (course.course_type === 'certificate') {
-                            // Note: certificate fields have different IDs
-                            $('#cert_course_name').val(course.course_name);
-                            $('#cert_duration_years').val(course.duration.years);
-                            $('#cert_duration_months').val(course.duration.months);
-                            $('#cert_duration_days').val(course.duration.days);
-                            setSelectValue('#cert_course_medium', course.course_medium);
-                            
-                            const conductedBy = course.conducted_by;
-                            const conductedBySelect = $('#cert_conducted_by');
-                            const otherConductedByInput = $('#cert_other_conducted_by');
-                            if (conductedBySelect.find(`option[value="${conductedBy}"]`).length > 0) {
-                                conductedBySelect.val(conductedBy);
-                            } else {
-                                conductedBySelect.val('Other');
-                                otherConductedByInput.val(conductedBy).show().prop('required', true);
-                            }
-                            
-                            $('#cert_training_years').val(course.training_period.years);
-                            $('#cert_training_months').val(course.training_period.months);
-                            $('#cert_training_days').val(course.training_period.days);
-                            $('#course_content').val(course.course_content);
-                            $('#cert_entry_qualification').val(course.entry_qualification);
+                        }, 300);
+                    } else if (isEditMode && response.course) {
+                        const course = response.course;
+                        const index = allCourses.findIndex(c => c.course_id == course.course_id);
+                        if (index !== -1) {
+                            allCourses[index] = {
+                                course_id: course.course_id,
+                                course_name: course.course_name,
+                                course_type: course.course_type,
+                                location: course.location,
+                                duration: course.duration_formatted ?? 'N/A',
+                                course_medium: course.course_medium
+                            };
                         }
-                    } else {
-                        showToast('Failed to fetch course details for editing', 'danger');
+                        applyCourseFilters();
+                        
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete('course_id');
+                        window.history.replaceState({}, document.title, url.toString());
+                        $('#submitBtn').text('Submit');
                     }
-                },
-                error: function(xhr, status, error) {
-                    showToast('Error fetching course details for editing', 'danger');
                 }
-            });
-        }
-
-        $('#conducted_by, #cert_conducted_by').on('change', function() {
-            const $otherInput = $(this).parent().find('input[name="other_conducted_by"]');
-            if ($(this).val() === 'Other') {
-                $otherInput.show().prop('required', true);
-            } else {
-                $otherInput.hide().prop('required', false).val('');
+            },
+            error: function(xhr) {
+                let message = 'An error occurred.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    message = xhr.responseJSON.message;
+                }
+                showToast(message, 'danger');
             }
         });
+    });
 
-        // Delete button click
-        $(document).on('click', '.delete-course-btn', function() {
-            const courseId = $(this).data('course-id');
-            $('#delete_course_id').val(courseId);
-            $('#deleteCourseModal').modal('show');
-        });
+    // Edit button click
+    $(document).on('click', '.edit-course-btn', function() {
+        const courseId = $(this).data('course-id');
+        window.location.href = '/course-management?course_id=' + courseId;
+    });
 
-        // Confirm delete
-        $('#confirmDeleteCourseBtn').on('click', function() {
-            const courseId = $('#delete_course_id').val();
-            $.ajax({
-                url: '/api/courses/' + courseId,
-                type: 'DELETE',
-                data: {_token: '{{ csrf_token() }}'},
-                success: function(response) {
-                    if (response.success) {
-                        showToast('Course deleted successfully', 'success');
-                        location.reload();
-                    } else {
-                        showToast('Failed to delete course', 'danger');
-                    }
-                },
-                error: function() {
-                    showToast('Error deleting course', 'danger');
-                }
-            });
-        });
+    // Delete button click
+    $(document).on('click', '.delete-course-btn', function() {
+        const courseId = $(this).data('course-id');
+        $('#delete_course_id').val(courseId);
+        $('#deleteCourseModal').modal('show');
+    });
 
-        // Defensive: Only set if value exists in the select options
-        function setSelectValue(selectId, value) {
-            const $select = $(selectId);
-            if ($select.find(`option[value='${value}']`).length > 0) {
-                $select.val(value);
-            } else {
-                // Try to match by display text (for legacy data)
-                $select.find('option').each(function() {
-                    if ($(this).text().trim() === value.trim()) {
-                        $select.val($(this).val());
-                    }
-                });
-            }
-        }
-
-        // Specialization logic
-        $(document).ready(function() {
-            $('input[name="has_specialization"]').on('change', function() {
-                if ($(this).val() === 'yes') {
-                    $('#specializationFields').show();
+    // Confirm delete
+    $('#confirmDeleteCourseBtn').on('click', function() {
+        const courseId = $('#delete_course_id').val();
+        $.ajax({
+            url: '/api/courses/' + courseId,
+            type: 'DELETE',
+            data: {_token: '{{ csrf_token() }}'},
+            success: function(response) {
+                if (response.success) {
+                    showToast('Course deleted successfully', 'success');
+                    allCourses = allCourses.filter(c => c.course_id != courseId);
+                    applyCourseFilters();
+                    $('#deleteCourseModal').modal('hide');
                 } else {
-                    $('#specializationFields').hide();
-                    $('#specializationInputs').html('<div class="input-group mb-2">\
-                        <input type="text" class="form-control specialization-input" name="specializations[]" placeholder="Enter specialization name">\
-                        <button type="button" class="btn btn-outline-secondary remove-specialization" style="display:none;">Remove</button>\
-                    </div>');
+                    showToast('Failed to delete course', 'danger');
                 }
-            });
-            // Add specialization
-            $('#addSpecializationBtn').on('click', function() {
-                $('#specializationInputs').append('<div class="input-group mb-2">\
-                    <input type="text" class="form-control specialization-input" name="specializations[]" placeholder="Enter specialization name">\
-                    <button type="button" class="btn btn-outline-secondary remove-specialization">Remove</button>\
-                </div>');
-                updateRemoveButtons();
-            });
-            // Remove specialization
-            $('#specializationInputs').on('click', '.remove-specialization', function() {
-                $(this).closest('.input-group').remove();
-                updateRemoveButtons();
-            });
-            function updateRemoveButtons() {
-                var count = $('#specializationInputs .input-group').length;
-                $('#specializationInputs .remove-specialization').each(function(i, btn) {
-                    $(btn).toggle(count > 1);
-                });
+            },
+            error: function() {
+                showToast('Error deleting course', 'danger');
             }
-            updateRemoveButtons();
         });
     });
-    // Scroll to the newly created course row after reload
-    $(window).on('load', function() {
-        const hash = window.location.hash;
-        if (hash && $(hash).length) {
-            $('html, body').animate({
-                scrollTop: $(hash).offset().top - 150
-            }, 800, function() {
-                // Optional: highlight the new row briefly
-                $(hash).addClass('table-success');
-                setTimeout(() => $(hash).removeClass('table-success'), 2500);
-            });
+
+    // On page load, check for course_id param and prefill form
+    function getQueryParam(name) {
+        const url = new URL(window.location.href);
+        return url.searchParams.get(name);
+    }
+
+    const editCourseId = getQueryParam('course_id');
+    if (editCourseId) {
+        $('#submitBtn').text('Update Course');
+        
+        $.ajax({
+            url: '/api/courses/' + editCourseId,
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.course) {
+                    const course = response.course;
+                    
+                    setSelectValue('#location', course.location);
+                    setSelectValue('#course_type', course.course_type);
+                    $('#course_type').trigger('change');
+
+                    if (course.course_type === 'degree') {
+                        $('#course_name').val(course.course_name);
+                        $('#duration_years').val(course.duration.years);
+                        $('#duration_months').val(course.duration.months);
+                        $('#duration_days').val(course.duration.days);
+                        setSelectValue('#course_medium', course.course_medium);
+
+                        const conductedBy = course.conducted_by;
+                        const conductedBySelect = $('#conducted_by');
+                        const otherConductedByInput = $('#other_conducted_by');
+                        if (conductedBySelect.find(`option[value="${conductedBy}"]`).length > 0) {
+                            conductedBySelect.val(conductedBy);
+                        } else {
+                            conductedBySelect.val('Other');
+                            otherConductedByInput.val(conductedBy).show().prop('required', true);
+                        }
+
+                        $('#no_of_semesters').val(course.no_of_semesters).trigger('input');
+                        $('#training_years').val(course.training_period.years);
+                        $('#training_months').val(course.training_period.months);
+                        $('#training_days').val(course.training_period.days);
+                        $('#min_credits').val(course.min_credits);
+                        $('#entry_qualification').val(course.entry_qualification);
+                    } else if (course.course_type === 'certificate') {
+                        $('#cert_course_name').val(course.course_name);
+                        $('#cert_duration_years').val(course.duration.years);
+                        $('#cert_duration_months').val(course.duration.months);
+                        $('#cert_duration_days').val(course.duration.days);
+                        setSelectValue('#cert_course_medium', course.course_medium);
+                        
+                        const conductedBy = course.conducted_by;
+                        const conductedBySelect = $('#cert_conducted_by');
+                        const otherConductedByInput = $('#cert_other_conducted_by');
+                        if (conductedBySelect.find(`option[value="${conductedBy}"]`).length > 0) {
+                            conductedBySelect.val(conductedBy);
+                        } else {
+                            conductedBySelect.val('Other');
+                            otherConductedByInput.val(conductedBy).show().prop('required', true);
+                        }
+                        
+                        $('#cert_training_years').val(course.training_period.years);
+                        $('#cert_training_months').val(course.training_period.months);
+                        $('#cert_training_days').val(course.training_period.days);
+                        $('#course_content').val(course.course_content);
+                        $('#cert_entry_qualification').val(course.entry_qualification);
+                    }
+                } else {
+                    showToast('Failed to fetch course details for editing', 'danger');
+                }
+            },
+            error: function(xhr, status, error) {
+                showToast('Error fetching course details for editing', 'danger');
+            }
+        });
+    }
+
+    $('#conducted_by, #cert_conducted_by').on('change', function() {
+        const $otherInput = $(this).parent().find('input[name="other_conducted_by"]');
+        if ($(this).val() === 'Other') {
+            $otherInput.show().prop('required', true);
+        } else {
+            $otherInput.hide().prop('required', false).val('');
         }
     });
 
-    </script>
+    function setSelectValue(selectId, value) {
+        const $select = $(selectId);
+        if ($select.find(`option[value='${value}']`).length > 0) {
+            $select.val(value);
+        } else {
+            $select.find('option').each(function() {
+                if ($(this).text().trim() === value.trim()) {
+                    $select.val($(this).val());
+                }
+            });
+        }
+    }
+
+    function showToast(message, type) {
+        const toastHtml = `
+            <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>`;
+        $('.toast-container').append(toastHtml);
+        const toastEl = $('.toast-container .toast').last();
+        const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
+        toast.show();
+    }
+
+    // Specialization logic
+    $('input[name="has_specialization"]').on('change', function() {
+        if ($(this).val() === 'yes') {
+            $('#specializationFields').show();
+        } else {
+            $('#specializationFields').hide();
+            $('#specializationInputs').html('<div class="input-group mb-2">\
+                <input type="text" class="form-control specialization-input" name="specializations[]" placeholder="Enter specialization name">\
+                <button type="button" class="btn btn-outline-secondary remove-specialization" style="display:none;">Remove</button>\
+            </div>');
+        }
+    });
+
+    $('#addSpecializationBtn').on('click', function() {
+        $('#specializationInputs').append('<div class="input-group mb-2">\
+            <input type="text" class="form-control specialization-input" name="specializations[]" placeholder="Enter specialization name">\
+            <button type="button" class="btn btn-outline-secondary remove-specialization">Remove</button>\
+        </div>');
+        updateRemoveButtons();
+    });
+
+    $('#specializationInputs').on('click', '.remove-specialization', function() {
+        $(this).closest('.input-group').remove();
+        updateRemoveButtons();
+    });
+
+    function updateRemoveButtons() {
+        var count = $('#specializationInputs .input-group').length;
+        $('#specializationInputs .remove-specialization').each(function(i, btn) {
+            $(btn).toggle(count > 1);
+        });
+    }
+    updateRemoveButtons();
+});
+</script>
 @endpush
