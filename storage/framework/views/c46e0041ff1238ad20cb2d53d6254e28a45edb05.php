@@ -1,21 +1,23 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Payment Plans')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Payment Plans'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
-    @if(session('success'))
+    <?php if(session('success')): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
+            <?php echo e(session('success')); ?>
+
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    @endif
-    @if(session('error'))
+    <?php endif; ?>
+    <?php if(session('error')): ?>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
+            <?php echo e(session('error')); ?>
+
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-    @endif
+    <?php endif; ?>
 
     <div class="card mb-3 shadow-sm">
         <div class="card-body">
@@ -31,52 +33,54 @@
                 </div>
             </div>
             
-            <form method="GET" action="{{ route('payment.plan.index') }}" class="row gy-2 gx-3 align-items-end">
+            <form method="GET" action="<?php echo e(route('payment.plan.index')); ?>" class="row gy-2 gx-3 align-items-end">
                 <div class="col-md-2">
                     <label class="form-label">Location</label>
                     <select name="location" class="form-select form-select-sm">
                         <option value="">All</option>
-                        @foreach($locations as $loc)
-                            <option value="{{ $loc }}" @selected(request('location')===$loc)>{{ $loc }}</option>
-                        @endforeach
+                        <?php $__currentLoopData = $locations; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $loc): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($loc); ?>" <?php if(request('location')===$loc): echo 'selected'; endif; ?>><?php echo e($loc); ?></option>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Course</label>
                     <select name="course_id" id="filter-course" class="form-select form-select-sm">
                         <option value="">All</option>
-                        @foreach($courses as $c)
-                            <option value="{{ $c->course_id }}" @selected((string)request('course_id')===(string)$c->course_id)>
-                                {{ $c->course_name }}
+                        <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $c): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($c->course_id); ?>" <?php if((string)request('course_id')===(string)$c->course_id): echo 'selected'; endif; ?>>
+                                <?php echo e($c->course_name); ?>
+
                             </option>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Intake</label>
-                    <select name="intake_id" id="filter-intake" class="form-select form-select-sm" @disabled(!request('course_id'))>
+                    <select name="intake_id" id="filter-intake" class="form-select form-select-sm" <?php if(!request('course_id')): echo 'disabled'; endif; ?>>
                         <option value="">All</option>
-                        @foreach($intakes as $i)
-                            <option value="{{ $i->intake_id }}" @selected((string)request('intake_id')===(string)$i->intake_id)>
-                                {{ $i->batch ?? 'Batch ' . $i->intake_id }}
+                        <?php $__currentLoopData = $intakes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($i->intake_id); ?>" <?php if((string)request('intake_id')===(string)$i->intake_id): echo 'selected'; endif; ?>>
+                                <?php echo e($i->batch ?? 'Batch ' . $i->intake_id); ?>
+
                             </option>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </select>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Discount Status</label>
                     <select name="has_discount" class="form-select form-select-sm">
                         <option value="">All</option>
-                        <option value="1" @selected(request('has_discount')==='1')>With Discount</option>
-                        <option value="0" @selected(request('has_discount')==='0')>No Discount</option>
+                        <option value="1" <?php if(request('has_discount')==='1'): echo 'selected'; endif; ?>>With Discount</option>
+                        <option value="0" <?php if(request('has_discount')==='0'): echo 'selected'; endif; ?>>No Discount</option>
                     </select>
                 </div>
                 <div class="col-md-2">
                     <label class="form-label">Installments</label>
                     <select name="has_installments" class="form-select form-select-sm">
                         <option value="">All</option>
-                        <option value="1" @selected(request('has_installments')==='1')>With Installments</option>
-                        <option value="0" @selected(request('has_installments')==='0')>No Installments</option>
+                        <option value="1" <?php if(request('has_installments')==='1'): echo 'selected'; endif; ?>>With Installments</option>
+                        <option value="0" <?php if(request('has_installments')==='0'): echo 'selected'; endif; ?>>No Installments</option>
                     </select>
                 </div>
                 <div class="col-md-1 d-grid">
@@ -115,8 +119,8 @@
                         </tr>
                     </thead>
                     <tbody>
-                    @forelse($plans as $plan)
-                        @php
+                    <?php $__empty_1 = true; $__currentLoopData = $plans; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $plan): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <?php
                             $items = is_array($plan->installments) ? $plan->installments : (json_decode($plan->installments, true) ?? []);
                             $count = count($items);
 
@@ -128,55 +132,58 @@
                                 $totalLocal += (float)($it['local_amount'] ?? 0);
                                 $totalIntl  += (float)($it['international_amount'] ?? 0);
                             }
-                        @endphp
+                        ?>
                         <tr class="data-row">
-                            <td>{{ $plan->id }}</td>
-                            <td>{{ $plan->location }}</td>
-                            <td>{{ optional($plan->course)->course_name ?? '—' }}</td>
-                            <td>{{ optional($plan->intake)->batch ?? '—' }}</td>
-                            <td class="text-end">{{ number_format($plan->registration_fee, 2, '.', ',') }}</td>
-                            <td class="text-end">{{ number_format($plan->local_fee, 2, '.', ',') }}</td>
+                            <td><?php echo e($plan->id); ?></td>
+                            <td><?php echo e($plan->location); ?></td>
+                            <td><?php echo e(optional($plan->course)->course_name ?? '—'); ?></td>
+                            <td><?php echo e(optional($plan->intake)->batch ?? '—'); ?></td>
+                            <td class="text-end"><?php echo e(number_format($plan->registration_fee, 2, '.', ',')); ?></td>
+                            <td class="text-end"><?php echo e(number_format($plan->local_fee, 2, '.', ',')); ?></td>
                             <td class="text-end">
-                                {{ number_format($plan->international_fee, 2, '.', ',') }}
-                                <small class="text-muted">{{ $plan->international_currency }}</small>
+                                <?php echo e(number_format($plan->international_fee, 2, '.', ',')); ?>
+
+                                <small class="text-muted"><?php echo e($plan->international_currency); ?></small>
                             </td>
                             <td>
-                                @if($plan->apply_discount)
-                                    <span class="badge bg-success">{{ rtrim(rtrim(number_format($plan->discount ?? 0, 2, '.', ''), '0'), '.') }}%</span>
-                                @else
+                                <?php if($plan->apply_discount): ?>
+                                    <span class="badge bg-success"><?php echo e(rtrim(rtrim(number_format($plan->discount ?? 0, 2, '.', ''), '0'), '.')); ?>%</span>
+                                <?php else: ?>
                                     <span class="badge bg-secondary">—</span>
-                                @endif
+                                <?php endif; ?>
                             </td>
                             <td>
-                                @if($plan->installment_plan)
+                                <?php if($plan->installment_plan): ?>
                                     <button class="btn btn-sm btn-outline-info"
                                             type="button"
                                             data-bs-toggle="collapse"
-                                            data-bs-target="#inst-{{ $plan->id }}">
-                                        <i class="bi bi-list-ul"></i> View {{ $count }}
+                                            data-bs-target="#inst-<?php echo e($plan->id); ?>">
+                                        <i class="bi bi-list-ul"></i> View <?php echo e($count); ?>
+
                                     </button>
                                     <div class="small text-muted mt-1">
-                                        @if($count)
-                                            {{ $firstDue }} → {{ $lastDue }}
-                                        @endif
+                                        <?php if($count): ?>
+                                            <?php echo e($firstDue); ?> → <?php echo e($lastDue); ?>
+
+                                        <?php endif; ?>
                                     </div>
-                                @else
+                                <?php else: ?>
                                     <span class="badge bg-light text-dark">—</span>
-                                @endif
+                                <?php endif; ?>
                             </td>
                             <td>
-                                <div class="small text-muted">{{ $plan->created_at?->format('Y-m-d H:i') }}</div>
+                                <div class="small text-muted"><?php echo e($plan->created_at?->format('Y-m-d H:i')); ?></div>
                             </td>
                             <td>
                                 <div class="d-flex gap-1">
-                                    <a href="{{ route('payment.plan.edit',$plan->id) }}" class="btn btn-sm btn-warning">
+                                    <a href="<?php echo e(route('payment.plan.edit',$plan->id)); ?>" class="btn btn-sm btn-warning">
                                         <i class="bi bi-pencil"></i> Edit
                                     </a>
                                 </div>
                             </td>
                         </tr>
-                        @if($plan->installment_plan)
-                            <tr class="collapse" id="inst-{{ $plan->id }}">
+                        <?php if($plan->installment_plan): ?>
+                            <tr class="collapse" id="inst-<?php echo e($plan->id); ?>">
                                 <td colspan="11" class="bg-light">
                                     <div class="table-responsive">
                                         <table class="table table-sm table-striped mb-2">
@@ -185,40 +192,40 @@
                                                     <th>#</th>
                                                     <th>Due Date</th>
                                                     <th class="text-end">Local (LKR)</th>
-                                                    <th class="text-end">International ({{ $plan->international_currency }})</th>
+                                                    <th class="text-end">International (<?php echo e($plan->international_currency); ?>)</th>
                                                     <th>Tax?</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @forelse($items as $it)
+                                                <?php $__empty_2 = true; $__currentLoopData = $items; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $it): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_2 = false; ?>
                                                     <tr>
-                                                        <td><span class="badge bg-primary">{{ $it['installment_number'] ?? '' }}</span></td>
-                                                        <td>{{ $it['due_date'] ?? '' }}</td>
-                                                        <td class="text-end">{{ number_format((float)($it['local_amount'] ?? 0), 2, '.', ',') }}</td>
-                                                        <td class="text-end">{{ number_format((float)($it['international_amount'] ?? 0), 2, '.', ',') }}</td>
+                                                        <td><span class="badge bg-primary"><?php echo e($it['installment_number'] ?? ''); ?></span></td>
+                                                        <td><?php echo e($it['due_date'] ?? ''); ?></td>
+                                                        <td class="text-end"><?php echo e(number_format((float)($it['local_amount'] ?? 0), 2, '.', ',')); ?></td>
+                                                        <td class="text-end"><?php echo e(number_format((float)($it['international_amount'] ?? 0), 2, '.', ',')); ?></td>
                                                         <td>
-                                                            @if(!empty($it['apply_tax']))
+                                                            <?php if(!empty($it['apply_tax'])): ?>
                                                                 <span class="badge bg-success">Yes</span>
-                                                            @else
+                                                            <?php else: ?>
                                                                 <span class="badge bg-secondary">No</span>
-                                                            @endif
+                                                            <?php endif; ?>
                                                         </td>
                                                     </tr>
-                                                @empty
+                                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_2): ?>
                                                     <tr><td colspan="5" class="text-center text-muted">No installments found</td></tr>
-                                                @endforelse
+                                                <?php endif; ?>
                                             </tbody>
                                             <tfoot class="table-info">
                                                 <tr class="fw-semibold">
                                                     <td colspan="2" class="text-end">Totals:</td>
-                                                    <td class="text-end">{{ number_format($totalLocal, 2, '.', ',') }}</td>
-                                                    <td class="text-end">{{ number_format($totalIntl, 2, '.', ',') }}</td>
+                                                    <td class="text-end"><?php echo e(number_format($totalLocal, 2, '.', ',')); ?></td>
+                                                    <td class="text-end"><?php echo e(number_format($totalIntl, 2, '.', ',')); ?></td>
                                                     <td></td>
                                                 </tr>
                                                 <tr class="small text-muted">
                                                     <td colspan="2" class="text-end">Required:</td>
-                                                    <td class="text-end">{{ number_format((float)$plan->local_fee, 2, '.', ',') }}</td>
-                                                    <td class="text-end">{{ number_format((float)$plan->international_fee, 2, '.', ',') }}</td>
+                                                    <td class="text-end"><?php echo e(number_format((float)$plan->local_fee, 2, '.', ',')); ?></td>
+                                                    <td class="text-end"><?php echo e(number_format((float)$plan->international_fee, 2, '.', ',')); ?></td>
                                                     <td></td>
                                                 </tr>
                                             </tfoot>
@@ -226,19 +233,21 @@
                                     </div>
                                 </td>
                             </tr>
-                        @endif
-                    @empty
+                        <?php endif; ?>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <tr><td colspan="11" class="text-center text-muted py-4">No payment plans found.</td></tr>
-                    @endforelse
+                    <?php endif; ?>
                     </tbody>
                 </table>
             </div>
 
             <div class="d-flex justify-content-between align-items-center mt-3">
                 <div class="small text-muted">
-                    Showing {{ $plans->firstItem() ?? 0 }}–{{ $plans->lastItem() ?? 0 }} of {{ $plans->total() }}
+                    Showing <?php echo e($plans->firstItem() ?? 0); ?>–<?php echo e($plans->lastItem() ?? 0); ?> of <?php echo e($plans->total()); ?>
+
                 </div>
-                {{ $plans->links() }}
+                <?php echo e($plans->links()); ?>
+
             </div>
         </div>
     </div>
@@ -421,11 +430,11 @@ document.querySelector('select[name="location"]')?.addEventListener('change', fu
 
     if (!location) return;
 
-    fetch("{{ route('courses.byLocation') }}", {
+    fetch("<?php echo e(route('courses.byLocation')); ?>", {
         method: 'POST',
         headers: {
             'Content-Type':'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({ location })
     })
@@ -457,11 +466,11 @@ document.getElementById('filter-course')?.addEventListener('change', function ()
         return;
     }
 
-   fetch("{{ route('intakes.byCourse') }}", {
+   fetch("<?php echo e(route('intakes.byCourse')); ?>", {
     method: 'POST',
     headers: {
         'Content-Type':'application/json',
-        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
     },
     body: JSON.stringify({ course_id: courseId, location })
 })
@@ -485,4 +494,5 @@ document.getElementById('filter-course')?.addEventListener('change', function ()
 });
 });
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\danid\Desktop\Clone Neb\Nebula\resources\views/payment_plan_index.blade.php ENDPATH**/ ?>
