@@ -39,10 +39,8 @@
                 <div id="courseDetailsBox" class="mb-3 row mx-3" style="display:none;">
                     <div class="col-sm-12">
                         <div style="background:#ededed; border-radius:10px; padding:18px;">
-                            <div><b>Duration</b> <span id="cd_duration"></span></div>
+                            <div><b>Conducted By</b> <span id="cd_conducted_by"></span></div>
                             <div><b>Minimum credits</b> <span id="cd_min_credits"></span></div>
-                            <div><b>Training</b> <span id="cd_training"></span></div>
-                            <div><b>Entry Qualification</b> <span id="cd_entry_qualification"></span></div>
                             <div><b>Medium</b> <span id="cd_medium"></span></div>
                         </div>
                     </div>
@@ -979,6 +977,7 @@ $(document).ready(function() {
                     $('#cd_training').text(c.training_period ? c.training_period : '-');
                     $('#cd_entry_qualification').html(c.entry_qualification ? c.entry_qualification.replace(/\n/g, '<br>') : '-');
                     $('#cd_medium').text(c.course_medium ? c.course_medium : '-');
+                    $('#cd_conducted_by').text(c.conducted_by ? c.conducted_by : '-');
                     $('#courseDetailsBox').show();
                 } else {
                     $('#courseDetailsBox').hide();
