@@ -162,55 +162,9 @@
                 </li>
             </ul>
             <div class="tab-content" id="discountTabsContent">
-                <!-- SLT Loan Tab -->
-                <div class="tab-pane fade show active" id="slt-loan" role="tabpanel" aria-labelledby="slt-loan-tab">
-                    <form id="slt-loan-form">
-                        <div class="row mb-3 align-items-center">
-                            <label class="col-sm-3 col-form-label fw-bold">SLT Loan Amount<span class="text-danger">*</span></label>
-                            <div class="col-sm-9">
-                                <div class="input-group">
-                                    <span class="input-group-text">LKR</span>
-                                    <input type="number" class="form-control" id="sltLoanAmount" name="slt_loan_amount" min="0" step="0.01" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3 align-items-center">
-                            <label class="col-sm-3 col-form-label fw-bold">No. of Installments<span class="text-danger">*</span></label>
-                            <div class="col-sm-9">
-                                <input type="number" class="form-control" id="sltInstallments" name="slt_installments" min="1" required>
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-sm-12">
-                                <div class="alert alert-info" id="sltLoanSummary" style="display:none;"></div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-sm-12">
-                                <h5>Local Fee Installments</h5>
-                                <div class="table-responsive">
-                                    <table class="table table-bordered" id="sltInstallmentsTable">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Installment No</th>
-                                                <th>Local Fee Amount</th>
-                                                <th>Due Date</th>
-                                                <th>Amount Should Be Paid</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <!-- Populated by JS -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                
+            
                 <!-- Local Course Fee Discounts Tab -->
-                <div class="tab-pane fade" id="local-course-discounts" role="tabpanel" aria-labelledby="local-course-discounts-tab">
+                <div class="tab-pane fade show active" id="local-course-discounts" role="tabpanel" aria-labelledby="local-course-discounts-tab">
                     <form id="local-course-discount-form">
                         <input type="hidden" id="localCourseDiscountCategory" value="local_course_fee">
                         <div class="row mb-3 align-items-center">
