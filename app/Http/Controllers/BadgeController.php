@@ -28,7 +28,7 @@ class BadgeController extends Controller
         }
 
         try {
-            $courses = CourseRegistration::with(['course', 'intake'])
+            $courses = CourseRegistration::with(['student', 'course', 'intake'])
                 ->where('student_id', $student->student_id)
                 ->get()
                 ->map(function ($c) {
@@ -50,6 +50,7 @@ class BadgeController extends Controller
             return response()->json(['success' => false, 'message' => $e->getMessage()]);
         }
     }
+
 
     public function searchByCourse(Request $request)
     {
