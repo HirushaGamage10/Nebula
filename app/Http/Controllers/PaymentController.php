@@ -1100,28 +1100,39 @@ public function generatePaymentSlip(Request $request)
                 ->first();
 
             if ($studentPlan) {
-                // 🔹 Use the $registration fetched at the top of your function
-                $paymentPlan = \App\Models\PaymentPlan::where('id', $studentPlan->payment_plan_id)
-                    ->where('course_id', $request->course_id)
-                    ->where('intake_id', $registration->intake_id)
-                    ->first();
+    // 🔹 Use the $registration fetched at the top of your function
+    $paymentPlan = \App\Models\PaymentPlan::where('id', $studentPlan->payment_plan_id)
+        ->where('course_id', $request->course_id)
+        ->where('intake_id', $registration->intake_id)
+        ->first();
 
-                if ($paymentPlan) {
-                    $ssclPercent = $paymentPlan->sscl_tax ?? 0; // percentage
-                    $bankCharges = $paymentPlan->bank_charges ?? 0; // fixed
-                    $ssclTaxAmount = round($franchiseFee * ($ssclPercent / 100), 2);
-                }
-            }
+    if ($paymentPlan) {
+            // Use payment plan values as defaults
+            $ssclPercent = $paymentPlan->sscl_tax ?? 0;   // % from plan
+            $bankCharges = $paymentPlan->bank_charges ?? 0; // fixed from plan
+            $ssclTaxAmount = round($franchiseFee * ($ssclPercent / 100), 2);
+        }
+    }
 
-            // 🔹 Remaining amount = franchise fee + SSCL tax + bank charges
-            $remainingAmount = $franchiseFee + $ssclTaxAmount + $bankCharges;
+    // ✅ Always prefer manually entered frontend values (if provided)
+    if ($request->filled('sscl_tax_amount')) {
+        $ssclTaxAmount = (float) $request->sscl_tax_amount;
+    }
 
-            // Optional: merge into request for storing in PaymentDetail
-            $request->merge([
-                'sscl_tax_amount' => $ssclTaxAmount,
-                'bank_charges'    => $bankCharges,
-                'remaining_amount'=> $remainingAmount,
-            ]);
+    if ($request->filled('bank_charges')) {
+        $bankCharges = (float) $request->bank_charges;
+    }
+
+    // ✅ Finally, recalculate total remaining
+    $remainingAmount = round($franchiseFee + $ssclTaxAmount + $bankCharges, 2);
+
+    // ✅ Merge values for later usage / DB storage
+    $request->merge([
+        'sscl_tax_amount' => $ssclTaxAmount,
+        'bank_charges'    => $bankCharges,
+        'remaining_amount'=> $remainingAmount,
+    ]);
+
         }
 
 
