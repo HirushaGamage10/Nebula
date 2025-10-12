@@ -15,13 +15,20 @@ class IntakeCreationController extends Controller
      * Show the form for creating a new intake.
      */
     public function create()
-    {
-        // Use both ID and name 
-        $courses = Course::orderBy('course_name', 'asc')->get(['course_id', 'course_name']);
-        $intakes = Intake::with(['registrations', 'course'])->orderBy('start_date', 'desc')->get();
+{
+    $courses = Course::select('course_id', 'course_name', 'course_type')
+    ->orderByRaw("FIELD(course_type, 'degree', 'diploma', 'certificate')")
+    ->orderBy('course_name', 'asc')
+    ->get();
 
-        return view('intake_creation', compact('courses', 'intakes'));
-    }
+    
+    $intakes = Intake::with(['registrations', 'course'])
+        ->orderBy('start_date', 'desc')
+        ->get();
+
+    return view('intake_creation', compact('courses', 'intakes'));
+}
+
 
 
     /**
