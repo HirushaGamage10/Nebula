@@ -393,7 +393,7 @@
 <li><hr class="my-2 border-gray-200 opacity-30"></li>
 
 {{-- 🔹 Developer Only --}}
-@if($role === 'Developer')
+<!-- @if($role === 'Developer')
     <li class="sidebar-item">
         <a class="sidebar-link {{ Route::currentRouteName() == 'reporting.dashboard' ? 'active' : '' }}"
            href="{{ route('reporting.dashboard') }}">
@@ -408,7 +408,7 @@
             <span class="hide-menu">Data Export/Import</span>
         </a>
     </li>
-@endif
+@endif -->
 
 
             @php

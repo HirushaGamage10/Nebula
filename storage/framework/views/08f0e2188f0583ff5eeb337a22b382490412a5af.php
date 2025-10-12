@@ -393,7 +393,7 @@
 <li><hr class="my-2 border-gray-200 opacity-30"></li>
 
 
-<?php if($role === 'Developer'): ?>
+<!-- <?php if($role === 'Developer'): ?>
     <li class="sidebar-item">
         <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'reporting.dashboard' ? 'active' : ''); ?>"
            href="<?php echo e(route('reporting.dashboard')); ?>">
@@ -408,7 +408,7 @@
             <span class="hide-menu">Data Export/Import</span>
         </a>
     </li>
-<?php endif; ?>
+<?php endif; ?> -->
 
 
             <?php
