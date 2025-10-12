@@ -102,27 +102,45 @@
                     </div>
                 </div>
 
+                <!-- 🔹 Mobile Phone -->
                 <div class="row mb-3">
                     <label for="mobilePhone" class="col-sm-2 col-form-label">Mobile Phone No<span class="text-danger">*</span></label>
                     <div class="col-sm-10">
-                        <input type="tel" class="form-control" id="mobilePhone" name="mobilePhone" placeholder="0XXXXXXXXX or +94XXXXXXXXX" required>
-                        <div id="mobilePhoneError" class="text-danger" style="display: none;">Invalid phone number. Must be 10 digits starting with 0.</div>
-                    </div>
-                </div>
-                
-                <div class="row mb-3">
-                    <label for="homePhone" class="col-sm-2 col-form-label">Home Phone No</label>
-                    <div class="col-sm-10">
-                        <input type="tel" class="form-control" id="homePhone" name="homePhone" placeholder="0XXXXXXXXX or +94XXXXXXXXX">
-                        <div id="homePhoneError" class="text-danger" style="display: none;">Invalid phone number. Must be 10 digits starting with 0.</div>
+                        <div class="input-group">
+                            <select class="form-select country-code-select" name="mobileCountryCode" style="max-width: 180px;">
+                                <!-- Will auto-populate via JS -->
+                            </select>
+                            <input type="tel" class="form-control" id="mobilePhone" name="mobilePhone" placeholder="Enter phone number" required>
+                        </div>
+                        <div id="mobilePhoneError" class="text-danger" style="display:none;">Invalid phone number.</div>
                     </div>
                 </div>
 
+                <!-- 🔹 Home Phone -->
+                <div class="row mb-3">
+                    <label for="homePhone" class="col-sm-2 col-form-label">Home Phone No</label>
+                    <div class="col-sm-10">
+                        <div class="input-group">
+                            <select class="form-select country-code-select" name="homeCountryCode" style="max-width: 180px;">
+                                <!-- Will auto-populate via JS -->
+                            </select>
+                            <input type="tel" class="form-control" id="homePhone" name="homePhone" placeholder="Enter phone number">
+                        </div>
+                        <div id="homePhoneError" class="text-danger" style="display:none;">Invalid phone number.</div>
+                    </div>
+                </div>
+
+                <!-- 🔹 WhatsApp Number -->
                 <div class="row mb-3">
                     <label for="whatsappPhone" class="col-sm-2 col-form-label">WhatsApp Number<span class="text-danger">*</span></label>
                     <div class="col-sm-10">
-                        <input type="tel" class="form-control" id="whatsappPhone" name="whatsappPhone" placeholder="0XXXXXXXXX or +94XXXXXXXXX" required>
-                        <div id="whatsappNumberError" class="text-danger" style="display: none;">Invalid WhatsApp number. Must be 10 digits starting with 0.</div>
+                        <div class="input-group">
+                            <select class="form-select country-code-select" name="whatsappCountryCode" style="max-width: 180px;">
+                                <!-- Will auto-populate via JS -->
+                            </select>
+                            <input type="tel" class="form-control" id="whatsappPhone" name="whatsappPhone" placeholder="Enter WhatsApp number" required>
+                        </div>
+                        <div id="whatsappNumberError" class="text-danger" style="display:none;">Invalid WhatsApp number.</div>
                     </div>
                 </div>
 
@@ -428,10 +446,16 @@
                                 <div class="row mb-3">
                                     <label for="parentContactNo" class="col-sm-2 col-form-label">Contact No<span class="text-danger">*</span></label>
                                     <div class="col-sm-10">
-                                        <input type="text" class="form-control" id="parentContactNo" name="parentContactNo" placeholder="0XXXXXXXXXX" required>
-                                        <div id="parentContactNoError" class="text-danger" style="display: none;">Invalid contact number.</div>
+                                        <div class="input-group">
+                                            <select class="form-select country-code-select" name="parentCountryCode" style="max-width: 180px;">
+                                                <!-- Will auto-populate via JS -->
+                                            </select>
+                                            <input type="tel" class="form-control" id="parentContactNo" name="parentContactNo" placeholder="Enter parent contact number" required>
+                                        </div>
+                                        <div id="parentContactNoError" class="text-danger" style="display:none;">Invalid contact number.</div>
                                     </div>
                                 </div>
+
                                 <div class="row mb-3">
                                     <label for="parentEmail" class="col-sm-2 col-form-label">Email</label>
                                     <div class="col-sm-10">
@@ -445,10 +469,17 @@
                                     </div>
                                 </div>
                                 <div class="row mb-3">
-                                    <label for="emergencyContactNo" class="col-sm-2 col-form-label">Emergency Contact No<span class="text-danger">*</span></label>
+                                    <label for="emergencyContactNo" class="col-sm-2 col-form-label">
+                                        Emergency Contact No<span class="text-danger">*</span>
+                                    </label>
                                     <div class="col-sm-10">
-                                        <input type="text" class="form-control" id="emergencyContactNo" name="emergencyContactNo" placeholder="0XXXXXXXXX" required>
-                                        <div id="emergencyContactNoError" class="text-danger" style="display: none;">Invalid contact number.</div>
+                                        <div class="input-group">
+                                            <select class="form-select country-code-select" name="emergencyCountryCode" style="max-width: 180px;">
+                                                <!-- Will auto-populate via JS -->
+                                            </select>
+                                            <input type="tel" class="form-control" id="emergencyContactNo" name="emergencyContactNo" placeholder="Enter emergency contact number" required>
+                                        </div>
+                                        <div id="emergencyContactNoError" class="text-danger" style="display:none;">Invalid contact number.</div>
                                     </div>
                                 </div>
                             </div>
@@ -536,6 +567,8 @@
 
 @push('scripts')
 <script>
+
+
 function showToast(message, type) {
     var toastHtml = '<div class="toast align-items-center text-white bg-' + type + ' border-0" role="alert" aria-live="assertive" aria-atomic="true">' +
                       '<div class="d-flex">' +
@@ -994,6 +1027,29 @@ $(document).ready(function() {
         summary.classList.remove('d-none');
         summary.scrollIntoView({ behavior:'smooth', block:'start' });
     }
+    // ✅ Phone number validator
+function setupPhoneValidator(inputId, errorId) {
+    const input = document.getElementById(inputId);
+    const error = document.getElementById(errorId);
+    input.addEventListener('input', function () {
+        const value = this.value.trim();
+        const isValid = /^(\+?\d{7,15})$/.test(value); // allow + and 7–15 digits
+        if (isValid) {
+            error.style.display = 'none';
+        } else {
+            error.style.display = 'block';
+            error.textContent = 'Enter a valid phone number (7–15 digits).';
+        }
+    });
+}
+
+// Apply to all phone inputs
+setupPhoneValidator('mobilePhone', 'mobilePhoneError');
+setupPhoneValidator('homePhone', 'homePhoneError');
+setupPhoneValidator('whatsappPhone', 'whatsappNumberError');
+setupPhoneValidator('parentContactNo', 'parentContactNoError');
+setupPhoneValidator('emergencyContactNo', 'emergencyContactNoError');
+
 
     $('#registrationForm').on('submit', function(e) {
         e.preventDefault();
@@ -1100,6 +1156,21 @@ $(document).ready(function() {
         alResults.forEach(function(result) {
             formData.append('al_results[]', result);
         });
+        // ✅ Combine country code + number before submit
+['mobilePhone', 'homePhone', 'whatsappPhone', 'parentContactNo', 'emergencyContactNo'].forEach(function(field) {
+    const input = document.getElementById(field);
+    if (input) {
+        const select = input.closest('.input-group').querySelector('.country-code-select');
+        if (select) {
+            let number = input.value.trim();
+            const code = select.value || '+94';
+            if (!number.startsWith('+')) {
+                number = code + number.replace(/^0+/, '');
+            }
+            formData.set(field, number);
+        }
+    }
+});
 
         $.ajax({
             url: $(this).attr('action'),
@@ -1107,6 +1178,7 @@ $(document).ready(function() {
             data: formData,
             processData: false,
             contentType: false,
+            
             success: function(response) {
                 // clear summary on success
                 const summary = document.getElementById('formErrorSummary');
@@ -1132,5 +1204,79 @@ $(document).ready(function() {
         });
     });
 });
+
+// --- 🌍 Country Calling Codes List ---
+const countryCodes = [
+  { name: "Sri Lanka", code: "+94" },
+  { name: "India", code: "+91" },
+  { name: "United States", code: "+1" },
+  { name: "United Kingdom", code: "+44" },
+  { name: "Australia", code: "+61" },
+  { name: "United Arab Emirates", code: "+971" },
+  { name: "Singapore", code: "+65" },
+  { name: "Malaysia", code: "+60" },
+  { name: "Canada", code: "+1" },
+  { name: "Japan", code: "+81" },
+  { name: "France", code: "+33" },
+  { name: "Germany", code: "+49" },
+  { name: "Italy", code: "+39" },
+  { name: "Bangladesh", code: "+880" },
+  { name: "Pakistan", code: "+92" },
+  { name: "Nepal", code: "+977" },
+  { name: "China", code: "+86" },
+  { name: "Thailand", code: "+66" },
+  { name: "Philippines", code: "+63" },
+  { name: "South Africa", code: "+27" },
+  { name: "New Zealand", code: "+64" },
+  { name: "Qatar", code: "+974" },
+  { name: "Saudi Arabia", code: "+966" },
+  { name: "Kuwait", code: "+965" },
+  { name: "Oman", code: "+968" },
+  { name: "Maldives", code: "+960" },
+  { name: "Vietnam", code: "+84" },
+  { name: "Indonesia", code: "+62" },
+  { name: "Myanmar", code: "+95" },
+  { name: "Other / Custom", code: "" }
+];
+
+// --- 🧩 Populate all selects with class .country-code-select ---
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".country-code-select").forEach(select => {
+    select.innerHTML = ""; // clear existing options
+
+    countryCodes.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.code || "";
+      opt.textContent = `${c.name} ${c.code ? "(" + c.code + ")" : ""}`;
+      if (c.code === "+94") opt.selected = true; // default Sri Lanka
+      select.appendChild(opt);
+    });
+  });
+});
+
+// ✅ Universal phone validator: supports +countrycode and digits
+function setupPhoneValidator(inputId, errorId) {
+    const input = document.getElementById(inputId);
+    const error = document.getElementById(errorId);
+
+    input.addEventListener('input', function () {
+        const value = this.value.trim();
+        const isValid = /^(\+?\d{7,15})$/.test(value); // allows + and 7–15 digits
+        if (isValid) {
+            error.style.display = 'none';
+        } else {
+            error.style.display = 'block';
+            error.textContent = 'Enter a valid phone number (7–15 digits).';
+        }
+    });
+}
+
+// Apply to all
+setupPhoneValidator('mobilePhone', 'mobilePhoneError');
+setupPhoneValidator('homePhone', 'homePhoneError');
+setupPhoneValidator('whatsappPhone', 'whatsappNumberError');
+setupPhoneValidator('parentContactNo', 'parentContactNoError');
+setupPhoneValidator('emergencyContactNo', 'emergencyContactNoError');
+
 </script>
 @endpush
