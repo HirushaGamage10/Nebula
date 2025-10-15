@@ -10,6 +10,8 @@ use App\Models\Course;
 use App\Models\Intake;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DGMDashboardController extends Controller
 {
@@ -187,6 +189,21 @@ class DGMDashboardController extends Controller
 
         $locations = $location === 'all' ? ['Welisara', 'Moratuwa', 'Peradeniya'] : [$location];
 
+        $bulk = \DB::table('bulk_student_uploads')
+            ->whereIn('year', $years)
+            ->whereIn('location', $locations)
+            ->when($course !== 'all', fn($q) => $q->where('course', $course))
+            ->get();
+
+        foreach ($bulk as $row) {
+            $data[] = [
+                'year' => $row->year,
+                'institute_location' => $row->location,
+                'course' => $row->course,
+                'count' => $row->student_count
+            ];
+        }
+
         $data = [];
         foreach ($years as $y) {
             foreach ($locations as $loc) {
@@ -227,7 +244,7 @@ class DGMDashboardController extends Controller
     /**
      * Get revenue data by year and location
      */
-    public function getRevenueData(Request $request)
+    public function getRevenueByYearCourse(Request $request)
     {
         $year = $request->input('year');
         $month = $request->input('month');
@@ -251,42 +268,52 @@ class DGMDashboardController extends Controller
             $years = [date('Y')];
         }
 
+        // Get all locations
+        $locations = $location === 'all'
+            ? ['Welisara', 'Moratuwa', 'Peradeniya']
+            : [$location];
+
+        // Get all courses (or filter by selected course)
+        $courses = $course === 'all'
+            ? \App\Models\Course::pluck('course_id', 'course_name')->toArray()
+            : [\App\Models\Course::where('course_id', $course)->value('course_name') => $course];
+
         $data = [];
         foreach ($years as $y) {
-            $query = PaymentDetail::whereYear('created_at', $y);
+            foreach ($locations as $loc) {
+                foreach ($courses as $courseName => $courseId) {
+                    $query = \App\Models\PaymentDetail::whereYear('created_at', $y)
+                        ->whereHas('student', function ($q) use ($loc) {
+                            $q->where('institute_location', $loc);
+                        })
+                        ->whereHas('registration.course', function ($q) use ($courseId) {
+                            $q->where('course_id', $courseId);
+                        });
 
-            if ($month) {
-                $query->whereMonth('created_at', $month);
-            }
-            if ($day) {
-                $query->whereDay('created_at', $day);
-            }
-            if ($location !== 'all') {
-                $query->whereHas('student', function ($q) use ($location) {
-                    $q->where('institute_location', $location);
-                });
-            }
-            if ($course !== 'all') {
-                $query->whereHas('registration.course', function ($q) use ($course) {
-                    $q->where('course_id', $course);
-                });
-            }
+                    if ($month)
+                        $query->whereMonth('created_at', $month);
+                    if ($day)
+                        $query->whereDay('created_at', $day);
 
-            // Calculate revenue from partial_payments
-            $payments = $query->get();
-            $revenue = 0;
-            foreach ($payments as $payment) {
-                if ($payment->partial_payments && is_array($payment->partial_payments)) {
-                    foreach ($payment->partial_payments as $partial) {
-                        $revenue += floatval($partial['amount'] ?? 0);
+                    // Calculate revenue from partial_payments
+                    $payments = $query->get();
+                    $revenue = 0;
+                    foreach ($payments as $payment) {
+                        if ($payment->partial_payments && is_array($payment->partial_payments)) {
+                            foreach ($payment->partial_payments as $partial) {
+                                $revenue += floatval($partial['amount'] ?? 0);
+                            }
+                        }
                     }
+
+                    $data[] = [
+                        'year' => $y,
+                        'location' => $loc,
+                        'course_name' => $courseName,
+                        'revenue' => $revenue
+                    ];
                 }
             }
-
-            $data[] = [
-                'year' => $y,
-                'revenue' => $revenue
-            ];
         }
 
         return response()->json($data);
@@ -308,97 +335,72 @@ class DGMDashboardController extends Controller
     }
 
     /**
-     * Get future revenue projections
+     * Get outstanding data by year and location
      */
-    public function getFutureProjections(Request $request)
+    public function getOutstandingByYearCourse(Request $request)
     {
-        $currentYear = date('Y');
-        $quarters = [];
+        $year = $request->input('year');
+        $month = $request->input('month');
+        $day = $request->input('date');
+        $location = $request->input('location', 'all');
+        $fromYear = $request->input('from_year');
+        $toYear = $request->input('to_year');
+        $range = $request->input('range');
+        $rangeStart = $request->input('range_start_year');
+        $rangeEnd = $request->input('range_end_year');
 
-        // Get last 4 quarters actual data
-        for ($i = 3; $i >= 0; $i--) {
-            $quarter = Carbon::now()->subQuarters($i);
-            $revenue = PaymentDetail::where('status', 'paid')
-                ->whereBetween('created_at', [
-                    $quarter->copy()->firstOfQuarter(),
-                    $quarter->copy()->lastOfQuarter()
-                ])
-                ->sum('amount');
-
-            $quarters[] = [
-                'label' => $quarter->format('Y Q') . $quarter->quarter,
-                'revenue' => $revenue,
-                'type' => 'actual'
-            ];
+        // Determine years to fetch
+        if ($range && $rangeStart && $rangeEnd) {
+            $years = range($rangeStart, $rangeEnd);
+        } elseif ($fromYear && $toYear) {
+            $years = range($fromYear, $toYear);
+        } elseif ($year) {
+            $years = [$year];
+        } else {
+            $years = [date('Y')];
         }
 
-        // Calculate average growth rate
-        $revenues = array_column($quarters, 'revenue');
-        $avgGrowth = count($revenues) > 1
-            ? ($revenues[count($revenues) - 1] - $revenues[0]) / count($revenues)
-            : 0;
+        // Get all locations
+        $locations = $location === 'all'
+            ? ['Welisara', 'Moratuwa', 'Peradeniya']
+            : [$location];
 
-        // Project next 4 quarters
-        $lastRevenue = end($revenues);
-        for ($i = 1; $i <= 4; $i++) {
-            $projectedRevenue = $lastRevenue + ($avgGrowth * $i);
-            $conservativeRevenue = $projectedRevenue * 0.85;
-
-            $quarter = Carbon::now()->addQuarters($i);
-            $quarters[] = [
-                'label' => $quarter->format('Y Q') . $quarter->quarter,
-                'revenue' => $projectedRevenue,
-                'conservative' => $conservativeRevenue,
-                'type' => 'projected'
-            ];
-        }
-
-        return response()->json($quarters);
-    }
-
-    /**
-     * Get revenue by location
-     */
-    public function getRevenueByLocation(Request $request)
-    {
-        $year = $request->input('year', date('Y'));
-        $course = $request->input('course', 'all');
-
-        $locations = ['Welisara', 'Moratuwa', 'Peradeniya'];
         $data = [];
+        foreach ($years as $y) {
+            foreach ($locations as $loc) {
+                $query = \App\Models\PaymentDetail::whereYear('created_at', $y)
+                    ->whereHas('student', function ($q) use ($loc) {
+                        $q->where('institute_location', $loc);
+                    });
 
-        foreach ($locations as $location) {
-            $query = PaymentDetail::whereYear('created_at', $year)
-                ->whereHas('student', function ($q) use ($location) {
-                    $q->where('institute_location', $location);
-                });
+                if ($month)
+                    $query->whereMonth('created_at', $month);
+                if ($day)
+                    $query->whereDay('created_at', $day);
 
-            if ($course !== 'all') {
-                $query->whereHas('registration.course', function ($q) use ($course) {
-                    $q->where('course_id', $course);
-                });
-            }
-
-            // Calculate revenue from partial_payments
-            $payments = $query->get();
-            $revenue = 0;
-            foreach ($payments as $payment) {
-                if ($payment->partial_payments && is_array($payment->partial_payments)) {
-                    foreach ($payment->partial_payments as $partial) {
-                        $revenue += floatval($partial['amount'] ?? 0);
+                $payments = $query->get();
+                $outstanding = 0;
+                foreach ($payments as $payment) {
+                    $total = floatval($payment->total_amount ?? 0);
+                    $paid = 0;
+                    if ($payment->partial_payments && is_array($payment->partial_payments)) {
+                        foreach ($payment->partial_payments as $partial) {
+                            $paid += floatval($partial['amount'] ?? 0);
+                        }
                     }
+                    $outstanding += ($total - $paid);
                 }
-            }
 
-            $data[] = [
-                'location' => $location,
-                'revenue' => $revenue
-            ];
+                $data[] = [
+                    'year' => $y,
+                    'location' => $loc,
+                    'outstanding' => $outstanding
+                ];
+            }
         }
 
         return response()->json($data);
     }
-
     /**
      * Helper method to build date filter
      */
@@ -422,5 +424,85 @@ class DGMDashboardController extends Controller
                 'end' => $date->endOfYear()
             ];
         }
+    }
+
+    public function getMarketingData(Request $request)
+    {
+        $year = $request->input('year', date('Y'));
+
+        // Get counts for each marketing_survey type for the current year
+        $data = \App\Models\Student::select('marketing_survey', DB::raw('COUNT(*) as count'))
+            ->whereYear('created_at', $year)
+            ->whereNotNull('marketing_survey')
+            ->groupBy('marketing_survey')
+            ->get();
+
+        // Format for chart.js
+        $labels = $data->pluck('marketing_survey')->toArray();
+        $counts = $data->pluck('count')->toArray();
+
+        return response()->json([
+            'labels' => $labels,
+            'counts' => $counts,
+        ]);
+    }
+
+    public function downloadStudentTemplate()
+    {
+        $headers = ['Year', 'Month', 'Day', 'Location', 'Course', 'Student_Count'];
+        $filename = 'student_bulk_template.xlsx';
+        // Generate Excel file dynamically or serve a static file
+        // For demo, serve a static file in storage/app/templates/
+        return Storage::download('templates/student_bulk_template.xlsx', $filename);
+    }
+
+    public function downloadRevenueTemplate()
+    {
+        $headers = ['Year', 'Month', 'Day', 'Location', 'Course', 'Revenue'];
+        $filename = 'revenue_bulk_template.xlsx';
+        return Storage::download('templates/revenue_bulk_template.xlsx', $filename);
+    }
+
+    public function bulkStudentUpload(Request $request)
+    {
+        $file = $request->file('student_excel');
+        // Parse Excel (use Laravel Excel or PHPSpreadsheet)
+        $rows = Excel::toArray([], $file)[0];
+        foreach ($rows as $i => $row) {
+            if ($i == 0)
+                continue; // skip header
+            \DB::table('bulk_student_uploads')->insert([
+                'year' => $row[0],
+                'month' => $row[1] ?? null,
+                'day' => $row[2] ?? null,
+                'location' => $row[3],
+                'course' => $row[4] ?? null,
+                'student_count' => $row[5],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        return back()->with('success', 'Student bulk data uploaded!');
+    }
+
+    public function bulkRevenueUpload(Request $request)
+    {
+        $file = $request->file('revenue_excel');
+        $rows = Excel::toArray([], $file)[0];
+        foreach ($rows as $i => $row) {
+            if ($i == 0)
+                continue;
+            \DB::table('bulk_revenue_uploads')->insert([
+                'year' => $row[0],
+                'month' => $row[1] ?? null,
+                'day' => $row[2] ?? null,
+                'location' => $row[3],
+                'course' => $row[4] ?? null,
+                'revenue' => $row[5],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+        return back()->with('success', 'Revenue bulk data uploaded!');
     }
 }

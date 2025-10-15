@@ -3,6 +3,12 @@
 @section('title', 'NEBULA | DGMDashboard')
 
 @section('content')
+    <link rel="stylesheet" href="{{ asset('css/styles.min.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn-script.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <div class="bg-gray-50">
 
         <!-- Navigation Tabs -->
@@ -21,9 +27,9 @@
                         class="px-4 py-2 rounded-lg text-sm font-medium tab-inactive">
                         <i class="fas fa-dollar-sign mr-2"></i>Revenues
                     </button>
-                    <button onclick="showTab('future')" id="tab-future"
+                    <button onclick="showTab('marketing')" id="tab-marketing"
                         class="px-4 py-2 rounded-lg text-sm font-medium tab-inactive">
-                        <i class="fas fa-chart-area mr-2"></i>Future Revenue
+                        <i class="fas fa-share-alt mr-2"></i>Marketing
                     </button>
                 </div>
             </div>
@@ -115,6 +121,7 @@
             <!-- Students Tab -->
             <div id="content-students" class="tab-content">
                 <!-- Filter Controls -->
+
                 <div class="bg-white shadow-sm border-b">
                     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-stretch">
@@ -151,6 +158,7 @@
 
                             <div class="filter-card flex flex-col gap-2">
                                 <div class="filter-card flex flex-col gap-2">
+
                                     <!-- Compare and Range selectors at the top -->
                                     <div class="flex flex-row gap-2 mb-2">
                                         <label class="inline-flex items-center">
@@ -162,6 +170,7 @@
                                             <span class="text-sm font-medium text-gray-700">Range</span>
                                         </label>
                                     </div>
+
                                     <!-- Compare year fields -->
                                     <div class="flex flex-row gap-2 mb-2" id="compareFields">
                                         <div>
@@ -185,6 +194,7 @@
                                             </select>
                                         </div>
                                     </div>
+
                                     <!-- Range year fields -->
                                     <div class="flex flex-row gap-2 mb-2" id="rangeFields" style="display:none;">
                                         <div>
@@ -208,6 +218,7 @@
                                             </select>
                                         </div>
                                     </div>
+
                                 </div>
                             </div>
 
@@ -268,6 +279,31 @@
                         <canvas id="chartCombined"></canvas>
                     </div>
                 </div>
+
+                <!-- Students Tab Upload/Download -->
+                <div class="flex gap-2 mb-4">
+                    <button class="px-3 py-2 bg-green-600 text-white rounded" onclick="downloadStudentTemplate()">Download
+                        Student Excel Template</button>
+                    <button class="px-3 py-2 bg-blue-600 text-white rounded"
+                        onclick="document.getElementById('studentUploadModal').style.display='block'">Upload Student
+                        Data</button>
+                </div>
+
+                <div id="studentUploadModal" style="display:none;"
+                    class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+                    <form id="studentUploadForm" enctype="multipart/form-data" class="bg-white p-6 rounded shadow w-96"
+                        method="POST" action="{{ route('bulk.student.upload') }}">
+                        @csrf
+                        <h3 class="mb-4 font-bold text-lg">Upload Student Excel</h3>
+                        <input type="file" name="student_excel" accept=".xlsx,.xls" required class="mb-4">
+                        <div class="flex gap-2 justify-end">
+                            <button type="button"
+                                onclick="document.getElementById('studentUploadModal').style.display='none'"
+                                class="px-3 py-1 bg-gray-400 text-white rounded">Cancel</button>
+                            <button type="submit" class="px-3 py-1 bg-blue-600 text-white rounded">Upload</button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             <!-- Revenues Tab -->
@@ -275,6 +311,7 @@
                 <!-- Filter Controls -->
                 <div class="bg-white shadow-sm border-b mb-6">
                     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-stretch">
                             <div class="filter-card">
                                 <div class="flex items-center mb-1">
@@ -396,31 +433,54 @@
                         </div>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="grid  mb-6 gap-4">
                     <div class="bg-white p-6 rounded-xl shadow-sm">
-                        <h3 class="text-lg font-semibold mb-4">Revenue by Year</h3>
-                        <div style="height: 300px;">
+                        <h3 class="text-lg font-semibold mb-4">Revenue</h3>
+                        <div style="height: 500px;">
                             <canvas id="revenueYearChart"></canvas>
                         </div>
                     </div>
                     <div class="bg-white p-6 rounded-xl shadow-sm">
-                        <h3 class="text-lg font-semibold mb-4">Revenue by Location</h3>
+                        <h3 class="text-lg font-semibold mb-4">Outstanding</h3>
                         <div style="height: 300px;">
-                            <canvas id="revenueLocationChart"></canvas>
+                            <canvas id="outstandingYearChart"></canvas>
                         </div>
                     </div>
+                </div>
+                <!-- Revenues Tab Upload/Download -->
+                <div class="flex gap-2 mb-4">
+                    <button class="px-3 py-2 bg-green-600 text-white rounded" onclick="downloadRevenueTemplate()">Download
+                        Revenue Excel Template</button>
+                    <button class="px-3 py-2 bg-blue-600 text-white rounded"
+                        onclick="document.getElementById('revenueUploadModal').style.display='block'">Upload Revenue
+                        Data</button>
+                </div>
+                <div id="revenueUploadModal" style="display:none;"
+                    class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+                    <form id="revenueUploadForm" enctype="multipart/form-data" class="bg-white p-6 rounded shadow w-96"
+                        method="POST" action="{{ route('bulk.revenue.upload') }}">
+                        @csrf
+                        <h3 class="mb-4 font-bold text-lg">Upload Revenue Excel</h3>
+                        <input type="file" name="revenue_excel" accept=".xlsx,.xls" required class="mb-4">
+                        <div class="flex gap-2 justify-end">
+                            <button type="button"
+                                onclick="document.getElementById('revenueUploadModal').style.display='none'"
+                                class="px-3 py-1 bg-gray-400 text-white rounded">Cancel</button>
+                            <button type="submit" class="px-3 py-1 bg-blue-600 text-white rounded">Upload</button>
+                        </div>
+                    </form>
                 </div>
             </div>
 
 
-            <!-- Future Revenue Tab -->
-            <div id="content-future" class="tab-content">
+            <!-- Marketing Tab -->
+            <div id="content-marketing" class="tab-content">
                 <!-- Filter Controls -->
 
                 <div class="bg-white p-6 rounded-xl shadow-sm">
-                    <h3 class="text-lg font-semibold mb-4">Future Revenue Projections</h3>
+                    <h3 class="text-lg font-semibold mb-4">Marketing Survey Analysis</h3>
                     <div style="height: 400px;">
-                        <canvas id="futureRevenueChart"></canvas>
+                        <canvas id="marketingSurveyChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -479,6 +539,12 @@
         let currentCharts = {};
         const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
+        function downloadStudentTemplate() {
+            window.location.href = "{{ route('bulk.student.template') }}";
+        }
+        function downloadRevenueTemplate() {
+            window.location.href = "{{ route('bulk.revenue.template') }}";
+        }
         // Tab switching
         function showTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(content => {
@@ -511,9 +577,10 @@
                     break;
                 case 'revenues':
                     loadRevenueData();
+                    loadOutstandingData();
                     break;
-                case 'future':
-                    loadFutureProjections();
+                case 'marketing':
+                    loadMarketingData();
                     break;
             }
         }
@@ -543,14 +610,14 @@
                 if (data.locationSummary) {
                     data.locationSummary.forEach(row => {
                         tbody.innerHTML += `
-                                                                                                                        <tr>
-                                                                                                                            <td class="px-6 py-4 text-sm font-medium text-gray-900">${row.location}</td>
-                                                                                                                            <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.current_year}</td>
-                                                                                                                            <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.previous_year}</td>
-                                                                                                                            <td class="px-6 py-4 text-sm ${row.growth >= 0 ? 'text-green-600' : 'text-red-600'}">${row.growth >= 0 ? '+' : ''}${row.growth}%</td>
-                                                                                                                            <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.outstanding}</td>
-                                                                                                                        </tr>
-                                                                                                                    `;
+                                                                                                                                                                                                    <tr>
+                                                                                                                                                                                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">${row.location}</td>
+                                                                                                                                                                                                        <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.current_year}</td>
+                                                                                                                                                                                                        <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.previous_year}</td>
+                                                                                                                                                                                                        <td class="px-6 py-4 text-sm ${row.growth >= 0 ? 'text-green-600' : 'text-red-600'}">${row.growth >= 0 ? '+' : ''}${row.growth}%</td>
+                                                                                                                                                                                                        <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.outstanding}</td>
+                                                                                                                                                                                                    </tr>
+                                                                                                                                                                                                `;
                     });
                 }
 
@@ -627,12 +694,18 @@
                     if (currentCharts.studentsLocation) {
                         currentCharts.studentsLocation.destroy();
                     }
+                    // Always show all locations, even if count is zero
+                    const allLocations = ['Welisara', 'Moratuwa', 'Peradeniya'];
+                    const chartData = allLocations.map(loc => {
+                        const found = studentsData.find(d => d.institute_location === loc);
+                        return found ? found.count : 0;
+                    });
                     currentCharts.studentsLocation = new Chart(ctx, {
                         type: 'doughnut',
                         data: {
-                            labels: data.map(d => d.institute_location),
+                            labels: allLocations,
                             datasets: [{
-                                data: data.map(d => d.count),
+                                data: chartData,
                                 backgroundColor: ['#3B82F6', '#10B981', '#F59E0B'],
                                 borderWidth: 2,
                                 borderColor: '#fff'
@@ -717,32 +790,71 @@
             const params = getRevenueFilterParams();
 
             try {
-                const response = await fetch(`/api/dashboard/revenue-data?${new URLSearchParams(params)}`);
-                const data = await response.json();
+                const res = await fetch(`/api/dashboard/revenue-by-year-course?${new URLSearchParams(params)}`);
+                const data = await res.json(); // [{year, location, course_name, revenue}, ...]
 
-                // Revenue by Year Chart
+                // Get all years in data
+                let years = [...new Set(data.map(d => d.year))].sort();
+
+                // Filter years for compare/range
+                if (params.compare && params.from_year && params.to_year) {
+                    // Only show the two selected years
+                    years = [parseInt(params.from_year), parseInt(params.to_year)].sort();
+                } else if (params.range && params.range_start_year && params.range_end_year) {
+                    // Show all years in the range
+                    const start = parseInt(params.range_start_year);
+                    const end = parseInt(params.range_end_year);
+                    years = [];
+                    for (let y = start; y <= end; y++) years.push(y);
+                }
+
+                // Get all locations and courses
+                const locations = [...new Set(data.map(d => d.location))];
+                const courses = [...new Set(data.map(d => d.course_name))];
+                const colors = [
+                    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#EC4899', '#22D3EE', '#A3E635'
+                ];
+
+                // Build all course+location combinations
+                const combos = [];
+                locations.forEach(loc => {
+                    courses.forEach(course => {
+                        combos.push({ loc, course });
+                    });
+                });
+
+                // Build datasets: one per course+location, data for each year
+                const datasets = combos.map((combo, idx) => ({
+                    label: `${combo.course} (${combo.loc})`,
+                    data: years.map(year => {
+                        const found = data.find(d => d.year == year && d.location === combo.loc && d.course_name === combo.course);
+                        return found ? found.revenue : 0;
+                    }),
+                    backgroundColor: colors[idx % colors.length]
+                }));
+
+                // Chart labels: years
+                const labels = years;
+
+                // Draw chart
                 const canvas = document.getElementById('revenueYearChart');
                 if (canvas) {
                     const ctx = canvas.getContext('2d');
-                    if (currentCharts.revenueYear) {
-                        currentCharts.revenueYear.destroy();
+                    if (currentCharts.revenueYearCourse) {
+                        currentCharts.revenueYearCourse.destroy();
                     }
-                    currentCharts.revenueYear = new Chart(ctx, {
+                    currentCharts.revenueYearCourse = new Chart(ctx, {
                         type: 'bar',
                         data: {
-                            labels: data.map(d => d.year),
-                            datasets: [{
-                                label: 'Total Revenue',
-                                data: data.map(d => d.revenue),
-                                backgroundColor: '#3B82F6',
-                                borderRadius: 8
-                            }]
+                            labels: labels,
+                            datasets: datasets
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
+                            plugins: { legend: { position: 'top' } },
                             scales: {
+                                x: { stacked: false },
                                 y: {
                                     beginAtZero: true,
                                     ticks: {
@@ -752,33 +864,6 @@
                                     }
                                 }
                             }
-                        }
-                    });
-                }
-
-                // Load revenue by location
-                const locResponse = await fetch(`/api/dashboard/revenue-by-location?${new URLSearchParams(params)}`);
-                const locData = await locResponse.json();
-
-                const locCanvas = document.getElementById('revenueLocationChart');
-                if (locCanvas) {
-                    const ctx = locCanvas.getContext('2d');
-                    if (currentCharts.revenueLocation) {
-                        currentCharts.revenueLocation.destroy();
-                    }
-                    currentCharts.revenueLocation = new Chart(ctx, {
-                        type: 'pie',
-                        data: {
-                            labels: locData.map(d => d.location),
-                            datasets: [{
-                                data: locData.map(d => d.revenue),
-                                backgroundColor: ['#3B82F6', '#10B981', '#F59E0B']
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: { legend: { position: 'bottom' } }
                         }
                     });
                 }
@@ -847,6 +932,123 @@
             }
         }
 
+        async function loadOutstandingData() {
+            const params = getRevenueFilterParams();
+
+            try {
+                const res = await fetch(`/api/dashboard/outstanding-by-year-course?${new URLSearchParams(params)}`);
+                const data = await res.json(); // [{year, location, outstanding}, ...]
+
+                // Get all years in data
+                let years = [...new Set(data.map(d => d.year))].sort();
+
+                // Filter years for compare/range
+                if (params.compare && params.from_year && params.to_year) {
+                    years = [parseInt(params.from_year), parseInt(params.to_year)].sort();
+                } else if (params.range && params.range_start_year && params.range_end_year) {
+                    const start = parseInt(params.range_start_year);
+                    const end = parseInt(params.range_end_year);
+                    years = [];
+                    for (let y = start; y <= end; y++) years.push(y);
+                }
+
+                // Get all locations
+                const locations = ['Welisara', 'Moratuwa', 'Peradeniya'];
+                const colors = ['#EF4444', '#6366F1', '#10B981'];
+
+                // Sum outstanding for each location across selected years
+                const locationOutstanding = locations.map(loc => {
+                    return data
+                        .filter(d => years.includes(d.year) && d.location === loc)
+                        .reduce((sum, d) => sum + (d.outstanding || 0), 0);
+                });
+
+                // Draw pie chart
+                const canvas = document.getElementById('outstandingYearChart');
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    if (currentCharts.outstandingYearChart) {
+                        currentCharts.outstandingYearChart.destroy();
+                    }
+                    currentCharts.outstandingYearChart = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: locations,
+                            datasets: [{
+                                data: locationOutstanding,
+                                backgroundColor: colors,
+                                borderWidth: 2,
+                                borderColor: '#fff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'top' }
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading outstanding data:', error);
+            }
+        }
+
+        async function loadMarketingData() {
+            const year = new Date().getFullYear();
+            try {
+                const res = await fetch(`/api/dashboard/marketing-data?year=${year}`);
+                const data = await res.json();
+
+                const canvas = document.getElementById('marketingSurveyChart');
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    if (currentCharts.marketingSurvey) {
+                        currentCharts.marketingSurvey.destroy();
+                    }
+                    currentCharts.marketingSurvey = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: data.labels,
+                            datasets: [{
+                                label: 'Responses',
+                                data: data.counts,
+                                backgroundColor: [
+                                    '#1877F2', '#E4405F', '#F59E0B', '#EF4444', '#6366F1', '#10B981', '#A3E635'
+                                ],
+                                borderWidth: 2,
+                                borderColor: '#fff',
+                                borderRadius: {
+                                    topLeft: 12,
+                                    topRight: 12,
+                                    bottomLeft: 0,
+                                    bottomRight: 0
+                                }
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        stepSize: 1
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading marketing data:', error);
+            }
+        }
+
         // Get filter parameters
         function getFilterParams() {
             const compareToggle = document.getElementById('compareToggle').checked;
@@ -893,6 +1095,8 @@
                 };
             }
         }
+
+
 
 
         document.addEventListener('DOMContentLoaded', function () {

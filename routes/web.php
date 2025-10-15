@@ -66,27 +66,27 @@ Route::post('/store-attendance', [SpreadSheetController::class, 'storeAttendance
 
 Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
-     // Dashboard Page - All authenticated users can access
-     Route::get('/dashboard', [DashboardController::class, 'showDashboard'])->name('dashboard');
+    // Dashboard Page - All authenticated users can access
+    Route::get('/dashboard', [DashboardController::class, 'showDashboard'])->name('dashboard');
 
-     // Student Registration Routes - DGM, Program Administrator (level 01), Program Administrator (level 02), Student Counselor, Bursar, Marketing Manager, Developer
-     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Student Counselor,Bursar,Marketing Manager,Developer'])->group(function () {
-         Route::get('/student/register', [StudentRegistraionController::class, 'showStudentRegistration'])->name('student.registration');
-         Route::post('/student/register', [StudentRegistraionController::class, 'register'])->name('student.register');
-         Route::get('/student/subjects/{examTypeId}', [StudentRegistraionController::class, 'getSubjectsByExamType']);
-         Route::get('/student/streams/{examTypeId}', [StudentRegistraionController::class, 'getStreamsByExamType']);
-     });
+    // Student Registration Routes - DGM, Program Administrator (level 01), Program Administrator (level 02), Student Counselor, Bursar, Marketing Manager, Developer
+    Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Student Counselor,Bursar,Marketing Manager,Developer'])->group(function () {
+        Route::get('/student/register', [StudentRegistraionController::class, 'showStudentRegistration'])->name('student.registration');
+        Route::post('/student/register', [StudentRegistraionController::class, 'register'])->name('student.register');
+        Route::get('/student/subjects/{examTypeId}', [StudentRegistraionController::class, 'getSubjectsByExamType']);
+        Route::get('/student/streams/{examTypeId}', [StudentRegistraionController::class, 'getStreamsByExamType']);
+    });
 
-     // Dashboard controller / dashboard.blade api routes for the apex charts
-     Route::get('/yearly-revenue', [DashboardController::class, 'getYearlyRevenue']);// Yearly Revenue Breakup Chart
-     Route::get('/monthly-earnings', [DashboardController::class, 'getMonthlyEarnings']); //Monthly Earnings Chart
-     Route::get('/students-per-course', [DashboardController::class, 'getStudentsPerCourse']); // Student Per Course Chart
-     Route::get('/marketing-survey-country-reg', [DashboardController::class, 'getCountrySurveyData']);// Marketing Survey Chart
-     Route::get('/dropdown-options', [DashboardController::class, 'getDropdownOptions']);// Student Registration data chart drop down menus
-     Route::get('/registration-data', [DashboardController::class, 'getRegistrationData']);// Student Registration data chart
-     Route::get('/courses', [DashboardController::class, 'getCourses']);
-     Route::get('/course-revenue/{courseId}', [DashboardController::class, 'getRevenueByCourse']);
-     Route::get('/revenue-data', [DashboardController::class, 'getRevenueData']); // Revenue Overview Chart
+    // Dashboard controller / dashboard.blade api routes for the apex charts
+    Route::get('/yearly-revenue', [DashboardController::class, 'getYearlyRevenue']);// Yearly Revenue Breakup Chart
+    Route::get('/monthly-earnings', [DashboardController::class, 'getMonthlyEarnings']); //Monthly Earnings Chart
+    Route::get('/students-per-course', [DashboardController::class, 'getStudentsPerCourse']); // Student Per Course Chart
+    Route::get('/marketing-survey-country-reg', [DashboardController::class, 'getCountrySurveyData']);// Marketing Survey Chart
+    Route::get('/dropdown-options', [DashboardController::class, 'getDropdownOptions']);// Student Registration data chart drop down menus
+    Route::get('/registration-data', [DashboardController::class, 'getRegistrationData']);// Student Registration data chart
+    Route::get('/courses', [DashboardController::class, 'getCourses']);
+    Route::get('/course-revenue/{courseId}', [DashboardController::class, 'getRevenueByCourse']);
+    Route::get('/revenue-data', [DashboardController::class, 'getRevenueData']); // Revenue Overview Chart
 
 
     // Logout
@@ -254,9 +254,9 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::post('/semester/get-filtered-modules', [SemesterCreationController::class, 'getFilteredModules'])->name('semester.get.filtered.modules');
         Route::post('/get-students-for-attendance', [AttendanceController::class, 'getStudentsForAttendance'])->name('get.students.for.attendance');
         Route::post('/store-attendance', [AttendanceController::class, 'storeAttendance'])->name('store.attendance');
-    // Bulk import/template routes
-    Route::get('/attendance/download-template', [AttendanceController::class, 'downloadTemplate'])->name('attendance.download.template');
-    Route::post('/attendance/import', [AttendanceController::class, 'importAttendance'])->name('attendance.import');
+        // Bulk import/template routes
+        Route::get('/attendance/download-template', [AttendanceController::class, 'downloadTemplate'])->name('attendance.download.template');
+        Route::post('/attendance/import', [AttendanceController::class, 'importAttendance'])->name('attendance.import');
         Route::post('/get-attendance-history', [AttendanceController::class, 'getAttendanceHistory'])->name('get.attendance.history');
         Route::get('/debug-attendance-data', [AttendanceController::class, 'debugData'])->name('debug.attendance.data'); // Debug route
 
@@ -264,7 +264,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::redirect('/student-attendance-management', '/attendance');
     });
 
-     //clearance start
+    //clearance start
     //library clearance - Librarian, DGM, Program Administrator (level 01), Developer
     Route::middleware(['role:Librarian,DGM,Program Administrator (level 01),Developer'])->group(function () {
         Route::get('/student-clearance-form-management', [StudentClearanceFormManagementController::class, 'showStudentClearanceFormManagement'])->name('student.clearance.form.management');
@@ -339,8 +339,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // Repeat Students Management - Program Administrator (level 01), Program Administrator (level 02), Developer
     Route::middleware(['role:Program Administrator (level 01),Program Administrator (level 02),Developer'])->group(function () {
         Route::post('/repeat-students/update-semester-registration', [RepeatStudentsController::class, 'updateSemesterRegistration'])
-        ->name('repeat.students.updateSemesterRegistration');
-    
+            ->name('repeat.students.updateSemesterRegistration');
+
         Route::get('/api/repeat-student-by-nic', [RepeatStudentsController::class, 'getRepeatStudentByNic']);
 
         Route::get('/repeat-students', [RepeatStudentsController::class, 'showRepeatStudentsManagement'])->name('repeat.students.management');
@@ -354,7 +354,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::post('/repeat-students/get-modules', [RepeatStudentsController::class, 'getFilteredModules'])->name('repeat.students.get.filtered.modules');
         Route::get('/repeat-students/get-semesters', [RepeatStudentsController::class, 'getSemesters'])->name('repeat.students.get.semesters');
 
-    // Additional API endpoints consumed by the repeat students frontend
+        // Additional API endpoints consumed by the repeat students frontend
         Route::get('/api/courses', [RepeatStudentsController::class, 'apiCourses']);
         Route::get('/api/intakes', [RepeatStudentsController::class, 'apiIntakes']);
         Route::get('/api/semesters', [RepeatStudentsController::class, 'apiSemesters']);
@@ -379,7 +379,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::post('/download-student-list-excel', [StudentListController::class, 'downloadStudentListExcel'])->name('student.downloadList.excel');
 
         // Temporary test route for semester creation debugging
-        Route::post('/test-semester-creation', function(Request $request) {
+        Route::post('/test-semester-creation', function (Request $request) {
             \Log::info('Test semester creation data:', $request->all());
             return response()->json(['success' => true, 'message' => 'Test route working']);
         });
@@ -424,15 +424,15 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
         Route::get('/api/student/{studentId}/course/{courseId}/semester/{semester}/attendance', [StudentProfileController::class, 'getAttendance']);
 
-    Route::get('/api/student/{studentId}/clearances', [StudentProfileController::class, 'getStudentClearances']);
-    // Student status history (terminate/reinstate records)
-    Route::get('/api/student/{studentId}/status-history', [App\Http\Controllers\StudentProfileController::class, 'getStudentStatusHistory']);
+        Route::get('/api/student/{studentId}/clearances', [StudentProfileController::class, 'getStudentClearances']);
+        // Student status history (terminate/reinstate records)
+        Route::get('/api/student/{studentId}/status-history', [App\Http\Controllers\StudentProfileController::class, 'getStudentStatusHistory']);
 
         Route::get('/student/{studentId}/certificates', [StudentProfileController::class, 'getStudentCertificates']);
-        
+
 
         Route::get('/api/student/{studentId}/course-registration-history', [StudentProfileController::class, 'getCourseRegistrationHistory']);
-        
+
         Route::get('/api/course/{courseId}/specializations', [StudentProfileController::class, 'getCourseSpecializations']);
         Route::post('/api/course-registration/{id}/update-grade', [StudentProfileController::class, 'updateCourseRegistrationGrade']);
 
@@ -476,7 +476,7 @@ Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Ad
 
 // Overall Attendance - DGM, Program Administrator (level 01), Program Administrator (level 02), Bursar, Marketing Manager, Developer
 Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Administrator (level 02),Bursar,Marketing Manager,Developer'])->group(function () {
-    Route::get('/overall-attendance', function() {
+    Route::get('/overall-attendance', function () {
         $courses = \App\Models\Course::all(['course_id', 'course_name']);
         $intakes = \App\Models\Intake::all(['intake_id', 'batch']);
         return view('overall_attendance', compact('courses', 'intakes'));
@@ -487,7 +487,7 @@ Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Ad
 
 // Special Approval List - DGM and Developer only
 Route::middleware(['auth', 'role:DGM,Developer'])->group(function () {
-    Route::get('/special-approval-list', function() {
+    Route::get('/special-approval-list', function () {
         return view('Special_approval_list');
     })->name('special.approval.list');
 
@@ -517,7 +517,7 @@ Route::middleware(['auth', 'role:DGM,Developer'])->group(function () {
     ]);
 
     // Temporary debug route
-    Route::get('/debug-special-approval', function() {
+    Route::get('/debug-special-approval', function () {
         $reg = App\Models\CourseRegistration::where('status', 'Special approval required')->with('student')->first();
         return response()->json([
             'student_id' => $reg->student->student_id,
@@ -535,7 +535,7 @@ Route::middleware(['auth', 'role:DGM,Student Counselor,Developer,Program Adminis
     ]);
 
     // Test route for debugging
-    Route::post('/test-special-approval', function(Request $request) {
+    Route::post('/test-special-approval', function (Request $request) {
         return response()->json([
             'success' => true,
             'message' => 'Test route working',
@@ -553,14 +553,14 @@ Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Ad
     Route::get('semesters/{semester}/edit', [App\Http\Controllers\SemesterCreationController::class, 'edit'])->name('semesters.edit');
     Route::put('semesters/{semester}', [App\Http\Controllers\SemesterCreationController::class, 'update'])->name('semesters.update');
     Route::delete('semesters/{semester}', [App\Http\Controllers\SemesterCreationController::class, 'destroy'])->name('semesters.destroy');
-Route::post('semesters/bulk-update-status', [App\Http\Controllers\SemesterCreationController::class, 'bulkUpdateStatus'])->name('semesters.bulkUpdateStatus');
-Route::post('semesters/bulk-delete', [App\Http\Controllers\SemesterCreationController::class, 'bulkDelete'])->name('semesters.bulkDelete');
-Route::post('semesters/{semester}/duplicate', [App\Http\Controllers\SemesterCreationController::class, 'duplicateSemester'])->name('semesters.duplicate');
+    Route::post('semesters/bulk-update-status', [App\Http\Controllers\SemesterCreationController::class, 'bulkUpdateStatus'])->name('semesters.bulkUpdateStatus');
+    Route::post('semesters/bulk-delete', [App\Http\Controllers\SemesterCreationController::class, 'bulkDelete'])->name('semesters.bulkDelete');
+    Route::post('semesters/{semester}/duplicate', [App\Http\Controllers\SemesterCreationController::class, 'duplicateSemester'])->name('semesters.duplicate');
 });
 
 // Semester Registration - Program Administrator (level 01), Program Administrator (level 02), Developer
 Route::middleware(['auth', 'role:Program Administrator (level 01),Program Administrator (level 02),Developer'])->group(function () {
-    
+
     // Semester registration management
     Route::get('/semester-registration', [SemesterRegistrationController::class, 'index'])
         ->name('semester.registration');
@@ -584,7 +584,7 @@ Route::middleware(['auth', 'role:Program Administrator (level 01),Program Admini
         ->name('semester.registration.getAllSemestersForCourse');
 
     Route::post('/semester-registration/update-status', [SemesterRegistrationController::class, 'updateStatus'])
-    ->name('semester.registration.updateStatus');
+        ->name('semester.registration.updateStatus');
 
     // AJAX: check pending clearances for a student before terminating
     Route::post('/semester-registration/check-clearances', [SemesterRegistrationController::class, 'checkStudentClearances'])->name('semester.registration.checkClearances');
@@ -608,10 +608,10 @@ Route::middleware(['auth', 'role:Marketing Manager,Developer'])->group(function 
 
     // AJAX: Get courses by location
     Route::post('/courses/by-location', [App\Http\Controllers\PaymentPlanController::class, 'getCoursesByLocation'])
-        ->name('courses.byLocation');   
+        ->name('courses.byLocation');
     // AJAX: Get intakes by course
     Route::post('/intakes/by-course', [App\Http\Controllers\PaymentPlanController::class, 'getIntakesByCourse'])
-    ->name('intakes.byCourse');
+        ->name('intakes.byCourse');
 
 
     // CREATE form (point your existing path to create())
@@ -691,28 +691,28 @@ Route::middleware(['auth', 'role:Marketing Manager,Developer'])->group(function 
     // Main Dashboard
     Route::get('/payments/summary', [PaymentSummaryController::class, 'index'])
         ->name('payment.summary');
-    
+
     // AJAX Filter for Dashboard
     Route::get('/payments/summary/filter', [PaymentSummaryController::class, 'filter'])
         ->name('payment.summary.filter');
-    
+
     // Student-Specific Summary
     Route::get('/payments/summary/student/{studentId}', [PaymentSummaryController::class, 'studentSummary'])
         ->name('payment.summary.student');
-    
+
     // ✅ NEW ADVANCED ROUTES
     // Advanced Analytics Dashboard
     Route::get('/payments/analytics', [PaymentSummaryController::class, 'analytics'])
         ->name('payment.analytics');
-    
+
     // Year-over-Year Comparison
     Route::get('/payments/comparison', [PaymentSummaryController::class, 'comparison'])
         ->name('payment.comparison');
-    
+
     // Export Reports (CSV/PDF)
     Route::get('/payments/export', [PaymentSummaryController::class, 'export'])
         ->name('payment.export');
-    
+
     // Live Payment Feed (Real-time updates)
     Route::get('/payments/live-feed', [PaymentSummaryController::class, 'liveFeed'])
         ->name('payment.live.feed');
@@ -728,7 +728,7 @@ Route::middleware(['auth', 'role:Marketing Manager,Developer'])->group(function 
 
 });
 Route::get('/verify-badge/{code}', [BadgeController::class, 'verify'])->name('badges.verify');
-Route::get('/intakes-by-course/{courseId}', function($courseId) {
+Route::get('/intakes-by-course/{courseId}', function ($courseId) {
     return Intake::where('course_id', $courseId)
         ->select('intake_id', 'batch', 'location')
         ->orderBy('batch')
@@ -786,33 +786,36 @@ Route::middleware(['auth', 'role:Bursar,Developer'])->group(function () {
     Route::post('/late-payment/get-paid-payments', [LatePaymentController::class, 'getPaidPaymentDetails'])->name('late.payment.get.paid.payments');
     Route::post('/late-payment/get-student-courses', [LatePaymentController::class, 'getStudentCourses'])->name('late.payment.get.student.courses');
 
-// Entry page
-Route::get('/late-fee/approval', [LateFeeApprovalController::class, 'index'])
-    ->name('latefee.approval.index');
+    // Entry page
+    Route::get('/late-fee/approval', [LateFeeApprovalController::class, 'index'])
+        ->name('latefee.approval.index');
 
-// Load installments for a student + course
-Route::post('/late-fee/get-payment-plan', [LateFeeApprovalController::class, 'getApprovalPaymentPlan'])
-    ->name('latefee.get.paymentplan');
+    // Load installments for a student + course
+    Route::post('/late-fee/get-payment-plan', [LateFeeApprovalController::class, 'getApprovalPaymentPlan'])
+        ->name('latefee.get.paymentplan');
 
-// Per-installment approval
-Route::post('/late-fee/approve-installment/{installmentId}', [LateFeeApprovalController::class, 'approveLateFeePerInstallment'])
-    ->name('latefee.approve.installment');
+    // Per-installment approval
+    Route::post('/late-fee/approve-installment/{installmentId}', [LateFeeApprovalController::class, 'approveLateFeePerInstallment'])
+        ->name('latefee.approve.installment');
 
-// Global approval
-Route::post('/late-fee/approve-global/{studentNic}/{courseId}', 
-    [LateFeeApprovalController::class, 'approveLateFeeGlobal']
-)->name('latefee.approve.global');
-
-
-// Get student courses by NIC
-Route::post('/late-fee/get-student-courses', 
-    [LateFeeApprovalController::class, 'getStudentCourses']
-)->name('latefee.get.courses');
+    // Global approval
+    Route::post(
+        '/late-fee/approve-global/{studentNic}/{courseId}',
+        [LateFeeApprovalController::class, 'approveLateFeeGlobal']
+    )->name('latefee.approve.global');
 
 
-Route::get('/late-fee/approval/{studentNic}/{courseId}', 
-    [LateFeeApprovalController::class, 'approvalPage']
-)->name('latefee.approval.page');
+    // Get student courses by NIC
+    Route::post(
+        '/late-fee/get-student-courses',
+        [LateFeeApprovalController::class, 'getStudentCourses']
+    )->name('latefee.get.courses');
+
+
+    Route::get(
+        '/late-fee/approval/{studentNic}/{courseId}',
+        [LateFeeApprovalController::class, 'approvalPage']
+    )->name('latefee.approval.page');
 
 
 });
@@ -820,13 +823,13 @@ Route::get('/late-fee/approval/{studentNic}/{courseId}',
 
 Route::get('/courses/by-location', [App\Http\Controllers\SemesterCreationController::class, 'getCoursesByLocation'])->name('courses.byLocation');
 
-Route::middleware(['auth','role:DGM,Developer,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
-    Route::get('/special-approval-list', fn()=>view('Special_approval_list'))->name('special.approval.list');
+Route::middleware(['auth', 'role:DGM,Developer,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
+    Route::get('/special-approval-list', fn() => view('Special_approval_list'))->name('special.approval.list');
 
     // NEW endpoints for the third tab
-    Route::get('/semester-registration/terminated-requests', [SemesterRegistrationController::class,'terminatedRequests']);
-    Route::post('/semester-registration/approve-reregister',   [SemesterRegistrationController::class,'approveReRegister'])->name('semester.registration.approveReRegister');
-    Route::post('/semester-registration/reject-reregister',    [SemesterRegistrationController::class,'rejectReRegister'])->name('semester.registration.rejectReRegister');
+    Route::get('/semester-registration/terminated-requests', [SemesterRegistrationController::class, 'terminatedRequests']);
+    Route::post('/semester-registration/approve-reregister', [SemesterRegistrationController::class, 'approveReRegister'])->name('semester.registration.approveReRegister');
+    Route::post('/semester-registration/reject-reregister', [SemesterRegistrationController::class, 'rejectReRegister'])->name('semester.registration.rejectReRegister');
 });
 
 
@@ -851,10 +854,18 @@ Route::middleware(['role:DGM'])->group(function () {
     Route::get('/api/dashboard/revenue-by-location', [DGMDashboardController::class, 'getRevenueByLocation'])
         ->name('api.dashboard.revenue.location');
 
+    Route::get('/api/dashboard/revenue-by-year-course', [DGMDashboardController::class, 'getRevenueByYearCourse']);
+
     Route::get('/api/dashboard/payment-status', [DGMDashboardController::class, 'getPaymentStatus'])
         ->name('api.dashboard.payment.status');
 
     Route::get('/api/dashboard/future-projections', [DGMDashboardController::class, 'getFutureProjections'])
         ->name('api.dashboard.future.projections');
 
+    Route::get('/api/dashboard/outstanding-by-year-course', [DGMDashboardController::class, 'getOutstandingByYearCourse']);
+    Route::post('/bulk-upload/students', [DGMDashboardController::class, 'bulkStudentUpload'])->name('bulk.student.upload');
+    Route::post('/bulk-upload/revenues', [DGMDashboardController::class, 'bulkRevenueUpload'])->name('bulk.revenue.upload');
+    Route::get('/bulk-upload/student-template', [DGMDashboardController::class, 'downloadStudentTemplate'])->name('bulk.student.template');
+    Route::get('/bulk-upload/revenue-template', [DGMDashboardController::class, 'downloadRevenueTemplate'])->name('bulk.revenue.template');
+    Route::get('/api/dashboard/marketing-data', [DGMDashboardController::class, 'getMarketingData']);
 });
