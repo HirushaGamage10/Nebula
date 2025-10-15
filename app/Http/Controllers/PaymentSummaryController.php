@@ -15,10 +15,19 @@ class PaymentSummaryController extends Controller
      */
     public function index(Request $request)
     {
+        // Get all filter parameters from request
         $range = $request->input('range', '1y');
+        $paymentMethod = $request->input('payment_method');
+        $status = $request->input('status');
+        $studentId = $request->input('student_id');
+        
         $startDate = $this->getDateFromRange($range);
         
-        return $this->generateAdvancedSummary(null, $startDate);
+        return $this->generateAdvancedSummary(null, $startDate, [
+            'payment_method' => $paymentMethod,
+            'status' => $status,
+            'student_id' => $studentId
+        ]);
     }
 
     /**
@@ -29,14 +38,12 @@ class PaymentSummaryController extends Controller
         $studentId = $request->input('student_id');
         $range = $request->input('range', '1y');
         $paymentMethod = $request->input('payment_method');
-        $paymentType = $request->input('payment_type');
         $status = $request->input('status');
 
         $startDate = $this->getDateFromRange($range);
 
         return $this->generateAdvancedSummary($studentId, $startDate, [
             'payment_method' => $paymentMethod,
-            'payment_type' => $paymentType,
             'status' => $status
         ]);
     }
@@ -230,7 +237,6 @@ class PaymentSummaryController extends Controller
             return $this->exportCSV($payments);
         }
 
-        // Add PDF export logic here if needed
         return response()->json(['error' => 'Format not supported'], 400);
     }
 
@@ -283,25 +289,33 @@ class PaymentSummaryController extends Controller
     }
 
     /**
-     * 🔹 Generate Advanced Summary
+     * 🔹 Generate Advanced Summary - FIXED VERSION
      */
     private function generateAdvancedSummary($studentId = null, $startDate = null, $filters = [])
     {
         $query = PaymentDetail::query();
 
+        // Apply student filter
         if ($studentId) {
             $query->where('student_id', $studentId);
         }
 
+        // Apply student filter from filters array
+        if (!empty($filters['student_id'])) {
+            $query->where('student_id', $filters['student_id']);
+        }
+
+        // Apply date range filter
         if ($startDate) {
             $query->where('created_at', '>=', $startDate);
         }
 
-        // Apply additional filters
+        // Apply payment method filter
         if (!empty($filters['payment_method'])) {
             $query->where('payment_method', $filters['payment_method']);
         }
 
+        // Apply status filter
         if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
