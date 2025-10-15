@@ -164,12 +164,6 @@
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentIndexNo" class="col-sm-3 col-form-label fw-bold">Index Number</label>
-                <div class="col-sm-9">
-                  <input type="text" class="form-control" id="studentIndexNo" value="{{ $student->registration_id ?? '' }}" readonly>
-                </div>
-              </div>
-              <div class="mb-3 row align-items-center mx-3">
                 <label for="studentInstitute" class="col-sm-3 col-form-label fw-bold">Institute</label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control" id="studentInstitute" value="{{ $student->institute_location ?? '' }}" readonly>
@@ -178,7 +172,7 @@
               <div class="mb-3 row align-items-center mx-3">
                 <label for="studentDOB" class="col-sm-3 col-form-label fw-bold">Date of Birth</label>
                 <div class="col-sm-9">
-                  <input type="text" class="form-control" id="studentDOB" value="{{ $student->birthday ?? '' }}" readonly>
+                  <input type="text" class="form-control" id="studentDOB" readonly>
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
@@ -203,12 +197,6 @@
                 <label for="studentHomePhone" class="col-sm-3 col-form-label fw-bold">Home Phone No</label>
                 <div class="col-sm-9">
                   <input type="tel" class="form-control" id="studentHomePhone" value="{{ $student->home_phone ?? '' }}" readonly>
-                </div>
-              </div>
-              <div class="mb-3 row align-items-center mx-3">
-                <label for="studentEmergencyContact" class="col-sm-3 col-form-label fw-bold">Emergency Contact Number</label>
-                <div class="col-sm-9">
-                  <input type="text" class="form-control bg-danger text-white" id="studentEmergencyContact" value="{{ $student->emergency_contact_number ?? '' }}" readonly>
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
@@ -898,6 +886,14 @@ $(function(){
     $('#studentExtraCurricular').val(student.extracurricular_activities || '');
     $('#studentFuturePotentials').val(student.future_potentials || '');
     setStatusUI(student.academic_status || 'active');
+    
+    if (student.birthday) {
+      const dob = new Date(student.birthday);
+      const formatted = dob.toISOString().split('T')[0];
+      $('#studentDOB').val(formatted);
+    } else {
+      $('#studentDOB').val('');
+    }
 
     // PARENT
     if(student.parent){
