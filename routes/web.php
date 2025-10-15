@@ -47,6 +47,7 @@ use App\Http\Controllers\{
     PaymentSummaryController,
     BadgeController,
     StudentViewController,
+    DGMDashboardController
 };
 
 // Default
@@ -831,3 +832,29 @@ Route::middleware(['auth','role:DGM,Developer,Program Administrator (level 01),P
 
 Route::get('/students/view', [StudentViewController::class, 'index'])->name('students.view');
 Route::post('/students/filter', [StudentViewController::class, 'filter'])->name('students.filter');
+
+Route::middleware(['role:DGM'])->group(function () {
+    Route::get('/dgmdashboard', [DGMDashboardController::class, 'showDashboard'])->name('dgmdashboard');
+
+    Route::get('/api/dashboard/overview', [DGMDashboardController::class, 'getOverviewMetrics'])
+        ->name('api.dashboard.overview');
+
+    Route::get('/api/dashboard/monthly-trend', [DGMDashboardController::class, 'getMonthlyRevenueTrend'])
+        ->name('api.dashboard.monthly.trend');
+
+    Route::get('/api/dashboard/students-by-location', [DGMDashboardController::class, 'getStudentsByLocation'])
+        ->name('api.dashboard.students.location');
+
+    Route::get('/api/dashboard/students-data', [DGMDashboardController::class, 'getStudentsData']);
+    Route::get('/api/dashboard/revenue-data', [DGMDashboardController::class, 'getRevenueData']);
+
+    Route::get('/api/dashboard/revenue-by-location', [DGMDashboardController::class, 'getRevenueByLocation'])
+        ->name('api.dashboard.revenue.location');
+
+    Route::get('/api/dashboard/payment-status', [DGMDashboardController::class, 'getPaymentStatus'])
+        ->name('api.dashboard.payment.status');
+
+    Route::get('/api/dashboard/future-projections', [DGMDashboardController::class, 'getFutureProjections'])
+        ->name('api.dashboard.future.projections');
+
+});

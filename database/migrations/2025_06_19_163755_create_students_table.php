@@ -24,7 +24,7 @@ return new class extends Migration {
             $table->string('home_phone', 20)->nullable();
             $table->string('whatsapp_phone', 20)->nullable();
             $table->date('birthday')->nullable();
-            $table->enum('institute_location', ['Welisara', 'Mathara', 'Peradeniya']);
+            $table->enum('institute_location', ['Welisara', 'Moratuwa', 'Peradeniya']);
             $table->boolean('foundation_program')->default(0);
             $table->text('special_needs')->nullable();
             $table->text('extracurricular_activities')->nullable();

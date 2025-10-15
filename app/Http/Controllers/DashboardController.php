@@ -36,7 +36,24 @@ class DashboardController extends Controller
         // Get available features for this role
         $availableFeatures = $this->getAvailableFeatures($userRole);
         
-        return view('dashboard', compact('user', 'welcomeMessage', 'permissions', 'availableFeatures'));
+        // Map roles to dashboard views
+        $roleViews = [
+            'DGM' => 'dgmdashboard',
+            'Program Administrator (level 01)' => 'dashboard',
+            'Program Administrator (level 02)' => 'dashboard',
+            'Student Counselor' => 'dashboard',
+            'Librarian' => 'dashboard',
+            'Hostel Manager' => 'dashboard',
+            'Bursar' => 'dashboard',
+            'Project Tutor' => 'dashboard',
+            'Marketing Manager' => 'dashboard',
+            'Developer' => 'dashboard',
+            // Add more as needed
+        ];
+
+        $viewName = $roleViews[$userRole] ?? 'dashboard_default';
+
+        return view($viewName, compact('user', 'welcomeMessage', 'permissions', 'availableFeatures'));
     }
     
     private function getWelcomeMessage($role)
