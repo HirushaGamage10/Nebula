@@ -18,77 +18,117 @@ class BadgeController extends Controller
     }
 
     public function searchStudent(Request $request)
-    {
-        $student = Student::where('student_id', $request->input('student_id'))
-            ->orWhere('id_value', $request->input('student_id'))
-            ->first();
+{
+    $student = Student::where('student_id', $request->input('student_id'))
+        ->orWhere('id_value', $request->input('student_id'))
+        ->first();
 
-        if (!$student) {
-            return response()->json(['success' => false, 'message' => 'Student not found']);
-        }
-
-        try {
-            $courses = CourseRegistration::with(['student', 'course', 'intake'])
-                ->where('student_id', $student->student_id)
-                ->get()
-                ->map(function ($c) {
-                    $badge = \App\Models\CourseBadge::where('student_id', $c->student_id)
-                        ->where('course_id', $c->course_id)
-                        ->where('intake_id', $c->intake_id)
-                        ->first();
-
-                    $c->badge = $badge;
-                    return $c;
-                });
-
-            return response()->json([
-                'success' => true,
-                'student' => $student,
-                'courses' => $courses
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()]);
-        }
+    if (!$student) {
+        return response()->json(['success' => false, 'message' => 'Student not found.']);
     }
 
+    try {
+        $query = CourseRegistration::with(['student', 'course', 'intake'])
+            ->where('student_id', $student->student_id);
 
-    public function searchByCourse(Request $request)
-    {
-        $query = CourseRegistration::with(['student', 'course', 'intake']);
-
-        // Apply filters dynamically
+        // 🔹 Apply course filter
         if ($request->filled('course_id')) {
             $query->where('course_id', $request->course_id);
         }
 
+        // 🔹 Apply intake filter
         if ($request->filled('intake_id')) {
             $query->where('intake_id', $request->intake_id);
         }
 
+        // 🔹 Apply mode filter
         if ($request->filled('mode')) {
             $query->whereHas('intake', function ($q) use ($request) {
                 $q->where('intake_mode', $request->mode);
             });
         }
 
-        $registrations = $query->get()->map(function ($c) {
+        $courses = $query->get();
+
+        // 🔹 If no results found, return a clear error message
+        if ($courses->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No matching records found for the selected course, intake, and mode.'
+            ]);
+        }
+
+        // 🔹 Add eligibility & badge info
+        $courses = $courses->map(function ($c) {
+            $eligible = (
+                $c->course_status === 'Completed' &&
+                $c->finance_cleared === 1
+            );
+
             $badge = \App\Models\CourseBadge::where('student_id', $c->student_id)
                 ->where('course_id', $c->course_id)
                 ->where('intake_id', $c->intake_id)
                 ->first();
+
+            $c->eligible_for_badge = $eligible;
             $c->badge = $badge;
+
             return $c;
         });
 
-        if ($registrations->isEmpty()) {
-            return response()->json(['success' => false, 'message' => 'No students found for this course.']);
-        }
+
+        $courses = $query->get();
 
         return response()->json([
             'success' => true,
-            'data' => $registrations
+            'student' => $student,
+            'courses' => $courses
         ]);
+
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'message' => $e->getMessage()]);
     }
+}
+
+
+    public function searchByCourse(Request $request)
+{
+    $query = CourseRegistration::with(['student', 'course', 'intake']);
+
+    if ($request->filled('course_id')) {
+        $query->where('course_id', $request->course_id);
+    }
+
+    if ($request->filled('intake_id')) {
+        $query->where('intake_id', $request->intake_id);
+    }
+
+    // 🔹 Keep mode filter consistent
+    if ($request->filled('mode')) {
+        $query->whereHas('intake', function ($q) use ($request) {
+            $q->where('intake_mode', $request->mode);
+        });
+    }
+
+    $registrations = $query->get()->map(function ($c) {
+        $badge = \App\Models\CourseBadge::where('student_id', $c->student_id)
+            ->where('course_id', $c->course_id)
+            ->where('intake_id', $c->intake_id)
+            ->first();
+
+        $c->badge = $badge;
+        return $c;
+    });
+
+    if ($registrations->isEmpty()) {
+        return response()->json(['success' => false, 'message' => 'No students found for this course.']);
+    }
+
+    return response()->json([
+        'success' => true,
+        'data' => $registrations
+    ]);
+}
 
 
     public function details($code)
