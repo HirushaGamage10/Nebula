@@ -12,6 +12,8 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 
 class DGMDashboardController extends Controller
 {
@@ -184,55 +186,109 @@ class DGMDashboardController extends Controller
     {
         $year = $request->input('year');
         if (empty($year) || !is_numeric($year)) {
-            $year = date('Y');
+            if ($request->input('year') === 'all') {
+                $year = 'all';
+            } else {
+                $year = date('Y');
+            }
+        } else {
+            $year = (int) $year;
         }
+
         $month = $request->input('month');
         $day = $request->input('date');
         $location = $request->input('location', 'all');
         $course = $request->input('course', 'all');
-        $fromYear = $request->input('from_year');
-        $toYear = $request->input('to_year');
 
-        // determine mode flags
-        $compareMode = filter_var($request->input('compare'), FILTER_VALIDATE_BOOLEAN);
-        $rangeMode   = filter_var($request->input('range'), FILTER_VALIDATE_BOOLEAN);
+        // Accept multiple possible parameter names for start/end and use Request::boolean for flags
+        $fromYear = $request->input('from_year') ?? $request->input('range_start_year') ?? $request->input('from') ?? null;
+        $toYear   = $request->input('to_year')   ?? $request->input('range_end_year')   ?? $request->input('to')   ?? null;
 
-        // If compare -> use exactly the two selected years
-        // If range -> use full inclusive range between fromYear and toYear
-        // Otherwise use single selected year
-        if ($compareMode && $fromYear && $toYear) {
-            $years = [(int)$fromYear, (int)$toYear];
-        } elseif ($rangeMode && $fromYear && $toYear) {
-            $start = (int) min($fromYear, $toYear);
-            $end   = (int) max($fromYear, $toYear);
+        $compareMode = $request->boolean('compare');
+        $rangeMode   = $request->boolean('range');
+
+        // normalize numeric strings to ints when present
+        $fromYearInt = $fromYear !== null && is_numeric($fromYear) ? (int)$fromYear : null;
+        $toYearInt   = $toYear !== null && is_numeric($toYear)   ? (int)$toYear   : null;
+
+        // determine years list (inclusive)
+        if ($rangeMode && $fromYearInt && $toYearInt) {
+            $start = min($fromYearInt, $toYearInt);
+            $end = max($fromYearInt, $toYearInt);
             $years = range($start, $end);
+        } elseif ($compareMode && $fromYearInt && $toYearInt) {
+            // compare: include exactly the two years for side-by-side comparison
+            $years = [$fromYearInt, $toYearInt];
+        } elseif ($year === 'all') {
+            $bulkMin = \DB::table('bulk_student_uploads')->min('year');
+            $bulkMax = \DB::table('bulk_student_uploads')->max('year');
+            $regMin = CourseRegistration::min(DB::raw('YEAR(created_at)'));
+            $regMax = CourseRegistration::max(DB::raw('YEAR(created_at)'));
+
+            $candidates = array_filter([
+                $bulkMin ? (int)$bulkMin : null,
+                $bulkMax ? (int)$bulkMax : null,
+                $regMin ? (int)$regMin : null,
+                $regMax ? (int)$regMax : null,
+            ]);
+
+            if (empty($candidates)) {
+                $years = [(int) date('Y')];
+            } else {
+                $min = min($candidates);
+                $max = max($candidates);
+                $years = range($min, $max);
+            }
         } else {
-            $years = $year ? [(int)$year] : [(int) date('Y')];
+            $years = [$year ?: (int) date('Y')];
         }
+
         $locations = $location === 'all' ? ['Welisara', 'Moratuwa', 'Peradeniya'] : [$location];
 
-        $bulk = \DB::table('bulk_student_uploads')
-            ->whereIn('year', $years)
-            ->whereIn('location', $locations)
-            ->when($course !== 'all', fn($q) => $q->where('course', $course))
-            ->get();
+        $aggregate = [];
 
-        foreach ($bulk as $row) {
-            $data[] = [
-                'year' => $row->year,
-                'institute_location' => $row->location,
-                'course' => $row->course,
-                'count' => $row->student_count
-            ];
+        // Resolve possible course name if course is numeric id (bulk table may store names)
+        $courseNameForMatch = null;
+        if ($course !== 'all' && is_numeric($course)) {
+            $courseNameForMatch = Course::where('course_id', $course)->value('course_name');
         }
 
-        $data = [];
+        // 1) bulk rows
+        $bulkQuery = \DB::table('bulk_student_uploads')
+            ->whereIn('year', $years)
+            ->whereIn('location', $locations);
+
+        if ($course !== 'all') {
+            $bulkQuery->where(function ($q) use ($course, $courseNameForMatch) {
+                $q->where('course', $course);
+                if ($courseNameForMatch) {
+                    $q->orWhere('course', $courseNameForMatch);
+                }
+            });
+        }
+
+        $bulkRows = $bulkQuery->get();
+
+        foreach ($bulkRows as $row) {
+            $c = $row->course ?? ($course !== 'all' ? $course : 'all');
+            if (empty($c)) $c = 'all';
+            $key = "{$row->year}|{$row->location}|{$c}";
+            if (!isset($aggregate[$key])) {
+                $aggregate[$key] = [
+                    'year' => (int) $row->year,
+                    'institute_location' => $row->location,
+                    'course' => $c,
+                    'count' => 0
+                ];
+            }
+            $aggregate[$key]['count'] += (int) ($row->student_count ?? 0);
+        }
+
+        // 2) registrations
         foreach ($years as $y) {
             foreach ($locations as $loc) {
-                // Count distinct students by their course registrations
                 $query = Student::where('institute_location', $loc)
                     ->whereHas('courseRegistrations', function ($q) use ($y, $month, $day, $course) {
-                        // Filter by course registration date
                         $q->whereYear('created_at', $y);
 
                         if (!empty($month)) {
@@ -242,23 +298,29 @@ class DGMDashboardController extends Controller
                             $q->whereDay('created_at', $day);
                         }
 
-                        // Filter by specific course if selected
                         if ($course !== 'all') {
                             $q->where('course_id', $course);
                         }
                     });
 
-                // Use distinct to avoid counting same student multiple times
                 $count = $query->distinct()->count('students.student_id');
 
-                $data[] = [
-                    'year' => $y,
-                    'institute_location' => $loc,
-                    'course' => $course,
-                    'count' => $count
-                ];
+                $c = $course !== 'all' ? $course : 'all';
+                $key = "{$y}|{$loc}|{$c}";
+
+                if (!isset($aggregate[$key])) {
+                    $aggregate[$key] = [
+                        'year' => (int) $y,
+                        'institute_location' => $loc,
+                        'course' => $c,
+                        'count' => 0
+                    ];
+                }
+                $aggregate[$key]['count'] += (int) $count;
             }
         }
+
+        $data = array_values($aggregate);
 
         return response()->json($data);
     }
@@ -511,60 +573,236 @@ class DGMDashboardController extends Controller
 
     public function downloadStudentTemplate()
     {
-        $headers = ['Year', 'Month', 'Day', 'Location', 'Course', 'Student_Count'];
         $filename = 'student_bulk_template.xlsx';
-        // Generate Excel file dynamically or serve a static file
-        // For demo, serve a static file in storage/app/templates/
-        return Storage::download('templates/student_bulk_template.xlsx', $filename);
+        $path = 'templates/student_bulk_template.xlsx';
+
+        if (Storage::exists($path)) {
+            return Storage::download($path, $filename);
+        }
+
+        // Fallback: stream a CSV-compatible template if xlsx missing
+        $callback = function () {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Year', 'Month', 'Day', 'Location', 'Course', 'Student_Count']);
+            // include example row
+            fputcsv($out, [date('Y'), '', '', 'Welisara', '', 0]);
+            fclose($out);
+        };
+
+        return response()->streamDownload($callback, 'student_bulk_template.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 
     public function downloadRevenueTemplate()
     {
-        $headers = ['Year', 'Month', 'Day', 'Location', 'Course', 'Revenue'];
         $filename = 'revenue_bulk_template.xlsx';
-        return Storage::download('templates/revenue_bulk_template.xlsx', $filename);
+        $path = 'templates/revenue_bulk_template.xlsx';
+
+        if (Storage::exists($path)) {
+            return Storage::download($path, $filename);
+        }
+
+        $callback = function () {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Year', 'Month', 'Day', 'Location', 'Course', 'Revenue']);
+            fputcsv($out, [date('Y'), '', '', 'Welisara', '', 0.00]);
+            fclose($out);
+        };
+
+        return response()->streamDownload($callback, 'revenue_bulk_template.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 
     public function bulkStudentUpload(Request $request)
     {
-        $file = $request->file('student_excel');
-        // Parse Excel (use Laravel Excel or PHPSpreadsheet)
-        $rows = Excel::toArray([], $file)[0];
-        foreach ($rows as $i => $row) {
-            if ($i == 0)
-                continue; // skip header
-            \DB::table('bulk_student_uploads')->insert([
-                'year' => $row[0],
-                'month' => $row[1] ?? null,
-                'day' => $row[2] ?? null,
-                'location' => $row[3],
-                'course' => $row[4] ?? null,
-                'student_count' => $row[5],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+        // allow common Excel/CSV variants and text csv; provide JSON-friendly messages for AJAX
+        $rules = [
+            'student_excel' => ['required', 'file', 'mimes:xlsx,xls,csv,txt,xlsm', 'max:51200']
+        ];
+        $messages = [
+            'student_excel.required' => 'Please choose a file to upload.',
+            'student_excel.file' => 'Uploaded item must be a file.',
+            'student_excel.mimes' => 'Allowed file types: xlsx, xls, xlsm, csv, txt.',
+            'student_excel.max' => 'File too large (max 50MB).'
+        ];
+
+        $validator = Validator::make($request->all(), $rules, $messages);
+
+        if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            }
+            return back()->withErrors($validator)->withInput();
         }
-        return back()->with('success', 'Student bulk data uploaded!');
+
+        $file = $request->file('student_excel');
+        $inserted = 0;
+
+        try {
+            $sheets = Excel::toArray(null, $file);
+            if (empty($sheets) || !isset($sheets[0])) {
+                throw new \Exception('Uploaded file contains no sheets/rows.');
+            }
+
+            $rows = $sheets[0];
+            foreach ($rows as $i => $row) {
+                if ($i == 0)
+                    continue; // skip header
+                $year = $row[0] ?? null;
+                $location = $row[3] ?? null;
+                $count = $row[5] ?? null;
+                if (!$year || !$location || !is_numeric($count))
+                    continue;
+
+                \DB::table('bulk_student_uploads')->insert([
+                    'year' => (int) $year,
+                    'month' => $row[1] ?? null,
+                    'day' => $row[2] ?? null,
+                    'location' => $location,
+                    'course' => $row[4] ?? null,
+                    'student_count' => (int) $count,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                $inserted++;
+            }
+        } catch (\Throwable $e) {
+            Log::error('bulkStudentUpload error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Upload failed', 'detail' => $e->getMessage()], 500);
+            }
+            return back()->with('error', 'Upload failed: ' . $e->getMessage());
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'inserted' => $inserted]);
+        }
+
+        return back()->with('success', 'Student bulk data uploaded! Inserted: ' . $inserted);
     }
 
     public function bulkRevenueUpload(Request $request)
     {
-        $file = $request->file('revenue_excel');
-        $rows = Excel::toArray([], $file)[0];
-        foreach ($rows as $i => $row) {
-            if ($i == 0)
-                continue;
-            \DB::table('bulk_revenue_uploads')->insert([
-                'year' => $row[0],
-                'month' => $row[1] ?? null,
-                'day' => $row[2] ?? null,
-                'location' => $row[3],
-                'course' => $row[4] ?? null,
-                'revenue' => $row[5],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+        $rules = [
+            'revenue_excel' => ['required', 'file', 'mimes:xlsx,xls,csv,txt,xlsm', 'max:51200']
+        ];
+        $messages = [
+            'revenue_excel.required' => 'Please choose a file to upload.',
+            'revenue_excel.file' => 'Uploaded item must be a file.',
+            'revenue_excel.mimes' => 'Allowed file types: xlsx, xls, xlsm, csv, txt.',
+            'revenue_excel.max' => 'File too large (max 50MB).'
+        ];
+
+        $validator = Validator::make($request->all(), $rules, $messages);
+
+        if ($validator->fails()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Validation failed', 'errors' => $validator->errors()], 422);
+            }
+            return back()->withErrors($validator)->withInput();
         }
-        return back()->with('success', 'Revenue bulk data uploaded!');
+
+        $file = $request->file('revenue_excel');
+        $inserted = 0;
+
+        try {
+            $sheets = Excel::toArray(null, $file);
+            if (empty($sheets) || !isset($sheets[0])) {
+                throw new \Exception('Uploaded file contains no sheets/rows.');
+            }
+
+            $rows = $sheets[0];
+            foreach ($rows as $i => $row) {
+                if ($i == 0)
+                    continue;
+                $year = $row[0] ?? null;
+                $location = $row[3] ?? null;
+                $revenue = $row[5] ?? null;
+                if (!$year || !$location || !is_numeric($revenue))
+                    continue;
+
+                \DB::table('bulk_revenue_uploads')->insert([
+                    'year' => (int) $year,
+                    'month' => $row[1] ?? null,
+                    'day' => $row[2] ?? null,
+                    'location' => $location,
+                    'course' => $row[4] ?? null,
+                    'revenue' => floatval($revenue),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                $inserted++;
+            }
+        } catch (\Throwable $e) {
+            Log::error('bulkRevenueUpload error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Upload failed', 'detail' => $e->getMessage()], 500);
+            }
+            return back()->with('error', 'Upload failed: ' . $e->getMessage());
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'inserted' => $inserted]);
+        }
+
+        return back()->with('success', 'Revenue bulk data uploaded! Inserted: ' . $inserted);
+    }
+
+    // New: export stored bulk student uploads as CSV
+    public function exportStudentBulkData()
+    {
+        $rows = \DB::table('bulk_student_uploads')->orderBy('year')->get();
+        $filename = 'bulk_students_' . now()->format('Ymd_His') . '.csv';
+
+        $callback = function () use ($rows) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Year', 'Month', 'Day', 'Location', 'Course', 'Student_Count', 'Created_At']);
+            foreach ($rows as $r) {
+                fputcsv($out, [
+                    $r->year,
+                    $r->month,
+                    $r->day,
+                    $r->location,
+                    $r->course,
+                    $r->student_count,
+                    $r->created_at
+                ]);
+            }
+            fclose($out);
+        };
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
+
+    // New: export stored bulk revenue uploads as CSV
+    public function exportRevenueBulkData()
+    {
+        $rows = \DB::table('bulk_revenue_uploads')->orderBy('year')->get();
+        $filename = 'bulk_revenues_' . now()->format('Ymd_His') . '.csv';
+
+        $callback = function () use ($rows) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Year', 'Month', 'Day', 'Location', 'Course', 'Revenue', 'Created_At']);
+            foreach ($rows as $r) {
+                fputcsv($out, [
+                    $r->year,
+                    $r->month,
+                    $r->day,
+                    $r->location,
+                    $r->course,
+                    $r->revenue,
+                    $r->created_at
+                ]);
+            }
+            fclose($out);
+        };
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
     }
 }

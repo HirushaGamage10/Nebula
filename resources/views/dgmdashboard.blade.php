@@ -9,7 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <div class="bg-gray-50">
+    <div id="pageContent" class="bg-gray-50">
 
         <!-- Navigation Tabs -->
         <nav class="bg-white shadow-sm">
@@ -285,20 +285,18 @@
                     <button class="px-3 py-2 bg-green-600 text-white rounded" onclick="downloadStudentTemplate()">Download
                         Student Excel Template</button>
                     <button class="px-3 py-2 bg-blue-600 text-white rounded"
-                        onclick="document.getElementById('studentUploadModal').style.display='block'">Upload Student
-                        Data</button>
+                        onclick="showModal('studentUploadModal')">Upload Student Data</button>
                 </div>
 
                 <div id="studentUploadModal" style="display:none;"
-                    class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+                    class="fixed inset-0 flex items-center justify-center z-50 modal-overlay" aria-hidden="true">
                     <form id="studentUploadForm" enctype="multipart/form-data" class="bg-white p-6 rounded shadow w-96"
                         method="POST" action="{{ route('bulk.student.upload') }}">
                         @csrf
                         <h3 class="mb-4 font-bold text-lg">Upload Student Excel</h3>
-                        <input type="file" name="student_excel" accept=".xlsx,.xls" required class="mb-4">
+                        <input type="file" name="student_excel" accept=".xlsx,.xls,.csv" required class="mb-4">
                         <div class="flex gap-2 justify-end">
-                            <button type="button"
-                                onclick="document.getElementById('studentUploadModal').style.display='none'"
+                            <button type="button" onclick="hideModal('studentUploadModal')"
                                 class="px-3 py-1 bg-gray-400 text-white rounded">Cancel</button>
                             <button type="submit" class="px-3 py-1 bg-blue-600 text-white rounded">Upload</button>
                         </div>
@@ -452,19 +450,18 @@
                     <button class="px-3 py-2 bg-green-600 text-white rounded" onclick="downloadRevenueTemplate()">Download
                         Revenue Excel Template</button>
                     <button class="px-3 py-2 bg-blue-600 text-white rounded"
-                        onclick="document.getElementById('revenueUploadModal').style.display='block'">Upload Revenue
-                        Data</button>
+                        onclick="showModal('revenueUploadModal')">Upload Revenue Data</button>
                 </div>
+
                 <div id="revenueUploadModal" style="display:none;"
-                    class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+                    class="fixed inset-0 flex items-center justify-center z-50 modal-overlay" aria-hidden="true">
                     <form id="revenueUploadForm" enctype="multipart/form-data" class="bg-white p-6 rounded shadow w-96"
                         method="POST" action="{{ route('bulk.revenue.upload') }}">
                         @csrf
                         <h3 class="mb-4 font-bold text-lg">Upload Revenue Excel</h3>
-                        <input type="file" name="revenue_excel" accept=".xlsx,.xls" required class="mb-4">
+                        <input type="file" name="revenue_excel" accept=".xlsx,.xls,.csv" required class="mb-4">
                         <div class="flex gap-2 justify-end">
-                            <button type="button"
-                                onclick="document.getElementById('revenueUploadModal').style.display='none'"
+                            <button type="button" onclick="hideModal('revenueUploadModal')"
                                 class="px-3 py-1 bg-gray-400 text-white rounded">Cancel</button>
                             <button type="submit" class="px-3 py-1 bg-blue-600 text-white rounded">Upload</button>
                         </div>
@@ -532,6 +529,29 @@
             color: #9ca3af !important;
             cursor: not-allowed;
         }
+
+        .modal-overlay {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0);
+            /* transparent so no darkening */
+            -webkit-backdrop-filter: blur(6px);
+            backdrop-filter: blur(6px);
+            transition: opacity 120ms ease;
+            padding: 1.25rem;
+
+        }
+
+        .modal-overlay.show {
+            display: flex !important;
+            opacity: 1;
+
+        }
+
+        .modal-overlay form {
+            z-index: 60;
+        }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -565,6 +585,27 @@
             }
 
             setTimeout(() => initializeChartsForTab(tabName), 100);
+        }
+
+        function showModal(id) {
+            const modal = document.getElementById(id);
+            const page = document.getElementById('pageContent');
+            if (modal) {
+                modal.classList.add('show');
+                modal.style.display = 'flex';
+                modal.classList.add('modal-overlay');
+            }
+            if (page) page.classList.add('blurred');
+        }
+
+        function hideModal(id) {
+            const modal = document.getElementById(id);
+            const page = document.getElementById('pageContent');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.classList.remove('show');
+            }
+            if (page) page.classList.remove('blurred');
         }
 
         function initializeChartsForTab(tabName) {
@@ -610,14 +651,14 @@
                 if (data.locationSummary) {
                     data.locationSummary.forEach(row => {
                         tbody.innerHTML += `
-                                                                                                                                                                                                    <tr>
-                                                                                                                                                                                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">${row.location}</td>
-                                                                                                                                                                                                        <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.current_year}</td>
-                                                                                                                                                                                                        <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.previous_year}</td>
-                                                                                                                                                                                                        <td class="px-6 py-4 text-sm ${row.growth >= 0 ? 'text-green-600' : 'text-red-600'}">${row.growth >= 0 ? '+' : ''}${row.growth}%</td>
-                                                                                                                                                                                                        <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.outstanding}</td>
-                                                                                                                                                                                                    </tr>
-                                                                                                                                                                                                `;
+                                                                                                                                                                                                                                <tr>
+                                                                                                                                                                                                                                    <td class="px-6 py-4 text-sm font-medium text-gray-900">${row.location}</td>
+                                                                                                                                                                                                                                    <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.current_year}</td>
+                                                                                                                                                                                                                                    <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.previous_year}</td>
+                                                                                                                                                                                                                                    <td class="px-6 py-4 text-sm ${row.growth >= 0 ? 'text-green-600' : 'text-red-600'}">${row.growth >= 0 ? '+' : ''}${row.growth}%</td>
+                                                                                                                                                                                                                                    <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.outstanding}</td>
+                                                                                                                                                                                                                                </tr>
+                                                                                                                                                                                                                            `;
                     });
                 }
 
@@ -1052,17 +1093,37 @@
         // Get filter parameters
         function getFilterParams() {
             const compareToggle = document.getElementById('compareToggle').checked;
+            const rangeToggle = document.getElementById('rangeSelectorToggle').checked;
 
-            return {
-                year: document.getElementById('yearSelect').value,
-                month: document.getElementById('studentMonthSelect').value,
-                date: document.getElementById('studentDaySelect').value,
-                location: document.getElementById('locationSelect').value,
-                course: document.getElementById('courseSelect').value,
-                compare: compareToggle,
-                from_year: compareToggle ? document.getElementById('fromYearSelect').value : null,
-                to_year: compareToggle ? document.getElementById('toYearSelect').value : null
-            };
+            if (rangeToggle) {
+                return {
+                    range: true,
+                    range_start_year: document.getElementById('rangeStartYearSelect').value,
+                    range_end_year: document.getElementById('rangeEndYearSelect').value,
+                    month: document.getElementById('studentMonthSelect').value,
+                    date: document.getElementById('studentDaySelect').value,
+                    location: document.getElementById('locationSelect').value,
+                    course: document.getElementById('courseSelect').value
+                };
+            } else if (compareToggle) {
+                return {
+                    compare: true,
+                    from_year: document.getElementById('fromYearSelect').value,
+                    to_year: document.getElementById('toYearSelect').value,
+                    month: document.getElementById('studentMonthSelect').value,
+                    date: document.getElementById('studentDaySelect').value,
+                    location: document.getElementById('locationSelect').value,
+                    course: document.getElementById('courseSelect').value
+                };
+            } else {
+                return {
+                    year: document.getElementById('yearSelect').value,
+                    month: document.getElementById('studentMonthSelect').value,
+                    date: document.getElementById('studentDaySelect').value,
+                    location: document.getElementById('locationSelect').value,
+                    course: document.getElementById('courseSelect').value
+                };
+            }
         }
 
         function getRevenueFilterParams() {
@@ -1213,46 +1274,136 @@
 
             updateRevenueSelectors();
 
+            // wire month/year change events to populate days and enable/disable day select
+            studentMonthSelect.addEventListener('change', () => {
+                populateDays('studentDaySelect', 'yearSelect', 'studentMonthSelect');
+                // update selectors in case month cleared
+                updateSelectors();
+            });
+            yearSelect.addEventListener('change', () => {
+                populateDays('studentDaySelect', 'yearSelect', 'studentMonthSelect');
+            });
+
+            revenueMonthSelect.addEventListener('change', () => {
+                populateDays('revenueDaySelect', 'revenueYearSelect', 'revenueMonthSelect');
+                updateRevenueSelectors();
+            });
+            revenueYearSelect.addEventListener('change', () => {
+                populateDays('revenueDaySelect', 'revenueYearSelect', 'revenueMonthSelect');
+            });
+
+            // populate on load (will disable day selects if no month)
+            populateDays('studentDaySelect', 'yearSelect', 'studentMonthSelect');
+            populateDays('revenueDaySelect', 'revenueYearSelect', 'revenueMonthSelect');
+
         });
 
 
         function populateDays(daySelectId, yearSelectId, monthSelectId) {
             const daySelect = document.getElementById(daySelectId);
-            const year = document.getElementById(yearSelectId).value;
-            const month = document.getElementById(monthSelectId).value;
+            const yearEl = document.getElementById(yearSelectId);
+            const monthEl = document.getElementById(monthSelectId);
+            if (!daySelect || !yearEl || !monthEl) return;
 
+            const year = yearEl.value || new Date().getFullYear();
+            const month = monthEl.value;
+
+            // Reset options
             daySelect.innerHTML = '<option value="">All Days</option>';
+
             if (month) {
-                // JS months are 0-based, so subtract 1
-                const daysInMonth = new Date(year, month, 0).getDate();
+                // month is in "MM" format; JS Date expects month index for next month, so pass parseInt(month)
+                const daysInMonth = new Date(year, parseInt(month), 0).getDate();
                 for (let d = 1; d <= daysInMonth; d++) {
                     const dayStr = d.toString().padStart(2, '0');
                     daySelect.innerHTML += `<option value="${dayStr}">${dayStr}</option>`;
                 }
+                daySelect.disabled = false;
+            } else {
+                // No month selected -> disable day selector
+                daySelect.disabled = true;
             }
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            // Students tab
-            document.getElementById('studentMonthSelect').addEventListener('change', function () {
-                populateDays('studentDaySelect', 'yearSelect', 'studentMonthSelect');
-            });
-            document.getElementById('yearSelect').addEventListener('change', function () {
-                populateDays('studentDaySelect', 'yearSelect', 'studentMonthSelect');
-            });
+            function bindUpload(formId, modalId, onSuccess) {
+                const form = document.getElementById(formId);
+                if (!form) return;
+                form.addEventListener('submit', async function (e) {
+                    e.preventDefault();
+                    const formData = new FormData(form);
+                    try {
+                        const res = await fetch(form.action, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': csrfToken,
+                                'Accept': 'application/json'
+                            },
+                            body: formData,
+                            credentials: 'same-origin'
+                        });
 
-            // Revenue tab
-            document.getElementById('revenueMonthSelect').addEventListener('change', function () {
-                populateDays('revenueDaySelect', 'revenueYearSelect', 'revenueMonthSelect');
-            });
-            document.getElementById('revenueYearSelect').addEventListener('change', function () {
-                populateDays('revenueDaySelect', 'revenueYearSelect', 'revenueMonthSelect');
-            });
+                        // Handle validation errors (422) with useful messages
+                        if (res.status === 422) {
+                            const body = await res.json().catch(() => null);
+                            const errs = (body && body.errors) ? body.errors : null;
+                            if (errs) {
+                                const messages = [];
+                                Object.values(errs).forEach(arr => {
+                                    if (Array.isArray(arr)) messages.push(...arr);
+                                    else messages.push(arr);
+                                });
+                                throw new Error(messages.join(' ; ') || body.message || 'Validation failed');
+                            }
+                            throw new Error(body?.message || 'Validation failed');
+                        }
 
-            // Initial population
-            populateDays('studentDaySelect', 'yearSelect', 'studentMonthSelect');
-            populateDays('revenueDaySelect', 'revenueYearSelect', 'revenueMonthSelect');
+                        if (!res.ok) {
+                            // try to parse JSON error message, otherwise text/html
+                            const contentType = res.headers.get('content-type') || '';
+                            if (contentType.includes('application/json')) {
+                                const body = await res.json().catch(() => null);
+                                throw new Error(body?.message || JSON.stringify(body) || `Upload failed (${res.status})`);
+                            } else {
+                                const text = await res.text();
+                                // If HTML returned, give a concise hint and log details to console
+                                console.error('Server response (non-JSON):', text);
+                                throw new Error(`Server error (${res.status}). See console/network tab for details.`);
+                            }
+                        }
+
+                        const ct = res.headers.get('content-type') || '';
+                        if (!ct.includes('application/json')) {
+                            const text = await res.text();
+                            throw new Error(text || 'Server did not return JSON');
+                        }
+
+                        const json = await res.json();
+                        if (json.success) {
+                            if (modalId) document.getElementById(modalId).style.display = 'none';
+                            if (onSuccess) onSuccess(json);
+                            alert('Uploaded ' + (json.inserted ?? 0) + ' rows.');
+                        } else {
+                            throw new Error(json.message || 'Upload failed');
+                        }
+                    } catch (err) {
+                        console.error('Upload error details:', err);
+                        alert('Upload error: ' + (err.message || err));
+                    }
+                });
+            }
+
+            bindUpload('studentUploadForm', 'studentUploadModal', () => loadStudentsData());
+            bindUpload('revenueUploadForm', 'revenueUploadModal', () => { loadRevenueData(); loadOutstandingData(); });
         });
+
+        // Download exports (actual uploaded table data)
+        function downloadStudentExport() {
+            window.location.href = "{{ route('bulk.student.export') }}";
+        }
+        function downloadRevenueExport() {
+            window.location.href = "{{ route('bulk.revenue.export') }}";
+        }
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function () {

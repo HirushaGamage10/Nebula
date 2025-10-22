@@ -867,5 +867,7 @@ Route::middleware(['role:DGM'])->group(function () {
     Route::post('/bulk-upload/revenues', [DGMDashboardController::class, 'bulkRevenueUpload'])->name('bulk.revenue.upload');
     Route::get('/bulk-upload/student-template', [DGMDashboardController::class, 'downloadStudentTemplate'])->name('bulk.student.template');
     Route::get('/bulk-upload/revenue-template', [DGMDashboardController::class, 'downloadRevenueTemplate'])->name('bulk.revenue.template');
+    Route::get('/bulk-upload/export-students', [DGMDashboardController::class, 'exportStudentBulkData'])->name('bulk.student.export');
+    Route::get('/bulk-upload/export-revenues', [DGMDashboardController::class, 'exportRevenueBulkData'])->name('bulk.revenue.export');
     Route::get('/api/dashboard/marketing-data', [DGMDashboardController::class, 'getMarketingData']);
 });
