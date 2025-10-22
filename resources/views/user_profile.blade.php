@@ -130,7 +130,9 @@
 
 <!-- Current Password -->
 <div class="mb-3">
-  <label for="current_password" class="form-label">Current Password</label>
+  <label for="current_password" class="form-label">
+    Current Password <span class="text-danger">*</span>
+  </label>
   <div class="input-group">
     <input type="password" class="form-control" id="current_password" name="current_password" required>
     <span class="input-group-text cursor-pointer" onclick="togglePassword('current_password')">
@@ -138,6 +140,7 @@
     </span>
   </div>
 </div>
+
 
 <!-- New Password -->
 <div class="mb-3">
