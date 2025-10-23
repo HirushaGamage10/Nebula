@@ -238,7 +238,7 @@
                                     <div class="row mb-3">
                                         <label for="ol_certificate" class="col-sm-2 col-form-label">O/L Certificate<span class="text-danger">*</span></label>
                                         <div class="col-sm-10">
-                                            <input type="file" class="form-control" id="ol_certificate" name="ol_certificate" required>
+                                            <input type="file" class="form-control" id="ol_certificate" name="ol_certificate">
                                         </div>
                                     </div>
                                 </div>
@@ -351,7 +351,7 @@
                                     <div class="row mb-3">
                                         <label for="al_certificate" class="col-sm-2 col-form-label">A/L Certificate<span class="text-danger">*</span></label>
                                         <div class="col-sm-10">
-                                            <input type="file" class="form-control" id="al_certificate" name="al_certificate" required>
+                                            <input type="file" class="form-control" id="al_certificate" name="al_certificate">
                                         </div>
                                     </div>
                                 </div>
