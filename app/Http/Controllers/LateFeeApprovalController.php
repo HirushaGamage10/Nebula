@@ -23,38 +23,63 @@ class LateFeeApprovalController extends Controller
      * Load approval page (with installments & late fee calculation)
      */
     public function approvalPage($studentNic, $courseId)
-    {
-        $student = Student::where('id_value', $studentNic)->first();
+{
+    // 1️⃣ Get student by NIC
+    $student = Student::where('id_value', $studentNic)->first();
+    if (!$student) {
+        return redirect()->back()->with('error', 'Student not found.');
+    }
 
-        if (!$student) {
-            return redirect()->back()->with('error', 'Student not found.');
-        }
-
-        $plan = StudentPaymentPlan::where('student_id', $student->student_id)
-            ->where('course_id', $courseId)
-            ->with('installments')
-            ->first();
-
-        if (!$plan) {
-            return redirect()->back()->with('error', 'No payment plan found for this course.');
-        }
-
-        $installments = $plan->installments()->orderBy('due_date')->get();
-
-        // Preprocess late fee calculation
-        $installments = $installments->map(function ($inst) {
-            $dueDate  = \Carbon\Carbon::parse($inst->due_date);
-            $isLate   = $dueDate->isPast() && $inst->status !== 'paid';
-            $daysLate = $isLate ? $dueDate->diffInDays(now()) : 0;
-            $finalAmt = $inst->final_amount ?? $inst->amount ?? 0;
-
-            $inst->calculated_late_fee = $isLate ? $this->calculateLateFee($finalAmt, $daysLate) : 0;
-            $inst->days_late           = $daysLate;
-            return $inst;
+    // 2️⃣ Get all registered courses for this student (for dropdown)
+    $courses = CourseRegistration::where('student_id', $student->student_id)
+        ->with('course')
+        ->get()
+        ->map(function ($reg) {
+            return [
+                'course_id'   => $reg->course->course_id,
+                'course_name' => $reg->course->course_name,
+            ];
         });
 
-        return view('late_fee.approval', compact('student', 'plan', 'installments', 'studentNic', 'courseId'));
+    // 3️⃣ Get payment plan for selected course
+    $plan = StudentPaymentPlan::where('student_id', $student->student_id)
+        ->where('course_id', $courseId)
+        ->with('installments')
+        ->first();
+
+    if (!$plan) {
+        return view('late_fee.approval', [
+            'student'      => $student,
+            'courses'      => $courses,
+            'studentNic'   => $studentNic,
+            'courseId'     => $courseId,
+            'installments' => collect(),
+            'error'        => 'No payment plan found for this course.',
+        ]);
     }
+
+    // 4️⃣ Calculate late fee for each installment
+    $installments = $plan->installments()->orderBy('due_date')->get()->map(function ($inst) {
+        $dueDate  = \Carbon\Carbon::parse($inst->due_date);
+        $isLate   = $dueDate->isPast() && $inst->status !== 'paid';
+        $daysLate = $isLate ? $dueDate->diffInDays(now()) : 0;
+        $finalAmt = $inst->final_amount ?? $inst->amount ?? 0;
+
+        $inst->calculated_late_fee = $isLate ? $this->calculateLateFee($finalAmt, $daysLate) : 0;
+        $inst->days_late = $daysLate;
+        return $inst;
+    });
+
+    // 5️⃣ Send everything to Blade
+    return view('late_fee.approval', [
+        'student'      => $student,
+        'courses'      => $courses,
+        'installments' => $installments,
+        'studentNic'   => $studentNic,
+        'courseId'     => $courseId,
+    ]);
+}
+
 
     /**
      * Ajax – return payment plan + installments (JSON)

@@ -9,29 +9,55 @@
             <h2 class="text-center mb-4">Late Fee Approval</h2>
             <hr>
             
+
+<div class="mb-4">
+    <h5 class="mb-3">Select Student & Course</h5>
+
+    <form method="GET" onsubmit="event.preventDefault(); goToApprovalPage();">
+        <div class="row mb-3">
+
             
-            <div class="mb-4">
-                <h5 class="mb-3">Select Student & Course</h5>
-                <form method="GET" onsubmit="event.preventDefault(); goToApprovalPage();">
-                    <div class="row mb-3">
-                        <div class="col-md-5">
-                            <label for="student_nic">Student NIC</label>
-                            <input type="text" id="student-nic" name="student_nic" class="form-control" placeholder="Enter NIC" required>
-                        </div>
-
-                        <div class="col-md-5">
-                            <label for="course_id">Course</label>
-                            <select id="course_id" class="form-control" required>
-                                <option value="">-- Select Course --</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary w-100">Load</button>
-                        </div>
-                    </div>
-                </form>
+            <div class="col-md-5">
+                <label for="student-nic" class="form-label fw-semibold">Student NIC</label>
+                <input type="text" 
+                       id="student-nic" 
+                       name="student_nic" 
+                       class="form-control" 
+                       placeholder="Enter NIC" 
+                       value="<?php echo e($studentNic ?? ''); ?>" 
+                       required>
             </div>
+
+            
+            <div class="col-md-5">
+                <label for="course_id" class="form-label fw-semibold">Course</label>
+                <select id="course_id" name="course_id" class="form-control" required>
+                    <option value="">-- Select Course --</option>
+                    <?php $__currentLoopData = $courses ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $c): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <option value="<?php echo e($c['course_id']); ?>" 
+                            <?php echo e(($courseId ?? '') == $c['course_id'] ? 'selected' : ''); ?>>
+                            <?php echo e($c['course_name']); ?>
+
+                        </option>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                </select>
+            </div>
+
+            
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="d-flex w-100 gap-2">
+                    <button type="submit" class="btn btn-primary flex-fill">Load</button>
+                    <button type="button" 
+                            class="btn btn-outline-secondary flex-fill"
+                            onclick="window.location.href='<?php echo e(url('/late-fee/approval')); ?>'">
+                        Clear
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>
 
 
     <?php if(isset($installments)): ?>
@@ -197,92 +223,92 @@
 </div>
 
 <script>
-document.getElementById("student-nic").addEventListener("blur", function() {
-    let nic = this.value;
-    if (!nic) return;
+document.addEventListener("DOMContentLoaded", function () {
+    const studentNicInput = document.getElementById("student-nic");
+    const courseSelect = document.getElementById("course_id");
 
-    fetch("<?php echo e(route('latefee.get.courses')); ?>", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-TOKEN": "<?php echo e(csrf_token()); ?>"
-        },
-        body: JSON.stringify({ student_nic: nic })
-    })
-    .then(res => res.json())
-    .then(data => {
-        let courseSelect = document.getElementById("course_id");
-        courseSelect.innerHTML = "<option value=''>-- Select Course --</option>";
+    // 1️⃣ Fetch and populate courses when NIC is entered or changed
+    studentNicInput.addEventListener("blur", fetchCoursesForNIC);
+    studentNicInput.addEventListener("change", fetchCoursesForNIC);
 
-        if (data.success) {
-            data.courses.forEach(c => {
-                let option = document.createElement("option");
-                option.value = c.course_id;
-                option.textContent = c.course_name;
-                courseSelect.appendChild(option);
-            });
-        } else {
-            alert("No courses found for this NIC.");
-        }
-    })
-    .catch(err => console.error(err));
+    function fetchCoursesForNIC() {
+        const nic = studentNicInput.value.trim();
+        if (!nic) return;
+
+        fetch("<?php echo e(route('latefee.get.courses')); ?>", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": "<?php echo e(csrf_token()); ?>"
+            },
+            body: JSON.stringify({ student_nic: nic })
+        })
+        .then(res => res.json())
+        .then(data => {
+            courseSelect.innerHTML = "<option value=''>-- Select Course --</option>";
+
+            if (data.success && Array.isArray(data.courses)) {
+                data.courses.forEach(c => {
+                    const opt = document.createElement("option");
+                    opt.value = c.course_id;
+                    opt.textContent = c.course_name;
+                    courseSelect.appendChild(opt);
+                });
+            } else {
+                alert("No courses found for this NIC.");
+            }
+        })
+        .catch(err => console.error("Error fetching courses:", err));
+    }
+
+    // 2️⃣ Auto-fill when returning from backend (values from Blade)
+    const prefilledNic = "<?php echo e($studentNic ?? ''); ?>";
+    const prefilledCourseId = "<?php echo e($courseId ?? ''); ?>";
+
+    if (prefilledNic) {
+        studentNicInput.value = prefilledNic;
+
+        // If NIC is filled, fetch courses and auto-select correct one
+        fetch("<?php echo e(route('latefee.get.courses')); ?>", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-TOKEN": "<?php echo e(csrf_token()); ?>"
+            },
+            body: JSON.stringify({ student_nic: prefilledNic })
+        })
+        .then(res => res.json())
+        .then(data => {
+            courseSelect.innerHTML = "<option value=''>-- Select Course --</option>";
+            if (data.success && Array.isArray(data.courses)) {
+                data.courses.forEach(c => {
+                    const opt = document.createElement("option");
+                    opt.value = c.course_id;
+                    opt.textContent = c.course_name;
+                    if (c.course_id == prefilledCourseId) {
+                        opt.selected = true;
+                    }
+                    courseSelect.appendChild(opt);
+                });
+            }
+        })
+        .catch(err => console.error("Error preloading courses:", err));
+    }
 });
 
+// 3️⃣ Redirect to approval page
 function goToApprovalPage() {
-    let nic = document.getElementById("student-nic").value;
-    let courseId = document.getElementById("course_id").value;
+    const nic = document.getElementById("student-nic").value.trim();
+    const courseId = document.getElementById("course_id").value;
 
     if (!nic || !courseId) {
         alert("Please enter NIC and select a course.");
         return;
     }
 
-    let url = "<?php echo e(url('/late-fee/approval')); ?>/" + nic + "/" + courseId;
+    const url = "<?php echo e(url('/late-fee/approval')); ?>/" + nic + "/" + courseId;
     window.location.href = url;
 }
-
-
-document.addEventListener("DOMContentLoaded", function () {
-    const studentNicInput = document.getElementById("student-nic");
-    const courseSelect = document.getElementById("course-select");
-
-    studentNicInput.addEventListener("change", function () {
-        let nic = studentNicInput.value.trim();
-        if (!nic) return;
-
-        // Clear old options
-        courseSelect.innerHTML = '<option value="">-- Select Course --</option>';
-
-        fetch("<?php echo e(route('latefee.get.courses')); ?>", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
-            },
-            body: JSON.stringify({ student_nic: nic })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                data.courses.forEach(course => {
-                    let opt = document.createElement("option");
-                    opt.value = course.course_id;
-                    opt.textContent = course.course_name + " (" + course.registration_date + ")";
-                    courseSelect.appendChild(opt);
-                });
-            } else {
-                alert(data.message || "No courses found for this NIC");
-            }
-        })
-        .catch(err => console.error("Error fetching courses:", err));
-    });
-});
-
-</script>
-<script>
-    if (performance.navigation.type === performance.navigation.TYPE_RELOAD) {
-        window.location.href = "<?php echo e(url('/late-fee/approval')); ?>";
-    }
 </script>
 
 <?php $__env->stopSection(); ?>
