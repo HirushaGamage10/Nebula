@@ -455,14 +455,20 @@ function autoCompleteRemaining() {
 }
 
 function toggleDiscountField() {
-  var applyDiscountYes = document.getElementById('applyDiscountYes').checked;
-  var discountField = document.getElementById('discountField');
-  if (applyDiscountYes) {
-    discountField.style.display = 'flex';
-  } else {
-    discountField.style.display = 'none';
-  }
+    const applyDiscountYes = document.getElementById('applyDiscountYes').checked;
+    const discountField = document.getElementById('discountField');
+    const discountInput = document.getElementById('fullPaymentDiscount');
+
+    if (applyDiscountYes) {
+        discountField.style.display = 'flex';
+        discountInput.setAttribute('required', 'required'); // ✅ Make it required
+    } else {
+        discountField.style.display = 'none';
+        discountInput.removeAttribute('required'); // ✅ Remove required
+        discountInput.value = ''; // Optional: clear value when hidden
+    }
 }
+
 document.getElementById('currency').addEventListener('change', function() {
   var selectedCurrency = this.value;
   var headerElement = document.getElementById('internationalHeader');
