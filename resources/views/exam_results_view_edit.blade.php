@@ -11,21 +11,23 @@
 
             <!-- Spinner and Toast containers -->
             <div id="spinner-overlay" style="display:none;"><div class="lds-ring"><div></div><div></div><div></div><div></div></div></div>
-            <div id="toastContainer" aria-live="polite" aria-atomic="true" style="position: fixed; top: 10px; right: 10px; z-index: 1000;"></div>
+            <div id="toastContainer" aria-live="polite" aria-atomic="true" style="position: fixed; top: 9px; right: 10px; z-index: 1000;"></div>
 
             <!-- Filters -->
-            <div id="exam-filters-bootstrap" class="mb-4">
-                <div class="mb-3 row mx-3">
-                    <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
-                    <div class="col-sm-10">
-                        <select class="form-select filter-param" id="location" name="location" required>
+            <div class="mb-3 row mx-3">
+                 <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
+                <div class="col-sm-10">
+                
+                    <select class="form-select filter-param" id="location" name="location" required>
                             <option value="" selected disabled>Select a Location</option>
                             <option value="Welisara">Nebula Institute of Technology - Welisara</option>
                             <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
                             <option value="Peradeniya">Nebula Institute of Technology - Peradeniya</option>
-                        </select>
-                    </div>
+                     </select>
+
                 </div>
+            </div>
+        
                 <div class="mb-3 row mx-3">
                     <label for="course_type" class="col-sm-2 col-form-label">Course Type <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
@@ -37,6 +39,7 @@
                         </select>
                     </div>
                 </div>
+                
                 <div id="fields-container" style="display: none;">
                     <div class="mb-3 row mx-3">
                         <label for="course" class="col-sm-2 col-form-label">Course <span class="text-danger">*</span></label>
