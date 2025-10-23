@@ -64,7 +64,7 @@ class PaymentPlanController extends Controller
     if ($selectedLocation) {
         $courses = Course::where('location', $selectedLocation)
             ->orderBy('course_name')
-            ->get(['course_id', 'course_name']);
+    ->get(['course_id', 'course_name', 'course_type']);
     }
 
     return view('payment_plan', compact('courses', 'locations', 'selectedLocation'));

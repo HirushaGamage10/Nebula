@@ -59,18 +59,26 @@
 
                 </div>
                 <div class="mb-3 row mx-3">
-                    <label for="course" class="col-sm-2 col-form-label">Course <span class="text-danger">*</span></label>
-                    <div class="col-sm-10">
-                        <select class="form-select" id="course" name="course" required>
-                            <option selected disabled value="">Select Course...</option>
-                            <?php if(isset($courses)): ?>
-                                <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                    <option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>
-                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                            <?php endif; ?>
-                        </select>
-                    </div>
-                </div>
+    <label for="course" class="col-sm-2 col-form-label">
+        Course <span class="text-danger">*</span>
+    </label>
+    <div class="col-sm-10">
+        <select class="form-select" id="course" name="course" required <?php echo e(empty($selectedLocation) ? 'disabled' : ''); ?>>
+            <option selected disabled value="">Select Course...</option>
+            <?php if(isset($courses) && $courses->count()): ?>
+                <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <option value="<?php echo e($course->course_id); ?>">
+                        <?php echo e(ucfirst($course->course_type)); ?> – <?php echo e($course->course_name); ?>
+
+                    </option>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            <?php else: ?>
+                <option disabled>No courses available for this location</option>
+            <?php endif; ?>
+        </select>
+    </div>
+</div>
+
                 <div class="mb-3 row mx-3">
                     <label for="intake" class="col-sm-2 col-form-label">Intake <span class="text-danger">*</span></label>
                     <div class="col-sm-10">

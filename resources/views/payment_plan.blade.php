@@ -57,18 +57,25 @@
 
                 </div>
                 <div class="mb-3 row mx-3">
-                    <label for="course" class="col-sm-2 col-form-label">Course <span class="text-danger">*</span></label>
-                    <div class="col-sm-10">
-                        <select class="form-select" id="course" name="course" required>
-                            <option selected disabled value="">Select Course...</option>
-                            @if(isset($courses))
-                                @foreach($courses as $course)
-                                    <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
-                                @endforeach
-                            @endif
-                        </select>
-                    </div>
-                </div>
+    <label for="course" class="col-sm-2 col-form-label">
+        Course <span class="text-danger">*</span>
+    </label>
+    <div class="col-sm-10">
+        <select class="form-select" id="course" name="course" required {{ empty($selectedLocation) ? 'disabled' : '' }}>
+            <option selected disabled value="">Select Course...</option>
+            @if(isset($courses) && $courses->count())
+                @foreach($courses as $course)
+                    <option value="{{ $course->course_id }}">
+                        {{ ucfirst($course->course_type) }} – {{ $course->course_name }}
+                    </option>
+                @endforeach
+            @else
+                <option disabled>No courses available for this location</option>
+            @endif
+        </select>
+    </div>
+</div>
+
                 <div class="mb-3 row mx-3">
                     <label for="intake" class="col-sm-2 col-form-label">Intake <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
