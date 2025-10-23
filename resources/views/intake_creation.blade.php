@@ -1075,6 +1075,39 @@ $(document).ready(function() {
         return dateObj.toISOString().split('T')[0];
     }
 });
+
+window.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('intakeForm');
+    const locationSelect = document.getElementById('location');
+
+    function toggleFields() {
+        const hasLocation = locationSelect.value !== '';
+
+        // Disable all fields except location and hidden/submit inputs
+        form.querySelectorAll('input, select, textarea, button').forEach(el => {
+            if (
+                el.id !== 'location' &&
+                el.type !== 'hidden' &&
+                el.type !== 'submit'
+            ) {
+                el.disabled = !hasLocation;
+                if (!hasLocation) {
+                    el.classList.add('locked-field');
+                } else {
+                    el.classList.remove('locked-field');
+                }
+            }
+        });
+    }
+
+    // Run on load and when location changes
+    toggleFields();
+    locationSelect.addEventListener('change', toggleFields);
+});
+
+
+
+
 </script>
 
 
@@ -1087,5 +1120,17 @@ $(document).ready(function() {
 .table td {
     font-size: 0.9rem !important;
 }
+/* Apply soft visual dim only to locked inputs */
+.locked-field {
+    background-color: #f1f3f5 !important;
+    cursor: not-allowed;
+    opacity: 1 !important; /* Keep text readable */
+}
+
+/* Keep labels and text clear */
+#intakeForm label {
+    opacity: 1 !important;
+}
+
 </style>
 @endpush
