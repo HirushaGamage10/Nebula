@@ -623,6 +623,59 @@ $('#paymentPlanForm').on('submit', function(e) {
   // Submit the form
   this.submit();
 });
+window.addEventListener('DOMContentLoaded', function () {
+    // Disable all other inputs/selects initially except location
+    toggleFormFields();
+
+    // Re-check when location changes
+    $('#location').on('change', function () {
+        toggleFormFields();
+    });
+
+    function toggleFormFields() {
+        const locationSelected = $('#location').val() !== '';
+
+        // Disable or enable everything except #location
+        $('#paymentPlanForm')
+            .find('input, select, button, textarea')
+            .not('#location')
+            .prop('disabled', !locationSelected);
+
+        // Allow submit button only when location selected
+        $('#submitBtn').prop('disabled', !locationSelected);
+    }
+});
+window.addEventListener('DOMContentLoaded', function () {
+    const $form = $('#paymentPlanForm');
+    const $location = $('#location');
+    const $submitBtn = $('#submitBtn');
+
+    function toggleFormFields() {
+        const locationSelected = $location.val() !== '' && $location.val() !== null;
+
+        // Disable all except location & submit button initially
+        $form.find('input, select, button, textarea')
+            .not('#location, #submitBtn')
+            .each(function () {
+                // Keep disabled=true only if location not selected
+                if (!locationSelected) {
+                    $(this).prop('disabled', true);
+                } else {
+                    $(this).prop('disabled', false);
+                }
+            });
+
+        // Force re-enable location & submit
+        $location.prop('disabled', false);
+        $submitBtn.prop('disabled', !locationSelected);
+    }
+
+    // Run on load + when location changes
+    toggleFormFields();
+    $location.on('change', toggleFormFields);
+});
+
+
 </script>
 <?php $__env->stopSection(); ?> 
 <?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/payment_plan.blade.php ENDPATH**/ ?>
