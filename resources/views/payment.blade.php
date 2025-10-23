@@ -622,12 +622,13 @@
                             <div class="row mb-3 align-items-center">
                                 <label class="col-sm-2 col-form-label fw-bold">Payment Type <span class="text-danger">*</span></label>
                                 <div class="col-sm-10">
-                                    <select class="form-select" id="slip-payment-type" required onchange="loadPaymentDetails()" disabled>
-                                        <option value="" selected disabled>Select Payment Type</option>
-                                        <option value="course_fee">Course Fee</option>
-                                        <option value="franchise_fee">Franchise Fee</option>
-                                        <option value="registration_fee">Registration Fee</option>
-                                    </select>
+                                    <select class="form-select" id="slip-payment-type" required onchange="loadPaymentDetails(); setTimeout(toggleLateFeeColumn, 300);" disabled>
+    <option value="" selected disabled>Select Payment Type</option>
+    <option value="course_fee">Course Fee</option>
+    <option value="franchise_fee">Franchise Fee</option>
+    <option value="registration_fee">Registration Fee</option>
+</select>
+
                                 </div>
                             </div>
                             <div class="row mb-3 align-items-center" id="currencyConversionRow" style="display: none;">
@@ -3848,6 +3849,40 @@ async function loadPaymentDetails() {
     const tbody = document.getElementById('paymentDetailsTableBody');
     tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">${err.message}</td></tr>`;
   }
+}
+function toggleLateFeeColumn() {
+    const paymentType = document.getElementById('slip-payment-type').value;
+    const table = document.getElementById('paymentDetailsTable');
+    if (!table) return;
+
+    // Give the DOM a short time to finish inserting rows
+    setTimeout(() => {
+        // Find the "Late Fee" column index
+        const headers = table.querySelectorAll('thead th');
+        let lateFeeIndex = -1;
+
+        headers.forEach((th, i) => {
+            if (th.textContent.trim().toLowerCase().includes('late fee')) {
+                lateFeeIndex = i + 1; // nth-child is 1-based
+            }
+        });
+
+        // Stop if not found
+        if (lateFeeIndex === -1) return;
+
+        const lateFeeHeader = table.querySelector(`thead th:nth-child(${lateFeeIndex})`);
+        const lateFeeCells = table.querySelectorAll(`tbody td:nth-child(${lateFeeIndex})`);
+
+        if (paymentType === 'franchise_fee') {
+            // Hide header & all cells
+            if (lateFeeHeader) lateFeeHeader.style.display = 'none';
+            lateFeeCells.forEach(td => td.style.display = 'none');
+        } else {
+            // Show header & cells again
+            if (lateFeeHeader) lateFeeHeader.style.display = '';
+            lateFeeCells.forEach(td => td.style.display = '');
+        }
+    }, 100); // wait 100ms for table rows to load
 }
 
 
