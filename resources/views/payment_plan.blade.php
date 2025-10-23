@@ -103,7 +103,18 @@
                             <label for="ssclTax" class="col-sm-3 col-form-label fw-bold">SSCL Tax Percentage<span class="text-danger">*</span></label>
                             <div class="col-sm-9">
                                 <div class="input-group">
-                                    <input type="text" class="form-control bg-white" id="ssclTax" name="ssclTax" placeholder="Enter SSCL tax percentage" required oninput="validateInput(this)">
+                                   <input 
+    type="number" 
+    class="form-control bg-white" 
+    id="ssclTax" 
+    name="ssclTax" 
+    placeholder="Enter SSCL tax percentage" 
+    required 
+    min="0" 
+    max="100" 
+    step="0.01"
+    oninput="validateInput(this)">
+
                                     <span class="input-group-text bg-black text-white">%</span>
                                 </div>
                             </div>
@@ -243,15 +254,29 @@ function toggleAmountField() {
 toggleAmountField();
 
 function validateInput(input) {
+    // Allow only numbers and one decimal point
     input.value = input.value.replace(/[^0-9.]/g, '');
     const parts = input.value.split('.');
     if (parts.length > 2) {
-      input.value = parts[0] + '.' + parts.slice(1).join('');
+        input.value = parts[0] + '.' + parts.slice(1).join('');
     }
     if (input.value.startsWith('.')) {
-      input.value = '0' + input.value;
+        input.value = '0' + input.value;
+    }
+
+    // Restrict SSCL Tax and Discount to max 100%
+    if (input.id === 'ssclTax' || input.id === 'fullPaymentDiscount') {
+        const value = parseFloat(input.value);
+        if (value > 100) {
+            input.value = 100;
+            showAutofillToast('Percentage value cannot exceed 100%.');
+        }
+        if (value < 0) {
+            input.value = 0;
+        }
     }
 }
+
 
 function addRows() {
   const tableBody = document.getElementById('installmentsTableBody');
