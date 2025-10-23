@@ -48,7 +48,7 @@
         </div>
 
         <div class="col-md-1 d-flex align-items-end">
-          <button id="searchBtn" class="btn btn-primary w-100" type="submit">
+          <button id="searchBtn" class="btn btn-primary w-auto" type="submit">
             <span class="spinner-border spinner-border-sm d-none" id="searchSpinner" role="status"></span>
             <span id="searchText">Search</span>
           </button>
