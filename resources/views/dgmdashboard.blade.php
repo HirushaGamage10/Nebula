@@ -45,7 +45,7 @@
                             <div>
                                 <p class="text-sm text-gray-600">Total Students</p>
                                 <p class="text-2xl font-bold text-gray-900" id="totalStudents">-</p>
-                                <p class="text-sm text-green-600" id="studentChange">Loading...</p>
+                                <p class="text-sm text-green-600" id="studentChange"></p>
                             </div>
                             <div class="bg-blue-100 p-3 rounded-full">
                                 <i class="fas fa-users text-blue-600 text-xl"></i>
