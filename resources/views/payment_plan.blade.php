@@ -38,13 +38,23 @@
                 <div class="mb-3 row mx-3">
                     <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
-                        <select class="form-select" id="location" name="location" required>
-                            <option selected disabled value="">Choose a location...</option>
-                            <option value="Welisara">Nebula Institute of Technology - Welisara</option>
-                            <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
-                            <option value="Peradeniya">Nebula Institute of Technology - Peradeniya</option>
-                        </select>
-                    </div>
+    <select class="form-select" id="location" name="location" required
+        onchange="window.location='{{ route('payment.plan') }}?location=' + this.value">
+        <option disabled {{ !isset($selectedLocation) ? 'selected' : '' }} value="">
+            Choose a location...
+        </option>
+        <option value="Welisara" {{ (isset($selectedLocation) && $selectedLocation === 'Welisara') ? 'selected' : '' }}>
+            Nebula Institute of Technology - Welisara
+        </option>
+        <option value="Moratuwa" {{ (isset($selectedLocation) && $selectedLocation === 'Moratuwa') ? 'selected' : '' }}>
+            Nebula Institute of Technology - Moratuwa
+        </option>
+        <option value="Peradeniya" {{ (isset($selectedLocation) && $selectedLocation === 'Peradeniya') ? 'selected' : '' }}>
+            Nebula Institute of Technology - Peradeniya
+        </option>
+    </select>
+</div>
+
                 </div>
                 <div class="mb-3 row mx-3">
                     <label for="course" class="col-sm-2 col-form-label">Course <span class="text-danger">*</span></label>
@@ -103,7 +113,18 @@
                             <label for="ssclTax" class="col-sm-3 col-form-label fw-bold">SSCL Tax Percentage<span class="text-danger">*</span></label>
                             <div class="col-sm-9">
                                 <div class="input-group">
-                                    <input type="text" class="form-control bg-white" id="ssclTax" name="ssclTax" placeholder="Enter SSCL tax percentage" required oninput="validateInput(this)">
+                                   <input 
+    type="number" 
+    class="form-control bg-white" 
+    id="ssclTax" 
+    name="ssclTax" 
+    placeholder="Enter SSCL tax percentage" 
+    required 
+    min="0" 
+    max="100" 
+    step="0.01"
+    oninput="validateInput(this)">
+
                                     <span class="input-group-text bg-black text-white">%</span>
                                 </div>
                             </div>
@@ -243,15 +264,29 @@ function toggleAmountField() {
 toggleAmountField();
 
 function validateInput(input) {
+    // Allow only numbers and one decimal point
     input.value = input.value.replace(/[^0-9.]/g, '');
     const parts = input.value.split('.');
     if (parts.length > 2) {
-      input.value = parts[0] + '.' + parts.slice(1).join('');
+        input.value = parts[0] + '.' + parts.slice(1).join('');
     }
     if (input.value.startsWith('.')) {
-      input.value = '0' + input.value;
+        input.value = '0' + input.value;
+    }
+
+    // Restrict SSCL Tax and Discount to max 100%
+    if (input.id === 'ssclTax' || input.id === 'fullPaymentDiscount') {
+        const value = parseFloat(input.value);
+        if (value > 100) {
+            input.value = 100;
+            showAutofillToast('Percentage value cannot exceed 100%.');
+        }
+        if (value < 0) {
+            input.value = 0;
+        }
     }
 }
+
 
 function addRows() {
   const tableBody = document.getElementById('installmentsTableBody');
@@ -596,5 +631,58 @@ $('#paymentPlanForm').on('submit', function(e) {
   // Submit the form
   this.submit();
 });
+window.addEventListener('DOMContentLoaded', function () {
+    // Disable all other inputs/selects initially except location
+    toggleFormFields();
+
+    // Re-check when location changes
+    $('#location').on('change', function () {
+        toggleFormFields();
+    });
+
+    function toggleFormFields() {
+        const locationSelected = $('#location').val() !== '';
+
+        // Disable or enable everything except #location
+        $('#paymentPlanForm')
+            .find('input, select, button, textarea')
+            .not('#location')
+            .prop('disabled', !locationSelected);
+
+        // Allow submit button only when location selected
+        $('#submitBtn').prop('disabled', !locationSelected);
+    }
+});
+window.addEventListener('DOMContentLoaded', function () {
+    const $form = $('#paymentPlanForm');
+    const $location = $('#location');
+    const $submitBtn = $('#submitBtn');
+
+    function toggleFormFields() {
+        const locationSelected = $location.val() !== '' && $location.val() !== null;
+
+        // Disable all except location & submit button initially
+        $form.find('input, select, button, textarea')
+            .not('#location, #submitBtn')
+            .each(function () {
+                // Keep disabled=true only if location not selected
+                if (!locationSelected) {
+                    $(this).prop('disabled', true);
+                } else {
+                    $(this).prop('disabled', false);
+                }
+            });
+
+        // Force re-enable location & submit
+        $location.prop('disabled', false);
+        $submitBtn.prop('disabled', !locationSelected);
+    }
+
+    // Run on load + when location changes
+    toggleFormFields();
+    $location.on('change', toggleFormFields);
+});
+
+
 </script>
 @endsection 

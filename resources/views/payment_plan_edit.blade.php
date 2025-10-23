@@ -43,15 +43,18 @@
                 </div>
 
                 {{-- Intake --}}
-                <div class="mb-3">
-                    <label class="form-label">Intake</label>
-                    <select name="intake_id" class="form-select">
-                        <option value="">None</option>
-                        @foreach($intakes as $i)
-                            <option value="{{ $i->intake_id }}" @selected($plan->intake_id==$i->intake_id)>{{ $i->intake_id }}</option>
-                        @endforeach
-                    </select>
-                </div>
+<div class="mb-3">
+    <label class="form-label">Intake</label>
+    <select name="intake_id" class="form-select">
+        <option value="">None</option>
+        @foreach($intakes as $i)
+            <option value="{{ $i->intake_id }}" @selected($plan->intake_id == $i->intake_id)>
+                {{ $i->batch }}
+            </option>
+        @endforeach
+    </select>
+</div>
+
 
                 {{-- Registration Fee --}}
                 <div class="mb-3">

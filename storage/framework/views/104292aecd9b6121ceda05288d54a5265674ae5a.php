@@ -43,15 +43,19 @@
                 </div>
 
                 
-                <div class="mb-3">
-                    <label class="form-label">Intake</label>
-                    <select name="intake_id" class="form-select">
-                        <option value="">None</option>
-                        <?php $__currentLoopData = $intakes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                            <option value="<?php echo e($i->intake_id); ?>" <?php if($plan->intake_id==$i->intake_id): echo 'selected'; endif; ?>><?php echo e($i->intake_id); ?></option>
-                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-                    </select>
-                </div>
+<div class="mb-3">
+    <label class="form-label">Intake</label>
+    <select name="intake_id" class="form-select">
+        <option value="">None</option>
+        <?php $__currentLoopData = $intakes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <option value="<?php echo e($i->intake_id); ?>" <?php if($plan->intake_id == $i->intake_id): echo 'selected'; endif; ?>>
+                <?php echo e($i->batch); ?>
+
+            </option>
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+    </select>
+</div>
+
 
                 
                 <div class="mb-3">

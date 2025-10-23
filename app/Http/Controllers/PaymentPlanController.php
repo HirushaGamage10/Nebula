@@ -54,11 +54,22 @@ class PaymentPlanController extends Controller
 
 
     // Your original page now lives here, unchanged logic:
-    public function create()
-    {
-        $courses = Course::all();
-        return view('payment_plan', compact('courses')); // your create form view
+    public function create(Request $request)
+{
+    $locations = ['Welisara','Moratuwa','Peradeniya'];
+    $selectedLocation = $request->query('location');
+
+    // Filter courses based on selected location
+    $courses = collect();
+    if ($selectedLocation) {
+        $courses = Course::where('location', $selectedLocation)
+            ->orderBy('course_name')
+            ->get(['course_id', 'course_name']);
     }
+
+    return view('payment_plan', compact('courses', 'locations', 'selectedLocation'));
+}
+
 
 
     public function store(Request $request)
