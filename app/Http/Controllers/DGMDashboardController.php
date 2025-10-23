@@ -202,14 +202,14 @@ class DGMDashboardController extends Controller
 
         // Accept multiple possible parameter names for start/end and use Request::boolean for flags
         $fromYear = $request->input('from_year') ?? $request->input('range_start_year') ?? $request->input('from') ?? null;
-        $toYear   = $request->input('to_year')   ?? $request->input('range_end_year')   ?? $request->input('to')   ?? null;
+        $toYear = $request->input('to_year') ?? $request->input('range_end_year') ?? $request->input('to') ?? null;
 
         $compareMode = $request->boolean('compare');
-        $rangeMode   = $request->boolean('range');
+        $rangeMode = $request->boolean('range');
 
         // normalize numeric strings to ints when present
-        $fromYearInt = $fromYear !== null && is_numeric($fromYear) ? (int)$fromYear : null;
-        $toYearInt   = $toYear !== null && is_numeric($toYear)   ? (int)$toYear   : null;
+        $fromYearInt = $fromYear !== null && is_numeric($fromYear) ? (int) $fromYear : null;
+        $toYearInt = $toYear !== null && is_numeric($toYear) ? (int) $toYear : null;
 
         // determine years list (inclusive)
         if ($rangeMode && $fromYearInt && $toYearInt) {
@@ -226,10 +226,10 @@ class DGMDashboardController extends Controller
             $regMax = CourseRegistration::max(DB::raw('YEAR(created_at)'));
 
             $candidates = array_filter([
-                $bulkMin ? (int)$bulkMin : null,
-                $bulkMax ? (int)$bulkMax : null,
-                $regMin ? (int)$regMin : null,
-                $regMax ? (int)$regMax : null,
+                $bulkMin ? (int) $bulkMin : null,
+                $bulkMax ? (int) $bulkMax : null,
+                $regMin ? (int) $regMin : null,
+                $regMax ? (int) $regMax : null,
             ]);
 
             if (empty($candidates)) {
@@ -271,7 +271,8 @@ class DGMDashboardController extends Controller
 
         foreach ($bulkRows as $row) {
             $c = $row->course ?? ($course !== 'all' ? $course : 'all');
-            if (empty($c)) $c = 'all';
+            if (empty($c))
+                $c = 'all';
             $key = "{$row->year}|{$row->location}|{$c}";
             if (!isset($aggregate[$key])) {
                 $aggregate[$key] = [
@@ -335,36 +336,59 @@ class DGMDashboardController extends Controller
         $day = $request->input('date');
         $location = $request->input('location', 'all');
         $course = $request->input('course', 'all');
-        $fromYear = $request->input('from_year');
-        $toYear = $request->input('to_year');
-        $range = $request->input('range');
-        $rangeStart = $request->input('range_start_year');
-        $rangeEnd = $request->input('range_end_year');
 
-        // Determine years to fetch
-        if ($range && $rangeStart && $rangeEnd) {
-            $years = range($rangeStart, $rangeEnd);
-        } elseif ($fromYear && $toYear) {
-            $years = range($fromYear, $toYear);
-        } elseif ($year) {
-            $years = [$year];
+        // Accept multiple possible names for from/to and range flags
+        $fromYear = $request->input('from_year') ?? $request->input('range_start_year') ?? $request->input('from');
+        $toYear = $request->input('to_year') ?? $request->input('range_end_year') ?? $request->input('to');
+
+        $compareMode = $request->boolean('compare');
+        $rangeMode = $request->boolean('range');
+
+        // normalize years
+        $fromInt = is_numeric($fromYear) ? (int) $fromYear : null;
+        $toInt = is_numeric($toYear) ? (int) $toYear : null;
+
+        if ($request->filled('range_start_year') && $request->filled('range_end_year')) {
+            $start = min((int) $request->input('range_start_year'), (int) $request->input('range_end_year'));
+            $end = max((int) $request->input('range_start_year'), (int) $request->input('range_end_year'));
+            $years = range($start, $end);
+        } elseif ($request->filled('from_year') && $request->filled('to_year')) {
+            if ($compareMode) {
+                $years = [(int) $request->input('from_year'), (int) $request->input('to_year')];
+            } else {
+                $start = min((int) $request->input('from_year'), (int) $request->input('to_year'));
+                $end = max((int) $request->input('from_year'), (int) $request->input('to_year'));
+                $years = range($start, $end);
+            }
+        } elseif ($rangeMode && $fromInt && $toInt) {
+            $start = min($fromInt, $toInt);
+            $end = max($fromInt, $toInt);
+            $years = range($start, $end);
+        } elseif ($compareMode && $fromInt && $toInt) {
+            $years = [$fromInt, $toInt];
+        } elseif (!empty($year) && is_numeric($year)) {
+            $years = [(int) $year];
         } else {
             $years = [date('Y')];
         }
 
-        // Get all locations
-        $locations = $location === 'all'
-            ? ['Welisara', 'Moratuwa', 'Peradeniya']
-            : [$location];
+        $locations = $location === 'all' ? ['Welisara', 'Moratuwa', 'Peradeniya'] : [$location];
 
-        // Get all courses (or filter by selected course)
-        $courses = $course === 'all'
-            ? \App\Models\Course::pluck('course_id', 'course_name')->toArray()
-            : [\App\Models\Course::where('course_id', $course)->value('course_name') => $course];
+        // Build courses list to iterate (key => id) where key is course_name, value is course_id
+        if ($course === 'all') {
+            $courses = Course::pluck('course_id', 'course_name')->toArray();
+        } else {
+            $courseName = Course::where('course_id', $course)->value('course_name') ?? (string) $course;
+            $courses = [$courseName => $course];
+        }
 
-        $data = [];
+        $aggregate = [];
+
+        // Pre-resolve numeric course id -> name mapping for bulk matching
+        $courseIdToName = Course::pluck('course_name', 'course_id')->toArray();
+
         foreach ($years as $y) {
-            // build period for this year (respecting month/day from incoming request)
+            // Build period bounds for this year
             $base = Carbon::create($y, $month ?: 1, $day ?: 1);
             if ($day) {
                 $periodStart = $base->copy()->startOfDay();
@@ -378,57 +402,157 @@ class DGMDashboardController extends Controller
             }
 
             foreach ($locations as $loc) {
-                foreach ($courses as $courseName => $courseId) {
-                    // fetch payments for location+course (do NOT restrict by payment created_at here;
-                    // we'll inspect partial_payments dates)
-                    $paymentsQuery = \App\Models\PaymentDetail::whereHas('student', function ($q) use ($loc) {
-                        $q->where('institute_location', $loc);
-                    })->whereHas('registration.course', function ($q) use ($courseId) {
-                        $q->where('course_id', $courseId);
+                // --- 1) Bulk revenue rows for this year/location (and optional month/day/course) ---
+                $bulkQ = DB::table('bulk_revenue_uploads')
+                    ->where('year', $y)
+                    ->where('location', $loc);
+
+                if ($month) {
+                    // incoming month may be "01" or "1" — cast to int for comparison
+                    $bulkQ->where('month', intval($month));
+                }
+                if ($day) {
+                    $bulkQ->where('day', intval($day));
+                }
+
+                // If frontend requested specific course, match either stored id or stored name
+                if ($course !== 'all') {
+                    $bulkQ->where(function ($q) use ($course, $courseIdToName) {
+                        $q->where('course', $course);
+                        // if stored bulk uses course name and we have a mapping, match that too
+                        $name = $courseIdToName[$course] ?? null;
+                        if ($name)
+                            $q->orWhere('course', $name);
                     });
+                }
 
-                    $payments = $paymentsQuery->get();
+                $bulkRows = $bulkQ->get();
 
-                    $revenue = 0.0;
-                    foreach ($payments as $payment) {
-                        if (!empty($payment->partial_payments) && is_array($payment->partial_payments)) {
-                            foreach ($payment->partial_payments as $partial) {
-                                $partialDate = $partial['date'] ?? $partial['payment_date'] ?? $partial['paid_at'] ?? null;
-                                if ($partialDate) {
-                                    try {
-                                        $dt = Carbon::parse($partialDate);
-                                    } catch (\Exception $ex) {
-                                        continue;
-                                    }
-                                    if ($dt->between($periodStart, $periodEnd)) {
-                                        $revenue += floatval($partial['amount'] ?? 0);
-                                    }
-                                } else {
-                                    // fallback: if partial has no date, treat parent payment created_at as its date
-                                    if ($payment->created_at && $payment->created_at->between($periodStart, $periodEnd)) {
-                                        $revenue += floatval($partial['amount'] ?? 0);
-                                    }
-                                }
-                            }
+                foreach ($bulkRows as $r) {
+                    // Normalize course name for output:
+                    $bulkCourseRaw = $r->course;
+                    $courseNameOut = null;
+
+                    // If bulk stored course is numeric id -> map to name
+                    if (is_numeric($bulkCourseRaw)) {
+                        $courseNameOut = $courseIdToName[intval($bulkCourseRaw)] ?? (string) $bulkCourseRaw;
+                    } elseif ($bulkCourseRaw) {
+                        // if it's a name, keep it
+                        $courseNameOut = (string) $bulkCourseRaw;
+                    } else {
+                        // if no course in bulk row and frontend asked for a specific course, use that name
+                        if ($course !== 'all') {
+                            $courseNameOut = Course::where('course_id', $course)->value('course_name') ?? (string) $course;
                         } else {
-                            // no partials: include whole payment if payment created_at falls inside period
-                            if ($payment->created_at && $payment->created_at->between($periodStart, $periodEnd)) {
-                                $revenue += floatval($payment->amount ?? $payment->total_amount ?? 0);
-                            }
+                            $courseNameOut = 'all';
                         }
                     }
 
-                    $data[] = [
-                        'year' => (int) $y,
-                        'location' => $loc,
-                        'course_name' => $courseName,
-                        'revenue' => round($revenue, 2)
-                    ];
-                }
-            }
-        }
+                    // If frontend filtered by course but courseNameOut doesn't match the requested course name, skip
+                    if ($course !== 'all') {
+                        $requestedCourseName = Course::where('course_id', $course)->value('course_name') ?? (string) $course;
+                        if ($courseNameOut !== $requestedCourseName && (string) $r->course !== (string) $course) {
+                            // not matching either id or name
+                            continue;
+                        }
+                    }
 
-        return response()->json($data);
+                    $key = "{$y}|{$loc}|{$courseNameOut}";
+
+                    if (!isset($aggregate[$key])) {
+                        $aggregate[$key] = [
+                            'year' => (int) $y,
+                            'location' => $loc,
+                            'course_name' => $courseNameOut,
+                            'revenue' => 0.0
+                        ];
+                    }
+
+                    $aggregate[$key]['revenue'] += floatval($r->revenue ?? 0);
+                }
+
+                // --- 2) PaymentDetail partials for this year/location/course ---
+                foreach ($courses as $courseName => $courseId) {
+                    // If a specific course filter was provided, this loop will only contain that course
+                    $paymentQ = PaymentDetail::whereHas('student', function ($q) use ($loc) {
+                        $q->where('institute_location', $loc);
+                    });
+
+                    // If course filter provided, restrict by registration/course
+                    if ($course !== 'all') {
+                        $paymentQ->whereHas('registration', function ($q) use ($courseId) {
+                            $q->where('course_id', $courseId);
+                        });
+                    } else {
+                        // when course = all, but we are iterating courses list we still want payments for that course id
+                        $paymentQ->whereHas('registration', function ($q) use ($courseId) {
+                            $q->where('course_id', $courseId);
+                        });
+                    }
+
+                    // We don't restrict payment created_at here because partial_payments have their own dates.
+                    $payments = $paymentQ->get();
+
+                    foreach ($payments as $p) {
+                        // if partial_payments array exists, iterate and match by partial date
+                        if (!empty($p->partial_payments) && is_array($p->partial_payments)) {
+                            foreach ($p->partial_payments as $partial) {
+                                $partialDateRaw = $partial['date'] ?? $partial['payment_date'] ?? $partial['paid_at'] ?? null;
+                                if (!$partialDateRaw) {
+                                    // fallback to parent created_at
+                                    $partialDate = $p->created_at;
+                                } else {
+                                    try {
+                                        $partialDate = Carbon::parse($partialDateRaw);
+                                    } catch (\Exception $ex) {
+                                        // skip unparsable dates
+                                        continue;
+                                    }
+                                }
+
+                                if ($partialDate->between($periodStart, $periodEnd)) {
+                                    $key = "{$y}|{$loc}|{$courseName}";
+                                    if (!isset($aggregate[$key])) {
+                                        $aggregate[$key] = [
+                                            'year' => (int) $y,
+                                            'location' => $loc,
+                                            'course_name' => $courseName,
+                                            'revenue' => 0.0
+                                        ];
+                                    }
+                                    $aggregate[$key]['revenue'] += floatval($partial['amount'] ?? 0);
+                                }
+                            }
+                        } else {
+                            // no partials: treat whole payment as single entry at created_at
+                            if ($p->created_at && $p->created_at->between($periodStart, $periodEnd)) {
+                                $key = "{$y}|{$loc}|{$courseName}";
+                                if (!isset($aggregate[$key])) {
+                                    $aggregate[$key] = [
+                                        'year' => (int) $y,
+                                        'location' => $loc,
+                                        'course_name' => $courseName,
+                                        'revenue' => 0.0
+                                    ];
+                                }
+                                // amount field fallback: amount / total_amount / 0
+                                $amount = floatval($p->amount ?? $p->total_amount ?? 0);
+                                $aggregate[$key]['revenue'] += $amount;
+                            }
+                        }
+                    } // end payments loop
+                } // end courses loop
+
+            } // end locations
+        } // end years
+
+        // Normalize output: ensure revenue rounded, and include entries for combinations with zero if needed
+        $result = array_values(array_map(function ($item) {
+            $item['revenue'] = round(floatval($item['revenue'] ?? 0), 2);
+            return $item;
+        }, $aggregate));
+
+        return response()->json($result);
     }
 
     /**

@@ -45,7 +45,7 @@
                             <div>
                                 <p class="text-sm text-gray-600">Total Students</p>
                                 <p class="text-2xl font-bold text-gray-900" id="totalStudents">-</p>
-                                <p class="text-sm text-green-600" id="studentChange">Loading...</p>
+                                <p class="text-sm text-green-600" id="studentChange"></p>
                             </div>
                             <div class="bg-blue-100 p-3 rounded-full">
                                 <i class="fas fa-users text-blue-600 text-xl"></i>
@@ -257,17 +257,17 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                     <div class="bg-white p-6 rounded-xl shadow-sm">
-                        <h4 class="font-semibold text-gray-900 mb-2">Welisara Campus</h4>
+                        <h4 class="font-semibold text-gray-900 mb-2">SLT MNIT Welisara</h4>
                         <p class="text-2xl font-bold text-blue-600" id="welisaraStudents">-</p>
                         <p class="text-sm text-gray-600">Students enrolled</p>
                     </div>
                     <div class="bg-white p-6 rounded-xl shadow-sm">
-                        <h4 class="font-semibold text-gray-900 mb-2">Moratuwa Campus</h4>
+                        <h4 class="font-semibold text-gray-900 mb-2">SLT MNIT Moratuwa</h4>
                         <p class="text-2xl font-bold text-blue-600" id="MoratuwaStudents">-</p>
                         <p class="text-sm text-gray-600">Students enrolled</p>
                     </div>
                     <div class="bg-white p-6 rounded-xl shadow-sm">
-                        <h4 class="font-semibold text-gray-900 mb-2">Peradeniya Campus</h4>
+                        <h4 class="font-semibold text-gray-900 mb-2">SLT MNIT Peradeniya</h4>
                         <p class="text-2xl font-bold text-blue-600" id="peradeniyaStudents">-</p>
                         <p class="text-sm text-gray-600">Students enrolled</p>
                     </div>
