@@ -1,8 +1,6 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | Course Registration'); ?>
 
-@section('title', 'NEBULA | Course Registration')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <style>
     /* Existing styles */
     .terminated-disabled {
@@ -135,7 +133,7 @@
                 <div class="accordion-item">
                     <div class="accordion-body">
                         <form id="searchForm">
-                            @csrf
+                            <?php echo csrf_field(); ?>
                             <div class="mb-3 row mx-3">
                                 <label for="studentNicSearch" class="col-sm-2 col-form-label">Student NIC<span class="text-danger">*</span></label>
                                 <div class="col-sm-8">
@@ -171,9 +169,9 @@
                     </div>
                 </div>
 
-                @if(isset($resultsPending) && $resultsPending)
+                <?php if(isset($resultsPending) && $resultsPending): ?>
                     <div class="alert alert-warning mt-4"><strong>Pending Results:</strong> Some or all of the student's exam results are still pending.</div>
-                @else
+                <?php else: ?>
                     <div class="mb-3 mt-4">
                         <h5 class="bg-danger p-2 text-white"><strong>O/L Exam Details</strong></h5>
                         <div class="row mt-4 mb-4 mx-3">
@@ -196,12 +194,12 @@
                                     </tr>
                                 </thead>
                                 <tbody id="olExamSubjectsAndGradesTableBody">
-                                    @foreach($olSubjects as $subject)
+                                    <?php $__currentLoopData = $olSubjects; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $subject): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                         <tr>
-                                            <td>{{ $subject['subject'] ?? 'N/A' }}</td>
-                                            <td>{{ $subject['result'] ?? 'N/A' }}</td>
+                                            <td><?php echo e($subject['subject'] ?? 'N/A'); ?></td>
+                                            <td><?php echo e($subject['result'] ?? 'N/A'); ?></td>
                                         </tr>
-                                    @endforeach
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </tbody>
                             </table>
                         </div>
@@ -233,16 +231,16 @@
                                 </tr>
                             </thead>
                             <tbody id="alExamSubjectsAndGradesTableBody">
-                                @foreach($alSubjects as $subject)
+                                <?php $__currentLoopData = $alSubjects; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $subject): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                     <tr>
-                                        <td>{{ $subject['subject'] ?? 'N/A' }}</td>
-                                        <td>{{ $subject['result'] ?? 'N/A' }}</td>
+                                        <td><?php echo e($subject['subject'] ?? 'N/A'); ?></td>
+                                        <td><?php echo e($subject['result'] ?? 'N/A'); ?></td>
                                     </tr>
-                                @endforeach
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </tbody>
                         </table>
                     </div>
-                @endif
+                <?php endif; ?>
                 
                 <hr>
                 <input type="hidden" id="studentId" name="studentId">
@@ -308,7 +306,7 @@
                         <div class="mb-3 mt-3 row mx-3">
                             <label for="serviceNo" class="col-sm-3 col-form-label">Service No<span class="text-danger">*</span></label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="serviceNo" name="service_no" placeholder="Enter service number" required>
+                                <input type="text" class="form-control" id="serviceNo" name="service_no" placeholder="Enter service number">
                             </div>
                         </div>
                     </div>
@@ -316,23 +314,19 @@
                         <div class="mb-3 mt-3 row mx-3">
                             <label for="counselorName" class="col-sm-3 col-form-label">Counselor Name<span class="text-danger">*</span></label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="counselorName" name="counselor_name" placeholder="Enter counselor's name" required>
+                                <input type="text" class="form-control" id="counselorName" name="counselor_name" placeholder="Enter counselor's name">
                             </div>
                         </div>
                         <div class="mb-3 row mx-3">
                             <label for="counselorNic" class="col-sm-3 col-form-label">Counselor NIC<span class="text-danger">*</span></label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="counselorNic" name="counselor_nic" placeholder="Enter counselor's NIC number" required>
-                                <div class="invalid-feedback"><span class="text-danger">✖</span> Invalid NIC. Use 12 digits or 9 digits + 1 letter.</div>
-                                <div class="valid-feedback"><span class="text-success">✔</span> Valid NIC.</div>
+                                <input type="text" class="form-control" id="counselorNic" name="counselor_nic" placeholder="Enter counselor's NIC number">
                             </div>
                         </div>
                         <div class="mb-3 row mx-3">
                             <label for="counselorPhone" class="col-sm-3 col-form-label">Counselor Phone<span class="text-danger">*</span></label>
                             <div class="col-sm-9">
-                                <input type="tel" class="form-control" id="counselorPhone" name="counselor_phone" placeholder="Enter counselor's phone number" required>
-                                <div class="invalid-feedback"><span class="text-danger">✖</span> Invalid phone. Use "07x xxxxxxx" or "+94 xxxxxxxxx".</div>
-                                <div class="valid-feedback"><span class="text-success">✔</span> Valid phone.</div>
+                                <input type="text" class="form-control" id="counselorPhone" name="counselor_phone" placeholder="Enter counselor's phone number">
                             </div>
                         </div>
                     </div>
@@ -405,9 +399,9 @@
 <div class="toast-container position-fixed bottom-0 end-0 p-3">
     <!-- Toasts will be appended here -->
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 $(document).ready(function() {
     // Enter key support for NIC search
@@ -702,12 +696,12 @@ $(document).ready(function() {
         if (courseId && location) {
             $('#spinner-overlay').show();
             $.ajax({
-                url: '{{ route("intakes.get") }}',
+                url: '<?php echo e(route("intakes.get")); ?>',
                 type: 'POST',
                 data: {
                     course_name: $(this).find('option:selected').text(),
                     location: location,
-                    _token: '{{ csrf_token() }}'
+                    _token: '<?php echo e(csrf_token()); ?>'
                 },
                 success: function(data) {
                     intakeSelect.empty().append('<option value="" selected disabled>Select an intake</option>');
@@ -786,39 +780,6 @@ $(document).ready(function() {
         }
     });
 
-    // Validation helpers for NIC and Phone
-    function validateNIC(value) {
-        if (!value) return false;
-        var nicPattern = /^(?:\d{12}|\d{9}[A-Za-z])$/;
-        return nicPattern.test(value.trim());
-    }
-
-    function validatePhone(value) {
-        if (!value) return false;
-        // Accept "xxx xxxxxxx" or "xxxxxxxxxx" (3+7) or "+94 xxxxxxxxx" or "+94xxxxxxxxx"
-        var phonePattern = /^(?:\d{3}\s?\d{7}|\+94\s?\d{9})$/;
-        return phonePattern.test(value.trim());
-    }
-
-    // Immediate feedback on blur/input for counselor NIC & phone
-    $('#counselorNic').on('blur input', function() {
-        var val = $(this).val();
-        if (val && validateNIC(val)) {
-            $(this).removeClass('is-invalid').addClass('is-valid');
-        } else {
-            $(this).removeClass('is-valid').addClass('is-invalid');
-        }
-    });
-
-    $('#counselorPhone').on('blur input', function() {
-        var val = $(this).val();
-        if (val && validatePhone(val)) {
-            $(this).removeClass('is-invalid').addClass('is-valid');
-        } else {
-            $(this).removeClass('is-valid').addClass('is-invalid');
-        }
-    });
-
     // Handle form submission
     $('#finalRegister').on('click', function(e) {
         e.preventDefault();
@@ -860,13 +821,13 @@ $(document).ready(function() {
             counselor_nic: $('#counselorNic').val(),
             course_start_date: $('#courseStartDate').val(),
             marketing_survey_options: marketing_survey_options,
-            _token: '{{ csrf_token() }}'
+            _token: '<?php echo e(csrf_token()); ?>'
         };
 
         $('#spinner-overlay').show();
 
         $.ajax({
-            url: '{{ route("register.course.api") }}',
+            url: '<?php echo e(route("register.course.api")); ?>',
             type: 'POST',
             data: formData,
             success: function(response) {
@@ -924,9 +885,9 @@ $(document).ready(function() {
     }
     window.showToast = showToast;
 
-    @if(session('success'))
+    <?php if(session('success')): ?>
         showToast('Student has been registered successfully', 'success');
-    @endif
+    <?php endif; ?>
 });
 
 function redirectToEligibility() {
@@ -974,18 +935,18 @@ function redirectToEligibility() {
         counselor_nic: $('#counselorNic').val(),
         course_start_date: courseStartDate,
         marketing_survey_options: marketing_survey_options,
-        _token: '{{ csrf_token() }}'
+        _token: '<?php echo e(csrf_token()); ?>'
     };
 
     $('#spinner-overlay').show();
 
     // Save course registration data first
     $.ajax({
-        url: '{{ route("register.course.eligibility.api") }}',
+        url: '<?php echo e(route("register.course.eligibility.api")); ?>',
         type: 'POST',
         contentType: 'application/json',
         headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         data: JSON.stringify(formData),
         success: function(response) {
@@ -1027,4 +988,5 @@ function redirectToEligibility() {
     });
 }
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/nebula final/Nebula/resources/views/course_registration.blade.php ENDPATH**/ ?>
