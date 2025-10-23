@@ -1,6 +1,6 @@
-@extends('inc.app')
 
-@section('content')
+
+<?php $__env->startSection('content'); ?>
 <div class="container mt-5">
     <div class="card shadow-lg border-0" style="background: #fff; border-radius: 12px;">
         <div class="card-body p-4">
@@ -27,8 +27,8 @@
             </div>
 
             <!-- Buttons Form -->
-            <form id="statementDownloadForm" action="{{ route('payment.downloadStatement') }}" method="POST" target="_blank">
-                @csrf
+            <form id="statementDownloadForm" action="<?php echo e(route('payment.downloadStatement')); ?>" method="POST" target="_blank">
+                <?php echo csrf_field(); ?>
                 <input type="hidden" name="student_nic" id="download-student-nic">
                 <input type="hidden" name="course_id" id="download-course-id">
                 <input type="hidden" name="action" id="download-action">
@@ -42,9 +42,9 @@
         </div>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('scripts')
+<?php $__env->startSection('scripts'); ?>
 <script>
     // Load courses when NIC is entered
     document.getElementById('statement-nic').addEventListener('change', function() {
@@ -55,7 +55,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
             },
             body: JSON.stringify({ student_nic: studentNic })
         })
@@ -98,4 +98,6 @@
         document.getElementById('download-action').value = action;
     }
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/payment/statement_download.blade.php ENDPATH**/ ?>

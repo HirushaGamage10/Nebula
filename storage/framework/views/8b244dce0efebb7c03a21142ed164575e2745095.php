@@ -6,7 +6,23 @@
 <div class="container mt-5 mb-5">
   <div class="card shadow border-0">
     <div class="card-body">
+            <?php if(session('success')): ?>
+          <div class="alert alert-success alert-dismissible fade show" role="alert">
+              <?php echo e(session('success')); ?>
+
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+      <?php endif; ?>
+
+      <?php if(session('error')): ?>
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              <?php echo e(session('error')); ?>
+
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+      <?php endif; ?>
       <h3 class="text-primary mb-4">Course Completion & Badge Generation</h3>
+      
 
       <!-- 🔹 Unified Search Form -->
       <form id="searchForm" class="row g-3 mb-4">
@@ -43,7 +59,7 @@
         </div>
 
         <div class="col-md-1 d-flex align-items-end">
-          <button id="searchBtn" class="btn btn-primary w-100" type="submit">
+          <button id="searchBtn" class="btn btn-primary w-auto" type="submit">
             <span class="spinner-border spinner-border-sm d-none" id="searchSpinner" role="status"></span>
             <span id="searchText">Search</span>
           </button>
@@ -101,8 +117,51 @@
     </div>
   </div>
 </div>
+<style>
+  .error-message {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    background: linear-gradient(135deg, #dc3545, #e74c3c);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+    font-weight: 500;
+    font-size: 14px;
+    max-width: 400px;
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    border-left: 4px solid #fff;
+}
 
+.error-message.show {
+    transform: translateX(0);
+}
+
+.error-message .error-icon {
+    margin-right: 10px;
+    font-size: 18px;
+}
+</style>
 <script>
+  // ---------- Notifications ----------
+function showSuccessMessage(message){
+  document.querySelectorAll('.success-message,.error-message').forEach(m=>m.remove());
+  const n=document.createElement('div'); n.className='success-message';
+  n.innerHTML=`<i class="ti ti-check-circle success-icon"></i>${message}`;
+  document.body.appendChild(n); setTimeout(()=>n.classList.add('show'),100);
+  setTimeout(()=>{n.classList.remove('show'); setTimeout(()=>n.remove(),300)},4000);
+}
+function showErrorMessage(message){
+  document.querySelectorAll('.success-message,.error-message').forEach(m=>m.remove());
+  const n=document.createElement('div'); n.className='error-message';
+  n.innerHTML=`<i class="ti ti-alert-circle error-icon"></i>${message}`;
+  document.body.appendChild(n); setTimeout(()=>n.classList.add('show'),100);
+  setTimeout(()=>{n.classList.remove('show'); setTimeout(()=>n.remove(),300)},5000);
+}
+
 /* -------------------------------
    🔹 Dynamic Intake Dropdown
 --------------------------------*/
@@ -165,7 +224,19 @@ document.getElementById('searchForm').addEventListener('submit', async e => {
     body: JSON.stringify(payload)
   });
   const data = await res.json();
-  if (!data.success) alert(data.message);
+  if (!data.success) {
+    showErrorMessage(data.message);
+} 
+
+// In your markComplete function:
+if (!data.success) {
+    showErrorMessage(data.message);
+}
+
+// In your cancelBadge function:
+if (!data.success) {
+    showErrorMessage(data.message);
+}
   else renderResults(data.courses || data.data);
 
   btn.disabled = false; spin.classList.add('d-none'); text.textContent = 'Search';
