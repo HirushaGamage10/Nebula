@@ -43,7 +43,27 @@ class DGMDashboardController extends Controller
         }
         $totalStudents = $studentsQuery->count();
 
-        // Yearly Revenue
+        // Calculate Revenue from both sources for current year
+        // 1. From bulk_revenue_uploads
+        $bulkRevenueQuery = DB::table('bulk_revenue_uploads')
+            ->where('year', $year);
+
+        if ($location !== 'all') {
+            $bulkRevenueQuery->where('location', $location);
+        }
+        if ($course !== 'all') {
+            $bulkRevenueQuery->where('course', $course);
+        }
+        if ($month) {
+            $bulkRevenueQuery->where('month', $month);
+        }
+        if ($day) {
+            $bulkRevenueQuery->where('day', $day);
+        }
+
+        $bulkRevenue = $bulkRevenueQuery->sum('revenue');
+
+        // 2. From payment_details (partial payments)
         $paymentBaseQuery = PaymentDetail::query();
 
         if ($location !== 'all') {
@@ -51,73 +71,70 @@ class DGMDashboardController extends Controller
                 $q->where('institute_location', $location);
             });
         }
-
         if ($course !== 'all') {
             $paymentBaseQuery->whereHas('registration.course', function ($q) use ($course) {
                 $q->where('course_id', $course);
             });
         }
 
-        // If month/day filters are provided, keep them to help narrow the set of PaymentDetail rows
-        if ($month) {
-            $paymentBaseQuery->whereMonth('created_at', $month);
-        }
-        if ($day) {
-            $paymentBaseQuery->whereDay('created_at', $day);
-        }
-
-        // Fetch payments (we will inspect their partial_payments JSON dates)
         $payments = $paymentBaseQuery->get();
+        $partialPaymentsRevenue = 0;
 
-        // Helper: sum partial payments whose partial entry date falls in $targetYear.
-        $sumPartialsForYear = function ($paymentsCollection, $targetYear) {
-            $sum = 0;
-            foreach ($paymentsCollection as $p) {
-                if ($p->partial_payments && is_array($p->partial_payments)) {
-                    foreach ($p->partial_payments as $partial) {
-                        // Expect partial to have a date field (e.g. 'date' or 'payment_date').
-                        // Try common keys and fallback to payment created_at if missing.
-                        $partialDate = null;
-                        if (!empty($partial['date'])) {
-                            $partialDate = $partial['date'];
-                        } elseif (!empty($partial['payment_date'])) {
-                            $partialDate = $partial['payment_date'];
-                        } elseif (!empty($partial['paid_at'])) {
-                            $partialDate = $partial['paid_at'];
-                        }
-
-                        if ($partialDate) {
-                            try {
-                                $dt = Carbon::parse($partialDate);
-                                if ((int) $dt->format('Y') === (int) $targetYear) {
-                                    $sum += floatval($partial['amount'] ?? 0);
-                                }
-                            } catch (\Exception $ex) {
-                                // If parsing fails, skip this partial entry
-                                continue;
-                            }
-                        } else {
-                            // If partial has no date, fallback: include it if parent payment created_at year matches
-                            if ($p->created_at && (int) $p->created_at->format('Y') === (int) $targetYear) {
-                                $sum += floatval($partial['amount'] ?? 0);
+        foreach ($payments as $payment) {
+            if (!empty($payment->partial_payments) && is_array($payment->partial_payments)) {
+                foreach ($payment->partial_payments as $partial) {
+                    $paymentDate = Carbon::parse($partial['date'] ?? $partial['payment_date'] ?? $partial['paid_at'] ?? $payment->created_at);
+                    if ($paymentDate->year == $year) {
+                        if (!$month || $paymentDate->month == $month) {
+                            if (!$day || $paymentDate->day == $day) {
+                                $partialPaymentsRevenue += floatval($partial['amount'] ?? 0);
                             }
                         }
-                    }
-                } else {
-                    // If there are no partials, maybe the amount field is direct - include by payment created_at year
-                    if ($p->created_at && (int) $p->created_at->format('Y') === (int) $targetYear) {
-                        $sum += floatval($p->amount ?? 0);
                     }
                 }
             }
-            return $sum;
-        };
+        }
 
-        // Yearly Revenue (sum of partials whose partial date is in $year)
-        $yearlyRevenue = $sumPartialsForYear($payments, $year);
+        // Total current year revenue
+        $yearlyRevenue = $bulkRevenue + $partialPaymentsRevenue;
 
-        // Outstanding Amount - sum of remaining_amount for payments related to selected filters.
-        // Keep original logic (outstanding typically stored on the payment record)
+        // Calculate Previous Year Revenue
+        $prevYear = $year - 1;
+
+        // 1. Previous year bulk revenue
+        $prevBulkRevenue = DB::table('bulk_revenue_uploads')
+            ->where('year', $prevYear)
+            ->when($location !== 'all', fn($q) => $q->where('location', $location))
+            ->when($course !== 'all', fn($q) => $q->where('course', $course))
+            ->when($month, fn($q) => $q->where('month', $month))
+            ->when($day, fn($q) => $q->where('day', $day))
+            ->sum('revenue');
+
+        // 2. Previous year partial payments
+        $prevPartialPaymentsRevenue = 0;
+        foreach ($payments as $payment) {
+            if (!empty($payment->partial_payments) && is_array($payment->partial_payments)) {
+                foreach ($payment->partial_payments as $partial) {
+                    $paymentDate = Carbon::parse($partial['date'] ?? $partial['payment_date'] ?? $partial['paid_at'] ?? $payment->created_at);
+                    if ($paymentDate->year == $prevYear) {
+                        if (!$month || $paymentDate->month == $month) {
+                            if (!$day || $paymentDate->day == $day) {
+                                $prevPartialPaymentsRevenue += floatval($partial['amount'] ?? 0);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $prevYearRevenue = $prevBulkRevenue + $prevPartialPaymentsRevenue;
+
+        // Calculate revenue change percentage
+        $revenueChange = $prevYearRevenue > 0
+            ? round((($yearlyRevenue - $prevYearRevenue) / $prevYearRevenue) * 100, 1)
+            : 0;
+
+        // Outstanding Amount calculations remain the same
         $outstandingQuery = PaymentDetail::query();
         if ($location !== 'all') {
             $outstandingQuery->whereHas('student', function ($q) use ($location) {
@@ -131,41 +148,72 @@ class DGMDashboardController extends Controller
         }
         $outstanding = $outstandingQuery->sum('remaining_amount');
 
-        // Previous year revenue (sum partials by partial date year = year-1)
-        $prevYearRevenue = $sumPartialsForYear($payments, $year - 1);
-
-        $revenueChange = $prevYearRevenue > 0
-            ? round((($yearlyRevenue - $prevYearRevenue) / $prevYearRevenue) * 100, 1)
-            : 0;
-
-        // Location-wise revenue/outstanding for current and previous year
+        // Location Summary with both revenue sources
         $locations = ['Welisara', 'Moratuwa', 'Peradeniya'];
         $locationSummary = [];
+
         foreach ($locations as $loc) {
-            // Fetch payments for this location (do not restrict by created_at year)
+            // Current year bulk revenue
+            $currBulkRev = DB::table('bulk_revenue_uploads')
+                ->where('year', $year)
+                ->where('location', $loc)
+                ->when($course !== 'all', fn($q) => $q->where('course', $course))
+                ->sum('revenue');
+
+            // Current year partial payments
+            $currPartialRev = 0;
             $locPayments = PaymentDetail::whereHas('student', fn($q) => $q->where('institute_location', $loc))
                 ->when($course !== 'all', fn($q) => $q->whereHas('registration.course', fn($qq) => $qq->where('course_id', $course)))
                 ->get();
 
-            // Current year revenue by partial dates
-            $currRevenue = $sumPartialsForYear($locPayments, $year);
+            foreach ($locPayments as $p) {
+                if (!empty($p->partial_payments) && is_array($p->partial_payments)) {
+                    foreach ($p->partial_payments as $partial) {
+                        $paymentDate = Carbon::parse($partial['date'] ?? $partial['payment_date'] ?? $partial['paid_at'] ?? $p->created_at);
+                        if ($paymentDate->year == $year) {
+                            if (!$month || $paymentDate->month == $month) {
+                                if (!$day || $paymentDate->day == $day) {
+                                    $currPartialRev += floatval($partial['amount'] ?? 0);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
-            // Current outstanding: sum remaining_amount for payments (no partial-date filter)
-            $currOutstanding = $locPayments->reduce(function ($carry, $p) {
-                return $carry + floatval($p->remaining_amount ?? 0);
-            }, 0);
+            // Previous year calculations
+            $prevBulkRev = DB::table('bulk_revenue_uploads')
+                ->where('year', $prevYear)
+                ->where('location', $loc)
+                ->when($course !== 'all', fn($q) => $q->where('course', $course))
+                ->sum('revenue');
 
-            // Previous year revenue (based on partial dates)
-            $prevRevenue = $sumPartialsForYear($locPayments, $year - 1);
+            $prevPartialRev = 0;
+            foreach ($locPayments as $p) {
+                if (!empty($p->partial_payments) && is_array($p->partial_payments)) {
+                    foreach ($p->partial_payments as $partial) {
+                        $paymentDate = Carbon::parse($partial['date'] ?? $partial['payment_date'] ?? $partial['paid_at'] ?? $p->created_at);
+                        if ($paymentDate->year == $prevYear) {
+                            if (!$month || $paymentDate->month == $month) {
+                                if (!$day || $paymentDate->day == $day) {
+                                    $prevPartialRev += floatval($partial['amount'] ?? 0);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
-            $growth = $prevRevenue > 0 ? round((($currRevenue - $prevRevenue) / $prevRevenue) * 100, 1) : 0;
+            $currTotal = $currBulkRev + $currPartialRev;
+            $prevTotal = $prevBulkRev + $prevPartialRev;
+            $growth = $prevTotal > 0 ? round((($currTotal - $prevTotal) / $prevTotal) * 100, 1) : 0;
 
             $locationSummary[] = [
                 'location' => $loc,
-                'current_year' => number_format($currRevenue, 2),
-                'previous_year' => number_format($prevRevenue, 2),
+                'current_year' => number_format($currTotal, 2),
+                'previous_year' => number_format($prevTotal, 2),
                 'growth' => $growth,
-                'outstanding' => number_format($currOutstanding, 2),
+                'outstanding' => number_format($locPayments->sum('remaining_amount'), 2),
             ];
         }
 
