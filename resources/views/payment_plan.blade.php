@@ -117,7 +117,7 @@
                             </div>
                         </div>
                         <div class="row align-items-center mx-3 mb-4">
-                            <label for="ssclTax" class="col-sm-3 col-form-label fw-bold">SSCL Tax Percentage<span class="text-danger">*</span></label>
+                            <label for="ssclTax" class="col-sm-3 col-form-label fw-bold">SSCL Tax Percentage</label>
                             <div class="col-sm-9">
                                 <div class="input-group">
                                    <input 
