@@ -126,7 +126,7 @@
                             <li class="nav-item dropdown">
                                 <a class="nav-link nav-icon-hover" href="javascript:void(0)" id="drop2"
                                     data-bs-toggle="dropdown" aria-expanded="false">
-                                    <img src="<?php echo e(asset('images/profile/user-1.jpg')); ?>" alt=""
+                                    <img id="headerAvatar" src="<?php echo e((auth()->check() && !empty(auth()->user()->user_profile)) ? asset('storage/' . auth()->user()->user_profile) : asset('images/profile/user-1.jpg')); ?>" alt="User avatar"
                                         width="35" height="35" class="rounded-circle">
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up outline-shadow"

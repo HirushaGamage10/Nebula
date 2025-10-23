@@ -59,6 +59,20 @@
         border-color: #198754;
         box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
     }
+
+    /* Password toggle button styling */
+    .input-group .btn-password {
+        border-left: 0;
+        background: transparent;
+        color: #495057;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0 0.375rem 0.375rem 0;
+    }
+
+    .input-group .btn-password:focus {
+        box-shadow: none;
+        outline: none;
+    }
     </style>
 
     <script async defer>
@@ -100,6 +114,30 @@
                     e.preventDefault();
                 }
             });
+
+            // Password show/hide toggle
+            const togglePassword = document.getElementById('togglePassword');
+            if (togglePassword && passwordInput) {
+                const eyeIcon = function(show) {
+                    // simple inline SVGs
+                    return show
+                        ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8z"/><path d="M8 5a3 3 0 100 6 3 3 0 000-6z"/></svg>'
+                        : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.359 11.238C12.06 12.33 10.12 13 8 13c-1.913 0-3.757-.636-5.09-1.704L1 13l1.06-1.06c-.412-.34-.793-.72-1.15-1.13C1.9 8.5 4.4 6 8 6c.83 0 1.62.14 2.34.38L13.36 3l.64.64-1.64 1.64A8.7 8.7 0 0115 8s-1.1 2.35-1.64 3.24z"/><path d="M3.7 2.3L2.3 3.7l1.2 1.2A8.7 8.7 0 001 8s3 5.5 8 5.5c1.72 0 3.31-.37 4.7-1.03l1.43 1.43 1.4-1.4L3.7 2.3z"/></svg>';
+                };
+
+                // initialize icon state (hidden)
+                togglePassword.innerHTML = eyeIcon(true);
+                togglePassword.setAttribute('aria-pressed', 'false');
+                togglePassword.title = 'Show password';
+
+                togglePassword.addEventListener('click', function() {
+                    const isPassword = passwordInput.type === 'password';
+                    passwordInput.type = isPassword ? 'text' : 'password';
+                    togglePassword.innerHTML = eyeIcon(!isPassword);
+                    togglePassword.setAttribute('aria-pressed', String(isPassword));
+                    togglePassword.title = isPassword ? 'Hide password' : 'Show password';
+                });
+            }
         });
     </script>
 </head>
@@ -115,7 +153,7 @@
                     <div class="col-md-8 col-lg-6 col-xxl-3">
                         <div class="card mb-0">
                             <div class="card-body">
-                                <a href="./index.html" class="text-nowrap logo-img text-center d-block py-3 w-100">
+                                <a href="./" class="text-nowrap logo-img text-center d-block py-3 w-100">
                                     <img src="<?php echo e(asset('images/logos/nebula.png')); ?>" alt="Nebula"
                                         class="img-fluid" loading="lazy">
                                 </a>
@@ -135,7 +173,7 @@
                                     <?php echo csrf_field(); ?>
                                     <div class="form-group mb-3">
                                         <label for="email" class="form-label">Username</label>
-                                        <input type="email" 
+                         <input type="email" 
                                                class="form-control form-control-lg <?php $__errorArgs = ['email'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
@@ -148,7 +186,9 @@ unset($__errorArgs, $__bag); ?> <?php echo e(($errors->any() && !$errors->has('e
                                                id="email" 
                                                placeholder="Enter your username" 
                                                value="<?php echo e(old('email')); ?>"
-                                               required 
+                             required 
+                             oninvalid="this.setCustomValidity('Please Enter valid email address')"
+                             oninput="this.setCustomValidity('')"
                                                autocomplete="email">
                                         <?php $__errorArgs = ['email'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
@@ -167,8 +207,10 @@ unset($__errorArgs, $__bag); ?>
                                     
                                     <div class="form-group mb-4">
                                         <label for="password" class="form-label">Password</label>
-                                        <input type="password" 
-                                               class="form-control form-control-lg <?php $__errorArgs = ['password'];
+                                        <!-- wrap input in input-group and add toggle button -->
+                                        <div class="input-group">
+                                            <input type="password" 
+                                                   class="form-control form-control-lg <?php $__errorArgs = ['password'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
 if (isset($message)) { $__messageOriginal = $message; }
@@ -176,11 +218,13 @@ $message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?> <?php echo e(($errors->any() && !$errors->has('email') && !$errors->has('password')) ? 'is-invalid' : ''); ?>" 
-                                               name="password"
-                                               id="password" 
-                                               placeholder="Enter your password" 
-                                               required 
-                                               autocomplete="current-password">
+                                                   name="password"
+                                                   id="password" 
+                                                   placeholder="Enter your password" 
+                                                   required 
+                                                   autocomplete="current-password">
+                                            <button class="btn btn-password" type="button" id="togglePassword" aria-label="Show password"></button>
+                                        </div>
                                         <?php $__errorArgs = ['password'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :

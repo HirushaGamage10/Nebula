@@ -128,36 +128,58 @@ public function updateUserStatus(Request $request)
     // Only keep user listing, edit, and delete logic for DGM user management
 
     public function changePassword(Request $request)
-    {
-        try {
-            // Validate the request
-            $request->validate([
-                'current_password' => 'required',
-                'new_password' => ['required', 'min:6', 'confirmed'],
-            ]);
+{
+    try {
+        // Validate the incoming request
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => ['required', 'min:6', 'confirmed'], // 'confirmed' checks for new_password_confirmation
+        ]);
 
-            // Get the authenticated user's ID
-            $userId = Auth::id();
+        $userId = Auth::id();
+        $user = User::findOrFail($userId);
 
-            // Retrieve the user by ID
-            $user = User::findOrFail($userId);
-
-            // Check if the current password matches
-            if (!Hash::check($request->current_password, $user->password)) {
-                return response()->json(['success' => false, 'message' => 'Current password is incorrect'], 400);
-            }
-
-            // Update the user's password
-            $user->password = Hash::make($request->new_password);
-            $user->save();
-
-            // Return a success response
-            return response()->json(['success' => true, 'message' => 'Password changed successfully']);
-        } catch (\Exception $e) {
-            // Return an error response
-            return response()->json(['success' => false, 'message' => 'An error occurred while changing the password', 'error' => $e->getMessage()], 500);
+        // 1️⃣ Check if the current password is correct
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your current password is incorrect.'
+            ], 400);
         }
+
+        // 2️⃣ Check if new and confirm password match (extra check, just in case)
+        if ($request->new_password !== $request->new_password_confirmation) {
+            return response()->json([
+                'success' => false,
+                'message' => 'New password and confirm password do not match.'
+            ], 400);
+        }
+
+        // 3️⃣ Update the password
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password changed successfully.'
+        ]);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        // Validation errors (e.g., missing fields or short password)
+        $firstError = collect($e->errors())->flatten()->first();
+        return response()->json([
+            'success' => false,
+            'message' => $firstError ?? 'Invalid input.'
+        ], 422);
+    } catch (\Exception $e) {
+        // General error fallback
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred while changing the password.',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
+
 
     /**
      * Reset a user's password (admin action)
