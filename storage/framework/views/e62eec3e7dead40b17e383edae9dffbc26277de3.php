@@ -244,122 +244,131 @@ unset($__errorArgs, $__bag); ?>
   </div>
 </div>
 <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const form = document.getElementById('createUserForm');
   const createUserBtn = document.getElementById('createUserBtn');
+  const passwordInput = document.getElementById('setPassword');
 
-  // Password generator
+  // 🔹 Password generator
   document.getElementById('generatePassword').addEventListener('click', function() {
-    var charset = "abcdefghijklmnopqrstuvwxyz@!%^&*$#ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    var password = "";
-    for (var i = 0; i < 8; i++) {
-      var randomIndex = Math.floor(Math.random() * charset.length);
-      password += charset[randomIndex];
+    const charset = "abcdefghijklmnopqrstuvwxyz@!%^&*$#ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let password = "";
+    for (let i = 0; i < 8; i++) {
+      password += charset.charAt(Math.floor(Math.random() * charset.length));
     }
-    document.getElementById('setPassword').value = password;
+    passwordInput.value = password;
+    validatePasswordField(); // validate generated password immediately
   });
 
-  // Password visibility toggle
+  // 🔹 Toggle password visibility
   document.getElementById('togglePassword').addEventListener('click', function() {
-    const passwordInput = document.getElementById('setPassword');
     const eyeIcon = document.getElementById('eyeIcon');
-    
     if (passwordInput.type === 'password') {
       passwordInput.type = 'text';
-      eyeIcon.classList.remove('ti-eye');
-      eyeIcon.classList.add('ti-eye-off');
+      eyeIcon.classList.replace('ti-eye', 'ti-eye-off');
     } else {
       passwordInput.type = 'password';
-      eyeIcon.classList.remove('ti-eye-off');
-      eyeIcon.classList.add('ti-eye');
+      eyeIcon.classList.replace('ti-eye-off', 'ti-eye');
     }
   });
 
-  function showToast(message, type) {
+  // 🔹 Toast generator
+  function showToast(message, type = 'info') {
     const toastHtml = `
-      <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="toast align-items-center text-white bg-${type} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
           <div class="toast-body">${message}</div>
           <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
       </div>`;
-    document.querySelector('.toast-container').insertAdjacentHTML('beforeend', toastHtml);
-    const toastEl = document.querySelector('.toast-container .toast:last-child');
-    const toast = new bootstrap.Toast(toastEl, { delay: 1500 });
-    toast.show();
+    const container = document.querySelector('.toast-container');
+    container.insertAdjacentHTML('beforeend', toastHtml);
+    const toastEl = container.querySelector('.toast:last-child');
+    new bootstrap.Toast(toastEl, { delay: 2000 }).show();
   }
 
-  // Real-time email validation
+  // 🔹 Real-time email validation
   const emailInput = document.getElementById('email');
   emailInput.addEventListener('blur', function() {
-    const email = this.value;
+    const email = this.value.trim();
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    
+    const existingError = this.parentNode.querySelector('.invalid-feedback');
+
+    if (existingError) existingError.remove();
+
     if (email && !emailRegex.test(email)) {
       this.classList.add('is-invalid');
-      if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('invalid-feedback')) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'invalid-feedback';
-        errorDiv.textContent = 'Please enter a valid email address format.';
-        this.parentNode.appendChild(errorDiv);
-      }
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'invalid-feedback';
+      errorDiv.textContent = 'Please enter a valid email address format.';
+      this.parentNode.appendChild(errorDiv);
     } else {
       this.classList.remove('is-invalid');
-      const errorDiv = this.parentNode.querySelector('.invalid-feedback');
-      if (errorDiv) {
-        errorDiv.remove();
-      }
     }
   });
 
-  // Real-time name validation
+  // 🔹 Real-time name validation
   const nameInput = document.getElementById('name');
   nameInput.addEventListener('blur', function() {
-    const name = this.value;
+    const name = this.value.trim();
     const nameRegex = /^[a-zA-Z\s]+$/;
-    
+    const existingError = this.parentNode.querySelector('.invalid-feedback');
+
+    if (existingError) existingError.remove();
+
     if (name && !nameRegex.test(name)) {
       this.classList.add('is-invalid');
-      if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('invalid-feedback')) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'invalid-feedback';
-        errorDiv.textContent = 'Name can only contain letters and spaces.';
-        this.parentNode.appendChild(errorDiv);
-      }
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'invalid-feedback';
+      errorDiv.textContent = 'Name can only contain letters and spaces.';
+      this.parentNode.appendChild(errorDiv);
     } else {
       this.classList.remove('is-invalid');
-      const errorDiv = this.parentNode.querySelector('.invalid-feedback');
-      if (errorDiv) {
-        errorDiv.remove();
-      }
     }
   });
 
-  // Real-time password validation
-  const passwordInput = document.getElementById('setPassword');
-  passwordInput.addEventListener('input', function() {
-    const password = this.value;
-    
-    if (password.length < 6) {
-      this.classList.add('is-invalid');
-      if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('invalid-feedback')) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'invalid-feedback';
-        errorDiv.textContent = 'Password must be at least 6 characters long.';
-        this.parentNode.appendChild(errorDiv);
-      }
-    } else {
-      this.classList.remove('is-invalid');
-      const errorDiv = this.parentNode.querySelector('.invalid-feedback');
-      if (errorDiv) {
-        errorDiv.remove();
-      }
-    }
-  });
+  // 🔹 Enhanced password validation (live + enforced)
+  function validatePasswordField() {
+    const password = passwordInput.value.trim();
+    const parent = passwordInput.parentNode;
+    const existingError = parent.querySelector('.password-error');
+    if (existingError) existingError.remove();
 
+    const errors = [];
+    if (password.length < 6) errors.push('At least 6 characters long');
+    if (!/[A-Z]/.test(password)) errors.push('At least one uppercase letter (A-Z)');
+    if (!/[a-z]/.test(password)) errors.push('At least one lowercase letter (a-z)');
+    if (!/[0-9]/.test(password)) errors.push('At least one number (0-9)');
+
+    if (errors.length > 0) {
+      passwordInput.classList.add('is-invalid');
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'invalid-feedback password-error';
+      errorDiv.innerHTML = 'Password must contain:<br>• ' + errors.join('<br>• ');
+      parent.appendChild(errorDiv);
+      return false;
+    } else {
+      passwordInput.classList.remove('is-invalid');
+      return true;
+    }
+  }
+
+  // Live validation
+  passwordInput.addEventListener('input', validatePasswordField);
+
+  // 🔹 Final form submission
   form.addEventListener('submit', function(e) {
     e.preventDefault();
+
+    // stop if password invalid
+    if (!validatePasswordField()) {
+      showToast('Please fix the password format before submitting.', 'danger');
+      passwordInput.focus();
+      return;
+    }
+
     const formData = new FormData(form);
 
     fetch(form.action, {
@@ -370,15 +379,20 @@ document.addEventListener('DOMContentLoaded', function() {
       },
       body: formData
     })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        showToast('User created: ' + data.message, 'success');
-        setTimeout(function() {
-          location.reload();
-        }, 1500);
+    .then(async response => {
+      const data = await response.json();
+
+      if (response.status === 422) {
+        if (data.errors) {
+          Object.values(data.errors).forEach(errArr => showToast(errArr[0], 'danger'));
+        } else if (data.message) {
+          showToast(data.message, 'danger');
+        }
+      } else if (data.success) {
+        showToast(data.message || 'User created successfully.', 'success');
+        setTimeout(() => location.reload(), 1500);
       } else {
-        showToast('Error: ' + (data.message || 'Unknown error'), 'danger');
+        showToast(data.message || 'Unknown error occurred.', 'danger');
       }
     })
     .catch(error => {
@@ -387,6 +401,9 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 </script>
+
+
+
 <?php else: ?>
 <div class="alert alert-warning mt-5 mx-5">
     <h4 class="alert-heading">Access Restricted</h4>

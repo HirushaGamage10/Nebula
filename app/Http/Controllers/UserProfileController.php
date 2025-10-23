@@ -293,39 +293,61 @@ public function updateUserStatus(Request $request)
 
     // Handle user creation (POST)
     public function createUser(CreateUserRequest $request)
-    {
-        try {
-            // The validation is already handled by CreateUserRequest
-            $user = new User();
-            $user->name = $request->name;
-            $user->email = $request->email;
-            $user->employee_id = $request->employee_id;
-            $user->user_role = $request->user_role;
-            $user->status = 1; // Always Active
-            $user->user_location = $request->user_location;
-            $user->password = Hash::make($request->password);
-            $user->save();
+{
+    try {
+        // Laravel automatically throws ValidationException if validation fails
+        $validated = $request->validated();
 
-            // Log the user creation
-            Log::info('User created successfully', [
-                'created_by' => Auth::user()->user_id,
-                'new_user_id' => $user->user_id,
-                'new_user_email' => $user->email,
-                'new_user_role' => $user->user_role,
-                'new_user_location' => $user->user_location
-            ]);
-
-            return response()->json(['success' => true, 'message' => 'User created successfully.']);
-        } catch (\Exception $e) {
-            Log::error('Failed to create user', [
-                'error' => $e->getMessage(),
-                'created_by' => Auth::user()->user_id,
-                'request_data' => $request->except(['password'])
-            ]);
-
-            return response()->json(['success' => false, 'message' => 'Failed to create user.', 'error' => $e->getMessage()], 500);
+        // Check again manually for email uniqueness (extra safety)
+        if (User::where('email', $validated['email'])->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The email has already been taken.'
+            ], 422);
         }
+
+        $user = new User();
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
+        $user->employee_id = $validated['employee_id'];
+        $user->user_role = $validated['user_role'];
+        $user->status = 1; // Default Active
+        $user->user_location = $validated['user_location'];
+        $user->password = Hash::make($validated['password']);
+        $user->save();
+
+        Log::info('User created successfully', [
+            'created_by' => Auth::user()->user_id,
+            'new_user_id' => $user->user_id,
+            'new_user_email' => $user->email,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User created successfully.'
+        ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        // Return JSON error list instead of redirect
+        return response()->json([
+            'success' => false,
+            'errors' => $e->errors(),
+        ], 422);
+    } catch (\Exception $e) {
+        Log::error('Failed to create user', [
+            'error' => $e->getMessage(),
+            'created_by' => Auth::user()->user_id,
+            'request_data' => $request->except(['password'])
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to create user.',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
+
 
     /**
      * Update the authenticated user's profile picture
