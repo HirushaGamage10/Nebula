@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'Repeat Student Payment Plan')
 
-@section('content')
+<?php $__env->startSection('title', 'Repeat Student Payment Plan'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container mt-5 mb-5">
     <div class="card shadow border-0">
         <div class="card-body">
@@ -50,7 +50,7 @@
                 <!-- ✏️ Create New Payment Plan -->
                 <h5 class="fw-bold text-primary mt-4">Create New Payment Plan</h5>
                 <form id="newPlanForm">
-                    @csrf
+                    <?php echo csrf_field(); ?>
                     <input type="hidden" id="student_id" name="student_id">
                     <input type="hidden" id="course_id" name="course_id">
 
@@ -302,7 +302,7 @@ document.getElementById('newPlanForm').addEventListener('submit', async function
     const res = await fetch('/repeat-student-payment/save', {
         method: 'POST',
         body: formData,
-        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+        headers: { 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' }
     });
     const data = await res.json();
 
@@ -352,4 +352,6 @@ async function loadCreatedPlans(studentId, courseId) {
 
 
 
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/repeat_students/payment_plan.blade.php ENDPATH**/ ?>
