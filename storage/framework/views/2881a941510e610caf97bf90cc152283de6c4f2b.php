@@ -1,12 +1,12 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Elective Module Registration')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Elective Module Registration'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
-            <h2 class="text-center mb-4">Module Registration</h2>
+            <h2 class="text-center mb-4">Elective Module Registration</h2>
             <hr>
             <!-- Filter Section for Elective Registration -->
             <div class="mt-4">
@@ -26,9 +26,9 @@
                     <div class="col-sm-10">
                         <select class="form-select cursor-pointer bg-white" id="elective_course" name="elective_course">
                             <option selected disabled value="">Select a course</option>
-                            @foreach($courses as $course)
-                                <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
-                            @endforeach
+                            <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>
                     </div>
                 </div>
@@ -70,8 +70,8 @@
             <div id="electiveRegistrationSection" style="display: none;">
                 <hr>
                 <h4 class="mb-3">Elective Module Registration</h4>
-                <form method="POST" action="{{ route('module.management.registerElectiveModules') }}" id="electiveRegistrationForm">
-                    @csrf
+                <form method="POST" action="<?php echo e(route('module.management.registerElectiveModules')); ?>" id="electiveRegistrationForm">
+                    <?php echo csrf_field(); ?>
                     <input type="hidden" name="semester_id" id="elective_semester_hidden">
                     <input type="hidden" name="course_id" id="elective_course_hidden">
                     <input type="hidden" name="intake_id" id="elective_intake_hidden">
@@ -115,9 +115,9 @@
 <!-- Toast Container -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3">
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 // Enhanced toast function for colorful messages
 function showToast(message, type = 'info') {
@@ -401,12 +401,12 @@ $(document).ready(function() {
 
     function loadElectiveIntakes() {
         $.ajax({
-            url: '{{ route("module.management.getIntakes") }}',
+            url: '<?php echo e(route("module.management.getIntakes")); ?>',
             method: 'POST',
             data: {
                 course_id: $('#elective_course').val(),
                 location: $('#elective_location').val(),
-                _token: '{{ csrf_token() }}'
+                _token: '<?php echo e(csrf_token()); ?>'
             },
             success: function(response) {
                 if (response.success) {
@@ -427,13 +427,13 @@ $(document).ready(function() {
 
     function loadOngoingSemesters() {
         $.ajax({
-            url: '{{ route("module.management.getOngoingSemesters") }}',
+            url: '<?php echo e(route("module.management.getOngoingSemesters")); ?>',
             method: 'POST',
             data: {
                 course_id: $('#elective_course').val(),
                 intake_id: $('#elective_intake').val(),
                 location: $('#elective_location').val(),
-                _token: '{{ csrf_token() }}'
+                _token: '<?php echo e(csrf_token()); ?>'
             },
             success: function(response) {
                 if (response.success) {
@@ -459,12 +459,12 @@ $(document).ready(function() {
 
     function loadElectiveModulesForSemester() {
         $.ajax({
-            url: '{{ route("module.management.getElectiveModules") }}',
+            url: '<?php echo e(route("module.management.getElectiveModules")); ?>',
             method: 'POST',
             data: {
                 semester_id: $('#elective_semester').val(),
                 course_id: $('#elective_course').val(),
-                _token: '{{ csrf_token() }}'
+                _token: '<?php echo e(csrf_token()); ?>'
             },
             success: function(response) {
                 if (response.success) {
@@ -485,11 +485,11 @@ $(document).ready(function() {
 
     function loadModules() {
         $.ajax({
-            url: '{{ route("module.management.getModules") }}',
+            url: '<?php echo e(route("module.management.getModules")); ?>',
             method: 'POST',
             data: {
                 course_id: $('#elective_course').val(),
-                _token: '{{ csrf_token() }}'
+                _token: '<?php echo e(csrf_token()); ?>'
             },
             success: function(response) {
                 if (response.success) {
@@ -519,14 +519,14 @@ $(document).ready(function() {
         });
         
         $.ajax({
-            url: '{{ route("module.management.getElectiveStudents") }}',
+            url: '<?php echo e(route("module.management.getElectiveStudents")); ?>',
             method: 'POST',
             data: {
                 course_id: $('#elective_course').val(),
                 intake_id: $('#elective_intake').val(),
                 semester_id: $('#elective_semester').val(),
                 location: $('#elective_location').val(),
-                _token: '{{ csrf_token() }}'
+                _token: '<?php echo e(csrf_token()); ?>'
             },
             success: function(response) {
                 console.log('loadElectiveStudents response:', response);
@@ -567,4 +567,5 @@ $(document).ready(function() {
     });
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/module_management.blade.php ENDPATH**/ ?>
