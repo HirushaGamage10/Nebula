@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'All Students View')
 
-@section('content')
+<?php $__env->startSection('title', 'All Students View'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container mt-5 mb-5">
   <div class="card shadow border-0">
     <div class="card-body">
@@ -10,7 +10,7 @@
 
       <!-- 🔹 Filter Form -->
       <form id="filterForm" class="row g-3 mb-4">
-        @csrf
+        <?php echo csrf_field(); ?>
         <div class="col-md-3">
           <label class="form-label">Student ID / NIC</label>
           <input type="text" id="student_id" name="student_id" class="form-control" placeholder="Enter Student ID or NIC">
@@ -20,9 +20,9 @@
           <label class="form-label">Course</label>
           <select id="courseSelect" name="course_id" class="form-select">
             <option value="">All Courses</option>
-            @foreach(\App\Models\Course::orderBy('course_name')->get() as $course)
-              <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
-            @endforeach
+            <?php $__currentLoopData = \App\Models\Course::orderBy('course_name')->get(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+              <option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
           </select>
         </div>
 
@@ -30,9 +30,9 @@
           <label class="form-label">Intake</label>
           <select id="intakeSelect" name="intake_id" class="form-select">
             <option value="">All Intakes</option>
-            @foreach(\App\Models\Intake::orderBy('batch')->get() as $intake)
-              <option value="{{ $intake->intake_id }}">{{ $intake->batch }}</option>
-            @endforeach
+            <?php $__currentLoopData = \App\Models\Intake::orderBy('batch')->get(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $intake): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+              <option value="<?php echo e($intake->intake_id); ?>"><?php echo e($intake->batch); ?></option>
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
           </select>
         </div>
 
@@ -128,9 +128,9 @@ document.getElementById('filterForm').addEventListener('submit', async e => {
     status: document.getElementById('statusSelect').value,
   };
 
-  const res = await fetch('{{ route("students.filter") }}', {
+  const res = await fetch('<?php echo e(route("students.filter")); ?>', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' },
     body: JSON.stringify(payload)
   });
 
@@ -278,4 +278,6 @@ function getStatusColor(status) {
   }
 }
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\danid\Desktop\Clony-17\resources\views/student_view.blade.php ENDPATH**/ ?>

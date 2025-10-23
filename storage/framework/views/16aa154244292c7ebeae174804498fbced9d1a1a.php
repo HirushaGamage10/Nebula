@@ -1,19 +1,19 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="<?php echo e(str_replace('_', '-', app()->getLocale())); ?>">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}"> <!-- CSRF Token -->
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>"> <!-- CSRF Token -->
     <title>NEBULA | Sign In</title>
-    <link href="{{ asset('css/styles.min.css') }}" rel="stylesheet">
+    <link href="<?php echo e(asset('css/styles.min.css')); ?>" rel="stylesheet">
     <!-- CSS -->
-    <link rel="stylesheet" href="{{ asset('css/styles.min.css') }}">
+    <link rel="stylesheet" href="<?php echo e(asset('css/styles.min.css')); ?>">
 
     <!-- JS -->
-    <script src="{{ asset('js/app.js') }}"></script>
-    <script src="{{ asset('libs/jquery/dist/jquery.min.js') }}"></script>
-    <script src="{{ asset('libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="<?php echo e(asset('js/app.js')); ?>"></script>
+    <script src="<?php echo e(asset('libs/jquery/dist/jquery.min.js')); ?>"></script>
+    <script src="<?php echo e(asset('libs/bootstrap/dist/js/bootstrap.bundle.min.js')); ?>"></script>
 
     <style>
     body {
@@ -25,7 +25,7 @@
     }
 
     body.loaded {
-        background-image: url('{{ asset('images/backgrounds/nebula.jpg') }}');
+        background-image: url('<?php echo e(asset('images/backgrounds/nebula.jpg')); ?>');
     }
 
     /* Error styling */
@@ -154,39 +154,53 @@
                         <div class="card mb-0">
                             <div class="card-body">
                                 <a href="./" class="text-nowrap logo-img text-center d-block py-3 w-100">
-                                    <img src="{{ asset('images/logos/nebula.png') }}" alt="Nebula"
+                                    <img src="<?php echo e(asset('images/logos/nebula.png')); ?>" alt="Nebula"
                                         class="img-fluid" loading="lazy">
                                 </a>
                                 
                                 <!-- Display general errors -->
-                                @if (($errors ?? collect())->any())
+                                <?php if(($errors ?? collect())->any()): ?>
                                     <div class="alert alert-danger">
                                         <ul class="mb-0">
-                                            @foreach ($errors->all() as $error)
-                                                <li>{{ $error }}</li>
-                                            @endforeach
+                                            <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                <li><?php echo e($error); ?></li>
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                         </ul>
                                     </div>
-                                @endif
+                                <?php endif; ?>
 
-                                <form class="pt-3" method="POST" action="{{ route('login.authenticate') }}" id="loginForm">
-                                    @csrf
+                                <form class="pt-3" method="POST" action="<?php echo e(route('login.authenticate')); ?>" id="loginForm">
+                                    <?php echo csrf_field(); ?>
                                     <div class="form-group mb-3">
                                         <label for="email" class="form-label">Username</label>
                                         <input type="email" 
-                                               class="form-control form-control-lg @error('email') is-invalid @enderror {{ ($errors->any() && !$errors->has('email') && !$errors->has('password')) ? 'is-invalid' : '' }}" 
+                                               class="form-control form-control-lg <?php $__errorArgs = ['email'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?> <?php echo e(($errors->any() && !$errors->has('email') && !$errors->has('password')) ? 'is-invalid' : ''); ?>" 
                                                name="email"
                                                id="email" 
                                                placeholder="Enter your username" 
-                                               value="{{ old('email') }}"
+                                               value="<?php echo e(old('email')); ?>"
                                                required 
                                                autocomplete="email">
-                                        @error('email')
-                                            <div class="error-message">{{ $message }}</div>
-                                        @enderror
-                                        @if($errors->any() && !$errors->has('email') && !$errors->has('password'))
-                                            <div class="error-message">{{ $errors->first() }}</div>
-                                        @endif
+                                        <?php $__errorArgs = ['email'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                            <div class="error-message"><?php echo e($message); ?></div>
+                                        <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                        <?php if($errors->any() && !$errors->has('email') && !$errors->has('password')): ?>
+                                            <div class="error-message"><?php echo e($errors->first()); ?></div>
+                                        <?php endif; ?>
                                     </div>
                                     
                                     <div class="form-group mb-4">
@@ -194,7 +208,14 @@
                                         <!-- wrap input in input-group and add toggle button -->
                                         <div class="input-group">
                                             <input type="password" 
-                                                   class="form-control form-control-lg @error('password') is-invalid @enderror {{ ($errors->any() && !$errors->has('email') && !$errors->has('password')) ? 'is-invalid' : '' }}" 
+                                                   class="form-control form-control-lg <?php $__errorArgs = ['password'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?> <?php echo e(($errors->any() && !$errors->has('email') && !$errors->has('password')) ? 'is-invalid' : ''); ?>" 
                                                    name="password"
                                                    id="password" 
                                                    placeholder="Enter your password" 
@@ -202,12 +223,19 @@
                                                    autocomplete="current-password">
                                             <button class="btn btn-password" type="button" id="togglePassword" aria-label="Show password"></button>
                                         </div>
-                                        @error('password')
-                                            <div class="error-message">{{ $message }}</div>
-                                        @enderror
-                                        @if($errors->any() && !$errors->has('email') && !$errors->has('password'))
-                                            <div class="error-message">{{ $errors->first() }}</div>
-                                        @endif
+                                        <?php $__errorArgs = ['password'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                            <div class="error-message"><?php echo e($message); ?></div>
+                                        <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                                        <?php if($errors->any() && !$errors->has('email') && !$errors->has('password')): ?>
+                                            <div class="error-message"><?php echo e($errors->first()); ?></div>
+                                        <?php endif; ?>
                                     </div>
                                     
                                     <button type="submit" class="btn btn-primary w-100 py-8 fs-4 mb-4 rounded-2"
@@ -233,3 +261,4 @@
 </body>
 
 </html>
+<?php /**PATH C:\Users\danid\Desktop\Clony-17\resources\views/login.blade.php ENDPATH**/ ?>
