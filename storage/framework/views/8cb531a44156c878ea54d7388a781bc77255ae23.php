@@ -3704,19 +3704,52 @@ function loadIntakesForCourse() {
     paymentTypeSelect.disabled = false;
 }
 
-// Check if both student ID and course are selected
 function checkStudentAndCourse() {
-    const courseId = document.getElementById('slip-course').value;
-    const studentId = document.getElementById('slip-student-id').value;
-    
-    const paymentTypeSelect = document.getElementById('slip-payment-type');
-    
-    if (!courseId || !studentId) {
-        paymentTypeSelect.disabled = true;
-        paymentTypeSelect.value = '';
-    } else {
-        paymentTypeSelect.disabled = false;
-    }
+    const nic = document.getElementById('slip-student-id').value.trim();
+    if (!nic) return;
+
+    // Disable dropdown while loading
+    const courseSelect = document.getElementById('slip-course');
+    courseSelect.disabled = true;
+    courseSelect.innerHTML = '<option>Loading courses...</option>';
+
+    fetch('<?php echo e(route("payment.get.student.courses")); ?>', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ student_nic: nic })
+    })
+    .then(response => response.json())
+    .then(data => {
+        courseSelect.innerHTML = '<option value="" selected disabled>Select Course</option>';
+
+        if (data.success && data.courses.length > 0) {
+            data.courses.forEach(course => {
+                courseSelect.innerHTML += `
+                    <option value="${course.course_id}">
+                        ${course.course_name} (${course.approval_status})
+                    </option>`;
+            });
+
+            // Auto-select if only one course
+            if (data.courses.length === 1) {
+                courseSelect.value = data.courses[0].course_id;
+                loadIntakesForCourse(); // Automatically trigger the next step
+            }
+
+            courseSelect.disabled = false;
+        } else {
+            courseSelect.innerHTML = '<option value="">No approved courses found</option>';
+            courseSelect.disabled = true;
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching courses:', error);
+        courseSelect.innerHTML = '<option value="">Error loading courses</option>';
+        courseSelect.disabled = true;
+    });
 }
 async function loadPaymentDetails() {
   const studentIdOrNic = document.getElementById('slip-student-id').value?.trim();
