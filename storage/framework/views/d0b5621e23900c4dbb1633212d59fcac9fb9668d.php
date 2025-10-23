@@ -539,10 +539,15 @@
         <td class="amount">+ LKR <?php echo e($fmt($bankCharges)); ?></td>
     </tr>
     <?php endif; ?>
-      <tr class="total-row">
-        <td>TOTAL PAYMENT:</td>
-        <td class="amount">LKR <?php echo e($fmt($totalFee)); ?></td>
-      </tr>
+      <?php
+    // ✅ Ensure SSCL and Bank Charges are always included in the displayed total
+    $displayTotal = $totalFee + $ssclTaxAmount + $bankCharges;
+?>
+<tr class="total-row">
+    <td>TOTAL PAYMENT (Incl. Tax & Bank Charges):</td>
+    <td class="amount">LKR <?php echo e($fmt($displayTotal)); ?></td>
+</tr>
+
     </table>
 
     

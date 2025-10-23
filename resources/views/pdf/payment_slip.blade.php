@@ -538,10 +538,15 @@
         <td class="amount">+ LKR {{ $fmt($bankCharges) }}</td>
     </tr>
     @endif
-      <tr class="total-row">
-        <td>TOTAL PAYMENT:</td>
-        <td class="amount">LKR {{ $fmt($totalFee) }}</td>
-      </tr>
+      @php
+    // ✅ Ensure SSCL and Bank Charges are always included in the displayed total
+    $displayTotal = $totalFee + $ssclTaxAmount + $bankCharges;
+@endphp
+<tr class="total-row">
+    <td>TOTAL PAYMENT (Incl. Tax & Bank Charges):</td>
+    <td class="amount">LKR {{ $fmt($displayTotal) }}</td>
+</tr>
+
     </table>
 
     {{-- ✅ Registration Fee Remarks --}}
