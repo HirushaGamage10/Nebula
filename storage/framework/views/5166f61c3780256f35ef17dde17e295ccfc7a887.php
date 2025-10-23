@@ -57,7 +57,7 @@
                 </div>
                 <div class="col-12 col-sm-6 col-md-2">
                     <label class="form-label small">Intake</label>
-                    <select name="intake_id" id="filter-intake" class="form-select form-select-sm form-select-md" <?php if(!request('course_id')): echo 'disabled'; endif; ?>>
+                    <select name="intake_id" id="filter-intake" class="form-select form-select-sm form-select-md" <?php if(request('course_id')): echo 'selected'; endif; ?>>
                         <option value="">All</option>
                         <?php $__currentLoopData = $intakes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <option value="<?php echo e($i->intake_id); ?>" <?php if((string)request('intake_id')===(string)$i->intake_id): echo 'selected'; endif; ?>>
