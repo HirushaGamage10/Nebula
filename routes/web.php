@@ -95,6 +95,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // User Page - All authenticated users can access
     Route::get('/user', [UserProfileController::class, 'showUserProfile'])->name('user.profile');
     Route::post('/user/change-password', [UserProfileController::class, 'changePassword'])->name('user.changePassword');
+    Route::post('/user/update-profile-picture', [UserProfileController::class, 'updateProfilePicture'])->name('user.updateProfilePicture');
 
     // User management - Only DGM, Program Administrator (level 01), and Developer can create/update/delete users
     Route::middleware(['role:DGM,Program Administrator (level 01),Developer'])->group(function () {

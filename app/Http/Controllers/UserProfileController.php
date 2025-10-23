@@ -9,6 +9,7 @@ use Illuminate\Validation\Rules\Password; // Import the Password rule
 use App\Models\User;
 use App\Http\Requests\CreateUserRequest;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class UserProfileController extends Controller
 {
@@ -46,7 +47,8 @@ class UserProfileController extends Controller
             'employee_id' => $user->employee_id,
             'user_role' => $user->user_role,
             'status' => ($user->status == "1" ? "Active" : ($user->status == "0" ? "Inactive" : ($user->status == "2" ? "Suspended" : "Unknown"))),
-            'user_location' => $user->user_location ?? 'Unknown'
+            'user_location' => $user->user_location ?? 'Unknown',
+            'user_profile' => $user->user_profile ?? null,
         ];
 
         // Fetch all user roles from RoleHelper
@@ -301,5 +303,35 @@ public function updateUserStatus(Request $request)
 
             return response()->json(['success' => false, 'message' => 'Failed to create user.', 'error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Update the authenticated user's profile picture
+     */
+    public function updateProfilePicture(Request $request)
+    {
+        $request->validate([
+            'profile_picture' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
+        ]);
+
+        $user = Auth::user();
+
+        // Store file in storage/app/public/profile_pictures
+        $path = $request->file('profile_picture')->store('profile_pictures', 'public');
+
+        // Delete previous file if it exists
+        if (!empty($user->user_profile) && \Storage::disk('public')->exists($user->user_profile)) {
+            try { \Storage::disk('public')->delete($user->user_profile); } catch (\Throwable $e) { /* ignore */ }
+        }
+
+        // Save new path
+        $user->user_profile = $path;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile picture updated successfully.',
+            'url' => asset('storage/' . $path),
+        ]);
     }
 }

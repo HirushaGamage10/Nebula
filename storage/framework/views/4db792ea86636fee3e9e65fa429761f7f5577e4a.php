@@ -1,8 +1,6 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | User Profile'); ?>
 
-@section('title', 'NEBULA | User Profile')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
  <style>
   .nav-tabs .nav-link.active {
     background-color: #6c8cff !important;
@@ -37,7 +35,7 @@
         <div class="mb-3 text-center position-relative">
             <div class="d-flex justify-content-end">
                 <div class="rounded-circle overflow-hidden mx-auto mb-3 position-relative" style="width: 150px; height: 150px; border: 2px solid #ccc;">
-                    <img src="{{ !empty($userData['user_profile']) ? asset('storage/' . $userData['user_profile']) : asset('images/profile/user-1.jpg') }}" alt="User Profile" class="w-100 h-100 object-cover" id="profilePictureImg">
+                    <img src="<?php echo e(!empty($userData['user_profile']) ? asset('storage/' . $userData['user_profile']) : asset('images/profile/user-1.jpg')); ?>" alt="User Profile" class="w-100 h-100 object-cover" id="profilePictureImg">
                 </div>
             </div>
             <!-- hidden input removed; handled via modal form -->
@@ -55,8 +53,8 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <form id="profilePictureForm" method="POST" action="{{ route('user.updateProfilePicture') }}" enctype="multipart/form-data">
-                            @csrf
+                        <form id="profilePictureForm" method="POST" action="<?php echo e(route('user.updateProfilePicture')); ?>" enctype="multipart/form-data">
+                            <?php echo csrf_field(); ?>
                             <div class="mb-3">
                                 <label for="newProfilePicture" class="form-label fw-bold">New Profile Picture</label>
                                 <input type="file" class="form-control" id="newProfilePicture" name="profile_picture" accept="image/*" required>
@@ -88,37 +86,37 @@
                     <div class="mb-3 row align-items-center mx-3 mt-4">
                         <label for="adminEmail" class="col-sm-2 col-form-label fw-bold">Email</label>
                         <div class="col-sm-10">
-                            <input type="email" class="form-control" value="{{ $userData['email'] }}" id="adminEmail" placeholder="User email" readonly>
+                            <input type="email" class="form-control" value="<?php echo e($userData['email']); ?>" id="adminEmail" placeholder="User email" readonly>
                         </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                         <label for="employeeId" class="col-sm-2 col-form-label fw-bold">Employee ID</label>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" id="employeeId" value="{{ $userData['employee_id'] ?? '' }}" placeholder="Employee ID" readonly>
+                            <input type="text" class="form-control" id="employeeId" value="<?php echo e($userData['employee_id'] ?? ''); ?>" placeholder="Employee ID" readonly>
                         </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                         <label for="userName" class="col-sm-2 col-form-label fw-bold">User Name</label>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" id="userName" value="{{ $userData['user_name'] ?? '' }}" placeholder="User Name" readonly>
+                            <input type="text" class="form-control" id="userName" value="<?php echo e($userData['user_name'] ?? ''); ?>" placeholder="User Name" readonly>
                         </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                         <label for="userRole" class="col-sm-2 col-form-label fw-bold">User Role</label>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" id="userRole" value="{{ $userData['user_role'] ?? '' }}" placeholder="User Role" readonly>
+                            <input type="text" class="form-control" id="userRole" value="<?php echo e($userData['user_role'] ?? ''); ?>" placeholder="User Role" readonly>
                         </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                         <label for="userLocation" class="col-sm-2 col-form-label fw-bold">User Location</label>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" id="userLocation" value="{{ $userData['user_location'] ?? '' }}" placeholder="User Location" readonly>
+                            <input type="text" class="form-control" id="userLocation" value="<?php echo e($userData['user_location'] ?? ''); ?>" placeholder="User Location" readonly>
                         </div>
                     </div>
                     <div class="mb-3 row align-items-center mx-3">
                         <label for="userStatus" class="col-sm-2 col-form-label fw-bold">Status</label>
                         <div class="col-sm-10">
-                            <input type="text" class="form-control" id="userStatus" value="{{ $userData['status'] }}" placeholder="User status" readonly>
+                            <input type="text" class="form-control" id="userStatus" value="<?php echo e($userData['status']); ?>" placeholder="User status" readonly>
                         </div>
                     </div>
                 </div>
@@ -128,8 +126,8 @@
                     <div class="card mt-4">
                         <div class="card-body">
                             <h4 class="mb-3 text-center">Change Password</h4>
-                            <form id="changePasswordForm" method="POST" action="{{ route('user.changePassword') }}">
-                                @csrf
+                            <form id="changePasswordForm" method="POST" action="<?php echo e(route('user.changePassword')); ?>">
+                                <?php echo csrf_field(); ?>
 
 <!-- Current Password -->
 <div class="mb-3">
@@ -234,7 +232,7 @@ function togglePassword(fieldId) {
                             return toast;
                         }
 
-                        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+                        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '<?php echo e(csrf_token()); ?>';
 
                         if (pwdForm) {
                             pwdForm.addEventListener('submit', function(e) {
@@ -325,4 +323,6 @@ function togglePassword(fieldId) {
 <!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/nebula final/Nebula/resources/views/user_profile.blade.php ENDPATH**/ ?>
