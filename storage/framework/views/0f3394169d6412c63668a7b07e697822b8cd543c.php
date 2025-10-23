@@ -1,8 +1,6 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | Overall Attendance'); ?>
 
-@section('title', 'NEBULA | Overall Attendance')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -36,9 +34,9 @@
                         <div class="col-sm-10">
                             <select class="form-select filter-param" id="course" name="course_id" required>
                                 <option selected disabled value="">Select a Course</option>
-                                @foreach ($courses as $course)
-                                    <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
-                                @endforeach
+                                <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </select>
                         </div>
                     </div>
@@ -47,9 +45,9 @@
                         <div class="col-sm-10">
                             <select class="form-select filter-param" id="intake" name="intake_id" required>
                                 <option selected disabled value="">Select an Intake</option>
-                                @foreach ($intakes as $intake)
-                                    <option value="{{ $intake->intake_id }}">{{ $intake->batch }}</option>
-                                @endforeach
+                                <?php $__currentLoopData = $intakes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $intake): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <option value="<?php echo e($intake->intake_id); ?>"><?php echo e($intake->batch); ?></option>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </select>
                         </div>
                     </div>
@@ -237,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('intake_id', intakeSelect.value);
         formData.append('semester', semesterSelect.value);
         formData.append('module_id', moduleSelect.value);
-        formData.append('_token', '{{ csrf_token() }}');
+        formData.append('_token', '<?php echo e(csrf_token()); ?>');
 
         // Send request to download Excel
         fetch('/download-attendance-excel', {
@@ -313,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         fetch('/get-filtered-modules', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -343,7 +341,7 @@ document.addEventListener('DOMContentLoaded', function() {
         section.style.display = '';
         fetch('/get-overall-attendance', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -375,4 +373,5 @@ document.addEventListener('DOMContentLoaded', function() {
     // Each dropdown has its own specific event listener
 });
 </script>
-@endsection 
+<?php $__env->stopSection(); ?> 
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/nebula final/Nebula/resources/views/overall_attendance.blade.php ENDPATH**/ ?>
