@@ -38,13 +38,23 @@
                 <div class="mb-3 row mx-3">
                     <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
-                        <select class="form-select" id="location" name="location" required>
-                            <option selected disabled value="">Choose a location...</option>
-                            <option value="Welisara">Nebula Institute of Technology - Welisara</option>
-                            <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
-                            <option value="Peradeniya">Nebula Institute of Technology - Peradeniya</option>
-                        </select>
-                    </div>
+    <select class="form-select" id="location" name="location" required
+        onchange="window.location='{{ route('payment.plan') }}?location=' + this.value">
+        <option disabled {{ !isset($selectedLocation) ? 'selected' : '' }} value="">
+            Choose a location...
+        </option>
+        <option value="Welisara" {{ (isset($selectedLocation) && $selectedLocation === 'Welisara') ? 'selected' : '' }}>
+            Nebula Institute of Technology - Welisara
+        </option>
+        <option value="Moratuwa" {{ (isset($selectedLocation) && $selectedLocation === 'Moratuwa') ? 'selected' : '' }}>
+            Nebula Institute of Technology - Moratuwa
+        </option>
+        <option value="Peradeniya" {{ (isset($selectedLocation) && $selectedLocation === 'Peradeniya') ? 'selected' : '' }}>
+            Nebula Institute of Technology - Peradeniya
+        </option>
+    </select>
+</div>
+
                 </div>
                 <div class="mb-3 row mx-3">
                     <label for="course" class="col-sm-2 col-form-label">Course <span class="text-danger">*</span></label>
