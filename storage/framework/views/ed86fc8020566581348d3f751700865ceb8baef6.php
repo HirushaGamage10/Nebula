@@ -46,7 +46,7 @@
         </div>
 
         <div class="col-md-1 d-flex align-items-end">
-          <button id="searchBtn" class="btn btn-primary w-auto" type="submit">
+          <button id="searchBtn" class="btn btn-primary w-100" type="submit">
             <span class="spinner-border spinner-border-sm d-none" id="searchSpinner" role="status"></span>
             <span id="searchText">Search</span>
           </button>
@@ -108,73 +108,6 @@
 
 <script>
 let tableData = [];
-// Keep a cached copy of ALL intake options rendered on first load
-const intakeSelect = document.getElementById('intakeSelect');
-const courseSelect = document.getElementById('courseSelect');
-// Clone all intake <option> elements so we can restore them when "All Courses" is selected
-const ALL_INTAKE_OPTIONS = [...intakeSelect.options].map(o => ({ value: o.value, text: o.text }));
-
-// Helper to repopulate the intake dropdown
-function setIntakeOptions(options) {
-  // Always keep the first option as "All Intakes"
-  intakeSelect.innerHTML = '';
-  const first = document.createElement('option');
-  first.value = '';
-  first.textContent = 'All Intakes';
-  intakeSelect.appendChild(first);
-
-  options
-    .filter(o => o.value) // skip any empty placeholders from source
-    .forEach(({ value, text }) => {
-      const opt = document.createElement('option');
-      opt.value = value;
-      opt.textContent = text;
-      intakeSelect.appendChild(opt);
-    });
-}
-
-// On course change -> filter intakes
-courseSelect.addEventListener('change', async (e) => {
-  const courseId = e.target.value;
-
-  // If no course selected -> restore ALL intakes
-  if (!courseId) {
-    setIntakeOptions(ALL_INTAKE_OPTIONS);
-    return;
-  }
-
-  try {
-    // Provide quick UX hint while loading
-    setIntakeOptions([]);
-    const loading = document.createElement('option');
-    loading.disabled = true; loading.selected = true; loading.textContent = 'Loading intakes...';
-    intakeSelect.appendChild(loading);
-
-    // Fetch intakes for selected course
-    // Prefer the simple closure route that returns an array. If not found, fall back to controller route shape.
-    let res = await fetch(`/api/intakes-by-course/${courseId}`);
-    if (!res.ok) {
-      // fallback to the existing controller-based endpoint
-      res = await fetch(`/api/intakes/${courseId}`);
-    }
-    if (!res.ok) throw new Error('Failed to load intakes');
-    const payload = await res.json();
-
-    // Support both shapes: array OR { success, intakes: [] }
-    const list = Array.isArray(payload) ? payload : (payload.intakes || payload.data || []);
-
-    // Map to {value,text} pairs; show batch and location if available
-    const opts = list.map(it => ({
-      value: it.intake_id,
-      text: it.location ? `${it.batch} - ${it.location}` : it.batch
-    }));
-    setIntakeOptions(opts);
-  } catch (err) {
-    // On error, fall back to empty (except All Intakes)
-    console.error(err);
-    setIntakeOptions([]);
-  }
-});
 
 /* -------------------------------
    🔹 Filter Form Submit
