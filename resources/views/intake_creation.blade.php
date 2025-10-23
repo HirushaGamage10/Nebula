@@ -13,12 +13,13 @@
                 <div class="mb-3 row mx-3">
                     <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
-                        <select class="form-select" id="location" name="location" required>
-                            <option selected disabled value="">Choose a location...</option>
-                            <option value="Welisara">Nebula Institute of Technology - Welisara</option>
-                            <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
-                            <option value="Peradeniya">Nebula Institute of Technology - Peradeniya</option>
-                        </select>
+                        <select class="form-select" id="location" name="location" onchange="window.location='?location='+this.value">
+    <option value="">Choose a location...</option>
+    <option value="Welisara" {{ $selectedLocation == 'Welisara' ? 'selected' : '' }}>Nebula Institute of Technology - Welisara</option>
+    <option value="Moratuwa" {{ $selectedLocation == 'Moratuwa' ? 'selected' : '' }}>Nebula Institute of Technology - Moratuwa</option>
+    <option value="Peradeniya" {{ $selectedLocation == 'Peradeniya' ? 'selected' : '' }}>Nebula Institute of Technology - Peradeniya</option>
+</select>
+
                     </div>
                 </div>
                 <div class="mb-3 row mx-3">
