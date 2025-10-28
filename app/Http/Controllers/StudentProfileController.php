@@ -20,6 +20,7 @@ use App\Models\Intake;
 use App\Models\Batch;
 use Illuminate\Support\Facades\Log;
 use App\Models\StudentStatusHistory;
+use Illuminate\Support\Facades\Storage;
 
 class StudentProfileController extends Controller
 {
@@ -922,5 +923,59 @@ class StudentProfileController extends Controller
             'message' => 'Student re-registered successfully.',
             'academic_status' => 'active',
         ]);
+    }
+
+    /**
+     * Update student profile picture
+     */
+    public function updateStudentProfilePicture(Request $request, $studentId)
+    {
+        $request->validate([
+            'profile_picture' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
+        ]);
+
+        $student = Student::find($studentId);
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+        }
+
+        try {
+            // Store file in storage/app/public/student_profile_pictures
+            $path = $request->file('profile_picture')->store('student_profile_pictures', 'public');
+
+            // Delete previous file if it exists
+            if (!empty($student->user_photo) && Storage::disk('public')->exists($student->user_photo)) {
+                try {
+                    Storage::disk('public')->delete($student->user_photo);
+                } catch (\Throwable $e) {
+                    // Log error but don't fail the update
+                    Log::warning('Failed to delete old student profile picture', [
+                        'student_id' => $studentId,
+                        'old_path' => $student->user_photo,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            // Save new path to student record
+            $student->user_photo = $path;
+            $student->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile picture updated successfully.',
+                'url' => asset('storage/' . $path),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to update student profile picture', [
+                'student_id' => $studentId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update profile picture. Please try again.',
+            ], 500);
+        }
     }
 }

@@ -402,6 +402,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::put('/student/update/{studentId}', [StudentProfileController::class, 'updatePersonalInfo'])->name('student.updatePersonalInfo');
         Route::post('/student/update-personal-info', [StudentProfileController::class, 'updatePersonalInfoAjax'])->name('student.update.personal.info');
         Route::post('/student/update-parent-info', [StudentProfileController::class, 'updateParentInfoAjax'])->name('student.update.parent.info');
+        Route::post('/student/update-profile-picture/{studentId}', [StudentProfileController::class, 'updateStudentProfilePicture'])->name('student.updateProfilePicture');
         Route::get('/student/academic', [StudentProfileController::class, 'getAcademicDetails'])->name('student.academic');
         Route::get('/student/exam-results', [StudentProfileController::class, 'getExamResults'])->name('student.examResults');
         Route::post('/student/attendance', [StudentProfileController::class, 'getAttendanceDetails'])->name('student.attendance');
