@@ -39,44 +39,42 @@
             <!-- Overview Tab -->
             <div id="content-overview" class="tab-content active">
                 <!-- Key Metrics Cards -->
-                <div class="flex  gap-10 mb-8">
-                    <div class="stat-card bg-white p-6 rounded-xl shadow-sm">
+                <div class="flex gap-10">
+                    <div class="stat-card bg-white p-2 rounded-xl shadow-sm border-4 border-sky-500">
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-gray-600">Total Students</p>
-                                <p class="text-2xl font-bold text-gray-900" id="totalStudents">-</p>
+                                <p class="text-2xl font-bold text-gray-900 pt-2 p-2" id="totalStudents">-</p>
                                 <p class="text-sm text-green-600" id="studentChange"></p>
-                            </div>
-                            <div class="bg-blue-100 p-3 rounded-full">
-                                <i class="fas fa-users text-blue-600 text-xl"></i>
-                            </div>
+                            </div>                           
                         </div>
                     </div>
 
-                    <div class="stat-card bg-white p-6 rounded-xl shadow-sm">
+                    <div class="stat-card bg-white p-2 rounded-xl shadow-sm border-4 border-green-500">
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-gray-600">Yearly Revenue</p>
-                                <p class="text-2xl font-bold text-gray-900" id="yearlyRevenue">-</p>
-                                <p class="text-sm text-green-600" id="revenueChange">Loading...</p>
+                                <p class="text-2xl font-bold text-gray-900 pt-2" id="yearlyRevenue">-</p>                                
                             </div>
-                            <div class="bg-green-100 p-3 rounded-full">
-                                <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
-                            </div>
+                            
                         </div>
                     </div>
 
-                    <div class="stat-card bg-white p-6 rounded-xl shadow-sm">
+                    <div class="stat-card bg-white p-2 rounded-xl shadow-sm border-4 border-orange-500">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">Due this year</p>
+                                <p class="text-2xl font-bold text-gray-900 pt-2" id="outstandingCurrentYear">-</p>
+                            </div>                            
+                        </div>
+                    </div>
+
+                    <div class="stat-card bg-white p-2  rounded-xl shadow-sm border-4 border-red-500">
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-gray-600">Outstanding</p>
-                                <p class="text-2xl font-bold text-gray-900" id="outstanding">-</p>
-                                <p class="text-sm text-red-600" id="outstandingRatio">Loading...</p>
-                                <p class="text-sm text-gray-600 mt-1" id="outstandingCurrentYear">Due this year: -</p>
-                            </div>
-                            <div class="bg-red-100 p-3 rounded-full">
-                                <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
-                            </div>
+                                <p class="text-2xl font-bold text-gray-900 pt-2" id="outstanding">-</p>
+                            </div>                            
                         </div>
                     </div>
 
@@ -645,10 +643,8 @@
                 document.getElementById('yearlyRevenue').textContent = 'Rs. ' + data.yearlyRevenue;
                 document.getElementById('outstanding').textContent = 'Rs. ' + data.outstanding;
                 if (document.getElementById('outstandingCurrentYear')) {
-                    document.getElementById('outstandingCurrentYear').textContent = 'Due this year: Rs. ' + (data.outstandingCurrentYear ?? '0.00');
+                    document.getElementById('outstandingCurrentYear').textContent = 'Rs. ' + (data.outstandingCurrentYear ?? '0.00');
                 }
-                document.getElementById('revenueChange').textContent = data.revenueChange;
-                document.getElementById('outstandingRatio').textContent = data.outstandingRatio + '% of total';
 
 
                 // Populate Revenue Summary Table
