@@ -153,41 +153,66 @@ class StudentProfileController extends Controller
     }
 
     try {
-        // Get all valid fields (only those that exist in students table)
-        $updateFields = [
-            'title',
-            'full_name',
-            'name_with_initials',
-            'id_value',
-            'institute_location',
-            'birthday',
-            'gender',
-            'email',
-            'mobile_phone',
-            'home_phone',
-            'address',
-            'foundation_program',
-            'special_needs',
-            'extracurricular_activities',
-            'future_potentials'
-        ];
+        // Validate required fields
+        $validatedData = $request->validate([
+            'student_id' => 'required|exists:students,student_id',
+            'title' => 'required|string|max:255',
+            'full_name' => 'required|string|max:255',
+            'id_value' => 'required|string|max:255',
+            'institute_location' => 'required|string|max:255',
+            'birthday' => 'required|date',
+            'gender' => 'required|in:Male,Female',
+            'email' => 'required|email|max:255',
+            'mobile_phone' => 'required|string|max:20',
+            'home_phone' => 'nullable|string|max:20',
+            'address' => 'required|string',
+            // Optional fields
+            'name_with_initials' => 'nullable|string|max:255',
+            'foundation_program' => 'nullable|boolean',
+            'special_needs' => 'nullable|string',
+            'extracurricular_activities' => 'nullable|string',
+            'future_potentials' => 'nullable|string',
+            'emergency_contact_number' => 'nullable|string|max:20'
+        ]);
 
-        foreach ($updateFields as $field) {
-            $value = $request->input($field);
-
-            // 🔒 Skip null or empty string updates to avoid violating NOT NULL constraints
-            if ($value !== null && $value !== '') {
-                $student->$field = $value;
-            }
+        // Update student fields
+        $student->title = $validatedData['title'];
+        $student->full_name = $validatedData['full_name'];
+        $student->id_value = $validatedData['id_value'];
+        $student->institute_location = $validatedData['institute_location'];
+        $student->birthday = $validatedData['birthday'];
+        $student->gender = $validatedData['gender'];
+        $student->email = $validatedData['email'];
+        $student->mobile_phone = $validatedData['mobile_phone'];
+        $student->address = $validatedData['address'];
+        
+        // Optional fields
+        if (isset($validatedData['name_with_initials'])) {
+            $student->name_with_initials = $validatedData['name_with_initials'];
+        }
+        if (isset($validatedData['home_phone'])) {
+            $student->home_phone = $validatedData['home_phone'];
+        }
+        if (isset($validatedData['foundation_program'])) {
+            $student->foundation_program = $validatedData['foundation_program'];
+        }
+        if (isset($validatedData['special_needs'])) {
+            $student->special_needs = $validatedData['special_needs'];
+        }
+        if (isset($validatedData['extracurricular_activities'])) {
+            $student->extracurricular_activities = $validatedData['extracurricular_activities'];
+        }
+        if (isset($validatedData['future_potentials'])) {
+            $student->future_potentials = $validatedData['future_potentials'];
         }
 
         $student->save();
 
         // ✅ Handle emergency contact number (belongs to ParentGuardian)
-        if ($request->filled('emergency_contact_number')) {
+        if (!empty($validatedData['emergency_contact_number'])) {
             \App\Models\ParentGuardian::updateOrCreate(
                 ['student_id' => $studentId],
-                ['emergency_contact_number' => $request->input('emergency_contact_number')]
+                ['emergency_contact_number' => $validatedData['emergency_contact_number']]
             );
         }
 
@@ -195,6 +220,12 @@ class StudentProfileController extends Controller
             'success' => true,
             'message' => 'Personal information updated successfully!'
         ]);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed.',
+            'errors' => $e->errors()
+        ], 422);
     } catch (\Exception $e) {
         return response()->json([
             'success' => false,

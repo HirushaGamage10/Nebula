@@ -4,6 +4,17 @@
 
 @section('content')
 <style>
+/* Validation Error Styles */
+.is-invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+.is-invalid:focus {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
 /* Success Message Styles */
 .success-message {
     position: fixed;
@@ -146,49 +157,49 @@
 
               {{-- Personal Details --}}
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentTitle" class="col-sm-3 col-form-label fw-bold">Title</label>
+                <label for="studentTitle" class="col-sm-3 col-form-label fw-bold">Title <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control" id="studentTitle" value="{{ $student->title ?? '' }}" readonly>
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentName" class="col-sm-3 col-form-label fw-bold">Name</label>
+                <label for="studentName" class="col-sm-3 col-form-label fw-bold">Name <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control" id="studentName" value="{{ $student->full_name ?? '' }}" readonly>
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentNIC" class="col-sm-3 col-form-label fw-bold">NIC</label>
+                <label for="studentNIC" class="col-sm-3 col-form-label fw-bold">NIC <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control" id="studentNIC" value="{{ $student->id_value ?? '' }}" readonly>
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentInstitute" class="col-sm-3 col-form-label fw-bold">Institute</label>
+                <label for="studentInstitute" class="col-sm-3 col-form-label fw-bold">Institute <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control" id="studentInstitute" value="{{ $student->institute_location ?? '' }}" readonly>
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentDOB" class="col-sm-3 col-form-label fw-bold">Date of Birth</label>
+                <label for="studentDOB" class="col-sm-3 col-form-label fw-bold">Date of Birth <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control" id="studentDOB" readonly>
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentGender" class="col-sm-3 col-form-label fw-bold">Gender</label>
+                <label for="studentGender" class="col-sm-3 col-form-label fw-bold">Gender <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control" id="studentGender" value="{{ $student->gender ?? '' }}" readonly>
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentEmail" class="col-sm-3 col-form-label fw-bold">Email</label>
+                <label for="studentEmail" class="col-sm-3 col-form-label fw-bold">Email <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <input type="email" class="form-control" id="studentEmail" value="{{ $student->email ?? '' }}" readonly>
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentMobile" class="col-sm-3 col-form-label fw-bold">Mobile Phone No</label>
+                <label for="studentMobile" class="col-sm-3 col-form-label fw-bold">Mobile Phone No <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <input type="tel" class="form-control" id="studentMobile" value="{{ $student->mobile_phone ?? '' }}" readonly>
                 </div>
@@ -200,7 +211,7 @@
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentAddress" class="col-sm-3 col-form-label fw-bold">Address</label>
+                <label for="studentAddress" class="col-sm-3 col-form-label fw-bold">Address <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <textarea class="form-control" id="studentAddress" rows="2" readonly>{{ $student->address ?? '' }}</textarea>
                 </div>
@@ -989,27 +1000,104 @@ $(function(){
   });
   $('#cancelEditBtn').on('click', function(){
     $('#studentTitle,#studentName,#studentNIC,#studentIndexNo,#studentInstitute,#studentDOB,#studentGender,#studentEmail,#studentMobile,#studentHomePhone,#studentEmergencyContact,#studentAddress,#studentFoundation,#studentSpecialNeeds,#studentExtraCurricular,#studentFuturePotentials').prop('readonly',true);
+    // Clear validation error classes
+    $('.is-invalid').removeClass('is-invalid');
     $('#showEditPersonalInfoBtn').show(); $('#updatePersonalInfoBtn,#cancelEditBtn').hide();
   });
   $('#updatePersonalInfoBtn').on('click', function(){
-    const studentId=$('#studentIdHidden').val(); if(!studentId){ return showErrorMessage('No student selected.'); }
+    const studentId=$('#studentIdHidden').val(); 
+    if(!studentId){ return showErrorMessage('No student selected.'); }
+    
+    // Validate required fields
+    const requiredFields = [
+      {id: '#studentTitle', name: 'Title'},
+      {id: '#studentName', name: 'Name'},
+      {id: '#studentNIC', name: 'NIC'},
+      {id: '#studentInstitute', name: 'Institute'},
+      {id: '#studentDOB', name: 'Date of Birth'},
+      {id: '#studentGender', name: 'Gender'},
+      {id: '#studentEmail', name: 'Email'},
+      {id: '#studentMobile', name: 'Mobile Phone No'},
+      {id: '#studentAddress', name: 'Address'}
+    ];
+    
+    let validationErrors = [];
+    
+    // Check each required field
+    requiredFields.forEach(function(field) {
+      const value = $(field.id).val();
+      if (!value || value.trim() === '') {
+        validationErrors.push(field.name);
+        $(field.id).addClass('is-invalid');
+      } else {
+        $(field.id).removeClass('is-invalid');
+      }
+    });
+    
+    // Email validation
+    const email = $('#studentEmail').val();
+    if (email && !isValidEmail(email)) {
+      validationErrors.push('Valid Email');
+      $('#studentEmail').addClass('is-invalid');
+    }
+    
+    // If there are validation errors, show them and return
+    if (validationErrors.length > 0) {
+      showErrorMessage('Please fill in all required fields: ' + validationErrors.join(', '));
+      return;
+    }
+    
     const data={
-      student_id:studentId,title:$('#studentTitle').val(),full_name:$('#studentName').val(),id_value:$('#studentNIC').val(),
-      registration_id:$('#studentIndexNo').val(),institute_location:$('#studentInstitute').val(),birthday:$('#studentDOB').val(),
-      gender:$('#studentGender').val(),email:$('#studentEmail').val(),mobile_phone:$('#studentMobile').val(),
-      home_phone:$('#studentHomePhone').val(),emergency_contact_number:$('#studentEmergencyContact').val(),
-      address:$('#studentAddress').val(),foundation_program:$('#studentFoundation').val(),special_needs:$('#studentSpecialNeeds').val(),
-      extracurricular_activities:$('#studentExtraCurricular').val(),future_potentials:$('#studentFuturePotentials').val(),
+      student_id:studentId,
+      title:$('#studentTitle').val(),
+      full_name:$('#studentName').val(),
+      id_value:$('#studentNIC').val(),
+      registration_id:$('#studentIndexNo').val(),
+      institute_location:$('#studentInstitute').val(),
+      birthday:$('#studentDOB').val(),
+      gender:$('#studentGender').val(),
+      email:$('#studentEmail').val(),
+      mobile_phone:$('#studentMobile').val(),
+      home_phone:$('#studentHomePhone').val(),
+      emergency_contact_number:$('#studentEmergencyContact').val(),
+      address:$('#studentAddress').val(),
+      foundation_program:$('#studentFoundation').val(),
+      special_needs:$('#studentSpecialNeeds').val(),
+      extracurricular_activities:$('#studentExtraCurricular').val(),
+      future_potentials:$('#studentFuturePotentials').val(),
       _token:'{{ csrf_token() }}'
     };
+    
     $.post("{{ route('student.update.personal.info') }}", data, function(resp){
       if(resp.success){
+        // Remove any validation error classes
+        $('.is-invalid').removeClass('is-invalid');
         showSuccessMessage('Personal information updated successfully!');
         $('#cancelEditBtn').click();
       }else{
-        showErrorMessage(resp.message||'Failed to update personal information.');
+        // Handle validation errors from server
+        if (resp.errors) {
+          let errorMessages = [];
+          Object.keys(resp.errors).forEach(function(field) {
+            errorMessages.push(resp.errors[field][0]);
+          });
+          showErrorMessage('Validation Error: ' + errorMessages.join(', '));
+        } else {
+          showErrorMessage(resp.message||'Failed to update personal information.');
+        }
       }
-    }).fail(()=>showErrorMessage('An error occurred while updating personal information.'));
+    }).fail(function(xhr) {
+      if (xhr.status === 422) {
+        const errors = xhr.responseJSON.errors;
+        let errorMessages = [];
+        Object.keys(errors).forEach(function(field) {
+          errorMessages.push(errors[field][0]);
+        });
+        showErrorMessage('Validation Error: ' + errorMessages.join(', '));
+      } else {
+        showErrorMessage('An error occurred while updating personal information.');
+      }
+    });
   });
 
   // ----- Parent edit buttons -----
@@ -1561,6 +1649,12 @@ $(function(){
       }
     }
   };
+
+  // Helper function to validate email
+  function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
 
   // On initial load, populate from server (if provided)
   @if(isset($student))
