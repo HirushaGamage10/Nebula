@@ -72,12 +72,15 @@
                                 <p class="text-sm text-gray-600">Outstanding</p>
                                 <p class="text-2xl font-bold text-gray-900" id="outstanding">-</p>
                                 <p class="text-sm text-red-600" id="outstandingRatio">Loading...</p>
+                                <p class="text-sm text-gray-600 mt-1" id="outstandingCurrentYear">Due this year: -</p>
                             </div>
                             <div class="bg-red-100 p-3 rounded-full">
                                 <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
                             </div>
                         </div>
                     </div>
+
+                    
                 </div>
 
                 <!-- Quick Charts Grid -->
@@ -641,6 +644,9 @@
                 document.getElementById('totalStudents').textContent = data.totalStudents;
                 document.getElementById('yearlyRevenue').textContent = 'Rs. ' + data.yearlyRevenue;
                 document.getElementById('outstanding').textContent = 'Rs. ' + data.outstanding;
+                if (document.getElementById('outstandingCurrentYear')) {
+                    document.getElementById('outstandingCurrentYear').textContent = 'Due this year: Rs. ' + (data.outstandingCurrentYear ?? '0.00');
+                }
                 document.getElementById('revenueChange').textContent = data.revenueChange;
                 document.getElementById('outstandingRatio').textContent = data.outstandingRatio + '% of total';
 
@@ -651,14 +657,14 @@
                 if (data.locationSummary) {
                     data.locationSummary.forEach(row => {
                         tbody.innerHTML += `
-                                                                                                                                                                                                                                <tr>
-                                                                                                                                                                                                                                    <td class="px-6 py-4 text-sm font-medium text-gray-900">${row.location}</td>
-                                                                                                                                                                                                                                    <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.current_year}</td>
-                                                                                                                                                                                                                                    <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.previous_year}</td>
-                                                                                                                                                                                                                                    <td class="px-6 py-4 text-sm ${row.growth >= 0 ? 'text-green-600' : 'text-red-600'}">${row.growth >= 0 ? '+' : ''}${row.growth}%</td>
-                                                                                                                                                                                                                                    <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.outstanding}</td>
-                                                                                                                                                                                                                                </tr>
-                                                                                                                                                                                                                            `;
+                                                                                                                                                                                                                                        <tr>
+                                                                                                                                                                                                                                            <td class="px-6 py-4 text-sm font-medium text-gray-900">${row.location}</td>
+                                                                                                                                                                                                                                            <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.current_year}</td>
+                                                                                                                                                                                                                                            <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.previous_year}</td>
+                                                                                                                                                                                                                                            <td class="px-6 py-4 text-sm ${row.growth >= 0 ? 'text-green-600' : 'text-red-600'}">${row.growth >= 0 ? '+' : ''}${row.growth}%</td>
+                                                                                                                                                                                                                                            <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.outstanding}</td>
+                                                                                                                                                                                                                                        </tr>
+                                                                                                                                                                                                                                    `;
                     });
                 }
 

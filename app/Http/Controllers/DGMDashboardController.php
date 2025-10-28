@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Student;
 use App\Models\CourseRegistration;
 use App\Models\PaymentDetail;
+use App\Models\PaymentInstallment;
 use App\Models\Course;
 use App\Models\Intake;
 use Carbon\Carbon;
@@ -148,6 +149,21 @@ class DGMDashboardController extends Controller
         }
         $outstanding = $outstandingQuery->sum('remaining_amount');
 
+        $outstandingCurrentYear = 0.0;
+        try {
+            // total scheduled for this year (sum of installment amounts whose due_date is in the target year)
+            $pendingCurrentYear = PaymentInstallment::when($year, fn($q) => $q->whereYear('due_date', $year))
+            ->sum('final_amount');
+
+            $outstandingCurrentYear = $pendingCurrentYear-$partialPaymentsRevenue;
+
+            // sum of partial payments that actually happened in the same year
+            
+        } catch (\Throwable $ex) {
+            Log::warning('Could not compute outstandingCurrentYear: ' . $ex->getMessage());
+            $outstandingCurrentYear = 0.0;
+        }
+
         // Location Summary with both revenue sources
         $locations = ['Welisara', 'Moratuwa', 'Peradeniya'];
         $locationSummary = [];
@@ -221,6 +237,7 @@ class DGMDashboardController extends Controller
             'totalStudents' => $totalStudents,
             'yearlyRevenue' => number_format($yearlyRevenue, 2),
             'outstanding' => number_format($outstanding, 2),
+            'outstandingCurrentYear' => number_format($outstandingCurrentYear, 2),
             'revenueChange' => $revenueChange >= 0 ? "+{$revenueChange}%" : "{$revenueChange}%",
             'outstandingRatio' => $yearlyRevenue > 0 ? round(($outstanding / ($yearlyRevenue + $outstanding)) * 100) : 0,
             'locationSummary' => $locationSummary
