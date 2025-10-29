@@ -250,31 +250,43 @@
             </div>
 
             
-            <div class="tab-pane fade" id="parent">
-              <div class="mb-3 row align-items-center mx-3">
-                <label for="parentName" class="col-sm-3 col-form-label fw-bold">Name</label>
-                <div class="col-sm-9"><input type="text" class="form-control" id="parentName" value="<?php echo e($student->parent->guardian_name ?? ''); ?>" readonly></div>
-              </div>
-              <div class="mb-3 row align-items-center mx-3">
-                <label for="parentProfession" class="col-sm-3 col-form-label fw-bold">Profession</label>
-                <div class="col-sm-9"><input type="text" class="form-control" id="parentProfession" value="<?php echo e($student->parent->guardian_profession ?? ''); ?>" readonly></div>
-              </div>
-              <div class="mb-3 row align-items-center mx-3">
-                <label for="parentContactNo" class="col-sm-3 col-form-label fw-bold">Contact Number</label>
-                <div class="col-sm-9"><input type="tel" class="form-control" id="parentContactNo" value="<?php echo e($student->parent->guardian_contact_number ?? ''); ?>" readonly></div>
-              </div>
-              <div class="mb-3 row align-items-center mx-3">
-                <label for="parentEmail" class="col-sm-3 col-form-label fw-bold">Email</label>
-                <div class="col-sm-9"><input type="email" class="form-control" id="parentEmail" value="<?php echo e($student->parent->guardian_email ?? ''); ?>" readonly></div>
-              </div>
-              <div class="mb-3 row align-items-center mx-3">
-                <label for="parentAddress" class="col-sm-3 col-form-label fw-bold">Address</label>
-                <div class="col-sm-9"><textarea class="form-control" id="parentAddress" rows="2" readonly><?php echo e($student->parent->guardian_address ?? ''); ?></textarea></div>
-              </div>
-              <div class="mb-3 row align-items-center mx-3">
-                <label for="parentEmergencyContact" class="col-sm-3 col-form-label fw-bold">Emergency Contact Number</label>
-                <div class="col-sm-9"><input type="text" class="form-control bg-danger text-white" id="parentEmergencyContact" value="<?php echo e($student->parent->emergency_contact_number ?? ''); ?>" readonly></div>
-              </div>
+            <!-- In the parent tab section of student_profile.blade.php -->
+            <div class="mb-3 row align-items-center mx-3">
+                <label for="parentName" class="col-sm-3 col-form-label fw-bold">Name <span class="text-danger">*</span></label>
+                <div class="col-sm-9">
+                    <input type="text" class="form-control" id="parentName" value="<?php echo e($student->parent->guardian_name ?? ''); ?>" readonly>
+                </div>
+            </div>
+            <div class="mb-3 row align-items-center mx-3">
+                <label for="parentProfession" class="col-sm-3 col-form-label fw-bold">Profession <span class="text-danger">*</span></label>
+                <div class="col-sm-9">
+                    <input type="text" class="form-control" id="parentProfession" value="<?php echo e($student->parent->guardian_profession ?? ''); ?>" readonly>
+                </div>
+            </div>
+            <div class="mb-3 row align-items-center mx-3">
+                <label for="parentContactNo" class="col-sm-3 col-form-label fw-bold">Contact Number <span class="text-danger">*</span></label>
+                <div class="col-sm-9">
+                    <input type="tel" class="form-control" id="parentContactNo" value="<?php echo e($student->parent->guardian_contact_number ?? ''); ?>" readonly>
+                </div>
+            </div>
+            <div class="mb-3 row align-items-center mx-3">
+                <label for="parentEmail" class="col-sm-3 col-form-label fw-bold">Email <span class="text-danger">*</span></label>
+                <div class="col-sm-9">
+                    <input type="email" class="form-control" id="parentEmail" value="<?php echo e($student->parent->guardian_email ?? ''); ?>" readonly>
+                </div>
+            </div>
+            <div class="mb-3 row align-items-center mx-3">
+                <label for="parentAddress" class="col-sm-3 col-form-label fw-bold">Address <span class="text-danger">*</span></label>
+                <div class="col-sm-9">
+                    <textarea class="form-control" id="parentAddress" rows="2" readonly><?php echo e($student->parent->guardian_address ?? ''); ?></textarea>
+                </div>
+            </div>
+            <div class="mb-3 row align-items-center mx-3">
+                <label for="parentEmergencyContact" class="col-sm-3 col-form-label fw-bold">Emergency Contact Number <span class="text-danger">*</span></label>
+                <div class="col-sm-9">
+                    <input type="text" class="form-control bg-danger text-white" id="parentEmergencyContact" value="<?php echo e($student->parent->emergency_contact_number ?? ''); ?>" readonly>
+                </div>
+            </div>
               <div class="mt-4 mb-3">
                 <button type="button" class="btn btn-primary" id="showEditParentInfoBtn">Edit Parent/Guardian Info</button>
                 <button type="button" class="btn btn-success ms-2" id="updateParentInfoBtn" style="display:none;">Update Parent/Guardian Info</button>
@@ -820,6 +832,100 @@ function showErrorMessage(message){
 }
 
 // ---------- Helper: status UI ----------
+// Add these functions at the top with your other helper functions
+function isValidPhone(phone) {
+    // Allows formats like: +94771234567, 0771234567, 771234567
+    return /^(?:\+94|0)?[0-9]{9}$/.test(phone.replace(/\s/g, ''));
+}
+
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+// Update the updateParentInfoBtn click handler
+$('#updateParentInfoBtn').on('click', function() {
+    const studentId = $('#studentIdHidden').val();
+    if (!studentId) {
+        showErrorMessage('No student selected.');
+        return;
+    }
+
+    // Clear previous validation states
+    $('.is-invalid').removeClass('is-invalid');
+
+    // Validate all required fields
+    const fields = {
+        'guardian_name': $('#parentName').val().trim(),
+        'guardian_profession': $('#parentProfession').val().trim(),
+        'guardian_contact_number': $('#parentContactNo').val().trim(),
+        'guardian_email': $('#parentEmail').val().trim(),
+        'guardian_address': $('#parentAddress').val().trim(),
+        'emergency_contact_number': $('#parentEmergencyContact').val().trim()
+    };
+
+    let hasError = false;
+    const errors = [];
+
+    // Check empty fields
+    Object.entries(fields).forEach(([key, value]) => {
+        const $field = $(`#parent${key.split('_')[1].charAt(0).toUpperCase() + key.split('_')[1].slice(1)}`);
+        if (!value) {
+            $field.addClass('is-invalid');
+            hasError = true;
+            errors.push(`${key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}`);
+        }
+    });
+
+    // Validate phone numbers
+    if (fields.guardian_contact_number && !isValidPhone(fields.guardian_contact_number)) {
+        $('#parentContactNo').addClass('is-invalid');
+        hasError = true;
+        errors.push('Invalid Contact Number format');
+    }
+    if (fields.emergency_contact_number && !isValidPhone(fields.emergency_contact_number)) {
+        $('#parentEmergencyContact').addClass('is-invalid');
+        hasError = true;
+        errors.push('Invalid Emergency Contact Number format');
+    }
+
+    // Validate email
+    if (fields.guardian_email && !isValidEmail(fields.guardian_email)) {
+        $('#parentEmail').addClass('is-invalid');
+        hasError = true;
+        errors.push('Invalid Email format');
+    }
+
+    if (hasError) {
+        showErrorMessage('Please correct the following errors: ' + errors.join(', '));
+        return;
+    }
+
+    // Proceed with update if validation passes
+    const data = {
+        student_id: studentId,
+        ...fields,
+        _token: '<?php echo e(csrf_token()); ?>'
+    };
+
+    $.post("<?php echo e(route('student.update.parent.info')); ?>", data, function(resp) {
+        if (resp.success) {
+            showSuccessMessage('Parent/Guardian information updated successfully!');
+            $('#cancelEditParentBtn').click();
+            
+            // Update the display values
+            Object.entries(fields).forEach(([key, value]) => {
+                const $field = $(`#parent${key.split('_')[1].charAt(0).toUpperCase() + key.split('_')[1].slice(1)}`);
+                $field.val(value);
+            });
+        } else {
+            showErrorMessage(resp.message || 'Failed to update parent/guardian information.');
+        }
+    }).fail(function() {
+        showErrorMessage('An error occurred while updating parent/guardian information.');
+    });
+});
+
 function setStatusUI(status){
   const isTerminated=(status||'').toString().toLowerCase()==='terminated';
   const badge=$('#studentStatusBadge');
@@ -1101,6 +1207,9 @@ $(function(){
   });
 
   // ----- Parent edit buttons -----
+  // Show / cancel handlers remain. The actual update is handled by the
+  // validated handler defined earlier (to avoid duplicate bindings and
+  // inconsistent null submissions).
   $('#showEditParentInfoBtn').on('click', function(){
     $('#parentName,#parentProfession,#parentContactNo,#parentEmail,#parentAddress,#parentEmergencyContact').prop('readonly',false);
     $('#showEditParentInfoBtn').hide(); $('#updateParentInfoBtn,#cancelEditParentBtn').show();
@@ -1108,23 +1217,6 @@ $(function(){
   $('#cancelEditParentBtn').on('click', function(){
     $('#parentName,#parentProfession,#parentContactNo,#parentEmail,#parentAddress,#parentEmergencyContact').prop('readonly',true);
     $('#showEditParentInfoBtn').show(); $('#updateParentInfoBtn,#cancelEditParentBtn').hide();
-  });
-  $('#updateParentInfoBtn').on('click', function(){
-    const studentId=$('#studentIdHidden').val(); if(!studentId){ return showErrorMessage('No student selected.'); }
-    const data={
-      student_id:studentId,guardian_name:$('#parentName').val(),guardian_profession:$('#parentProfession').val(),
-      guardian_contact_number:$('#parentContactNo').val(),guardian_email:$('#parentEmail').val(),
-      guardian_address:$('#parentAddress').val(),emergency_contact_number:$('#parentEmergencyContact').val(),
-      _token:'<?php echo e(csrf_token()); ?>'
-    };
-    $.post("<?php echo e(route('student.update.parent.info')); ?>", data, function(resp){
-      if(resp.success){
-        showSuccessMessage('Parent/Guardian information updated successfully!');
-        $('#cancelEditParentBtn').click();
-      }else{
-        showErrorMessage(resp.message||'Failed to update parent/guardian information.');
-      }
-    }).fail(()=>showErrorMessage('An error occurred while updating parent/guardian information.'));
   });
 
   // ----- Exams tab dynamic -----
