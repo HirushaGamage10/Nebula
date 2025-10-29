@@ -2,6 +2,17 @@
 
 <?php $__env->startSection('content'); ?>
 <style>
+/* Validation Error Styles */
+.is-invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+.is-invalid:focus {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
 /* Success Message Styles */
 .success-message {
     position: fixed;
@@ -144,49 +155,49 @@
 
               
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentTitle" class="col-sm-3 col-form-label fw-bold">Title</label>
+                <label for="studentTitle" class="col-sm-3 col-form-label fw-bold">Title <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control" id="studentTitle" value="<?php echo e($student->title ?? ''); ?>" readonly>
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentName" class="col-sm-3 col-form-label fw-bold">Name</label>
+                <label for="studentName" class="col-sm-3 col-form-label fw-bold">Name <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control" id="studentName" value="<?php echo e($student->full_name ?? ''); ?>" readonly>
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentNIC" class="col-sm-3 col-form-label fw-bold">NIC</label>
+                <label for="studentNIC" class="col-sm-3 col-form-label fw-bold">NIC <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control" id="studentNIC" value="<?php echo e($student->id_value ?? ''); ?>" readonly>
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentInstitute" class="col-sm-3 col-form-label fw-bold">Institute</label>
+                <label for="studentInstitute" class="col-sm-3 col-form-label fw-bold">Institute <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control" id="studentInstitute" value="<?php echo e($student->institute_location ?? ''); ?>" readonly>
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentDOB" class="col-sm-3 col-form-label fw-bold">Date of Birth</label>
+                <label for="studentDOB" class="col-sm-3 col-form-label fw-bold">Date of Birth <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control" id="studentDOB" readonly>
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentGender" class="col-sm-3 col-form-label fw-bold">Gender</label>
+                <label for="studentGender" class="col-sm-3 col-form-label fw-bold">Gender <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <input type="text" class="form-control" id="studentGender" value="<?php echo e($student->gender ?? ''); ?>" readonly>
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentEmail" class="col-sm-3 col-form-label fw-bold">Email</label>
+                <label for="studentEmail" class="col-sm-3 col-form-label fw-bold">Email <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <input type="email" class="form-control" id="studentEmail" value="<?php echo e($student->email ?? ''); ?>" readonly>
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentMobile" class="col-sm-3 col-form-label fw-bold">Mobile Phone No</label>
+                <label for="studentMobile" class="col-sm-3 col-form-label fw-bold">Mobile Phone No <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <input type="tel" class="form-control" id="studentMobile" value="<?php echo e($student->mobile_phone ?? ''); ?>" readonly>
                 </div>
@@ -198,7 +209,7 @@
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentAddress" class="col-sm-3 col-form-label fw-bold">Address</label>
+                <label for="studentAddress" class="col-sm-3 col-form-label fw-bold">Address <span class="text-danger">*</span></label>
                 <div class="col-sm-9">
                   <textarea class="form-control" id="studentAddress" rows="2" readonly><?php echo e($student->address ?? ''); ?></textarea>
                 </div>
@@ -236,32 +247,51 @@
               </div>
             </div>
 
-            
-            <div class="tab-pane fade" id="parent">
-              <div class="mb-3 row align-items-center mx-3">
-                <label for="parentName" class="col-sm-3 col-form-label fw-bold">Name</label>
-                <div class="col-sm-9"><input type="text" class="form-control" id="parentName" value="<?php echo e($student->parent->guardian_name ?? ''); ?>" readonly></div>
-              </div>
-              <div class="mb-3 row align-items-center mx-3">
-                <label for="parentProfession" class="col-sm-3 col-form-label fw-bold">Profession</label>
-                <div class="col-sm-9"><input type="text" class="form-control" id="parentProfession" value="<?php echo e($student->parent->guardian_profession ?? ''); ?>" readonly></div>
-              </div>
-              <div class="mb-3 row align-items-center mx-3">
-                <label for="parentContactNo" class="col-sm-3 col-form-label fw-bold">Contact Number</label>
-                <div class="col-sm-9"><input type="tel" class="form-control" id="parentContactNo" value="<?php echo e($student->parent->guardian_contact_number ?? ''); ?>" readonly></div>
-              </div>
-              <div class="mb-3 row align-items-center mx-3">
-                <label for="parentEmail" class="col-sm-3 col-form-label fw-bold">Email</label>
-                <div class="col-sm-9"><input type="email" class="form-control" id="parentEmail" value="<?php echo e($student->parent->guardian_email ?? ''); ?>" readonly></div>
-              </div>
-              <div class="mb-3 row align-items-center mx-3">
-                <label for="parentAddress" class="col-sm-3 col-form-label fw-bold">Address</label>
-                <div class="col-sm-9"><textarea class="form-control" id="parentAddress" rows="2" readonly><?php echo e($student->parent->guardian_address ?? ''); ?></textarea></div>
-              </div>
-              <div class="mb-3 row align-items-center mx-3">
-                <label for="parentEmergencyContact" class="col-sm-3 col-form-label fw-bold">Emergency Contact Number</label>
-                <div class="col-sm-9"><input type="text" class="form-control bg-danger text-white" id="parentEmergencyContact" value="<?php echo e($student->parent->emergency_contact_number ?? ''); ?>" readonly></div>
-              </div>
+      
+      <div class="tab-pane fade" id="parent">
+      <!-- In the parent tab section of student_profile.blade.php -->
+    <div class="mb-3 row align-items-center mx-3">
+        <label for="parentName" class="col-sm-3 col-form-label fw-bold">Name <span class="text-danger">*</span></label>
+        <div class="col-sm-9">
+          <input type="text" class="form-control" id="parentName" value="<?php echo e($student->parent->guardian_name ?? ''); ?>" readonly>
+          <div class="invalid-feedback" id="parentNameFeedback" style="display:none;"></div>
+        </div>
+      </div>
+            <div class="mb-3 row align-items-center mx-3">
+                <label for="parentProfession" class="col-sm-3 col-form-label fw-bold">Profession <span class="text-danger">*</span></label>
+        <div class="col-sm-9">
+          <input type="text" class="form-control" id="parentProfession" value="<?php echo e($student->parent->guardian_profession ?? ''); ?>" readonly>
+          <div class="invalid-feedback" id="parentProfessionFeedback" style="display:none;"></div>
+        </div>
+            </div>
+            <div class="mb-3 row align-items-center mx-3">
+                <label for="parentContactNo" class="col-sm-3 col-form-label fw-bold">Contact Number <span class="text-danger">*</span></label>
+        <div class="col-sm-9">
+          <input type="tel" class="form-control" id="parentContactNo" value="<?php echo e($student->parent->guardian_contact_number ?? ''); ?>" readonly>
+          <div class="invalid-feedback" id="parentContactNoFeedback" style="display:none;"></div>
+        </div>
+            </div>
+            <div class="mb-3 row align-items-center mx-3">
+                <label for="parentEmail" class="col-sm-3 col-form-label fw-bold">Email <span class="text-danger">*</span></label>
+        <div class="col-sm-9">
+          <input type="email" class="form-control" id="parentEmail" value="<?php echo e($student->parent->guardian_email ?? ''); ?>" readonly>
+          <div class="invalid-feedback" id="parentEmailFeedback" style="display:none;"></div>
+        </div>
+            </div>
+            <div class="mb-3 row align-items-center mx-3">
+                <label for="parentAddress" class="col-sm-3 col-form-label fw-bold">Address <span class="text-danger">*</span></label>
+        <div class="col-sm-9">
+          <textarea class="form-control" id="parentAddress" rows="2" readonly><?php echo e($student->parent->guardian_address ?? ''); ?></textarea>
+          <div class="invalid-feedback" id="parentAddressFeedback" style="display:none;"></div>
+        </div>
+            </div>
+            <div class="mb-3 row align-items-center mx-3">
+                <label for="parentEmergencyContact" class="col-sm-3 col-form-label fw-bold">Emergency Contact Number <span class="text-danger">*</span></label>
+        <div class="col-sm-9">
+          <input type="text" class="form-control bg-danger text-white" id="parentEmergencyContact" value="<?php echo e($student->parent->emergency_contact_number ?? ''); ?>" readonly>
+          <div class="invalid-feedback" id="parentEmergencyContactFeedback" style="display:none;"></div>
+        </div>
+            </div>
               <div class="mt-4 mb-3">
                 <button type="button" class="btn btn-primary" id="showEditParentInfoBtn">Edit Parent/Guardian Info</button>
                 <button type="button" class="btn btn-success ms-2" id="updateParentInfoBtn" style="display:none;">Update Parent/Guardian Info</button>
@@ -432,7 +462,8 @@
                 </div>
                 <div class="col-md-6">
                   <label for="attendanceSemesterSelect" class="form-label fw-bold">Select Semester</label>
-                  <select id="attendanceSemesterSelect" class="form-select" disabled><option value="">Select a semester</option></select>
+                  <!-- Start not disabled in markup; JS will control enabled/disabled state -->
+                  <select id="attendanceSemesterSelect" class="form-select"><option value="">Select a semester</option></select>
                 </div>
               </div>
               <div id="attendanceTableWrapper" style="display:none;">
@@ -807,6 +838,132 @@ function showErrorMessage(message){
 }
 
 // ---------- Helper: status UI ----------
+// Add these functions at the top with your other helper functions
+function isValidPhone(phone) {
+    // Allows formats like: +94771234567, 0771234567, 771234567
+    return /^(?:\+94|0)?[0-9]{9}$/.test(phone.replace(/\s/g, ''));
+}
+
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+// Update the updateParentInfoBtn click handler
+$('#updateParentInfoBtn').on('click', function() {
+    const studentId = $('#studentIdHidden').val();
+    if (!studentId) {
+        showErrorMessage('No student selected.');
+        return;
+    }
+
+  // Clear previous validation states and inline feedback
+  $('.is-invalid').removeClass('is-invalid');
+  $('.invalid-feedback').text('').hide();
+
+    // Validate all required fields
+    const fields = {
+        'guardian_name': $('#parentName').val().trim(),
+        'guardian_profession': $('#parentProfession').val().trim(),
+        'guardian_contact_number': $('#parentContactNo').val().trim(),
+        'guardian_email': $('#parentEmail').val().trim(),
+        'guardian_address': $('#parentAddress').val().trim(),
+        'emergency_contact_number': $('#parentEmergencyContact').val().trim()
+    };
+
+    let hasError = false;
+    const errors = [];
+
+  // Check empty fields and show inline messages
+  Object.entries(fields).forEach(([key, value]) => {
+    const idKey = key.split('_')[1];
+    const $field = $(`#parent${idKey.charAt(0).toUpperCase() + idKey.slice(1)}`);
+    const feedbackSelector = `#${$field.attr('id')}Feedback`;
+    if (!value) {
+      $field.addClass('is-invalid');
+      $(feedbackSelector).text('This field is required.').show();
+      hasError = true;
+      errors.push(`${key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}`);
+    }
+  });
+
+    // Validate phone numbers
+  if (fields.guardian_contact_number && !isValidPhone(fields.guardian_contact_number)) {
+    $('#parentContactNo').addClass('is-invalid');
+    $('#parentContactNoFeedback').text('Invalid contact number format.').show();
+    hasError = true;
+    errors.push('Invalid Contact Number format');
+  }
+  if (fields.emergency_contact_number && !isValidPhone(fields.emergency_contact_number)) {
+    $('#parentEmergencyContact').addClass('is-invalid');
+    $('#parentEmergencyContactFeedback').text('Invalid emergency contact number format.').show();
+    hasError = true;
+    errors.push('Invalid Emergency Contact Number format');
+  }
+
+    // Validate email
+    if (fields.guardian_email && !isValidEmail(fields.guardian_email)) {
+        $('#parentEmail').addClass('is-invalid');
+        hasError = true;
+        errors.push('Invalid Email format');
+    }
+
+  if (hasError) {
+    showErrorMessage('Please correct the following errors: ' + errors.join(', '));
+    return;
+  }
+
+    // Proceed with update if validation passes
+    const data = {
+        student_id: studentId,
+        ...fields,
+        _token: '<?php echo e(csrf_token()); ?>'
+    };
+
+  $.post("<?php echo e(route('student.update.parent.info')); ?>", data, function(resp) {
+    if (resp.success) {
+      // Clear any inline errors
+      $('.invalid-feedback').text('').hide();
+      $('.is-invalid').removeClass('is-invalid');
+      showSuccessMessage('Parent/Guardian information updated successfully!');
+      $('#cancelEditParentBtn').click();
+            
+      // Update the display values
+      Object.entries(fields).forEach(([key, value]) => {
+        const idKey = key.split('_')[1];
+        const $field = $(`#parent${idKey.charAt(0).toUpperCase() + idKey.slice(1)}`);
+        $field.val(value);
+      });
+    } else {
+      showErrorMessage(resp.message || 'Failed to update parent/guardian information.');
+    }
+  }).fail(function(xhr) {
+    if (xhr && xhr.status === 422) {
+      const errors = (xhr.responseJSON && xhr.responseJSON.errors) ? xhr.responseJSON.errors : {};
+      const mapping = {
+        'guardian_name':'#parentName',
+        'guardian_profession':'#parentProfession',
+        'guardian_contact_number':'#parentContactNo',
+        'guardian_email':'#parentEmail',
+        'guardian_address':'#parentAddress',
+        'emergency_contact_number':'#parentEmergencyContact'
+      };
+      Object.keys(errors).forEach(function(field){
+        const sel = mapping[field] || ('#' + field);
+        const $el = $(sel);
+        if ($el.length) {
+          $el.addClass('is-invalid');
+          const feed = '#' + $el.attr('id') + 'Feedback';
+          $(feed).text(errors[field][0]).show();
+        }
+      });
+      showErrorMessage('Please correct the highlighted fields.');
+    } else {
+      showErrorMessage('An error occurred while updating parent/guardian information.');
+    }
+  });
+});
+
 function setStatusUI(status){
   const isTerminated=(status||'').toString().toLowerCase()==='terminated';
   const badge=$('#studentStatusBadge');
@@ -987,30 +1144,110 @@ $(function(){
   });
   $('#cancelEditBtn').on('click', function(){
     $('#studentTitle,#studentName,#studentNIC,#studentIndexNo,#studentInstitute,#studentDOB,#studentGender,#studentEmail,#studentMobile,#studentHomePhone,#studentEmergencyContact,#studentAddress,#studentFoundation,#studentSpecialNeeds,#studentExtraCurricular,#studentFuturePotentials').prop('readonly',true);
+    // Clear validation error classes
+    $('.is-invalid').removeClass('is-invalid');
     $('#showEditPersonalInfoBtn').show(); $('#updatePersonalInfoBtn,#cancelEditBtn').hide();
   });
   $('#updatePersonalInfoBtn').on('click', function(){
-    const studentId=$('#studentIdHidden').val(); if(!studentId){ return showErrorMessage('No student selected.'); }
+    const studentId=$('#studentIdHidden').val(); 
+    if(!studentId){ return showErrorMessage('No student selected.'); }
+    
+    // Validate required fields
+    const requiredFields = [
+      {id: '#studentTitle', name: 'Title'},
+      {id: '#studentName', name: 'Name'},
+      {id: '#studentNIC', name: 'NIC'},
+      {id: '#studentInstitute', name: 'Institute'},
+      {id: '#studentDOB', name: 'Date of Birth'},
+      {id: '#studentGender', name: 'Gender'},
+      {id: '#studentEmail', name: 'Email'},
+      {id: '#studentMobile', name: 'Mobile Phone No'},
+      {id: '#studentAddress', name: 'Address'}
+    ];
+    
+    let validationErrors = [];
+    
+    // Check each required field
+    requiredFields.forEach(function(field) {
+      const value = $(field.id).val();
+      if (!value || value.trim() === '') {
+        validationErrors.push(field.name);
+        $(field.id).addClass('is-invalid');
+      } else {
+        $(field.id).removeClass('is-invalid');
+      }
+    });
+    
+    // Email validation
+    const email = $('#studentEmail').val();
+    if (email && !isValidEmail(email)) {
+      validationErrors.push('Valid Email');
+      $('#studentEmail').addClass('is-invalid');
+    }
+    
+    // If there are validation errors, show them and return
+    if (validationErrors.length > 0) {
+      showErrorMessage('Please fill in all required fields: ' + validationErrors.join(', '));
+      return;
+    }
+    
     const data={
-      student_id:studentId,title:$('#studentTitle').val(),full_name:$('#studentName').val(),id_value:$('#studentNIC').val(),
-      registration_id:$('#studentIndexNo').val(),institute_location:$('#studentInstitute').val(),birthday:$('#studentDOB').val(),
-      gender:$('#studentGender').val(),email:$('#studentEmail').val(),mobile_phone:$('#studentMobile').val(),
-      home_phone:$('#studentHomePhone').val(),emergency_contact_number:$('#studentEmergencyContact').val(),
-      address:$('#studentAddress').val(),foundation_program:$('#studentFoundation').val(),special_needs:$('#studentSpecialNeeds').val(),
-      extracurricular_activities:$('#studentExtraCurricular').val(),future_potentials:$('#studentFuturePotentials').val(),
+      student_id:studentId,
+      title:$('#studentTitle').val(),
+      full_name:$('#studentName').val(),
+      id_value:$('#studentNIC').val(),
+      registration_id:$('#studentIndexNo').val(),
+      institute_location:$('#studentInstitute').val(),
+      birthday:$('#studentDOB').val(),
+      gender:$('#studentGender').val(),
+      email:$('#studentEmail').val(),
+      mobile_phone:$('#studentMobile').val(),
+      home_phone:$('#studentHomePhone').val(),
+      emergency_contact_number:$('#studentEmergencyContact').val(),
+      address:$('#studentAddress').val(),
+      foundation_program:$('#studentFoundation').val(),
+      special_needs:$('#studentSpecialNeeds').val(),
+      extracurricular_activities:$('#studentExtraCurricular').val(),
+      future_potentials:$('#studentFuturePotentials').val(),
       _token:'<?php echo e(csrf_token()); ?>'
     };
+    
     $.post("<?php echo e(route('student.update.personal.info')); ?>", data, function(resp){
       if(resp.success){
+        // Remove any validation error classes
+        $('.is-invalid').removeClass('is-invalid');
         showSuccessMessage('Personal information updated successfully!');
         $('#cancelEditBtn').click();
       }else{
-        showErrorMessage(resp.message||'Failed to update personal information.');
+        // Handle validation errors from server
+        if (resp.errors) {
+          let errorMessages = [];
+          Object.keys(resp.errors).forEach(function(field) {
+            errorMessages.push(resp.errors[field][0]);
+          });
+          showErrorMessage('Validation Error: ' + errorMessages.join(', '));
+        } else {
+          showErrorMessage(resp.message||'Failed to update personal information.');
+        }
       }
-    }).fail(()=>showErrorMessage('An error occurred while updating personal information.'));
+    }).fail(function(xhr) {
+      if (xhr.status === 422) {
+        const errors = xhr.responseJSON.errors;
+        let errorMessages = [];
+        Object.keys(errors).forEach(function(field) {
+          errorMessages.push(errors[field][0]);
+        });
+        showErrorMessage('Validation Error: ' + errorMessages.join(', '));
+      } else {
+        showErrorMessage('An error occurred while updating personal information.');
+      }
+    });
   });
 
   // ----- Parent edit buttons -----
+  // Show / cancel handlers remain. The actual update is handled by the
+  // validated handler defined earlier (to avoid duplicate bindings and
+  // inconsistent null submissions).
   $('#showEditParentInfoBtn').on('click', function(){
     $('#parentName,#parentProfession,#parentContactNo,#parentEmail,#parentAddress,#parentEmergencyContact').prop('readonly',false);
     $('#showEditParentInfoBtn').hide(); $('#updateParentInfoBtn,#cancelEditParentBtn').show();
@@ -1018,23 +1255,6 @@ $(function(){
   $('#cancelEditParentBtn').on('click', function(){
     $('#parentName,#parentProfession,#parentContactNo,#parentEmail,#parentAddress,#parentEmergencyContact').prop('readonly',true);
     $('#showEditParentInfoBtn').show(); $('#updateParentInfoBtn,#cancelEditParentBtn').hide();
-  });
-  $('#updateParentInfoBtn').on('click', function(){
-    const studentId=$('#studentIdHidden').val(); if(!studentId){ return showErrorMessage('No student selected.'); }
-    const data={
-      student_id:studentId,guardian_name:$('#parentName').val(),guardian_profession:$('#parentProfession').val(),
-      guardian_contact_number:$('#parentContactNo').val(),guardian_email:$('#parentEmail').val(),
-      guardian_address:$('#parentAddress').val(),emergency_contact_number:$('#parentEmergencyContact').val(),
-      _token:'<?php echo e(csrf_token()); ?>'
-    };
-    $.post("<?php echo e(route('student.update.parent.info')); ?>", data, function(resp){
-      if(resp.success){
-        showSuccessMessage('Parent/Guardian information updated successfully!');
-        $('#cancelEditParentBtn').click();
-      }else{
-        showErrorMessage(resp.message||'Failed to update parent/guardian information.');
-      }
-    }).fail(()=>showErrorMessage('An error occurred while updating parent/guardian information.'));
   });
 
   // ----- Exams tab dynamic -----
@@ -1076,9 +1296,42 @@ $(function(){
   }
   function fetchAttendanceSemesters(courseId){
     const sid=getStudentId(); if(!sid||!courseId) return;
+    const $s = $('#attendanceSemesterSelect');
+    // reset and show loading state
+    $s.empty().append('<option value="">Select a semester</option>');
+    $s.prop('disabled', true).attr('aria-busy', 'true');
+
     $.get('/api/student/'+sid+'/course/'+courseId+'/semesters', res=>{
-      const $s=$('#attendanceSemesterSelect').empty().append('<option value="">Select a semester</option>');
-      if(res.success && res.semesters.length){ res.semesters.forEach(v=>$s.append(`<option value="${v}">${v}</option>`)); $s.prop('disabled',false); } else { $s.prop('disabled',true); }
+      // DEBUG: show raw response in console to aid troubleshooting
+      try{ if(window && window.location && window.location.hostname && !window.location.hostname.includes('your-production-hostname')) console.debug('fetchAttendanceSemesters response:', res); }catch(e){}
+
+      // Normalize many possible API shapes: res.semesters, res.data.semesters, res.data (array), res (array)
+      let semesters = [];
+      if (Array.isArray(res)) semesters = res;
+      else if (res && Array.isArray(res.semesters)) semesters = res.semesters;
+      else if (res && res.data && Array.isArray(res.data.semesters)) semesters = res.data.semesters;
+      else if (res && res.data && Array.isArray(res.data)) semesters = res.data;
+      else if (res && res.success && Array.isArray(res.semesters)) semesters = res.semesters;
+
+      if (Array.isArray(semesters) && semesters.length){
+        semesters.forEach(function(v){
+          // guard: skip null/empty
+          if (v === null || typeof v === 'undefined') return;
+          const val = (typeof v === 'object' && v.semester) ? v.semester : v;
+          $s.append(`<option value="${val}">${val}</option>`);
+        });
+        // enable the select reliably
+        $s.prop('disabled', false);
+        $s.removeAttr('disabled');
+        $s.attr('aria-busy', 'false').attr('aria-disabled', 'false');
+      } else {
+        // no semesters: keep it disabled and show a helpful single option
+        $s.empty().append('<option value="">No semesters registered for this course</option>');
+        $s.prop('disabled', true).attr('disabled', 'disabled').attr('aria-busy', 'false');
+      }
+    }).fail(function(){
+      console.error('Failed to load semesters for course', courseId);
+      $s.empty().append('<option value="">Failed to load semesters</option>').prop('disabled', true).attr('disabled','disabled').attr('aria-busy','false');
     });
   }
   function fetchAttendanceTable(courseId, sem){
@@ -1559,6 +1812,8 @@ $(function(){
       }
     }
   };
+
+  // (email validation helper is defined earlier)
 
   // On initial load, populate from server (if provided)
   <?php if(isset($student)): ?>
