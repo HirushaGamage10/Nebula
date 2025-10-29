@@ -527,6 +527,14 @@ Route::middleware(['auth', 'role:DGM,Developer'])->group(function () {
             'name' => $reg->student->full_name,
         ]);
     });
+
+    // Approve with reason + attachment (DGM action)
+    Route::post('/special-approval/approve', [\App\Http\Controllers\SpecialApprovalController::class, 'approveWithAttachment'])
+        ->name('special.approval.approve');
+
+    // Reject with reason (DGM action)
+    Route::post('/reject-special-registration', [\App\Http\Controllers\SpecialApprovalController::class, 'rejectWithReason'])
+        ->name('special.approval.reject');
 });
 
 // Special Approval Request - DGM, Student Counselor, and Developer
@@ -644,6 +652,12 @@ Route::post('/special-approval-register', [SpecialApprovalController::class, 're
 // Special approval document download route
 Route::get('/special-approval-document/{filename}', [SpecialApprovalController::class, 'downloadDocument'])->name('special.approval.document.download');
 // Removed duplicate route - using EligibilityCheckingAndRegistrationController@getSpecialApprovalList instead
+
+// Special Approval Rejected list (DGM & Developer)
+Route::middleware(['auth', 'role:DGM,Developer'])->group(function () {
+    Route::get('/get-special-approval-rejected', [\App\Http\Controllers\EligibilityCheckingAndRegistrationController::class, 'getSpecialApprovalRejectedList'])
+        ->name('special.approval.rejected');
+});
 
 // Payment Clearance - Bursar and Developer only
 Route::middleware(['auth', 'role:Bursar,Developer'])->group(function () {

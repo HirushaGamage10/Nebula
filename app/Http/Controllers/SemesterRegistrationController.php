@@ -438,17 +438,25 @@ class SemesterRegistrationController extends Controller
         return response()->json(['success' => true, 'message' => 'Request rejected. Student remains terminated.']);
     }
 
-    // Return all "terminated → re-register" requests for the Special Approval tab
+    // Return terminated → re-register requests
     public function terminatedRequests(Request $request)
     {
-        // Pull semester registrations that are currently terminated,
-        // asked to move to "registered", and are pending DGM approval.
-        $rows = SemesterRegistration::with(['student', 'course', 'intake', 'semester'])
-            ->where('status', 'terminated')
-            ->where('desired_status', 'registered')
-            ->where('approval_status', 'pending')
-            ->orderByDesc('approval_requested_at')
-            ->get();
+        $status = strtolower($request->query('status', 'pending')); // pending | rejected | approved
+
+        $query = SemesterRegistration::with(['student', 'course', 'intake', 'semester'])
+            ->where('status', 'terminated');
+
+        if ($status === 'rejected') {
+            $query->where('approval_status', 'rejected');
+        } elseif ($status === 'approved') {
+            $query->where('approval_status', 'approved');
+        } else {
+            // pending
+            $query->where('desired_status', 'registered')
+                  ->where('approval_status', 'pending');
+        }
+
+        $rows = $query->orderByDesc('approval_requested_at')->orderByDesc('approval_decided_at')->get();
 
         // Shape the payload expected by the front-end
         $requests = $rows->map(function ($r) {
@@ -469,6 +477,7 @@ class SemesterRegistrationController extends Controller
                     ? \Storage::disk('public')->url($r->approval_file_path)
                     : null,
                 'requested_at'   => optional($r->approval_requested_at)->toDateTimeString(),
+                'rejected_at'    => $r->approval_status === 'rejected' ? optional($r->approval_decided_at)->toDateTimeString() : null,
             ];
         });
 

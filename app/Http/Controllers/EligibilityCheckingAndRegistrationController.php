@@ -337,6 +337,31 @@ class EligibilityCheckingAndRegistrationController extends Controller
         return response()->json(['success' => true, 'students' => $mappedData]);
     }
 
+    // Rejected Special Approval list
+    public function getSpecialApprovalRejectedList(Request $request)
+    {
+        $registrations = CourseRegistration::where('status', 'Special approval required')
+            ->where('approval_status', 'Rejected')
+            ->with(['student', 'course', 'intake'])
+            ->get();
+
+        $mapped = $registrations->map(function ($reg) {
+            return [
+                'registration_number' => $reg->student->registration_id ?? $reg->student->student_id,
+                'student_id' => $reg->student->student_id,
+                'registration_id' => $reg->id,
+                'name' => $reg->student->full_name,
+                'nic' => $reg->student->id_value ?? $reg->student->nic_number ?? 'N/A',
+                'course_name' => $reg->course->course_name ?? 'Unknown Course',
+                'intake' => $reg->intake ? $reg->intake->batch : '—',
+                'reason' => $reg->remarks ?? '—',
+                'rejected_at' => optional($reg->updated_at)->format('Y-m-d H:i'),
+            ];
+        });
+
+        return response()->json(['success' => true, 'students' => $mapped]);
+    }
+
     // Register eligible student
     public function registerEligibleStudent(Request $request)
     {

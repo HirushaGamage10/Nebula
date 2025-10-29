@@ -1,7 +1,6 @@
-@extends('inc.app')
-@section('title', 'NEBULA | Special Approval List')
+<?php $__env->startSection('title', 'NEBULA | Special Approval List'); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
 <style>
 /* Toast-like messages */
 .success-message,.error-message{
@@ -322,7 +321,7 @@
   </div>
   </div>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 // mini toast helpers
 function showSuccessMessage(msg){const m=document.createElement('div');m.className='success-message';m.innerHTML=`<i class="ti ti-check-circle success-icon"></i>${msg}`;document.body.appendChild(m);setTimeout(()=>m.classList.add('show'),100);setTimeout(()=>{m.classList.remove('show');setTimeout(()=>m.remove(),300)},4000)}
@@ -459,10 +458,10 @@ document.addEventListener('DOMContentLoaded', function() {
       const btn = approveForm.querySelector('button[type="submit"]');
       const original = btn.textContent;
       btn.disabled = true; btn.textContent = 'Saving…';
-      fetch('{{ route('special.approval.approve') }}', {
+      fetch('<?php echo e(route('special.approval.approve')); ?>', {
         method: 'POST',
         body: fd,
-        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+        headers: { 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' }
       })
       .then(r=>r.json())
       .then(d=>{
@@ -491,9 +490,9 @@ document.addEventListener('DOMContentLoaded', function() {
       const btn = rejectForm.querySelector('button[type="submit"]');
       const original = btn.textContent;
       btn.disabled = true; btn.textContent = 'Rejecting…';
-      fetch('{{ route('special.approval.reject') }}', {
+      fetch('<?php echo e(route('special.approval.reject')); ?>', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' },
         body: JSON.stringify(payload)
       })
       .then(r=>r.json())
@@ -514,7 +513,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function loadRejectedRegistrations(){
     if (!rejectedTableBody) return;
     rejectedTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading…</td></tr>';
-    fetch('{{ route('special.approval.rejected') }}')
+    fetch('<?php echo e(route('special.approval.rejected')); ?>')
       .then(r=>r.json())
       .then(d=>{
         if (!d.success || !d.students || d.students.length === 0) {
@@ -545,7 +544,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const txt = document.getElementById('editCommentText').value;
     if(!rid){ showErrorMessage('Registration ID is required.'); return; }
     const btn=this; btn.disabled=true; btn.innerHTML='<span class="spinner-border spinner-border-sm"></span> Saving...';
-    fetch('/update-dgm-comment',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},body:JSON.stringify({registration_id:rid,dgm_comment:txt})})
+    fetch('/update-dgm-comment',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'<?php echo e(csrf_token()); ?>'},body:JSON.stringify({registration_id:rid,dgm_comment:txt})})
       .then(r=>r.json()).then(d=>{
         if(d.success){ bootstrap.Modal.getInstance(document.getElementById('editCommentModal')).hide(); location.reload(); }
         else showErrorMessage(d.message||'Failed to update comment.');
@@ -624,7 +623,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if(!confirm('Approve this re‑registration?')) return;
       fetch('/semester-registration/approve-reregister', {
         method:'POST',
-        headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},
+        headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'<?php echo e(csrf_token()); ?>'},
         body:JSON.stringify({ request_id:id })
       })
       .then(r=>r.json())
@@ -710,7 +709,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
       fetch('/semester-registration/reject-reregister', {
         method:'POST',
-        headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},
+        headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'<?php echo e(csrf_token()); ?>'},
         body: JSON.stringify({ student_id: sid, intake_id: iid, semester_id: sem, comment: reason })
       })
       .then(r=>r.json())
@@ -732,5 +731,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 });
 </script>
-@endpush
-@endsection
+<?php $__env->stopPush(); ?>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/nebula final/Nebula/resources/views/Special_approval_list.blade.php ENDPATH**/ ?>
