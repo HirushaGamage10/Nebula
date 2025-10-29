@@ -1,8 +1,6 @@
-@extends('inc.app')
+<?php $__env->startSection('title', 'NEBULA | All Clearance'); ?>
 
-@section('title', 'NEBULA | All Clearance')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -39,9 +37,9 @@
                             <div class="col-sm-9">
                                 <select id="courseDropdown" class="form-select" required>
                                     <option selected disabled value="">Select Course</option>
-                                    @foreach($courses as $course)
-                                        <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
-                                    @endforeach
+                                    <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </select>
                             </div>
                         </div>
@@ -66,39 +64,39 @@
                                 <tr>
                                     <td>Payment</td>
                                     <td>
-                                        @if(auth()->user()->user_role === 'Program Administrator (level 01)' || auth()->user()->user_role === 'Developer')
+                                        <?php if(auth()->user()->user_role === 'Program Administrator (level 01)' || auth()->user()->user_role === 'Developer'): ?>
                                             <button class="btn px-4 send-clearance-btn" data-type="payment" style="background-color: #5D9CFF; color: white;">Send</button>
-                                        @endif
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td>Library</td>
                                     <td>
-                                        @if(auth()->user()->user_role === 'Program Administrator (level 01)' || auth()->user()->user_role === 'Developer')
+                                        <?php if(auth()->user()->user_role === 'Program Administrator (level 01)' || auth()->user()->user_role === 'Developer'): ?>
                                             <button class="btn px-4 send-clearance-btn" data-type="library" style="background-color: #5D9CFF; color: white;">Send</button>
-                                        @endif
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td>Hostel</td>
                                     <td>
-                                        @if(auth()->user()->user_role === 'Program Administrator (level 01)' || auth()->user()->user_role === 'Developer')
+                                        <?php if(auth()->user()->user_role === 'Program Administrator (level 01)' || auth()->user()->user_role === 'Developer'): ?>
                                             <button class="btn px-4 send-clearance-btn" data-type="hostel" style="background-color: #5D9CFF; color: white;">Send</button>
-                                        @endif
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td>Project Tutor</td>
                                     <td>
-                                        @if(auth()->user()->user_role === 'Program Administrator (level 01)' || auth()->user()->user_role === 'Developer')
+                                        <?php if(auth()->user()->user_role === 'Program Administrator (level 01)' || auth()->user()->user_role === 'Developer'): ?>
                                             <button class="btn px-4 send-clearance-btn" data-type="project" style="background-color: #5D9CFF; color: white;">Send</button>
-                                        @endif
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                    @if(in_array(auth()->user()->user_role, ['Librarian', 'Hostel Manager', 'Bursar', 'Project Tutor']))
+                    <?php if(in_array(auth()->user()->user_role, ['Librarian', 'Hostel Manager', 'Bursar', 'Project Tutor'])): ?>
                     <div id="studentListSection" style="display:none;">
                         <h5 class="fw-bold mb-3">Students in Selected Intake</h5>
                         <div class="table-responsive">
@@ -116,7 +114,7 @@
                             </table>
                         </div>
                 </div>
-                    @endif
+                    <?php endif; ?>
                 </div>
                 <!-- Individual Clearance Tab -->
                 <div class="tab-pane fade" id="individual-clearance" role="tabpanel" aria-labelledby="individual-tab">
@@ -137,9 +135,9 @@
                             <div class="col-sm-9">
                                 <select id="ind_courseDropdown" class="form-select" required>
                                     <option selected disabled value="">Select Course</option>
-                                    @foreach($courses as $course)
-                                        <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
-                                    @endforeach
+                                    <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </select>
                             </div>
                         </div>
@@ -172,33 +170,33 @@
                 <tr>
                     <td>Payment</td>
                                     <td>
-                                        @if(auth()->user()->user_role === 'Program Administrator (level 01)' || auth()->user()->user_role === 'Developer')
+                                        <?php if(auth()->user()->user_role === 'Program Administrator (level 01)' || auth()->user()->user_role === 'Developer'): ?>
                                             <button class="btn px-4 send-individual-clearance-btn" data-type="payment" style="background-color: #5D9CFF; color: white;">Send</button>
-                                        @endif
+                                        <?php endif; ?>
                                     </td>
                 </tr>
                 <tr>
                     <td>Library</td>
                                     <td>
-                                        @if(auth()->user()->user_role === 'Program Administrator (level 01)' || auth()->user()->user_role === 'Developer')
+                                        <?php if(auth()->user()->user_role === 'Program Administrator (level 01)' || auth()->user()->user_role === 'Developer'): ?>
                                             <button class="btn px-4 send-individual-clearance-btn" data-type="library" style="background-color: #5D9CFF; color: white;">Send</button>
-                                        @endif
+                                        <?php endif; ?>
                                     </td>
                 </tr>
                 <tr>
                     <td>Hostel</td>
                                     <td>
-                                        @if(auth()->user()->user_role === 'Program Administrator (level 01)' || auth()->user()->user_role === 'Developer')
+                                        <?php if(auth()->user()->user_role === 'Program Administrator (level 01)' || auth()->user()->user_role === 'Developer'): ?>
                                             <button class="btn px-4 send-individual-clearance-btn" data-type="hostel" style="background-color: #5D9CFF; color: white;">Send</button>
-                                        @endif
+                                        <?php endif; ?>
                                     </td>
                 </tr>
                 <tr>
                     <td>Project Tutor</td>
                                     <td>
-                                        @if(auth()->user()->user_role === 'Program Administrator (level 01)' || auth()->user()->user_role === 'Developer')
+                                        <?php if(auth()->user()->user_role === 'Program Administrator (level 01)' || auth()->user()->user_role === 'Developer'): ?>
                                             <button class="btn px-4 send-individual-clearance-btn" data-type="project" style="background-color: #5D9CFF; color: white;">Send</button>
-                                        @endif
+                                        <?php endif; ?>
                                     </td>
                 </tr>
             </tbody>
@@ -215,7 +213,7 @@
                             <div class="col-md-3">
                                 <div class="card bg-warning text-white">
                                     <div class="card-body text-center">
-                                        <h4 class="card-title">{{ $pendingRequests->count() }}</h4>
+                                        <h4 class="card-title"><?php echo e($pendingRequests->count()); ?></h4>
                                         <p class="card-text">Pending Requests</p>
                                     </div>
                                 </div>
@@ -223,7 +221,7 @@
                             <div class="col-md-3">
                                 <div class="card bg-success text-white">
                                     <div class="card-body text-center">
-                                        <h4 class="card-title">{{ $approvedRequests->count() }}</h4>
+                                        <h4 class="card-title"><?php echo e($approvedRequests->count()); ?></h4>
                                         <p class="card-text">Approved Requests</p>
                                     </div>
                                 </div>
@@ -231,7 +229,7 @@
                             <div class="col-md-3">
                                 <div class="card bg-danger text-white">
                                     <div class="card-body text-center">
-                                        <h4 class="card-title">{{ $rejectedRequests->count() }}</h4>
+                                        <h4 class="card-title"><?php echo e($rejectedRequests->count()); ?></h4>
                                         <p class="card-text">Rejected Requests</p>
                                     </div>
                                 </div>
@@ -239,7 +237,7 @@
                             <div class="col-md-3">
                                 <div class="card bg-info text-white">
                                     <div class="card-body text-center">
-                                        <h4 class="card-title">{{ $allClearanceRequests->count() }}</h4>
+                                        <h4 class="card-title"><?php echo e($allClearanceRequests->count()); ?></h4>
                                         <p class="card-text">Total Requests</p>
                                     </div>
                                 </div>
@@ -254,7 +252,7 @@
                                 <h5 class="mb-0"><i class="ti ti-users"></i> Intake Clearance Requests</h5>
                             </div>
                             <div class="card-body">
-                                @if($intakeRequests->count() > 0)
+                                <?php if($intakeRequests->count() > 0): ?>
                                     <div class="table-responsive">
                                         <table class="table table-hover">
                                             <thead class="table-light">
@@ -271,65 +269,66 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach($intakeRequests as $request)
+                                                <?php $__currentLoopData = $intakeRequests; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $request): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                     <tr>
                                                         <td>
-                                                            <strong>{{ $request->intake->batch }}</strong>
+                                                            <strong><?php echo e($request->intake->batch); ?></strong>
                                                         </td>
-                                                        <td>{{ $request->course->course_name }}</td>
-                                                        <td>{{ $request->location }}</td>
+                                                        <td><?php echo e($request->course->course_name); ?></td>
+                                                        <td><?php echo e($request->location); ?></td>
                                                         <td>
                                                             <span class="badge bg-secondary">
-                                                                {{ ucfirst($request->clearance_type) }}
+                                                                <?php echo e(ucfirst($request->clearance_type)); ?>
+
                                                             </span>
                                                         </td>
                                                         <td>
-                                                            <span class="badge bg-info">{{ $request->total_students }}</span>
+                                                            <span class="badge bg-info"><?php echo e($request->total_students); ?></span>
                                                         </td>
                                                         <td>
                                                             <div class="d-flex align-items-center">
-                                                                <span class="badge bg-success me-1">{{ $request->approved_count }} Approved</span>
-                                                                <span class="badge bg-danger me-1">{{ $request->rejected_count }} Rejected</span>
-                                                                <span class="badge bg-warning">{{ $request->pending_count }} Pending</span>
+                                                                <span class="badge bg-success me-1"><?php echo e($request->approved_count); ?> Approved</span>
+                                                                <span class="badge bg-danger me-1"><?php echo e($request->rejected_count); ?> Rejected</span>
+                                                                <span class="badge bg-warning"><?php echo e($request->pending_count); ?> Pending</span>
                                                             </div>
                                                         </td>
-                                                        <td>{{ \Carbon\Carbon::parse($request->requested_at)->format('d/m/Y H:i') }}</td>
+                                                        <td><?php echo e(\Carbon\Carbon::parse($request->requested_at)->format('d/m/Y H:i')); ?></td>
                                                         <td>
-                                                            @php
+                                                            <?php
                                                                 $progress = $request->total_students > 0 ? 
                                                                     round(($request->received_count / $request->total_students) * 100) : 0;
-                                                            @endphp
+                                                            ?>
                                                             <div class="progress" style="height: 20px;">
                                                                 <div class="progress-bar bg-success" role="progressbar" 
-                                                                     style="width: {{ $progress }}%" 
-                                                                     aria-valuenow="{{ $progress }}" 
+                                                                     style="width: <?php echo e($progress); ?>%" 
+                                                                     aria-valuenow="<?php echo e($progress); ?>" 
                                                                      aria-valuemin="0" 
                                                                      aria-valuemax="100">
-                                                                    {{ $progress }}%
+                                                                    <?php echo e($progress); ?>%
                                                                 </div>
                                                             </div>
                                                         </td>
                                                         <td>
                                                             <button class="btn btn-sm btn-outline-primary view-intake-details" 
-                                                                    data-intake="{{ $request->intake->intake_id }}"
-                                                                    data-course="{{ $request->course->course_id }}"
-                                                                    data-location="{{ $request->location }}"
-                                                                    data-type="{{ $request->clearance_type }}">
+                                                                    data-intake="<?php echo e($request->intake->intake_id); ?>"
+                                                                    data-course="<?php echo e($request->course->course_id); ?>"
+                                                                    data-location="<?php echo e($request->location); ?>"
+                                                                    data-type="<?php echo e($request->clearance_type); ?>">
                                                                 <i class="ti ti-eye"></i> View Details
                                                             </button>
                                                         </td>
                                                     </tr>
-                                                @endforeach
+                                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                             </tbody>
                                         </table>
                                     </div>
-                                @else
+                                <?php else: ?>
                                     <div class="text-center py-4">
                                         <i class="ti ti-info-circle text-info" style="font-size: 3rem;"></i>
                                         <h5 class="mt-3">No Intake Clearance Requests</h5>
                                         <p class="text-muted">No intake clearance requests have been sent yet.</p>
                                     </div>
-                                @endif
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -341,7 +340,7 @@
                                 <h5 class="mb-0"><i class="ti ti-user"></i> Individual Clearance Requests</h5>
                             </div>
                             <div class="card-body">
-                                @if($individualRequests->count() > 0)
+                                <?php if($individualRequests->count() > 0): ?>
                                     <div class="table-responsive">
                                         <table class="table table-hover">
                                             <thead class="table-light">
@@ -360,39 +359,41 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach($individualRequests as $request)
+                                                <?php $__currentLoopData = $individualRequests; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $request): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                                     <tr>
-                                                        <td>{{ $request->student->student_id }}</td>
-                                                        <td>{{ $request->student->name_with_initials }}</td>
+                                                        <td><?php echo e($request->student->student_id); ?></td>
+                                                        <td><?php echo e($request->student->name_with_initials); ?></td>
                                                         <td>
                                                             <span class="badge bg-secondary">
-                                                                {{ ucfirst($request->clearance_type) }}
+                                                                <?php echo e(ucfirst($request->clearance_type)); ?>
+
                                                             </span>
                                                         </td>
-                                                        <td>{{ $request->course->course_name }}</td>
-                                                        <td>{{ $request->intake->batch ?? 'N/A' }}</td>
-                                                        <td>{{ $request->location }}</td>
+                                                        <td><?php echo e($request->course->course_name); ?></td>
+                                                        <td><?php echo e($request->intake->batch ?? 'N/A'); ?></td>
+                                                        <td><?php echo e($request->location); ?></td>
                                                         <td>
-                                                            <span class="badge bg-{{ $request->status_color }}">
-                                                                {{ $request->status_text }}
+                                                            <span class="badge bg-<?php echo e($request->status_color); ?>">
+                                                                <?php echo e($request->status_text); ?>
+
                                                             </span>
                                                         </td>
-                                                        <td>{{ $request->requested_at->format('d/m/Y H:i') }}</td>
-                                                        <td>{{ $request->approvedBy->name ?? 'N/A' }}</td>
-                                                        <td>{{ $request->approved_at ? $request->approved_at->format('d/m/Y H:i') : 'N/A' }}</td>
-                                                        <td>{{ $request->remarks ?? 'N/A' }}</td>
+                                                        <td><?php echo e($request->requested_at->format('d/m/Y H:i')); ?></td>
+                                                        <td><?php echo e($request->approvedBy->name ?? 'N/A'); ?></td>
+                                                        <td><?php echo e($request->approved_at ? $request->approved_at->format('d/m/Y H:i') : 'N/A'); ?></td>
+                                                        <td><?php echo e($request->remarks ?? 'N/A'); ?></td>
                                                     </tr>
-                                                @endforeach
+                                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                             </tbody>
                                         </table>
                                     </div>
-                                @else
+                                <?php else: ?>
                                     <div class="text-center py-4">
                                         <i class="ti ti-info-circle text-info" style="font-size: 3rem;"></i>
                                         <h5 class="mt-3">No Individual Clearance Requests</h5>
                                         <p class="text-muted">No individual clearance requests have been sent yet.</p>
                                     </div>
-                                @endif
+                                <?php endif; ?>
                             </div>
                             </div>
                         </div>
@@ -428,9 +429,9 @@
 <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
 </div>
 
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 $(document).ready(function() {
     // Intake dropdown population
@@ -441,12 +442,12 @@ $(document).ready(function() {
         if($('#courseDropdown').val() && $('#locationDropdown').val()) {
             // AJAX to get intakes for course/location
             $.ajax({
-                url: '{{ route('module.management.getIntakes') }}',
+                url: '<?php echo e(route('module.management.getIntakes')); ?>',
                 method: 'POST',
                 data: {
                     course_id: $('#courseDropdown').val(),
                     location: $('#locationDropdown').val(),
-                    _token: '{{ csrf_token() }}'
+                    _token: '<?php echo e(csrf_token()); ?>'
                 },
                 success: function(response) {
                     if(response.success) {
@@ -464,10 +465,10 @@ $(document).ready(function() {
     $('#intakeDropdown').on('change', function() {
         if($('#locationDropdown').val() && $('#courseDropdown').val() && $('#intakeDropdown').val()) {
             $('#clearanceTableSection').show();
-            @if(in_array(auth()->user()->user_role, ['Librarian', 'Hostel Manager', 'Bursar', 'Project Tutor']))
+            <?php if(in_array(auth()->user()->user_role, ['Librarian', 'Hostel Manager', 'Bursar', 'Project Tutor'])): ?>
             loadStudentList();
             $('#studentListSection').show();
-            @endif
+            <?php endif; ?>
             } else {
             $('#clearanceTableSection').hide();
             $('#studentListSection').hide();
@@ -491,14 +492,14 @@ $(document).ready(function() {
         
         // AJAX to backend to send notification (to be implemented)
         $.ajax({
-            url: '{{ route('clearance.sendRequest') }}',
+            url: '<?php echo e(route('clearance.sendRequest')); ?>',
             method: 'POST',
             data: {
                 type: type,
                 location: location,
                 course_id: courseId,
                 intake_id: intakeId,
-                _token: '{{ csrf_token() }}'
+                _token: '<?php echo e(csrf_token()); ?>'
             },
             success: function(response) {
                 showToast(response.message || 'Clearance request sent successfully!', 'success');
@@ -536,11 +537,11 @@ $(document).ready(function() {
         const intakeId = $('#intakeDropdown').val();
         if(!intakeId) return;
         $.ajax({
-            url: '{{ route('clearance.getStudentsForIntake') }}',
+            url: '<?php echo e(route('clearance.getStudentsForIntake')); ?>',
             method: 'POST',
             data: {
                 intake_id: intakeId,
-                _token: '{{ csrf_token() }}'
+                _token: '<?php echo e(csrf_token()); ?>'
             },
             success: function(response) {
                 if(response.success) {
@@ -567,14 +568,14 @@ $(document).ready(function() {
         
         // AJAX to get detailed student list for this intake request
         $.ajax({
-            url: '{{ route("clearance.getIntakeDetails") }}',
+            url: '<?php echo e(route("clearance.getIntakeDetails")); ?>',
             method: 'POST',
             data: {
                 intake_id: intakeId,
                 course_id: courseId,
                 location: location,
                 clearance_type: type,
-                _token: '{{ csrf_token() }}'
+                _token: '<?php echo e(csrf_token()); ?>'
             },
             success: function(response) {
                 if(response.success) {
@@ -653,9 +654,9 @@ $(function(){
         const location = $('#ind_locationDropdown').val();
         if(!courseId || !location) return;
         $.ajax({
-            url: '{{ route('module.management.getIntakes') }}',
+            url: '<?php echo e(route('module.management.getIntakes')); ?>',
             method: 'POST',
-            data: { course_id: courseId, location: location, _token: '{{ csrf_token() }}' },
+            data: { course_id: courseId, location: location, _token: '<?php echo e(csrf_token()); ?>' },
             success: function(res){
                 if(res && res.success){
                     const $intake = $('#ind_intakeDropdown').empty().append('<option selected disabled value="">Select Intake</option>');
@@ -672,9 +673,9 @@ $(function(){
         if(!intakeId) return;
         $('#ind_studentDropdown').prop('disabled', true).empty().append('<option selected disabled value="">Loading...</option>');
         $.ajax({
-            url: '{{ route('clearance.getStudentsForIntake') }}',
+            url: '<?php echo e(route('clearance.getStudentsForIntake')); ?>',
             method: 'POST',
-            data: { intake_id: intakeId, _token: '{{ csrf_token() }}' },
+            data: { intake_id: intakeId, _token: '<?php echo e(csrf_token()); ?>' },
             success: function(res){
                 const $std = $('#ind_studentDropdown').empty();
                 $std.append('<option selected disabled value="">Select Student</option>');
@@ -708,7 +709,7 @@ $(function(){
             course_id: $('#ind_courseDropdown').val(),
             intake_id: $('#ind_intakeDropdown').val(),
             student_id: $('#ind_studentDropdown').val(),
-            _token: '{{ csrf_token() }}'
+            _token: '<?php echo e(csrf_token()); ?>'
         };
 
         // quick validation
@@ -718,7 +719,7 @@ $(function(){
 
         $btn.addClass('loading').prop('disabled', true).text('Sending...');
         $.ajax({
-            url: '{{ route('clearance.sendRequest') }}',
+            url: '<?php echo e(route('clearance.sendRequest')); ?>',
             method: 'POST',
             data: payload,
             success: function(res){
@@ -740,4 +741,6 @@ $(function(){
     });
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/nebula final/Nebula/resources/views/all_clearance.blade.php ENDPATH**/ ?>

@@ -134,19 +134,24 @@ class AllClearanceController extends Controller
             'location' => 'required|string',
             'course_id' => 'required|exists:courses,course_id',
             'intake_id' => 'required|exists:intakes,intake_id',
+            'student_id' => 'nullable|exists:students,student_id', // optional for individual requests
         ]);
 
         try {
-            // Get all students registered for this course and intake
-            $students = CourseRegistration::where('course_id', $request->course_id)
+            // Get students registered for this course and intake (optionally for a single student)
+            $regQuery = CourseRegistration::where('course_id', $request->course_id)
                 ->where('intake_id', $request->intake_id)
                 ->where('location', $request->location)
                 ->where(function($query) {
                     $query->where('status', 'Registered')
                           ->orWhere('approval_status', 'Approved by DGM');
-                })
-                ->with('student')
-                ->get();
+                });
+
+            if ($request->filled('student_id')) {
+                $regQuery->where('student_id', $request->student_id);
+            }
+
+            $students = $regQuery->with('student')->get();
 
             $createdCount = 0;
             foreach ($students as $registration) {
@@ -171,9 +176,10 @@ class AllClearanceController extends Controller
                 }
             }
 
+            $scope = $request->filled('student_id') ? 'student' : 'students';
             return response()->json([
                 'success' => true, 
-                'message' => "Clearance requests sent successfully! {$createdCount} students notified."
+                'message' => "Clearance request(s) sent successfully! {$createdCount} {$scope} notified."
             ]);
         } catch (\Exception $e) {
             return response()->json([
