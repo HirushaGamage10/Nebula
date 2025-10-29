@@ -291,13 +291,22 @@ document.addEventListener('DOMContentLoaded', function() {
           </td>
           <td>${st.approval_status==1?'<span class="badge bg-success status-badge">Approved</span>':'<span class="badge bg-warning status-badge">Pending</span>'}</td>
           <td>${st.approval_status==1?'<span class="badge bg-success status-badge">Approved</span>':
-            `<button class="btn btn-success btn-sm approve-btn"
-               data-student-id="${st.student_id}"
-               data-student-nic="${nic}"
-               data-student-name="${st.name||''}"
-               data-course-id="${st.course_id||''}"
-               data-registration-number="${st.registration_number||''}"
-               data-intake="${st.intake||''}">Approve</button>`}
+            `<div class="d-flex gap-2">
+                <button class="btn btn-success btn-sm approve-btn"
+                   data-student-id="${st.student_id}"
+                   data-student-nic="${nic}"
+                   data-student-name="${st.name||''}"
+                   data-course-id="${st.course_id||''}"
+                   data-registration-number="${st.registration_number||''}"
+                   data-intake="${st.intake||''}">
+                   Approve
+                </button>
+                <button class="btn btn-outline-danger btn-sm reject-btn"
+                   data-student-id="${st.student_id}"
+                   data-registration-id="${st.registration_id}">
+                   Reject
+                </button>
+             </div>`}
           </td>
         </tr>`;
       tableBody.insertAdjacentHTML('beforeend', row);
@@ -341,6 +350,35 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('editCommentRegistrationId').value = editBtn.getAttribute('data-registration-id');
       document.getElementById('editCommentText').value = (editBtn.getAttribute('data-current-comment')||'').replace(/^No DGM comment$/,'');
       new bootstrap.Modal(document.getElementById('editCommentModal')).show();
+    }
+
+    if(e.target.closest('.reject-btn')) {
+        const studentId = e.target.closest('.reject-btn').getAttribute('data-student-id');
+        const registrationId = e.target.closest('.reject-btn').getAttribute('data-registration-id');
+        
+        if(confirm('Are you sure you want to reject this registration?')) {
+            fetch('/reject-special-registration', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    registration_id: registrationId
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if(data.success) {
+                    showSuccessMessage('Registration rejected successfully');
+                    loadStudentRegistrationData(); // Reload the table
+                } else {
+                    showErrorMessage(data.message || 'Failed to reject registration');
+                }
+            })
+            .catch(() => showErrorMessage('An error occurred while rejecting the registration'));
+        }
     }
   });
 
