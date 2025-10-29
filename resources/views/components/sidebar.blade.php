@@ -543,7 +543,6 @@
                     </a>
                 </li>
             @endif
-
             <hr>
             <div class="px-3 pb-3">
                 <div class="bg-light rounded p-3 d-flex flex-column gap-2 align-items-center">
@@ -551,6 +550,34 @@
                     <a href="{{ route('logout') }}" class="btn w-100" style="background-color: #ff8c7a; color: #fff; font-weight: 500;">Logout</a>
                 </div>
             </div>
+{{-- 🌐 Team Nebula IT --}}
+<li id="teamNebulaLink" class="text-center mb-3" style="opacity: 0.8; font-size: 13px;">
+    <a href="{{ route('team.phase.index') }}"
+       class="text-decoration-none d-inline-block py-1 px-2 rounded
+              {{ Route::currentRouteName() == 'team.phase.index'
+                    ? 'bg-light text-primary fw-semibold shadow-sm' 
+                    : 'text-muted' }}"
+       style="transition: all 0.3s;">
+        © Team Nebula IT
+    </a>
+</li>
+
+{{-- 🔽 Auto-scroll script when active --}}
+@if(Route::currentRouteName() == 'team.phase.index')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const link = document.getElementById('teamNebulaLink');
+            if (link) {
+                // Find the SimpleBar content element and scroll to the footer link
+                const sidebar = document.querySelector('.scroll-sidebar [data-simplebar=""]') || document.querySelector('.scroll-sidebar');
+                link.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    </script>
+@endif
+
+
+
         </ul>
     </nav>
 </div>

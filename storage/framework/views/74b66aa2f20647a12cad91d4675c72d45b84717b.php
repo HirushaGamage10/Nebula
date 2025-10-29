@@ -9,7 +9,9 @@
     <link href="<?php echo e(asset('css/styles.min.css')); ?>" rel="stylesheet">
     <!-- CSS -->
     <link rel="stylesheet" href="<?php echo e(asset('css/styles.min.css')); ?>">
-
+    <!-- Bootstrap Icons (for cleaner eye / eye-slash icons) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    
     <!-- JS -->
     <script src="<?php echo e(asset('js/app.js')); ?>"></script>
     <script src="<?php echo e(asset('libs/jquery/dist/jquery.min.js')); ?>"></script>
@@ -65,13 +67,26 @@
         border-left: 0;
         background: transparent;
         color: #495057;
-        padding: 0.5rem 0.75rem;
+        padding: 0.375rem 0.5rem;
         border-radius: 0 0.375rem 0.375rem 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        line-height: 1;
     }
 
     .input-group .btn-password:focus {
         box-shadow: none;
         outline: none;
+    }
+
+    /* ensure svg scales and uses current color */
+    .input-group .btn-password i {
+        font-size: 1rem;
+        line-height: 1;
+        display: block;
+        color: inherit;
     }
     </style>
 
@@ -115,27 +130,29 @@
                 }
             });
 
-            // Password show/hide toggle
+            // Password show/hide toggle (using bootstrap-icons like user_profile)
             const togglePassword = document.getElementById('togglePassword');
-            if (togglePassword && passwordInput) {
-                const eyeIcon = function(show) {
-                    // simple inline SVGs
-                    return show
-                        ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8z"/><path d="M8 5a3 3 0 100 6 3 3 0 000-6z"/></svg>'
-                        : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.359 11.238C12.06 12.33 10.12 13 8 13c-1.913 0-3.757-.636-5.09-1.704L1 13l1.06-1.06c-.412-.34-.793-.72-1.15-1.13C1.9 8.5 4.4 6 8 6c.83 0 1.62.14 2.34.38L13.36 3l.64.64-1.64 1.64A8.7 8.7 0 0115 8s-1.1 2.35-1.64 3.24z"/><path d="M3.7 2.3L2.3 3.7l1.2 1.2A8.7 8.7 0 001 8s3 5.5 8 5.5c1.72 0 3.31-.37 4.7-1.03l1.43 1.43 1.4-1.4L3.7 2.3z"/></svg>';
-                };
-
-                // initialize icon state (hidden)
-                togglePassword.innerHTML = eyeIcon(true);
+            const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+            if (togglePassword && passwordInput && togglePasswordIcon) {
+                // initialize as 'hidden' (password) -> show eye icon meaning "show password"
                 togglePassword.setAttribute('aria-pressed', 'false');
+                togglePassword.setAttribute('aria-label', 'Show password');
                 togglePassword.title = 'Show password';
 
                 togglePassword.addEventListener('click', function() {
                     const isPassword = passwordInput.type === 'password';
                     passwordInput.type = isPassword ? 'text' : 'password';
-                    togglePassword.innerHTML = eyeIcon(!isPassword);
+                    if (isPassword) {
+                        togglePasswordIcon.classList.remove('bi-eye');
+                        togglePasswordIcon.classList.add('bi-eye-slash');
+                    } else {
+                        togglePasswordIcon.classList.remove('bi-eye-slash');
+                        togglePasswordIcon.classList.add('bi-eye');
+                    }
                     togglePassword.setAttribute('aria-pressed', String(isPassword));
-                    togglePassword.title = isPassword ? 'Hide password' : 'Show password';
+                    const label = isPassword ? 'Hide password' : 'Show password';
+                    togglePassword.setAttribute('aria-label', label);
+                    togglePassword.title = label;
                 });
             }
         });
@@ -223,7 +240,9 @@ unset($__errorArgs, $__bag); ?> <?php echo e(($errors->any() && !$errors->has('e
                                                    placeholder="Enter your password" 
                                                    required 
                                                    autocomplete="current-password">
-                                            <button class="btn btn-password" type="button" id="togglePassword" aria-label="Show password"></button>
+                                            <span class="input-group-text btn-password cursor-pointer" id="togglePassword" role="button" aria-label="Show password" title="Show password">
+                                                <i class="bi bi-eye" id="togglePasswordIcon" aria-hidden="true"></i>
+                                            </span>
                                         </div>
                                         <?php $__errorArgs = ['password'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');

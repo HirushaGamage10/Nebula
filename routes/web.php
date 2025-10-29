@@ -47,9 +47,9 @@ use App\Http\Controllers\{
     PaymentSummaryController,
     BadgeController,
     StudentViewController,
-    DGMDashboardController
+    DGMDashboardController,
+    TeamPhaseController
 };
-
 // Default
 Route::redirect('/', 'login');
 
@@ -873,3 +873,10 @@ Route::middleware(['role:DGM,Developer,Program Administrator (level 01),Marketin
     Route::get('/bulk-upload/export-revenues', [DGMDashboardController::class, 'exportRevenueBulkData'])->name('bulk.revenue.export');
     Route::get('/api/dashboard/marketing-data', [DGMDashboardController::class, 'getMarketingData']);
 });
+
+
+
+Route::get('/team-phase', [TeamPhaseController::class, 'index'])->name('team.phase.index');
+Route::post('/phase/create', [TeamPhaseController::class, 'createPhase'])->name('phase.create');
+Route::post('/team/assign', [TeamPhaseController::class, 'assignMember'])->name('team.assign');
+
