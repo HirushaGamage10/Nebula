@@ -120,8 +120,18 @@ class StudentRegistrationRequest extends FormRequest
             
             // File Uploads
             'userPhoto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-            'ol_certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'al_certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'ol_certificate' => [
+                Rule::requiredIf($this->input('pending_result') === 'no'),
+                'file',
+                'mimes:pdf,jpg,jpeg,png',
+                'max:5120'
+            ],
+            'al_certificate' => [
+                Rule::requiredIf($this->input('al_pending_result') === 'no'),
+                'file',
+                'mimes:pdf,jpg,jpeg,png',
+                'max:5120'
+            ],
             'otherDocumentsFiles.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120',
             
             // Exam Information
@@ -235,9 +245,11 @@ class StudentRegistrationRequest extends FormRequest
             'ol_certificate.file' => 'O/L certificate must be a file.',
             'ol_certificate.mimes' => 'O/L certificate must be a PDF, JPG, JPEG, or PNG file.',
             'ol_certificate.max' => 'O/L certificate size must not exceed 5MB.',
+            'ol_certificate.required' => 'O/L certificate is required when O/L results are not pending. Please attach the certificate file.',
             'al_certificate.file' => 'A/L certificate must be a file.',
             'al_certificate.mimes' => 'A/L certificate must be a PDF, JPG, JPEG, or PNG file.',
             'al_certificate.max' => 'A/L certificate size must not exceed 5MB.',
+            'al_certificate.required' => 'A/L certificate is required when A/L results are not pending. Please attach the certificate file.',
             'otherDocumentsFiles.*.file' => 'Other documents must be files.',
             'otherDocumentsFiles.*.mimes' => 'Other documents must be PDF, JPG, JPEG, PNG, DOC, or DOCX files.',
             'otherDocumentsFiles.*.max' => 'Other documents size must not exceed 5MB.',

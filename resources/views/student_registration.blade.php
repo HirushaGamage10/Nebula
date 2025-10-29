@@ -612,20 +612,28 @@ document.addEventListener('DOMContentLoaded', function() {
         if (this.value === 'no') {
             olDetailsContainer.style.display = 'block';
             alPendingContainer.style.display = 'flex'; // it's a row, so flex for alignment
+            // When O/L results are not pending, make O/L certificate required
+            try { const olCert = document.getElementById('ol_certificate'); if (olCert) olCert.required = true; } catch(_){}
         } else { // 'yes'
             olDetailsContainer.style.display = 'none';
             alPendingContainer.style.display = 'none';
             alDetailsContainer.style.display = 'none';
             // Also reset the A/L pending dropdown
             alPendingSelect.value = '';
+            // O/L results pending -> not required
+            try { const olCert = document.getElementById('ol_certificate'); if (olCert) { olCert.required = false; olCert.classList.remove('is-invalid'); const fb = olCert.parentNode && olCert.parentNode.querySelector('.invalid-feedback.dynamic'); if (fb) fb.remove(); } } catch(_){}
         }
     });
 
     alPendingSelect.addEventListener('change', function() {
         if (this.value === 'no') {
             alDetailsContainer.style.display = 'block';
+            // When A/L results are not pending, make A/L certificate required
+            try { const alCert = document.getElementById('al_certificate'); if (alCert) alCert.required = true; } catch(_){}
         } else { // 'yes'
             alDetailsContainer.style.display = 'none';
+            // A/L results pending -> not required
+            try { const alCert = document.getElementById('al_certificate'); if (alCert) { alCert.required = false; alCert.classList.remove('is-invalid'); const fb = alCert.parentNode && alCert.parentNode.querySelector('.invalid-feedback.dynamic'); if (fb) fb.remove(); } } catch(_){}
         }
     });
 
@@ -1081,6 +1089,58 @@ setupPhoneValidator('emergencyContactNo', 'emergencyContactNoError');
         summary.classList.add('d-none');
         summary.innerHTML = '';
 
+        // Explicit required-fields check (some inputs may not rely on HTML5 validity because form has novalidate)
+        const requiredIds = [
+            'title','nameWithInitials','fullName','birthday','gender',
+            'identificationType','idValue','address','email','mobilePhone',
+            'pending_result','institute_location','parentName','parentContactNo','parentAddress','emergencyContactNo'
+        ];
+        const requiredErrors = [];
+        requiredIds.forEach(function(id){
+            const field = document.getElementById(id) || document.querySelector(`[name="${id}"]`);
+            if (!field) return; // field not present on page
+
+            // File input
+            if (field.tagName === 'INPUT' && field.type === 'file') {
+                if (field.required && (!field.files || field.files.length === 0)) {
+                    requiredErrors.push(`${(field.previousElementSibling && field.previousElementSibling.textContent.trim()) || id}: Please attach the required file.`);
+                    field.classList.add('is-invalid');
+                    const fb = document.createElement('div'); fb.className = 'invalid-feedback dynamic'; fb.textContent = 'This file is required.'; if (field.parentNode) field.parentNode.appendChild(fb);
+                }
+                return;
+            }
+
+            // For radio groups or selects we check value
+            let val = '';
+            if (field.tagName === 'SELECT') {
+                val = (field.value || '').toString().trim();
+                // treat disabled placeholder values as empty
+                if (!val || val === '#' || val.toLowerCase().includes('select')) val = '';
+            } else if (field.type === 'radio' || field.type === 'checkbox') {
+                const name = field.name;
+                const checked = form.querySelectorAll(`[name="${name}"]:checked`).length > 0;
+                if (!checked) {
+                    requiredErrors.push(`${(document.querySelector(`label[for="${field.id}"]`) && document.querySelector(`label[for="${field.id}"]`).textContent.trim()) || name}: Please make a selection.`);
+                }
+                return;
+            } else {
+                val = (field.value || '').toString().trim();
+            }
+
+            if (!val) {
+                const labelEl = document.querySelector(`label[for="${field.id}"]`);
+                const labelText = labelEl ? labelEl.textContent.replace('*','').trim() : id;
+                requiredErrors.push(`${labelText}: This field is required.`);
+                field.classList.add('is-invalid');
+                const fb = document.createElement('div'); fb.className = 'invalid-feedback dynamic'; fb.textContent = 'This field is required.'; if (field.parentNode) field.parentNode.appendChild(fb);
+            }
+        });
+        if (requiredErrors.length) {
+            const list = document.createElement('ul'); list.className = 'mb-0 ps-3'; requiredErrors.forEach(m=>{ const li=document.createElement('li'); li.textContent = m; list.appendChild(li); });
+            summary.appendChild(list); summary.classList.remove('d-none'); summary.scrollIntoView({ behavior:'smooth', block:'start' });
+            return; // stop submission
+        }
+
         const invalidEls = Array.from(form.querySelectorAll('input, select, textarea')).filter(el=>!el.checkValidity());
         if (invalidEls.length) {
             const list = document.createElement('ul');
@@ -1143,6 +1203,42 @@ setupPhoneValidator('emergencyContactNo', 'emergencyContactNoError');
             const list = document.createElement('ul'); list.className = 'mb-0 ps-3'; examErrors.forEach(m=>{ const li=document.createElement('li'); li.textContent = m; list.appendChild(li); });
             summary.appendChild(list); summary.classList.remove('d-none'); summary.scrollIntoView({ behavior:'smooth', block:'start' });
             return; // stop submission
+        }
+
+        // Require certificate files when results are NOT pending
+        const certificateErrors = [];
+        try {
+            const olPending = (document.getElementById('pending_result') || {}).value || '';
+            if (olPending === 'no') {
+                const olFile = document.getElementById('ol_certificate');
+                if (!olFile || !olFile.files || olFile.files.length === 0) {
+                    certificateErrors.push('O/L Certificate is required when O/L results are not marked as pending. Please attach the O/L certificate file.');
+                    if (olFile) {
+                        olFile.classList.add('is-invalid');
+                        const fb = document.createElement('div'); fb.className = 'invalid-feedback dynamic'; fb.textContent = 'Please attach the student\'s O/L certificate file.'; if (olFile.parentNode) olFile.parentNode.appendChild(fb);
+                    }
+                }
+            }
+        } catch (e) { /* ignore DOM errors */ }
+
+        try {
+            const alPending = (document.getElementById('al_pending_result') || {}).value || '';
+            if (alPending === 'no') {
+                const alFile = document.getElementById('al_certificate');
+                if (!alFile || !alFile.files || alFile.files.length === 0) {
+                    certificateErrors.push('A/L Certificate is required when A/L results are not marked as pending. Please attach the A/L certificate file.');
+                    if (alFile) {
+                        alFile.classList.add('is-invalid');
+                        const fb = document.createElement('div'); fb.className = 'invalid-feedback dynamic'; fb.textContent = 'Please attach the student\'s A/L certificate file.'; if (alFile.parentNode) alFile.parentNode.appendChild(fb);
+                    }
+                }
+            }
+        } catch (e) { /* ignore DOM errors */ }
+
+        if (certificateErrors.length) {
+            const list = document.createElement('ul'); list.className = 'mb-0 ps-3'; certificateErrors.forEach(m=>{ const li=document.createElement('li'); li.textContent = m; list.appendChild(li); });
+            summary.appendChild(list); summary.classList.remove('d-none'); summary.scrollIntoView({ behavior:'smooth', block:'start' });
+            return; // block submit until files attached
         }
 
         var formData = new FormData(form);
