@@ -21,6 +21,7 @@ use App\Models\Batch;
 use Illuminate\Support\Facades\Log;
 use App\Models\StudentStatusHistory;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Requests\UpdateParentInfoRequest;
 
 class StudentProfileController extends Controller
 {
@@ -236,27 +237,17 @@ class StudentProfileController extends Controller
 
 
     // Update parent/guardian info via AJAX
-    public function updateParentInfoAjax(Request $request)
+    public function updateParentInfoAjax(UpdateParentInfoRequest $request)
     {
-        $studentId = $request->input('student_id');
+        $validated = $request->validated();
+        $studentId = $validated['student_id'] ?? null;
         $student = Student::find($studentId);
 
         if (!$student) {
-            return response()->json(['success' => false, 'message' => 'Student not found.']);
+            return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
         }
 
         try {
-            // Validate required parent/guardian fields
-            $validated = $request->validate([
-                'student_id' => 'required|exists:students,student_id',
-                'guardian_name' => 'required|string|max:255',
-                'guardian_profession' => 'nullable|string|max:255',
-                'guardian_contact_number' => ['required','string','max:20','regex:/^(?:\\+94|0)?[0-9]{9}$/'],
-                'guardian_email' => 'nullable|email|max:255',
-                'guardian_address' => 'required|string',
-                'emergency_contact_number' => ['required','string','max:20','regex:/^(?:\\+94|0)?[0-9]{9}$/'],
-            ]);
-
             // Find or create parent/guardian record
             $parentGuardian = ParentGuardian::where('student_id', $studentId)->first();
 
