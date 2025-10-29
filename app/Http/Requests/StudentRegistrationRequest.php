@@ -133,8 +133,28 @@ class StudentRegistrationRequest extends FormRequest
             'ol_exam_year' => [
                 'nullable',
                 'integer',
-                'min:1990',
-                'max:' . (date('Y') + 1)
+                function ($attribute, $value, $fail) {
+                    if (is_null($value) || $value === '') return;
+                    $birth = $this->input('birthday');
+                    if (!$birth) {
+                        $fail('Date of birth is required to validate O/L exam year.');
+                        return;
+                    }
+                    $birthYear = (int) date('Y', strtotime($birth));
+                    $year = (int) $value;
+                    if ($year <= $birthYear) {
+                        $fail('O/L exam year must be after the student\'s birth year.');
+                        return;
+                    }
+                    if ($year < 1900) {
+                        $fail('O/L exam year must be 1900 or later.');
+                        return;
+                    }
+                    if ($year > (int) date('Y') + 1) {
+                        $fail('O/L exam year cannot be in the distant future.');
+                        return;
+                    }
+                }
             ],
             'ol_subjects.*' => 'nullable|string|max:50',
             'ol_results.*' => 'nullable|string|max:10',
@@ -145,8 +165,28 @@ class StudentRegistrationRequest extends FormRequest
             'al_exam_year' => [
                 'nullable',
                 'integer',
-                'min:1990',
-                'max:' . (date('Y') + 1)
+                function ($attribute, $value, $fail) {
+                    if (is_null($value) || $value === '') return;
+                    $birth = $this->input('birthday');
+                    if (!$birth) {
+                        $fail('Date of birth is required to validate A/L exam year.');
+                        return;
+                    }
+                    $birthYear = (int) date('Y', strtotime($birth));
+                    $year = (int) $value;
+                    if ($year <= $birthYear) {
+                        $fail('A/L exam year must be after the student\'s birth year.');
+                        return;
+                    }
+                    if ($year < 1900) {
+                        $fail('A/L exam year must be 1900 or later.');
+                        return;
+                    }
+                    if ($year > (int) date('Y') + 1) {
+                        $fail('A/L exam year cannot be in the distant future.');
+                        return;
+                    }
+                }
             ],
             'al_stream' => 'nullable|string|max:50',
             'z_score_value' => 'nullable|numeric|min:0|max:300',

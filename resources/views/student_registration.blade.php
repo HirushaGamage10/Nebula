@@ -41,7 +41,7 @@
                     <label for="nameWithInitials" class="col-sm-2 col-form-label">Name with Initials<span class="text-danger">*</span></label>
                     <div class="col-sm-10">
                         <input type="text" class="form-control" id="nameWithInitials" name="nameWithInitials" placeholder="J. A. Smith" required>
-                        <div id="nameError" class="text-danger" style="display: none;">Invalid name format. Only alphabets, full stop, and spaces are allowed.</div>
+                            <div id="nameError" class="text-danger" style="display: none;">Please enter a name using letters, periods (.) and spaces only.</div>
                     </div>
                 </div>
 
@@ -49,7 +49,7 @@
                     <label for="fullName" class="col-sm-2 col-form-label">Full Name<span class="text-danger">*</span></label>
                     <div class="col-sm-10">
                         <input type="text" class="form-control" id="fullName" name="fullName" placeholder="John Adam Smith" required>
-                        <div id="fullNameError" class="text-danger" style="display: none;">Invalid name format. Only letters and spaces are allowed.</div>
+                            <div id="fullNameError" class="text-danger" style="display: none;">Please enter the full name using letters and spaces only.</div>
                     </div>
                 </div>
 
@@ -57,7 +57,7 @@
                     <label for="birthday" class="col-sm-2 col-form-label">Birthday<span class="text-danger">*</span></label>
                     <div class="col-sm-10">
                         <input type="date" class="form-control" id="birthday" name="birthday" required>
-                        <div id="birthdayError" class="text-danger" style="display: none;">Invalid birth year. Please enter a valid 4-digit year.</div>
+                            <div id="birthdayError" class="text-danger" style="display: none;">Please choose a valid birth date (year should be between 1890 and the current year).</div>
                     </div>
                 </div>
 
@@ -98,7 +98,7 @@
                     <label for="email" class="col-sm-2 col-form-label">Email<span class="text-danger">*</span></label>
                     <div class="col-sm-10">
                         <input type="email" class="form-control" id="email" name="email" placeholder="example@example.com" required>
-                        <div id="emailError" class="text-danger" style="display: none;">Invalid email format.</div>
+                            <div id="emailError" class="text-danger" style="display: none;">Please enter a valid email address (e.g., example@example.com).</div>
                     </div>
                 </div>
 
@@ -112,7 +112,7 @@
                             </select>
                             <input type="tel" class="form-control" id="mobilePhone" name="mobilePhone" placeholder="Enter phone number" required>
                         </div>
-                        <div id="mobilePhoneError" class="text-danger" style="display:none;">Invalid phone number.</div>
+                            <div id="mobilePhoneError" class="text-danger" style="display:none;">Please enter a valid mobile number (7–15 digits). Include the country code if available, e.g. +94XXXXXXXXX.</div>
                     </div>
                 </div>
 
@@ -126,7 +126,7 @@
                             </select>
                             <input type="tel" class="form-control" id="homePhone" name="homePhone" placeholder="Enter phone number">
                         </div>
-                        <div id="homePhoneError" class="text-danger" style="display:none;">Invalid phone number.</div>
+                            <div id="homePhoneError" class="text-danger" style="display:none;">Please enter a valid home phone number or leave it blank.</div>
                     </div>
                 </div>
 
@@ -140,7 +140,7 @@
                             </select>
                             <input type="tel" class="form-control" id="whatsappPhone" name="whatsappPhone" placeholder="Enter WhatsApp number" required>
                         </div>
-                        <div id="whatsappNumberError" class="text-danger" style="display:none;">Invalid WhatsApp number.</div>
+                            <div id="whatsappNumberError" class="text-danger" style="display:none;">Please enter a valid WhatsApp number (7–15 digits). Include +country code if applicable.</div>
                     </div>
                 </div>
 
@@ -434,7 +434,7 @@
                                     <label for="parentName" class="col-sm-2 col-form-label">Name<span class="text-danger">*</span></label>
                                     <div class="col-sm-10">
                                         <input type="text" class="form-control" id="parentName" name="parentName" placeholder="John Doe" required>
-                                        <div id="parentNameError" class="text-danger" style="display: none;">Invalid name format.</div>
+                                        <div id="parentNameError" class="text-danger" style="display: none;">Please enter a valid name using letters and spaces only.</div>
                                     </div>
                                 </div>
                                 <div class="row mb-3">
@@ -452,7 +452,7 @@
                                             </select>
                                             <input type="tel" class="form-control" id="parentContactNo" name="parentContactNo" placeholder="Enter parent contact number" required>
                                         </div>
-                                        <div id="parentContactNoError" class="text-danger" style="display:none;">Invalid contact number.</div>
+                                        <div id="parentContactNoError" class="text-danger" style="display:none;">Please enter a valid contact number (7–15 digits). Include +country code if applicable.</div>
                                     </div>
                                 </div>
 
@@ -479,7 +479,7 @@
                                             </select>
                                             <input type="tel" class="form-control" id="emergencyContactNo" name="emergencyContactNo" placeholder="Enter emergency contact number" required>
                                         </div>
-                                        <div id="emergencyContactNoError" class="text-danger" style="display:none;">Invalid contact number.</div>
+                                        <div id="emergencyContactNoError" class="text-danger" style="display:none;">Please enter a valid emergency contact number (7–15 digits). Include +country code if applicable.</div>
                                     </div>
                                 </div>
                             </div>
@@ -890,7 +890,7 @@ function setupExamSubjects(config) {
 
         // ✅ Validate index no
         if (!indexNoInput.value.trim()) {
-            showError(indexNoInput, "Index No is required.");
+            showError(indexNoInput, "Please enter the index number.");
             hasError = true;
         } else {
             hideError(indexNoInput);
@@ -898,15 +898,31 @@ function setupExamSubjects(config) {
 
         // ✅ Validate exam type
         if (!examTypeSelect.value || examTypeSelect.value === 'Select an Exam Type') {
-            showError(examTypeSelect, "Exam Type is required.");
+            showError(examTypeSelect, "Please select the exam type.");
             hasError = true;
         } else {
             hideError(examTypeSelect);
         }
 
-        // ✅ Validate exam year
-        if (!examYearInput.value.trim() || examYearInput.value.length !== 4) {
-            showError(examYearInput, "Enter a valid 4-digit Exam Year.");
+        // ✅ Validate exam year (4-digit, reasonable bounds, and after birth year)
+        const yearStr = (examYearInput.value || '').toString().trim();
+        const yearNum = parseInt(yearStr, 10);
+        const nowYear = new Date().getFullYear();
+        const birthVal = (document.getElementById('birthday') || {}).value || '';
+        let birthYear = null;
+        if (birthVal) {
+            const parts = birthVal.split('-');
+            if (parts.length >= 1) birthYear = parseInt(parts[0], 10);
+        }
+
+        if (!/^[0-9]{4}$/.test(yearStr) || isNaN(yearNum) || yearNum < 1900 || yearNum > (nowYear + 1)) {
+            showError(examYearInput, "Please enter a 4-digit exam year between 1900 and next year.");
+            hasError = true;
+        } else if (!birthYear) {
+            showError(examYearInput, "Please enter the student's date of birth first so we can validate the exam year.");
+            hasError = true;
+        } else if (yearNum <= birthYear) {
+            showError(examYearInput, "Exam year must be later than the student's year of birth.");
             hasError = true;
         } else {
             hideError(examYearInput);
@@ -921,7 +937,7 @@ function setupExamSubjects(config) {
         if (subject === 'Other') subject = subjectOther;
 
         if (!subject || !result || subject === 'Select a Subject' || result === 'Select a Result') {
-            showError(resultSelect, "Select both Subject and Result.");
+            showError(resultSelect, "Please select both a subject and its result before adding.");
             return;
         } else {
             hideError(resultSelect);
@@ -1031,14 +1047,14 @@ $(document).ready(function() {
 function setupPhoneValidator(inputId, errorId) {
     const input = document.getElementById(inputId);
     const error = document.getElementById(errorId);
-    input.addEventListener('input', function () {
+        input.addEventListener('input', function () {
         const value = this.value.trim();
         const isValid = /^(\+?\d{7,15})$/.test(value); // allow + and 7–15 digits
         if (isValid) {
             error.style.display = 'none';
         } else {
             error.style.display = 'block';
-            error.textContent = 'Enter a valid phone number (7–15 digits).';
+            error.textContent = 'Please enter a phone number with 7–15 digits; include a leading +country code if available (e.g., +94XXXXXXXXX).';
         }
     });
 }
@@ -1092,7 +1108,44 @@ setupPhoneValidator('emergencyContactNo', 'emergencyContactNoError');
             return; // stop here until user fixes errors
         }
 
-    var formData = new FormData(form);
+        // Additional client-side validation: ensure OL/AL exam years (if provided) are after birth year
+        const birthVal2 = (document.getElementById('birthday') || {}).value || '';
+        let birthYear2 = null;
+        if (birthVal2) {
+            const parts2 = birthVal2.split('-');
+            if (parts2.length >= 1) birthYear2 = parseInt(parts2[0], 10);
+        }
+        const nowYear2 = new Date().getFullYear();
+        const examYearFields = [ 'ol_exam_year', 'al_exam_year' ];
+        const examErrors = [];
+        examYearFields.forEach(function(fid){
+            const fld = document.getElementById(fid);
+            if (!fld) return;
+            const val = (fld.value || '').toString().trim();
+            if (!val) return; // not provided
+            const n = parseInt(val, 10);
+            const label = fid === 'ol_exam_year' ? 'O/L exam year' : (fid === 'al_exam_year' ? 'A/L exam year' : fid.replace('_',' '));
+            if (!/^[0-9]{4}$/.test(val) || isNaN(n) || n < 1900 || n > (nowYear2 + 1)) {
+                examErrors.push(`${label}: Please enter a 4-digit year between 1900 and ${nowYear2 + 1}.`);
+                fld.classList.add('is-invalid');
+                const fb = document.createElement('div'); fb.className = 'invalid-feedback dynamic'; fb.textContent = `Please enter a 4-digit year between 1900 and ${nowYear2 + 1}.`; if (fld.parentNode) fld.parentNode.appendChild(fb);
+            } else if (!birthYear2) {
+                examErrors.push('Please enter the student\'s date of birth first so exam years can be validated.');
+                fld.classList.add('is-invalid');
+                const fb = document.createElement('div'); fb.className = 'invalid-feedback dynamic'; fb.textContent = `Please enter the student's date of birth first so exam years can be validated.`; if (fld.parentNode) fld.parentNode.appendChild(fb);
+            } else if (n <= birthYear2) {
+                examErrors.push(`${label}: Exam year must be later than the student's year of birth (${birthYear2}).`);
+                fld.classList.add('is-invalid');
+                const fb = document.createElement('div'); fb.className = 'invalid-feedback dynamic'; fb.textContent = `Exam year must be later than the student's year of birth (${birthYear2}).`; if (fld.parentNode) fld.parentNode.appendChild(fb);
+            }
+        });
+        if (examErrors.length) {
+            const list = document.createElement('ul'); list.className = 'mb-0 ps-3'; examErrors.forEach(m=>{ const li=document.createElement('li'); li.textContent = m; list.appendChild(li); });
+            summary.appendChild(list); summary.classList.remove('d-none'); summary.scrollIntoView({ behavior:'smooth', block:'start' });
+            return; // stop submission
+        }
+
+        var formData = new FormData(form);
         
         // Handle "Other" values for title and exam types
         var title = $('#title').val();
@@ -1453,12 +1506,12 @@ function setupPhoneValidator(inputId, errorId) {
 
     input.addEventListener('input', function () {
         const value = this.value.trim();
-        const isValid = /^(\+?\d{7,15})$/.test(value); // allows + and 7–15 digits
+        const isValid = /^(\+?\d{7,15})$/.test(value); // allow + and 7–15 digits
         if (isValid) {
             error.style.display = 'none';
         } else {
             error.style.display = 'block';
-            error.textContent = 'Enter a valid phone number (7–15 digits).';
+            error.textContent = 'Please enter a phone number with 7–15 digits; include the country code if available (e.g., +94XXXXXXXXX).';
         }
     });
 }

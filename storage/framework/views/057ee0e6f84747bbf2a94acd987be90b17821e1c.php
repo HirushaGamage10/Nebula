@@ -904,9 +904,25 @@ function setupExamSubjects(config) {
             hideError(examTypeSelect);
         }
 
-        // ✅ Validate exam year
-        if (!examYearInput.value.trim() || examYearInput.value.length !== 4) {
-            showError(examYearInput, "Enter a valid 4-digit Exam Year.");
+        // ✅ Validate exam year (4-digit, reasonable bounds, and after birth year)
+        const yearStr = (examYearInput.value || '').toString().trim();
+        const yearNum = parseInt(yearStr, 10);
+        const nowYear = new Date().getFullYear();
+        const birthVal = (document.getElementById('birthday') || {}).value || '';
+        let birthYear = null;
+        if (birthVal) {
+            const parts = birthVal.split('-');
+            if (parts.length >= 1) birthYear = parseInt(parts[0], 10);
+        }
+
+        if (!/^[0-9]{4}$/.test(yearStr) || isNaN(yearNum) || yearNum < 1900 || yearNum > (nowYear + 1)) {
+            showError(examYearInput, "Enter a valid 4-digit Exam Year (1900 - next year).");
+            hasError = true;
+        } else if (!birthYear) {
+            showError(examYearInput, "Please enter the student's birthday first (required to validate exam year).");
+            hasError = true;
+        } else if (yearNum <= birthYear) {
+            showError(examYearInput, "Exam year must be after the student's birth year.");
             hasError = true;
         } else {
             hideError(examYearInput);
@@ -1092,7 +1108,43 @@ setupPhoneValidator('emergencyContactNo', 'emergencyContactNoError');
             return; // stop here until user fixes errors
         }
 
-    var formData = new FormData(form);
+        // Additional client-side validation: ensure OL/AL exam years (if provided) are after birth year
+        const birthVal2 = (document.getElementById('birthday') || {}).value || '';
+        let birthYear2 = null;
+        if (birthVal2) {
+            const parts2 = birthVal2.split('-');
+            if (parts2.length >= 1) birthYear2 = parseInt(parts2[0], 10);
+        }
+        const nowYear2 = new Date().getFullYear();
+        const examYearFields = [ 'ol_exam_year', 'al_exam_year' ];
+        const examErrors = [];
+        examYearFields.forEach(function(fid){
+            const fld = document.getElementById(fid);
+            if (!fld) return;
+            const val = (fld.value || '').toString().trim();
+            if (!val) return; // not provided
+            const n = parseInt(val, 10);
+            if (!/^[0-9]{4}$/.test(val) || isNaN(n) || n < 1900 || n > (nowYear2 + 1)) {
+                examErrors.push(`${fid.replace('_', ' ').toUpperCase()}: Enter a valid 4-digit year between 1900 and ${nowYear2 + 1}.`);
+                fld.classList.add('is-invalid');
+                const fb = document.createElement('div'); fb.className = 'invalid-feedback dynamic'; fb.textContent = `Enter a valid 4-digit year between 1900 and ${nowYear2 + 1}.`; if (fld.parentNode) fld.parentNode.appendChild(fb);
+            } else if (!birthYear2) {
+                examErrors.push('Please enter the student\'s birthday first to validate exam years.');
+                fld.classList.add('is-invalid');
+                const fb = document.createElement('div'); fb.className = 'invalid-feedback dynamic'; fb.textContent = `Please enter the student's birthday first to validate exam years.`; if (fld.parentNode) fld.parentNode.appendChild(fb);
+            } else if (n <= birthYear2) {
+                examErrors.push(`${fid.replace('_', ' ').toUpperCase()}: Exam year must be after the student's birth year (${birthYear2}).`);
+                fld.classList.add('is-invalid');
+                const fb = document.createElement('div'); fb.className = 'invalid-feedback dynamic'; fb.textContent = `Exam year must be after the student's birth year (${birthYear2}).`; if (fld.parentNode) fld.parentNode.appendChild(fb);
+            }
+        });
+        if (examErrors.length) {
+            const list = document.createElement('ul'); list.className = 'mb-0 ps-3'; examErrors.forEach(m=>{ const li=document.createElement('li'); li.textContent = m; list.appendChild(li); });
+            summary.appendChild(list); summary.classList.remove('d-none'); summary.scrollIntoView({ behavior:'smooth', block:'start' });
+            return; // stop submission
+        }
+
+        var formData = new FormData(form);
         
         // Handle "Other" values for title and exam types
         var title = $('#title').val();
