@@ -338,7 +338,7 @@
         <a class="sidebar-link {{ Route::currentRouteName() == 'intake.create' ? 'active' : '' }}"
            href="{{ route('intake.create') }}">
             <span><i class="ti ti-pencil"></i></span>
-            <span class="hide-menu">Intake Creation</span>
+            <span class="hide-menu">Create New Intake</span>
         </a>
     </li>
 @endif

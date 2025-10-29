@@ -338,7 +338,7 @@
         <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'intake.create' ? 'active' : ''); ?>"
            href="<?php echo e(route('intake.create')); ?>">
             <span><i class="ti ti-pencil"></i></span>
-            <span class="hide-menu">Intake Creation</span>
+            <span class="hide-menu">Create New Intake</span>
         </a>
     </li>
 <?php endif; ?>

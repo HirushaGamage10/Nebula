@@ -306,7 +306,7 @@
                         <div class="mb-3 mt-3 row mx-3">
                             <label for="serviceNo" class="col-sm-3 col-form-label">Service No<span class="text-danger">*</span></label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="serviceNo" name="service_no" placeholder="Enter service number">
+                                <input type="text" class="form-control" id="serviceNo" name="service_no" placeholder="Enter service number" required>
                             </div>
                         </div>
                     </div>
@@ -314,19 +314,23 @@
                         <div class="mb-3 mt-3 row mx-3">
                             <label for="counselorName" class="col-sm-3 col-form-label">Counselor Name<span class="text-danger">*</span></label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="counselorName" name="counselor_name" placeholder="Enter counselor's name">
+                                <input type="text" class="form-control" id="counselorName" name="counselor_name" placeholder="Enter counselor's name" required>
                             </div>
                         </div>
                         <div class="mb-3 row mx-3">
                             <label for="counselorNic" class="col-sm-3 col-form-label">Counselor NIC<span class="text-danger">*</span></label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="counselorNic" name="counselor_nic" placeholder="Enter counselor's NIC number">
+                                <input type="text" class="form-control" id="counselorNic" name="counselor_nic" placeholder="Enter counselor's NIC number" required>
+                                <div class="invalid-feedback"><span class="text-danger">✖</span> Invalid NIC. Use 12 digits or 9 digits + 1 letter.</div>
+                                <div class="valid-feedback"><span class="text-success">✔</span> Valid NIC.</div>
                             </div>
                         </div>
                         <div class="mb-3 row mx-3">
                             <label for="counselorPhone" class="col-sm-3 col-form-label">Counselor Phone<span class="text-danger">*</span></label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="counselorPhone" name="counselor_phone" placeholder="Enter counselor's phone number">
+                                <input type="tel" class="form-control" id="counselorPhone" name="counselor_phone" placeholder="Enter counselor's phone number" required>
+                                <div class="invalid-feedback"><span class="text-danger">✖</span> Invalid phone. Use "07x xxxxxxx" or "+94 xxxxxxxxx".</div>
+                                <div class="valid-feedback"><span class="text-success">✔</span> Valid phone.</div>
                             </div>
                         </div>
                     </div>
@@ -777,6 +781,39 @@ $(document).ready(function() {
         } else {
             $('#otherMarketingSurveyRow').slideUp(200);
             $('#marketing_survey_other').prop('required', false).val('');
+        }
+    });
+
+    // Validation helpers for NIC and Phone
+    function validateNIC(value) {
+        if (!value) return false;
+        var nicPattern = /^(?:\d{12}|\d{9}[A-Za-z])$/;
+        return nicPattern.test(value.trim());
+    }
+
+    function validatePhone(value) {
+        if (!value) return false;
+        // Accept "xxx xxxxxxx" or "xxxxxxxxxx" (3+7) or "+94 xxxxxxxxx" or "+94xxxxxxxxx"
+        var phonePattern = /^(?:\d{3}\s?\d{7}|\+94\s?\d{9})$/;
+        return phonePattern.test(value.trim());
+    }
+
+    // Immediate feedback on blur/input for counselor NIC & phone
+    $('#counselorNic').on('blur input', function() {
+        var val = $(this).val();
+        if (val && validateNIC(val)) {
+            $(this).removeClass('is-invalid').addClass('is-valid');
+        } else {
+            $(this).removeClass('is-valid').addClass('is-invalid');
+        }
+    });
+
+    $('#counselorPhone').on('blur input', function() {
+        var val = $(this).val();
+        if (val && validatePhone(val)) {
+            $(this).removeClass('is-invalid').addClass('is-valid');
+        } else {
+            $(this).removeClass('is-valid').addClass('is-invalid');
         }
     });
 
