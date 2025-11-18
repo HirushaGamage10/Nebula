@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="{{ asset('css/styles.min.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn-script.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="{{ asset('js/tailwindcss.js') }}"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <div id="pageContent" class="bg-gray-50">
@@ -46,7 +46,7 @@
                                 <p class="text-sm text-gray-600">Total Students</p>
                                 <p class="text-2xl font-bold text-gray-900 pt-2 p-2" id="totalStudents">-</p>
                                 <p class="text-sm text-green-600" id="studentChange"></p>
-                            </div>                           
+                            </div>
                         </div>
                     </div>
 
@@ -54,9 +54,9 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm text-gray-600">Yearly Revenue</p>
-                                <p class="text-2xl font-bold text-gray-900 pt-2" id="yearlyRevenue">-</p>                                
+                                <p class="text-2xl font-bold text-gray-900 pt-2" id="yearlyRevenue">-</p>
                             </div>
-                            
+
                         </div>
                     </div>
 
@@ -65,7 +65,7 @@
                             <div>
                                 <p class="text-sm text-gray-600">Due this year</p>
                                 <p class="text-2xl font-bold text-gray-900 pt-2" id="outstandingCurrentYear">-</p>
-                            </div>                            
+                            </div>
                         </div>
                     </div>
 
@@ -74,11 +74,11 @@
                             <div>
                                 <p class="text-sm text-gray-600">Outstanding</p>
                                 <p class="text-2xl font-bold text-gray-900 pt-2" id="outstanding">-</p>
-                            </div>                            
+                            </div>
                         </div>
                     </div>
 
-                    
+
                 </div>
 
                 <!-- Quick Charts Grid -->
@@ -235,7 +235,7 @@
                                 </select>
 
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Course</label>
-                                <select id="courseSelect"
+                                <select id="courseSelect" multiple
                                     class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-sm">
                                     <option value="all">All Courses</option>
                                     @foreach(\App\Models\Course::all() as $course)
@@ -276,7 +276,7 @@
 
                 <div class="bg-white p-6 rounded-xl shadow-sm mb-6">
                     <h3 class="text-lg font-semibold mb-4">Students by Location and Course</h3>
-                    <div class="relative" style="height: 400px;">
+                    <div class="relative" style="height: 700px;">
                         <canvas id="chartCombined"></canvas>
                     </div>
                 </div>
@@ -415,7 +415,7 @@
                                 </select>
 
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Course</label>
-                                <select id="revenueCourseSelect"
+                                <select id="revenueCourseSelect" multiple
                                     class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-sm">
                                     <option value="all">All Courses</option>
                                     @foreach(\App\Models\Course::all() as $course)
@@ -553,6 +553,22 @@
         .modal-overlay form {
             z-index: 60;
         }
+
+        select[multiple] {
+            min-height: 120px;
+            padding: 0.5rem;
+        }
+
+        select[multiple] option {
+            padding: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        select[multiple] option:checked {
+            background: linear-gradient(#2563eb 0%, #2563eb 100%);
+            background-color: #2563eb;
+            color: white;
+        }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -653,14 +669,14 @@
                 if (data.locationSummary) {
                     data.locationSummary.forEach(row => {
                         tbody.innerHTML += `
-                                                                                                                                                                                                                                        <tr>
-                                                                                                                                                                                                                                            <td class="px-6 py-4 text-sm font-medium text-gray-900">${row.location}</td>
-                                                                                                                                                                                                                                            <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.current_year}</td>
-                                                                                                                                                                                                                                            <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.previous_year}</td>
-                                                                                                                                                                                                                                            <td class="px-6 py-4 text-sm ${row.growth >= 0 ? 'text-green-600' : 'text-red-600'}">${row.growth >= 0 ? '+' : ''}${row.growth}%</td>
-                                                                                                                                                                                                                                            <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.outstanding}</td>
-                                                                                                                                                                                                                                        </tr>
-                                                                                                                                                                                                                                    `;
+                                                                                                                                                                                                                                                                            <tr>
+                                                                                                                                                                                                                                                                                <td class="px-6 py-4 text-sm font-medium text-gray-900">${row.location}</td>
+                                                                                                                                                                                                                                                                                <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.current_year}</td>
+                                                                                                                                                                                                                                                                                <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.previous_year}</td>
+                                                                                                                                                                                                                                                                                <td class="px-6 py-4 text-sm ${row.growth >= 0 ? 'text-green-600' : 'text-red-600'}">${row.growth >= 0 ? '+' : ''}${row.growth}%</td>
+                                                                                                                                                                                                                                                                                <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.outstanding}</td>
+                                                                                                                                                                                                                                                                            </tr>
+                                                                                                                                                                                                                                                                        `;
                     });
                 }
 
@@ -777,48 +793,137 @@
                 const data = await response.json();
 
                 // Update location cards
-                const welisara = data.filter(d => d.institute_location === 'Welisara').reduce((sum, d) => sum + d.count, 0);
-                const Moratuwa = data.filter(d => d.institute_location === 'Moratuwa').reduce((sum, d) => sum + d.count, 0);
-                const peradeniya = data.filter(d => d.institute_location === 'Peradeniya').reduce((sum, d) => sum + d.count, 0);
+                const welisara = data.filter(d => d.institute_location === 'Welisara').reduce((sum, d) => sum + (Number(d.count) || 0), 0);
+                const Moratuwa = data.filter(d => d.institute_location === 'Moratuwa').reduce((sum, d) => sum + (Number(d.count) || 0), 0);
+                const peradeniya = data.filter(d => d.institute_location === 'Peradeniya').reduce((sum, d) => sum + (Number(d.count) || 0), 0);
 
-                document.getElementById('welisaraStudents').textContent = welisara;
-                document.getElementById('MoratuwaStudents').textContent = Moratuwa;
-                document.getElementById('peradeniyaStudents').textContent = peradeniya;
+                document.getElementById('welisaraStudents').textContent = Math.round(welisara);
+                document.getElementById('MoratuwaStudents').textContent = Math.round(Moratuwa);
+                document.getElementById('peradeniyaStudents').textContent = Math.round(peradeniya);
 
-                // Create combined chart
-                const years = [...new Set(data.map(d => d.year))].sort();
-                const locations = ['Welisara', 'Moratuwa', 'Peradeniya'];
-                const colors = ['#3B82F6', '#10B981', '#F59E0B'];
+                // Years for labels
+                let years = [...new Set(data.map(d => d.year))].sort((a, b) => a - b);
 
-                const datasets = locations.map((loc, idx) => ({
-                    label: loc,
+                // Respect compare/range selections if provided in params
+                const paramsObj = params;
+                if (paramsObj.compare && paramsObj.from_year && paramsObj.to_year) {
+                    years = [parseInt(paramsObj.from_year), parseInt(paramsObj.to_year)].sort((a, b) => a - b);
+                } else if (paramsObj.range && paramsObj.range_start_year && paramsObj.range_end_year) {
+                    const start = parseInt(paramsObj.range_start_year);
+                    const end = parseInt(paramsObj.range_end_year);
+                    years = [];
+                    for (let y = start; y <= end; y++) years.push(y);
+                }
+
+                const locations = [...new Set(data.map(d => d.institute_location))].length ? [...new Set(data.map(d => d.institute_location))] : ['Welisara', 'Moratuwa', 'Peradeniya'];
+                const coursesFromData = [...new Set(data.map(d => d.course_name))].filter(Boolean);
+
+                // Determine selected course (courseSelect has course_id values) and map to displayed name
+                const courseParam = params.course ?? null;
+                let selectedCourseNames = [];
+                if (!courseParam || courseParam === 'all') {
+                    // no filter or "all" -> show all courses from payload
+                    selectedCourseNames = [];
+                } else {
+                    // split incoming comma-separated ids and map to option text (course_name)
+                    const ids = String(courseParam).split(',').map(s => s.trim()).filter(Boolean);
+                    // if frontend included 'all' among selections, treat as no filter
+                    if (ids.includes('all')) {
+                        selectedCourseNames = [];
+                    } else {
+                        const courseSelectEl = document.getElementById('courseSelect');
+                        const idToName = {};
+                        if (courseSelectEl) {
+                            [...courseSelectEl.options].forEach(o => {
+                                idToName[o.value] = o.text;
+                            });
+                        }
+                        selectedCourseNames = ids.map(id => idToName[id] ?? id);
+                    }
+                }
+
+                // If course filter selected, only keep those course names; otherwise use courses from server payload
+                const courses = selectedCourseNames.length ? selectedCourseNames : coursesFromData;
+
+                // Fallback if no courses in payload -> per-location datasets
+                if (courses.length === 0) {
+                    const simpleDatasets = locations.map((loc, idx) => ({
+                        label: loc,
+                        data: years.map(year => {
+                            const found = data.find(d => d.year == year && d.institute_location === loc);
+                            return Math.round(found ? Number(found.count) || 0 : 0);
+                        }),
+                        backgroundColor: ['#3B82F6', '#10B981', '#F59E0B'][idx % 3]
+                    }));
+
+                    const canvas = document.getElementById('chartCombined');
+                    if (canvas) {
+                        const ctx = canvas.getContext('2d');
+                        if (currentCharts.combined) currentCharts.combined.destroy();
+                        currentCharts.combined = new Chart(ctx, {
+                            type: 'bar',
+                            data: { labels: years, datasets: simpleDatasets },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { position: 'top' } },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: {
+                                            stepSize: 1,
+                                            callback: value => Number.isInteger(value) ? value : ''
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    return;
+                }
+
+                const colors = [
+                    '#3B82F6', '#60A5FA', '#93C5FD', // Welisara shades
+                    '#10B981', '#34D399', '#6EE7B7', // Moratuwa shades
+                    '#F59E0B', '#FBBF24', '#FCD34D'  // Peradeniya shades
+                ];
+
+                // Build combos only for courses we want to show and existing locations
+                const combos = [];
+                locations.forEach((loc) => {
+                    courses.forEach((course) => combos.push({ loc, course }));
+                });
+
+                // Build datasets; round counts to integers to avoid decimal axis ticks
+                const datasets = combos.map((combo, idx) => ({
+                    label: `${combo.course} (${combo.loc})`,
                     data: years.map(year => {
-                        const found = data.find(d => d.year === year && d.institute_location === loc);
-                        return found ? found.count : 0;
+                        const found = data.find(d => String(d.year) == String(year) && d.institute_location === combo.loc && d.course_name === combo.course);
+                        return Math.round(found ? Number(found.count) || 0 : 0);
                     }),
-                    backgroundColor: colors[idx]
+                    backgroundColor: colors[idx % colors.length]
                 }));
 
+                // If a specific course was selected, hide any other legend entries by restricting datasets (already done)
                 const canvas = document.getElementById('chartCombined');
                 if (canvas) {
                     const ctx = canvas.getContext('2d');
-                    if (currentCharts.combined) {
-                        currentCharts.combined.destroy();
-                    }
+                    if (currentCharts.combined) currentCharts.combined.destroy();
                     currentCharts.combined = new Chart(ctx, {
                         type: 'bar',
-                        data: {
-                            labels: years,
-                            datasets: datasets
-                        },
+                        data: { labels: years, datasets: datasets },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            plugins: {
-                                legend: { position: 'top' }
-                            },
+                            plugins: { legend: { position: 'top' } },
                             scales: {
-                                y: { beginAtZero: true }
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        stepSize: 1,
+                                        callback: value => Number.isInteger(value) ? value : ''
+                                    }
+                                }
                             }
                         }
                     });
@@ -1096,6 +1201,11 @@
         function getFilterParams() {
             const compareToggle = document.getElementById('compareToggle').checked;
             const rangeToggle = document.getElementById('rangeSelectorToggle').checked;
+            const courseSelect = document.getElementById('courseSelect');
+
+            // Get selected courses
+            const selectedCourses = Array.from(courseSelect.selectedOptions).map(opt => opt.value);
+            const courseParam = selectedCourses.length === 0 || selectedCourses.includes('all') ? 'all' : selectedCourses.join(',');
 
             if (rangeToggle) {
                 return {
@@ -1105,7 +1215,7 @@
                     month: document.getElementById('studentMonthSelect').value,
                     date: document.getElementById('studentDaySelect').value,
                     location: document.getElementById('locationSelect').value,
-                    course: document.getElementById('courseSelect').value
+                    course: courseParam
                 };
             } else if (compareToggle) {
                 return {
@@ -1115,7 +1225,7 @@
                     month: document.getElementById('studentMonthSelect').value,
                     date: document.getElementById('studentDaySelect').value,
                     location: document.getElementById('locationSelect').value,
-                    course: document.getElementById('courseSelect').value
+                    course: courseParam
                 };
             } else {
                 return {
@@ -1123,7 +1233,7 @@
                     month: document.getElementById('studentMonthSelect').value,
                     date: document.getElementById('studentDaySelect').value,
                     location: document.getElementById('locationSelect').value,
-                    course: document.getElementById('courseSelect').value
+                    course: courseParam
                 };
             }
         }
@@ -1131,11 +1241,16 @@
         function getRevenueFilterParams() {
             const compareToggle = document.getElementById('revenueCompareToggle').checked;
             const rangeToggle = document.getElementById('revenueRangeSelectorToggle').checked;
+            const revenueCourseSelect = document.getElementById('revenueCourseSelect');
+
+            // Get selected courses
+            const selectedCourses = Array.from(revenueCourseSelect.selectedOptions).map(opt => opt.value);
+            const courseParam = selectedCourses.length === 0 || selectedCourses.includes('all') ? 'all' : selectedCourses.join(',');
 
             if (rangeToggle) {
                 return {
                     location: document.getElementById('revenueLocationSelect').value,
-                    course: document.getElementById('revenueCourseSelect').value,
+                    course: courseParam,
                     range: true,
                     range_start_year: document.getElementById('revenueRangeStartYearSelect').value,
                     range_end_year: document.getElementById('revenueRangeEndYearSelect').value
@@ -1143,7 +1258,7 @@
             } else if (compareToggle) {
                 return {
                     location: document.getElementById('revenueLocationSelect').value,
-                    course: document.getElementById('revenueCourseSelect').value,
+                    course: courseParam,
                     compare: true,
                     from_year: document.getElementById('revenueFromYearSelect').value,
                     to_year: document.getElementById('revenueToYearSelect').value
@@ -1154,7 +1269,7 @@
                     month: document.getElementById('revenueMonthSelect').value,
                     date: document.getElementById('revenueDaySelect').value,
                     location: document.getElementById('revenueLocationSelect').value,
-                    course: document.getElementById('revenueCourseSelect').value
+                    course: courseParam
                 };
             }
         }
@@ -1326,6 +1441,38 @@
                 daySelect.disabled = true;
             }
         }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            function enableClickMultiSelect(selectId) {
+                const sel = document.getElementById(selectId);
+                if (!sel) return;
+                sel.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    const opt = e.target;
+                    if (!opt || opt.tagName !== 'OPTION') return;
+
+                    // Toggle clicked option
+                    opt.selected = !opt.selected;
+
+                    // If "all" clicked -> select/deselect all options to match it
+                    if (opt.value === 'all') {
+                        const allSelected = opt.selected;
+                        Array.from(sel.options).forEach(o => o.selected = allSelected);
+                    } else {
+                        // If any real option clicked, ensure "all" is unset
+                        const allOpt = Array.from(sel.options).find(o => o.value === 'all');
+                        if (allOpt && allOpt.selected) allOpt.selected = false;
+                    }
+
+                    // keep focus and notify change listeners
+                    sel.focus();
+                    sel.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+            }
+
+            enableClickMultiSelect('courseSelect');
+            enableClickMultiSelect('revenueCourseSelect');
+        });
 
         document.addEventListener('DOMContentLoaded', function () {
             function bindUpload(formId, modalId, onSuccess) {

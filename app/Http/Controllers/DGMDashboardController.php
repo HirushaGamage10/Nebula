@@ -153,12 +153,12 @@ class DGMDashboardController extends Controller
         try {
             // total scheduled for this year (sum of installment amounts whose due_date is in the target year)
             $pendingCurrentYear = PaymentInstallment::when($year, fn($q) => $q->whereYear('due_date', $year))
-            ->sum('final_amount');
+                ->sum('final_amount');
 
-            $outstandingCurrentYear = $pendingCurrentYear-$partialPaymentsRevenue;
+            $outstandingCurrentYear = $pendingCurrentYear - $partialPaymentsRevenue;
 
             // sum of partial payments that actually happened in the same year
-            
+
         } catch (\Throwable $ex) {
             Log::warning('Could not compute outstandingCurrentYear: ' . $ex->getMessage());
             $outstandingCurrentYear = 0.0;
@@ -276,6 +276,31 @@ class DGMDashboardController extends Controller
         $fromYearInt = $fromYear !== null && is_numeric($fromYear) ? (int) $fromYear : null;
         $toYearInt = $toYear !== null && is_numeric($toYear) ? (int) $toYear : null;
 
+        $coursesSelected = [];
+        $courseIds = [];
+        $courseNames = [];
+
+        if ($course !== 'all' && !empty($course)) {
+            $coursesSelected = array_values(array_filter(array_map('trim', explode(',', $course))));
+            foreach ($coursesSelected as $c) {
+                if (is_numeric($c)) {
+                    $courseIds[] = (int) $c;
+                } else {
+                    $courseNames[] = $c;
+                }
+            }
+
+            // Resolve any numeric ids to names and merge
+            if (!empty($courseIds)) {
+                $resolved = Course::whereIn('course_id', $courseIds)->pluck('course_name', 'course_id')->toArray();
+                foreach ($resolved as $id => $name) {
+                    if (!in_array($name, $courseNames, true)) {
+                        $courseNames[] = $name;
+                    }
+                }
+            }
+        }
+
         // determine years list (inclusive)
         if ($rangeMode && $fromYearInt && $toYearInt) {
             $start = min($fromYearInt, $toYearInt);
@@ -324,8 +349,18 @@ class DGMDashboardController extends Controller
             ->whereIn('location', $locations);
 
         if ($course !== 'all') {
-            $bulkQuery->where(function ($q) use ($course, $courseNameForMatch) {
-                $q->where('course', $course);
+            // Support multi-select: match stored id or stored name
+            $bulkQuery->where(function ($q) use ($course, $courseNameForMatch, $courseIds, $courseNames) {
+                // if we have numeric ids in the filter, match those
+                if (!empty($courseIds)) {
+                    $q->whereIn('course', $courseIds);
+                }
+                // if we have name filters, match those too
+                if (!empty($courseNames)) {
+                    $q->orWhereIn('course', $courseNames);
+                }
+                // keep backwards compatibility with single-course string value
+                $q->orWhere('course', $course);
                 if ($courseNameForMatch) {
                     $q->orWhere('course', $courseNameForMatch);
                 }
@@ -353,40 +388,102 @@ class DGMDashboardController extends Controller
         // 2) registrations
         foreach ($years as $y) {
             foreach ($locations as $loc) {
-                $query = Student::where('institute_location', $loc)
-                    ->whereHas('courseRegistrations', function ($q) use ($y, $month, $day, $course) {
-                        $q->whereYear('created_at', $y);
+                // build list of courses to iterate (id + name)
+                $courseLoop = [];
 
-                        if (!empty($month)) {
-                            $q->whereMonth('created_at', $month);
+                if ($course === 'all') {
+                    $allCourses = Course::select('course_id', 'course_name')->get();
+                    foreach ($allCourses as $cObj) {
+                        $courseLoop[] = ['id' => $cObj->course_id, 'name' => $cObj->course_name];
+                    }
+                } else {
+                    // prefer numeric ids if provided
+                    if (!empty($courseIds)) {
+                        $rows = Course::whereIn('course_id', $courseIds)->get();
+                        foreach ($rows as $r) {
+                            $courseLoop[] = ['id' => $r->course_id, 'name' => $r->course_name];
                         }
-                        if (!empty($day)) {
-                            $q->whereDay('created_at', $day);
+                    }
+                    // also accept course names from multi-select
+                    if (!empty($courseNames)) {
+                        $rows = Course::whereIn('course_name', $courseNames)->get();
+                        foreach ($rows as $r) {
+                            $exists = false;
+                            foreach ($courseLoop as $cl) {
+                                if ($cl['id'] == $r->course_id) {
+                                    $exists = true;
+                                    break;
+                                }
+                            }
+                            if (!$exists) {
+                                $courseLoop[] = ['id' => $r->course_id, 'name' => $r->course_name];
+                            }
                         }
-
-                        if ($course !== 'all') {
-                            $q->where('course_id', $course);
+                    }
+                    // fallback: if nothing resolved, attempt to treat $course as single id/name
+                    if (empty($courseLoop)) {
+                        $singleRows = Course::where('course_id', $course)->orWhere('course_name', $course)->get();
+                        foreach ($singleRows as $r) {
+                            $courseLoop[] = ['id' => $r->course_id, 'name' => $r->course_name];
                         }
-                    });
-
-                $count = $query->distinct()->count('students.student_id');
-
-                $c = $course !== 'all' ? $course : 'all';
-                $key = "{$y}|{$loc}|{$c}";
-
-                if (!isset($aggregate[$key])) {
-                    $aggregate[$key] = [
-                        'year' => (int) $y,
-                        'institute_location' => $loc,
-                        'course' => $c,
-                        'count' => 0
-                    ];
+                    }
                 }
-                $aggregate[$key]['count'] += (int) $count;
+
+                // iterate each course and count registrations matching year/month/day
+                foreach ($courseLoop as $cInfo) {
+                    $courseId = $cInfo['id'];
+                    $courseName = $cInfo['name'];
+
+                    $regQuery = Student::where('institute_location', $loc)
+                        ->whereHas('courseRegistrations', function ($q) use ($y, $month, $day, $courseId) {
+                            $q->where('course_id', $courseId)
+                                ->whereYear('created_at', $y);
+                            if (!empty($month)) {
+                                $q->whereMonth('created_at', $month);
+                            }
+                            if (!empty($day)) {
+                                $q->whereDay('created_at', $day);
+                            }
+                        });
+
+                    $count = $regQuery->distinct()->count('students.student_id');
+
+                    $key = "{$y}|{$loc}|{$courseName}";
+                    if (!isset($aggregate[$key])) {
+                        $aggregate[$key] = [
+                            'year' => (int) $y,
+                            'institute_location' => $loc,
+                            'course_name' => $courseName,
+                            'count' => 0
+                        ];
+                    }
+                    $aggregate[$key]['count'] += (int) $count;
+                }
             }
         }
 
         $data = array_values($aggregate);
+
+        // Normalize keys for frontend: ensure 'course_name' and 'institute_location' exist and are readable
+        $courseIdToName = Course::pluck('course_name', 'course_id')->toArray();
+        foreach ($data as &$item) {
+            // normalize course value (bulk uses 'course', registrations used numeric id or 'course')
+            $rawCourse = $item['course'] ?? $item['course_name'] ?? null;
+            if ($rawCourse === null || $rawCourse === '') {
+                $courseNameOut = 'all';
+            } elseif (is_numeric($rawCourse)) {
+                $courseNameOut = $courseIdToName[intval($rawCourse)] ?? (string) $rawCourse;
+            } else {
+                $courseNameOut = (string) $rawCourse;
+            }
+            $item['course_name'] = $courseNameOut;
+
+            // ensure frontend key exists for location
+            if (!isset($item['institute_location']) && isset($item['location'])) {
+                $item['institute_location'] = $item['location'];
+            }
+        }
+        unset($item);
 
         return response()->json($data);
     }
@@ -408,6 +505,12 @@ class DGMDashboardController extends Controller
 
         $compareMode = $request->boolean('compare');
         $rangeMode = $request->boolean('range');
+
+        $courseIds = [];
+        if ($course !== 'all' && !empty($course)) {
+            $courseIds = array_filter(explode(',', $course));
+            $courseIds = array_map('intval', $courseIds);
+        }
 
         // normalize years
         $fromInt = is_numeric($fromYear) ? (int) $fromYear : null;
@@ -443,8 +546,14 @@ class DGMDashboardController extends Controller
         if ($course === 'all') {
             $courses = Course::pluck('course_id', 'course_name')->toArray();
         } else {
-            $courseName = Course::where('course_id', $course)->value('course_name') ?? (string) $course;
-            $courses = [$courseName => $course];
+            // If multiple courses passed, fetch all of them
+            $coursesQuery = Course::query();
+            if (!empty($courseIds)) {
+                $coursesQuery->whereIn('course_id', $courseIds);
+            } else {
+                $coursesQuery->where('course_id', $course);
+            }
+            $courses = $coursesQuery->pluck('course_id', 'course_name')->toArray();
         }
 
         $aggregate = [];
