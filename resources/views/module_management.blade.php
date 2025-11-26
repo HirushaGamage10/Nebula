@@ -6,7 +6,7 @@
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
-            <h2 class="text-center mb-4">Module Registration</h2>
+            <h2 class="text-center mb-4">Module Registration(Elective)</h2>
             <hr>
             <!-- Filter Section for Elective Registration -->
             <div class="mt-4">

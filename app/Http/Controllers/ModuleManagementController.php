@@ -641,7 +641,7 @@ class ModuleManagementController extends Controller
                 'already_registered_count' => $alreadyRegistered
             ]);
 
-        } catch (\Exception $e) {
+        } catch (\Exception $e) {2
             DB::rollback();
             \Log::error('Error registering elective modules: ' . $e->getMessage());
             \Log::error('Stack trace: ' . $e->getTraceAsString());
