@@ -625,13 +625,13 @@ class ModuleManagementController extends Controller
 
             $successMessage = '';
             if (count($registrations) > 0) {
-                $successMessage = "🎉 **Success!** " . count($registrations) . " students have been successfully registered for **{$moduleName}** in Semester {$semester->name}!";
+                $successMessage = "🎉 *Success!* " . count($registrations) . " students have been successfully registered for *{$moduleName}* in Semester {$semester->name}!";
                 
                 if ($alreadyRegistered > 0) {
                     $successMessage .= " ({$alreadyRegistered} students were already registered)";
                 }
             } else {
-                $successMessage = "ℹ️ **Info:** All selected students are already registered for **{$moduleName}** in Semester {$semester->name}.";
+                $successMessage = "ℹ *Info:* All selected students are already registered for *{$moduleName}* in Semester {$semester->name}.";
             }
 
             return response()->json([
@@ -641,13 +641,13 @@ class ModuleManagementController extends Controller
                 'already_registered_count' => $alreadyRegistered
             ]);
 
-        } catch (\Exception $e) {2
+        } catch (\Exception $e) {
             DB::rollback();
             \Log::error('Error registering elective modules: ' . $e->getMessage());
             \Log::error('Stack trace: ' . $e->getTraceAsString());
             return response()->json([
                 'success' => false,
-                'message' => '❌ **Oops!** Something went wrong while registering elective modules. Please try again or contact support if the issue persists.'
+                'message' => '❌ *Oops!* Something went wrong while registering elective modules. Please try again or contact support if the issue persists.'
             ], 500);
         }
     }
