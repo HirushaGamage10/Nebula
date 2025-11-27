@@ -265,6 +265,11 @@ class DGMDashboardController extends Controller
         $location = $request->input('location', 'all');
         $course = $request->input('course', 'all');
 
+        $locationsArray = [];
+        if ($location !== 'all' && !empty($location)) {
+            $locationsArray = array_filter(array_map('trim', explode(',', $location)));
+        }
+
         // Accept multiple possible parameter names for start/end and use Request::boolean for flags
         $fromYear = $request->input('from_year') ?? $request->input('range_start_year') ?? $request->input('from') ?? null;
         $toYear = $request->input('to_year') ?? $request->input('range_end_year') ?? $request->input('to') ?? null;
@@ -333,7 +338,7 @@ class DGMDashboardController extends Controller
             $years = [$year ?: (int) date('Y')];
         }
 
-        $locations = $location === 'all' ? ['Welisara', 'Moratuwa', 'Peradeniya'] : [$location];
+        $locations = empty($locationsArray) ? ['Welisara', 'Moratuwa', 'Peradeniya'] : $locationsArray;
 
         $aggregate = [];
 
@@ -499,6 +504,11 @@ class DGMDashboardController extends Controller
         $location = $request->input('location', 'all');
         $course = $request->input('course', 'all');
 
+        $locationsArray = [];
+        if ($location !== 'all' && !empty($location)) {
+            $locationsArray = array_filter(array_map('trim', explode(',', $location)));
+        }
+
         // Accept multiple possible names for from/to and range flags
         $fromYear = $request->input('from_year') ?? $request->input('range_start_year') ?? $request->input('from');
         $toYear = $request->input('to_year') ?? $request->input('range_end_year') ?? $request->input('to');
@@ -540,7 +550,7 @@ class DGMDashboardController extends Controller
             $years = [date('Y')];
         }
 
-        $locations = $location === 'all' ? ['Welisara', 'Moratuwa', 'Peradeniya'] : [$location];
+        $locations = empty($locationsArray) ? ['Welisara', 'Moratuwa', 'Peradeniya'] : $locationsArray;
 
         // Build courses list to iterate (key => id) where key is course_name, value is course_id
         if ($course === 'all') {

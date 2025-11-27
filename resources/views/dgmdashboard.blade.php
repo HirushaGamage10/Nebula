@@ -114,6 +114,15 @@
                             <tbody id="revenueSummaryBody" class="divide-y divide-gray-200">
                                 <!-- JS will populate rows here -->
                             </tbody>
+                            <tfoot class="bg-gray-50 border-t-2 border-gray-300">
+                                <tr class="font-bold">
+                                    <td class="px-6 py-3 text-sm font-medium text-gray-900">Total</td>
+                                    <td class="px-6 py-3 text-sm text-gray-900" id="totalCurrentYear">Rs. 0.00</td>
+                                    <td class="px-6 py-3 text-sm text-gray-900" id="totalPreviousYear">Rs. 0.00</td>
+                                    <td class="px-6 py-3 text-sm text-gray-900" id="totalGrowth">0%</td>
+                                    <td class="px-6 py-3 text-sm text-gray-900" id="totalOutstanding">Rs. 0.00</td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -226,7 +235,7 @@
                             <div class="filter-card md:col-span-2 flex flex-col justify-between">
 
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                                <select id="locationSelect"
+                                <select id="locationSelect" multiple
                                     class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-sm">
                                     <option value="all">All Locations</option>
                                     <option value="Welisara">Welisara</option>
@@ -406,7 +415,7 @@
 
                             <div class="filter-card md:col-span-2 flex flex-col justify-between">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                                <select id="revenueLocationSelect"
+                                <select id="revenueLocationSelect" multiple
                                     class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-sm">
                                     <option value="all">All Locations</option>
                                     <option value="Welisara">Welisara</option>
@@ -666,18 +675,43 @@
                 // Populate Revenue Summary Table
                 const tbody = document.getElementById('revenueSummaryBody');
                 tbody.innerHTML = '';
+
                 if (data.locationSummary) {
+                    let totalCurrentYear = 0;
+                    let totalPreviousYear = 0;
+                    let totalOutstanding = 0;
+
                     data.locationSummary.forEach(row => {
+
+                        const current = parseFloat(row.current_year.toString().replace(/,/g, ""));
+                        const previous = parseFloat(row.previous_year.toString().replace(/,/g, ""));
+                        const outstanding = parseFloat(row.outstanding.toString().replace(/,/g, ""));
+
                         tbody.innerHTML += `
-                                                                                                                                                                                                                                                                            <tr>
-                                                                                                                                                                                                                                                                                <td class="px-6 py-4 text-sm font-medium text-gray-900">${row.location}</td>
-                                                                                                                                                                                                                                                                                <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.current_year}</td>
-                                                                                                                                                                                                                                                                                <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.previous_year}</td>
-                                                                                                                                                                                                                                                                                <td class="px-6 py-4 text-sm ${row.growth >= 0 ? 'text-green-600' : 'text-red-600'}">${row.growth >= 0 ? '+' : ''}${row.growth}%</td>
-                                                                                                                                                                                                                                                                                <td class="px-6 py-4 text-sm text-gray-900">Rs. ${row.outstanding}</td>
-                                                                                                                                                                                                                                                                            </tr>
-                                                                                                                                                                                                                                                                        `;
+                <tr>
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900">${row.location}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">Rs. ${current.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">Rs. ${previous.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td class="px-6 py-4 text-sm ${row.growth >= 0 ? 'text-green-600' : 'text-red-600'}">${row.growth >= 0 ? '+' : ''}${row.growth}%</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">Rs. ${outstanding.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                </tr>
+            `;
+
+                        totalCurrentYear += current;
+                        totalPreviousYear += previous;
+                        totalOutstanding += outstanding;
                     });
+
+                    const totalGrowth = totalPreviousYear > 0
+                        ? (((totalCurrentYear - totalPreviousYear) / totalPreviousYear) * 100).toFixed(1)
+                        : 0;
+
+                    // display totals WITH commas
+                    document.getElementById('totalCurrentYear').textContent = 'Rs. ' + totalCurrentYear.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                    document.getElementById('totalPreviousYear').textContent = 'Rs. ' + totalPreviousYear.toLocaleString('en-US', { minimumFractionDigits: 2 });
+                    document.getElementById('totalGrowth').textContent = (totalGrowth >= 0 ? '+' : '') + totalGrowth + '%';
+                    document.getElementById('totalGrowth').className = 'px-6 py-3 text-sm ' + (totalGrowth >= 0 ? 'text-green-600' : 'text-red-600');
+                    document.getElementById('totalOutstanding').textContent = 'Rs. ' + totalOutstanding.toLocaleString('en-US', { minimumFractionDigits: 2 });
                 }
 
                 // Fetch students by location and show in chart + numbers
@@ -1202,10 +1236,14 @@
             const compareToggle = document.getElementById('compareToggle').checked;
             const rangeToggle = document.getElementById('rangeSelectorToggle').checked;
             const courseSelect = document.getElementById('courseSelect');
+            const locationSelect = document.getElementById('locationSelect');
 
             // Get selected courses
             const selectedCourses = Array.from(courseSelect.selectedOptions).map(opt => opt.value);
             const courseParam = selectedCourses.length === 0 || selectedCourses.includes('all') ? 'all' : selectedCourses.join(',');
+
+            const selectedLocations = Array.from(locationSelect.selectedOptions).map(opt => opt.value);
+            const locationParam = selectedLocations.length === 0 || selectedLocations.includes('all') ? 'all' : selectedLocations.join(',');
 
             if (rangeToggle) {
                 return {
@@ -1214,7 +1252,7 @@
                     range_end_year: document.getElementById('rangeEndYearSelect').value,
                     month: document.getElementById('studentMonthSelect').value,
                     date: document.getElementById('studentDaySelect').value,
-                    location: document.getElementById('locationSelect').value,
+                    location: locationParam,
                     course: courseParam
                 };
             } else if (compareToggle) {
@@ -1224,7 +1262,7 @@
                     to_year: document.getElementById('toYearSelect').value,
                     month: document.getElementById('studentMonthSelect').value,
                     date: document.getElementById('studentDaySelect').value,
-                    location: document.getElementById('locationSelect').value,
+                    location: locationParam,
                     course: courseParam
                 };
             } else {
@@ -1232,7 +1270,7 @@
                     year: document.getElementById('yearSelect').value,
                     month: document.getElementById('studentMonthSelect').value,
                     date: document.getElementById('studentDaySelect').value,
-                    location: document.getElementById('locationSelect').value,
+                    location: locationParam,
                     course: courseParam
                 };
             }
@@ -1242,14 +1280,18 @@
             const compareToggle = document.getElementById('revenueCompareToggle').checked;
             const rangeToggle = document.getElementById('revenueRangeSelectorToggle').checked;
             const revenueCourseSelect = document.getElementById('revenueCourseSelect');
+            const revenueLocationSelect = document.getElementById('revenueLocationSelect');
 
             // Get selected courses
             const selectedCourses = Array.from(revenueCourseSelect.selectedOptions).map(opt => opt.value);
             const courseParam = selectedCourses.length === 0 || selectedCourses.includes('all') ? 'all' : selectedCourses.join(',');
 
+            const selectedLocations = Array.from(revenueLocationSelect.selectedOptions).map(opt => opt.value);
+            const locationParam = selectedLocations.length === 0 || selectedLocations.includes('all') ? 'all' : selectedLocations.join(',');
+
             if (rangeToggle) {
                 return {
-                    location: document.getElementById('revenueLocationSelect').value,
+                    location: locationParam,
                     course: courseParam,
                     range: true,
                     range_start_year: document.getElementById('revenueRangeStartYearSelect').value,
@@ -1257,7 +1299,7 @@
                 };
             } else if (compareToggle) {
                 return {
-                    location: document.getElementById('revenueLocationSelect').value,
+                    location: locationParam,
                     course: courseParam,
                     compare: true,
                     from_year: document.getElementById('revenueFromYearSelect').value,
@@ -1268,7 +1310,7 @@
                     year: document.getElementById('revenueYearSelect').value,
                     month: document.getElementById('revenueMonthSelect').value,
                     date: document.getElementById('revenueDaySelect').value,
-                    location: document.getElementById('revenueLocationSelect').value,
+                    location: locationParam,
                     course: courseParam
                 };
             }
@@ -1472,6 +1514,8 @@
 
             enableClickMultiSelect('courseSelect');
             enableClickMultiSelect('revenueCourseSelect');
+            enableClickMultiSelect('locationSelect');
+            enableClickMultiSelect('revenueLocationSelect');
         });
 
         document.addEventListener('DOMContentLoaded', function () {
