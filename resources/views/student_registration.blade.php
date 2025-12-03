@@ -431,12 +431,12 @@
                         <div id="parentDetailsSection" class="accordion-collapse collapse" aria-labelledby="parentDetailsHeading" data-bs-parent="#parentDetailsAccordion">
                             <div class="accordion-body">
                                 <div class="row mb-3">
-                                    <label for="parentName" class="col-sm-2 col-form-label">Name<span class="text-danger">*</span></label>
-                                    <div class="col-sm-10">
-                                        <input type="text" class="form-control" id="parentName" name="parentName" placeholder="John Doe" required>
-                                        <div id="parentNameError" class="text-danger" style="display: none;">Please enter a valid name using letters and spaces only.</div>
-                                    </div>
-                                </div>
+                    <label for="parentnameWithInitials" class="col-sm-2 col-form-label">Name with Initials<span class="text-danger">*</span></label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" id="parentnameWithInitials" name="parentnameWithInitials" placeholder="J. A. Smith" required>
+                            <div id="nameError" class="text-danger" style="display: none;">Please enter a name using letters, periods (.) and spaces only.</div>
+                    </div>
+                </div>
                                 <div class="row mb-3">
                                     <label for="parentProfession" class="col-sm-2 col-form-label">Profession</label>
                                     <div class="col-sm-10">
