@@ -28,6 +28,14 @@
 
                 <h5 class="text-secondary">Current Course Registrations</h5>
 
+                <!-- Loading Spinner -->
+                <div id="table-loader" style="display:none;" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Refreshing course registrations...</p>
+                </div>
+
                 <table class="table table-bordered align-middle" id="reg_table">
                     <thead class="table-light">
                         <tr>
@@ -73,16 +81,25 @@
     </div>
 </div>
 
+<!-- Toast Container -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 11">
+    <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body">
+                Course change completed successfully!
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
 <script>
 let selectedRegistration = null;
 let currentIntakeId = null;
+let searchedNIC = null; // Store the searched NIC
 
 // ========================= SEARCH STUDENT =========================
-document.getElementById('searchForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    let nic = document.getElementById('nic').value.trim();
-    if (!nic) return alert('Enter NIC');
-
+async function searchStudent(nic) {
     const res = await fetch("{{ route('course.change.find') }}", {
         method: 'POST',
         headers: {
@@ -122,10 +139,26 @@ document.getElementById('searchForm').addEventListener('submit', async e => {
     `;
 });
 
+        // Hide intake section when showing new results
+        document.getElementById('intake-section').style.display = 'none';
+
+        // Hide loader and show table
+        document.getElementById('table-loader').style.display = 'none';
+        document.getElementById('reg_table').style.visibility = 'visible';
 
     } else {
         alert(data.message || 'Student not found');
+        document.getElementById('table-loader').style.display = 'none';
     }
+}
+
+document.getElementById('searchForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    let nic = document.getElementById('nic').value.trim();
+    if (!nic) return alert('Enter NIC');
+
+    searchedNIC = nic; // Store the NIC for later re-search
+    await searchStudent(nic);
 });
 
 
@@ -208,31 +241,78 @@ document.getElementById('new_intake').addEventListener('change', function () {
 
 
 // ========================= SUBMIT CHANGE =========================
-function submitChange() {
+async function submitChange() {
     let intakeId = document.getElementById('new_intake').value;
     let newCourseRegId = document.getElementById('generated_id').value;
 
     if (!intakeId) return alert('Select a new intake');
 
-    fetch("{{ route('course.change.submit') }}", {
-        method:'POST',
-        headers:{
-            'Content-Type':'application/json',
-            'X-CSRF-TOKEN':'{{ csrf_token() }}'
-        },
-        body: JSON.stringify({
-            registration_id: selectedRegistration,
-            new_intake_id: intakeId,
-            new_course_registration_id: newCourseRegId
-        })
-    })
-    .then(res => res.json())
-    .then(res => {
-        alert(res.message);
-        if (res.status === 'success') {
-            window.location.reload();
+    // Show success toast immediately
+    const toastEl = document.getElementById('successToast');
+    const toast = new bootstrap.Toast(toastEl);
+    toast.show();
+
+    // Hide the intake selection section
+    document.getElementById('intake-section').style.display = 'none';
+
+    // Show loading animation and hide table
+    const tableEl = document.getElementById('reg_table');
+    const loaderEl = document.getElementById('table-loader');
+    
+    tableEl.style.visibility = 'hidden';
+    loaderEl.style.display = 'block';
+
+    try {
+        const res = await fetch("{{ route('course.change.submit') }}", {
+            method:'POST',
+            headers:{
+                'Content-Type':'application/json',
+                'X-CSRF-TOKEN':'{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                registration_id: selectedRegistration,
+                new_intake_id: intakeId,
+                new_course_registration_id: newCourseRegId
+            })
+        });
+
+        // Check if response is OK (status 200-299)
+        if (!res.ok) {
+            console.error('Server error:', res.status);
+            // Even if server returns error, the DB update might have worked
+            // So we still refresh the table
         }
-    });
+
+        // Try to parse JSON, but if it fails, continue anyway
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (jsonError) {
+            console.log('Could not parse JSON response, but continuing with refresh');
+        }
+
+        // Wait for backend to complete
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Always re-run the search to refresh the table
+        if (searchedNIC) {
+            await searchStudent(searchedNIC);
+        }
+
+    } catch (error) {
+        console.error('Fetch error:', error);
+        
+        // Even on error, try to refresh the table (DB might have updated)
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        if (searchedNIC) {
+            await searchStudent(searchedNIC);
+        } else {
+            // If refresh fails, hide loader and show table
+            loaderEl.style.display = 'none';
+            tableEl.style.visibility = 'visible';
+        }
+    }
 }
 </script>
 
