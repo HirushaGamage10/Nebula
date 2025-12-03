@@ -102,20 +102,24 @@ document.getElementById('searchForm').addEventListener('submit', async e => {
         tbody.innerHTML = '';
 
         data.registrations.forEach(r => {
-            tbody.innerHTML += `
-                <tr>
-                    <td>${r.course.course_name}</td>
-                    <td>${r.intake.batch}</td>
-                    <td>${r.course_start_date}</td>
-                    <td>
-                        <button class="btn btn-warning btn-sm"
-                            onclick="loadCourseOptions(${r.id}, ${r.course_id}, '${r.location}', ${r.intake_id})">
-                            Change
-                        </button>
-                    </td>
-                </tr>
-            `;
-        });
+
+    let actionColumn = r.is_future
+        ? `<button class="btn btn-warning btn-sm"
+                onclick="loadCourseOptions(${r.id}, ${r.course_id}, '${r.location}', ${r.intake_id})">
+                Change
+           </button>`
+        : `<span class="text-muted">Restricted</span>`;
+
+    tbody.innerHTML += `
+        <tr>
+            <td>${r.course.course_name}</td>
+            <td>${r.intake.batch}</td>
+            <td>${r.course_start_date}</td>
+            <td>${actionColumn}</td>
+        </tr>
+    `;
+});
+
 
     } else {
         alert(data.message || 'Student not found');
@@ -166,11 +170,15 @@ document.getElementById('course_select').addEventListener('change', function () 
             .filter(i => i.intake_id != currentIntakeId)
             .sort((a,b) => new Date(b.start_date) - new Date(a.start_date))
             .forEach(i => {
+
+                let formattedDate = new Date(i.start_date).toISOString().split('T')[0];
+
                 select.innerHTML += `
                     <option value="${i.intake_id}">
-                        ${i.batch} (Starts: ${i.start_date})
+                        ${i.batch} (Starts: ${formattedDate})
                     </option>`;
             });
+
     });
 });
 

@@ -17,24 +17,32 @@ class CourseChangeController extends Controller
     }
 
     public function findStudent(Request $request)
-    {
-        $student = Student::where('id_value', $request->nic)->first();
+{
+    $student = Student::where('id_value', $request->nic)->first();
 
-        if (!$student) {
-            return response()->json(['status' => 'error', 'message' => 'Student not found']);
-        }
-
-        $registrations = CourseRegistration::where('student_id', $student->student_id)
-            ->where('status', 'Registered')
-            ->with('course', 'intake')
-            ->get();
-
-        return response()->json([
-            'status' => 'success',
-            'student' => $student,
-            'registrations' => $registrations
-        ]);
+    if (!$student) {
+        return response()->json(['status' => 'error', 'message' => 'Student not found']);
     }
+
+    // Only future intakes OR today
+    $today = now()->toDateString();
+
+    $registrations = CourseRegistration::where('student_id', $student->student_id)
+        ->where('status', 'Registered')
+        ->with('course', 'intake')
+        ->get()
+        ->map(function($reg) use ($today) {
+            $reg->is_future = $reg->course_start_date >= $today;
+            return $reg;
+        });
+
+    return response()->json([
+        'status' => 'success',
+        'student' => $student,
+        'registrations' => $registrations
+    ]);
+}
+
 
     public function getCourses()
     {
