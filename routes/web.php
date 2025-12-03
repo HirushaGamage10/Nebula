@@ -48,7 +48,8 @@ use App\Http\Controllers\{
     BadgeController,
     StudentViewController,
     DGMDashboardController,
-    TeamPhaseController
+    TeamPhaseController,
+    CourseChangeController
 };
 // Default
 Route::redirect('/', 'login');
@@ -894,3 +895,27 @@ Route::get('/team-phase', [TeamPhaseController::class, 'index'])->name('team.pha
 Route::post('/phase/create', [TeamPhaseController::class, 'createPhase'])->name('phase.create');
 Route::post('/team/assign', [TeamPhaseController::class, 'assignMember'])->name('team.assign');
 
+
+Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Administrator (level 02),Developer'])
+    ->group(function () {
+
+    // Show Course Change Page
+    Route::get('/course-change', [CourseChangeController::class, 'index'])
+        ->name('course.change.index');
+
+    // Search student by NIC
+    Route::post('/course-change/find-student', [CourseChangeController::class, 'findStudent'])
+        ->name('course.change.find');
+
+    // Load all courses (dropdown)
+    Route::get('/course-change/courses', [CourseChangeController::class, 'getCourses'])
+        ->name('course.change.courses');
+
+    // Load new intake list after selecting course
+    Route::post('/course-change/new-intakes', [CourseChangeController::class, 'getNewIntakes'])
+        ->name('course.change.new.intakes');
+
+    // Submit change
+    Route::post('/course-change/submit', [CourseChangeController::class, 'submitChange'])
+        ->name('course.change.submit');
+});
