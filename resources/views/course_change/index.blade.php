@@ -61,6 +61,11 @@
                     </div>
                 </div>
 
+                <div class="mt-3">
+                    <label class="form-label text-primary">New Course Registration ID</label>
+                    <input type="text" id="generated_id" class="form-control" readonly placeholder="Will auto generate">
+                </div>
+
                 <button class="btn btn-success mt-3" onclick="submitChange()">Confirm Change</button>
             </div>
 
@@ -172,9 +177,32 @@ document.getElementById('course_select').addEventListener('change', function () 
 });
 
 
+// ========================= GENERATE NEW ID AFTER INTAKE SELECT =========================
+document.getElementById('new_intake').addEventListener('change', function () {
+    let intakeId = this.value;
+    if (!intakeId) return;
+
+    fetch("{{ route('course.change.generateId') }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({ intake_id: intakeId })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            document.getElementById('generated_id').value = data.new_id;
+        }
+    });
+});
+
+
 // ========================= SUBMIT CHANGE =========================
 function submitChange() {
     let intakeId = document.getElementById('new_intake').value;
+    let newCourseRegId = document.getElementById('generated_id').value;
 
     if (!intakeId) return alert('Select a new intake');
 
@@ -186,7 +214,8 @@ function submitChange() {
         },
         body: JSON.stringify({
             registration_id: selectedRegistration,
-            new_intake_id: intakeId
+            new_intake_id: intakeId,
+            new_course_registration_id: newCourseRegId
         })
     })
     .then(res => res.json())

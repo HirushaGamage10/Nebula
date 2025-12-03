@@ -896,6 +896,7 @@ Route::post('/phase/create', [TeamPhaseController::class, 'createPhase'])->name(
 Route::post('/team/assign', [TeamPhaseController::class, 'assignMember'])->name('team.assign');
 
 
+
 Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Administrator (level 02),Developer'])
     ->group(function () {
 
@@ -914,6 +915,10 @@ Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Ad
     // Load new intake list after selecting course
     Route::post('/course-change/new-intakes', [CourseChangeController::class, 'getNewIntakes'])
         ->name('course.change.new.intakes');
+
+    // Generate new course registration ID (NEW)
+    Route::post('/course-change/generate-id', [CourseChangeController::class, 'generateNewCourseRegId'])
+        ->name('course.change.generateId');
 
     // Submit change
     Route::post('/course-change/submit', [CourseChangeController::class, 'submitChange'])
