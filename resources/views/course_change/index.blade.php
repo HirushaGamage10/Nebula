@@ -131,7 +131,7 @@ async function searchStudent(nic) {
 
     tbody.innerHTML += `
         <tr>
-            <td>${r.course.course_name}</td>
+            <td>${r.course.course_name} (${r.course.location})</td>
             <td>${r.intake.batch}</td>
             <td>${r.course_start_date}</td>
             <td>${actionColumn}</td>
@@ -174,8 +174,13 @@ function loadCourseOptions(regId, courseId, location, intakeId) {
         courseSelect.innerHTML = '<option value="">Select Course</option>';
 
         data.courses.forEach(c => {
-            courseSelect.innerHTML += `<option value="${c.course_id}">${c.course_name}</option>`;
+            courseSelect.innerHTML += `
+                <option value="${c.course_id}"> ${c.location} -
+                    ${c.course_name} 
+                </option>
+            `;
         });
+
 
         document.getElementById('intake-section').style.display = 'block';
     });
