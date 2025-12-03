@@ -291,7 +291,7 @@ class SemesterCreationController extends Controller
         $location = $request->query('location');
         $courses = \App\Models\Course::select('course_id', 'course_name')
             ->where('location', $location)
-            ->where('course_type', 'degree')
+            ->whereIn('course_type', ['degree', 'diploma'])
             ->orderBy('course_name', 'asc')
             ->get();
         return response()->json(['success' => true, 'courses' => $courses]);
