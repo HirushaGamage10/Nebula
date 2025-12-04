@@ -160,9 +160,24 @@ document.getElementById('searchForm').addEventListener('submit', async e => {
     searchedNIC = nic; // Store the NIC for later re-search
     await searchStudent(nic);
 });
+// Generate unique color for any text
+function stringToColor(str) {
+    let hash = 0;
 
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
 
-// ========================= LOAD COURSE LIST =========================
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+        let value = (hash >> (i * 8)) & 255;
+        color += ('00' + value.toString(16)).slice(-2);
+    }
+
+    return color;
+}
+
+// Load course list
 function loadCourseOptions(regId, courseId, location, intakeId) {
     selectedRegistration = regId;
     currentIntakeId = intakeId;
@@ -170,17 +185,46 @@ function loadCourseOptions(regId, courseId, location, intakeId) {
     fetch("{{ route('course.change.courses') }}")
     .then(res => res.json())
     .then(data => {
+
         let courseSelect = document.getElementById('course_select');
         courseSelect.innerHTML = '<option value="">Select Course</option>';
 
+        data.courses.sort((a, b) => {
+            if (a.location < b.location) return -1;
+            if (a.location > b.location) return 1;
+            return a.course_name.localeCompare(b.course_name);
+        });
+
+        let lastLocation = null;
+
         data.courses.forEach(c => {
+            if (c.location !== lastLocation) {
+
+                let color = stringToColor(c.location);
+
+                courseSelect.innerHTML += `
+                    <option disabled
+                        style="
+                            font-weight:bold;
+                            color:${color};
+                            padding:6px;
+                            border-top:2px solid ${color};
+                            border-bottom:2px solid ${color};
+                            background:#f0f4ff;
+                        ">
+                        ${c.location}
+                    </option>
+                `;
+
+                lastLocation = c.location;
+            }
+
             courseSelect.innerHTML += `
-                <option value="${c.course_id}"> ${c.location} -
-                    ${c.course_name} 
+                <option value="${c.course_id}">
+                   ${c.course_type} - ${c.course_name} 
                 </option>
             `;
         });
-
 
         document.getElementById('intake-section').style.display = 'block';
     });

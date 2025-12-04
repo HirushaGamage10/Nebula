@@ -47,7 +47,7 @@ class CourseChangeController extends Controller
     public function getCourses()
     {
         return response()->json([
-            'courses' => Course::select('course_id', 'course_name', 'location')->get()
+            'courses' => Course::select('course_id', 'course_name', 'location', 'course_type')->get()
         ]);
     }
 
