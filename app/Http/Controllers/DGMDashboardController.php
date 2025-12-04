@@ -810,7 +810,9 @@ class DGMDashboardController extends Controller
             ? ['Welisara', 'Moratuwa', 'Peradeniya']
             : array_map('trim', explode(',', $location));
 
-        $data = [];
+        // We'll aggregate outstanding by year|location|course_name
+        $aggregate = [];
+
         foreach ($years as $y) {
             foreach ($locations as $loc) {
                 $query = \App\Models\PaymentDetail::whereYear('created_at', $y)
@@ -832,15 +834,28 @@ class DGMDashboardController extends Controller
                     });
                 }
 
-                $payments = $query->get();
+                $payments = $query->with('registration')->get();
 
-                $outstanding = 0.0;
                 foreach ($payments as $payment) {
-                    // Prefer stored remaining_amount when available
+                    // determine course name for this payment (via registration)
+                    $courseName = 'Unknown';
+                    try {
+                        if (!empty($payment->registration)) {
+                            $reg = $payment->registration;
+                            if (!empty($reg->course_id)) {
+                                $courseName = Course::where('course_id', $reg->course_id)->value('course_name') ?? (string) $reg->course_id;
+                            } elseif (!empty($reg->course_name)) {
+                                $courseName = $reg->course_name;
+                            }
+                        }
+                    } catch (\Throwable $ex) {
+                        // swallow and keep 'Unknown'
+                    }
+
+                    // compute remaining / outstanding for this payment
                     if (isset($payment->remaining_amount) && $payment->remaining_amount !== null) {
                         $rem = floatval($payment->remaining_amount);
                     } else {
-                        // Fallback: compute as total (or amount) minus sum of all partial payments (ignore partial dates)
                         $total = floatval($payment->total_amount ?? $payment->amount ?? 0);
                         $paid = 0.0;
                         if (!empty($payment->partial_payments) && is_array($payment->partial_payments)) {
@@ -850,17 +865,39 @@ class DGMDashboardController extends Controller
                         }
                         $rem = $total - $paid;
                     }
+                    $rem = max(0, $rem);
 
-                    // Avoid negative outstanding values
-                    $outstanding += max(0, $rem);
+                    // Respect course filter: if frontend passed course names/ids but course couldn't be resolved skip
+                    if (!empty($courseIds)) {
+                        // if registration doesn't exist or not in filter, skip
+                        if (empty($payment->registration) || !in_array((int) $payment->registration->course_id, $courseIds, true)) {
+                            continue;
+                        }
+                    }
+
+                    $key = "{$y}|{$loc}|{$courseName}";
+                    if (!isset($aggregate[$key])) {
+                        $aggregate[$key] = [
+                            'year' => (int) $y,
+                            'location' => $loc,
+                            'course_name' => $courseName,
+                            'outstanding' => 0.0
+                        ];
+                    }
+                    $aggregate[$key]['outstanding'] += $rem;
                 }
-
-                $data[] = [
-                    'year' => $y,
-                    'location' => $loc,
-                    'outstanding' => round($outstanding, 2)
-                ];
             }
+        }
+
+        // Convert aggregate to response array (round outstanding)
+        $data = [];
+        foreach ($aggregate as $item) {
+            $data[] = [
+                'year' => $item['year'],
+                'location' => $item['location'],
+                'course_name' => $item['course_name'],
+                'outstanding' => round($item['outstanding'], 2),
+            ];
         }
 
         return response()->json($data);

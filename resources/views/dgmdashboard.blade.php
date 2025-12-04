@@ -487,16 +487,7 @@
             <div id="content-outstanding" class="tab-content">
                 <div class="bg-white shadow-sm border-b mb-6">
                     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-stretch">
-                            <div class="filter-card">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Year</label>
-                                <select id="outstandingYearSelect"
-                                    class="border w-full border-gray-300 rounded-md px-3 py-2 bg-white text-sm">
-                                    <option value="current" selected>Current Year ({{ date('Y') }})</option>
-                                    <option value="future">All Future Years ({{ date('Y') }}+)</option>
-                                </select>
-                            </div>
-
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
                             <div class="filter-card">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
                                 <select id="outstandingLocationSelect" multiple
@@ -769,14 +760,14 @@
                         const outstanding = parseFloat(row.outstanding.toString().replace(/,/g, ""));
 
                         tbody.innerHTML += `
-                    <tr>
-                        <td class="px-6 py-4 text-sm font-medium text-gray-900">${row.location}</td>
-                        <td class="px-6 py-4 text-sm text-gray-900">Rs. ${current.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                        <td class="px-6 py-4 text-sm text-gray-900">Rs. ${previous.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                        <td class="px-6 py-4 text-sm ${row.growth >= 0 ? 'text-green-600' : 'text-red-600'}">${row.growth >= 0 ? '+' : ''}${row.growth}%</td>
-                        <td class="px-6 py-4 text-sm text-gray-900">Rs. ${outstanding.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                    </tr>
-                `;
+                                            <tr>
+                                                <td class="px-6 py-4 text-sm font-medium text-gray-900">${row.location}</td>
+                                                <td class="px-6 py-4 text-sm text-gray-900">Rs. ${current.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                                <td class="px-6 py-4 text-sm text-gray-900">Rs. ${previous.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                                <td class="px-6 py-4 text-sm ${row.growth >= 0 ? 'text-green-600' : 'text-red-600'}">${row.growth >= 0 ? '+' : ''}${row.growth}%</td>
+                                                <td class="px-6 py-4 text-sm text-gray-900">Rs. ${outstanding.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                            </tr>
+                                        `;
 
                         totalCurrentYear += current;
                         totalPreviousYear += previous;
@@ -1316,48 +1307,116 @@
             const params = getOutstandingFilterParams();
             try {
                 const res = await fetch(`/api/dashboard/outstanding-by-year-course?${new URLSearchParams(params)}`);
-                const data = await res.json(); // [{year, location, outstanding}, ...]
+                const data = await res.json(); // [{year, location, course_name, outstanding}, ...]
 
-                // Aggregate outstanding per location (sum across years returned)
-                const locations = {};
+                // Build unique lists of courses and locations from payload
+                const coursesSet = new Set();
+                const locationsSet = new Set();
                 data.forEach(item => {
+                    const course = item.course_name || item.course || 'Unknown';
                     const loc = item.location || item.institute_location || 'Unknown';
-                    locations[loc] = (locations[loc] || 0) + parseFloat(item.outstanding || 0);
+                    coursesSet.add(course);
+                    locationsSet.add(loc);
+                });
+                const courses = Array.from(coursesSet).sort();
+                const locations = Array.from(locationsSet).length ? Array.from(locationsSet) : ['Welisara', 'Moratuwa', 'Peradeniya'];
+
+                // Aggregate outstanding per location (for summary table) and prepare datasets per course by location
+                const locationTotals = {};
+                locations.forEach(loc => locationTotals[loc] = 0);
+
+                // Color palette for courses (extendable)
+                const colors = [
+                    '#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#6366F1', '#EC4899', '#22C1C3', '#A78BFA', '#F97316', '#06B6D4'
+                ];
+
+                // Build datasets: one dataset (bar) per course; x-axis = locations
+                const datasets = courses.map((course, idx) => {
+                    const vals = locations.map(loc => {
+                        const matched = data.filter(d =>
+                            (d.location === loc || d.institute_location === loc) &&
+                            ((d.course_name === course) || (d.course === course))
+                        );
+                        const sum = matched.reduce((s, it) => s + (Number(it.outstanding) || 0), 0);
+                        locationTotals[loc] += sum;
+                        return Math.round(sum * 100) / 100;
+                    });
+
+                    const color = colors[idx % colors.length];
+                    return {
+                        label: course,
+                        data: vals,
+                        backgroundColor: color,
+                        borderColor: '#ffffff',
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        barThickness: 'flex'
+                    };
                 });
 
-                // populate summary table
+                // populate summary table (location totals) + total row
                 const tbody = document.getElementById('outstandingSummaryBody');
                 tbody.innerHTML = '';
-                Object.keys(locations).forEach(loc => {
-                    const amt = locations[loc];
+                let grandTotal = 0;
+                Object.keys(locationTotals).forEach(loc => {
+                    const amt = locationTotals[loc];
+                    grandTotal += amt;
                     tbody.innerHTML += `<tr>
-                        <td class="px-6 py-4 text-sm font-medium text-gray-900">${loc}</td>
-                        <td class="px-6 py-4 text-sm text-gray-900">Rs. ${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                    </tr>`;
+                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">${loc}</td>
+                                        <td class="px-6 py-4 text-sm text-gray-900">Rs. ${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                    </tr>`;
                 });
 
-                // Draw chart
+                // Add total row
+                tbody.innerHTML += `<tr class="bg-gray-100 border-t-2 border-gray-300 font-bold">
+                                    <td class="px-6 py-4 text-sm font-medium text-gray-900">Total</td>
+                                    <td class="px-6 py-4 text-sm text-gray-900">Rs. ${grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                </tr>`;
+
+                // Draw bar chart: x-axis = locations, datasets = courses (grouped bars)
                 const canvas = document.getElementById('outstandingTabChart');
                 if (canvas) {
                     const ctx = canvas.getContext('2d');
                     if (currentCharts.outstandingTab) currentCharts.outstandingTab.destroy();
-                    const labels = Object.keys(locations);
-                    const values = labels.map(l => locations[l]);
                     currentCharts.outstandingTab = new Chart(ctx, {
-                        type: 'pie',
+                        type: 'bar',
                         data: {
-                            labels: labels,
-                            datasets: [{
-                                data: values,
-                                backgroundColor: ['#EF4444', '#6366F1', '#10B981', '#F59E0B', '#3B82F6'],
-                                borderColor: '#fff',
-                                borderWidth: 2
-                            }]
+                            labels: locations,
+                            datasets: datasets
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            plugins: { legend: { position: 'top' } }
+                            plugins: {
+                                legend: { position: 'top' },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (context) {
+                                            const v = context.parsed.y ?? context.parsed ?? 0;
+                                            return `${context.dataset.label}: Rs. ${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    title: { display: true, text: 'Location' },
+                                    stacked: false
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    title: { display: true, text: 'Outstanding (Rs.)' },
+                                    ticks: {
+                                        callback: function (value) {
+                                            return 'Rs. ' + Number(value).toLocaleString();
+                                        }
+                                    }
+                                }
+                            },
+                            interaction: {
+                                mode: 'nearest',
+                                intersect: false
+                            }
                         }
                     });
                 }
@@ -1365,7 +1424,7 @@
                 console.error('Error loading outstanding tab data:', err);
             }
         }
-        
+
         // Get filter parameters
         function getFilterParams() {
             const compareToggle = document.getElementById('compareToggle').checked;
@@ -1452,8 +1511,7 @@
         }
 
 
-         function getOutstandingFilterParams() {
-            const yearChoice = document.getElementById('outstandingYearSelect').value;
+        function getOutstandingFilterParams() {
             const locationSelect = document.getElementById('outstandingLocationSelect');
             const courseSelect = document.getElementById('outstandingCourseSelect');
 
@@ -1463,24 +1521,11 @@
             const selectedCourses = Array.from(courseSelect.selectedOptions).map(opt => opt.value);
             const courseParam = selectedCourses.length === 0 || selectedCourses.includes('all') ? 'all' : selectedCourses.join(',');
 
-            if (yearChoice === 'future') {
-                // treat future as a range from current year to +20 years (adjustable)
-                const start = new Date().getFullYear();
-                const end = start + 20;
-                return {
-                    location: locationParam,
-                    course: courseParam,
-                    range: true,
-                    range_start_year: start,
-                    range_end_year: end
-                };
-            } else {
-                return {
-                    year: new Date().getFullYear(),
-                    location: locationParam,
-                    course: courseParam
-                };
-            }
+            return {
+                year: new Date().getFullYear(),
+                location: locationParam,
+                course: courseParam
+            };
         }
 
 
@@ -1681,6 +1726,8 @@
             enableClickMultiSelect('revenueCourseSelect');
             enableClickMultiSelect('locationSelect');
             enableClickMultiSelect('revenueLocationSelect');
+            enableClickMultiSelect('outstandingLocationSelect');
+            enableClickMultiSelect('outstandingCourseSelect');
         });
 
         document.addEventListener('DOMContentLoaded', function () {
