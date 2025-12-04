@@ -27,6 +27,10 @@
                         class="px-4 py-2 rounded-lg text-sm font-medium tab-inactive">
                         <i class="fas fa-dollar-sign mr-2"></i>Revenues
                     </button>
+                    <button onclick="showTab('outstanding')" id="tab-outstanding"
+                        class="px-4 py-2 rounded-lg text-sm font-medium tab-inactive">
+                        <i class="fas fa-exclamation-circle mr-2"></i>Outstanding
+                    </button>
                     <button onclick="showTab('marketing')" id="tab-marketing"
                         class="px-4 py-2 rounded-lg text-sm font-medium tab-inactive">
                         <i class="fas fa-share-alt mr-2"></i>Marketing
@@ -479,6 +483,80 @@
                 </div>
             </div>
 
+            <!-- Outstanding Tab -->
+            <div id="content-outstanding" class="tab-content">
+                <div class="bg-white shadow-sm border-b mb-6">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-stretch">
+                            <div class="filter-card">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                                <select id="outstandingYearSelect"
+                                    class="border w-full border-gray-300 rounded-md px-3 py-2 bg-white text-sm">
+                                    <option value="current" selected>Current Year ({{ date('Y') }})</option>
+                                    <option value="future">All Future Years ({{ date('Y') }}+)</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-card">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                                <select id="outstandingLocationSelect" multiple
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-sm">
+                                    <option value="all">All Locations</option>
+                                    <option value="Welisara">Welisara</option>
+                                    <option value="Moratuwa">Moratuwa</option>
+                                    <option value="Peradeniya">Peradeniya</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-card md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Course</label>
+                                <select id="outstandingCourseSelect" multiple
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-sm">
+                                    <option value="all">All Courses</option>
+                                    @foreach(\App\Models\Course::all() as $course)
+                                        <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 flex justify-end">
+                            <button onclick="loadOutstandingTabData()"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">
+                                Apply Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid gap-6 mb-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="text-lg font-semibold mb-4">Outstanding by Location</h3>
+                        <div style="height: 400px;">
+                            <canvas id="outstandingTabChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="text-lg font-semibold mb-4">Outstanding Summary</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location
+                                        </th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                            Outstanding (Rs.)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="outstandingSummaryBody" class="divide-y divide-gray-200">
+                                    <!-- populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Marketing Tab -->
             <div id="content-marketing" class="tab-content">
@@ -646,6 +724,9 @@
                     loadRevenueData();
                     loadOutstandingData();
                     break;
+                case 'outstanding':
+                    loadOutstandingTabData();
+                    break;
                 case 'marketing':
                     loadMarketingData();
                     break;
@@ -688,14 +769,14 @@
                         const outstanding = parseFloat(row.outstanding.toString().replace(/,/g, ""));
 
                         tbody.innerHTML += `
-                <tr>
-                    <td class="px-6 py-4 text-sm font-medium text-gray-900">${row.location}</td>
-                    <td class="px-6 py-4 text-sm text-gray-900">Rs. ${current.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                    <td class="px-6 py-4 text-sm text-gray-900">Rs. ${previous.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                    <td class="px-6 py-4 text-sm ${row.growth >= 0 ? 'text-green-600' : 'text-red-600'}">${row.growth >= 0 ? '+' : ''}${row.growth}%</td>
-                    <td class="px-6 py-4 text-sm text-gray-900">Rs. ${outstanding.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                </tr>
-            `;
+                    <tr>
+                        <td class="px-6 py-4 text-sm font-medium text-gray-900">${row.location}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900">Rs. ${current.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900">Rs. ${previous.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td class="px-6 py-4 text-sm ${row.growth >= 0 ? 'text-green-600' : 'text-red-600'}">${row.growth >= 0 ? '+' : ''}${row.growth}%</td>
+                        <td class="px-6 py-4 text-sm text-gray-900">Rs. ${outstanding.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                `;
 
                         totalCurrentYear += current;
                         totalPreviousYear += previous;
@@ -1231,6 +1312,60 @@
             }
         }
 
+        async function loadOutstandingTabData() {
+            const params = getOutstandingFilterParams();
+            try {
+                const res = await fetch(`/api/dashboard/outstanding-by-year-course?${new URLSearchParams(params)}`);
+                const data = await res.json(); // [{year, location, outstanding}, ...]
+
+                // Aggregate outstanding per location (sum across years returned)
+                const locations = {};
+                data.forEach(item => {
+                    const loc = item.location || item.institute_location || 'Unknown';
+                    locations[loc] = (locations[loc] || 0) + parseFloat(item.outstanding || 0);
+                });
+
+                // populate summary table
+                const tbody = document.getElementById('outstandingSummaryBody');
+                tbody.innerHTML = '';
+                Object.keys(locations).forEach(loc => {
+                    const amt = locations[loc];
+                    tbody.innerHTML += `<tr>
+                        <td class="px-6 py-4 text-sm font-medium text-gray-900">${loc}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900">Rs. ${amt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    </tr>`;
+                });
+
+                // Draw chart
+                const canvas = document.getElementById('outstandingTabChart');
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    if (currentCharts.outstandingTab) currentCharts.outstandingTab.destroy();
+                    const labels = Object.keys(locations);
+                    const values = labels.map(l => locations[l]);
+                    currentCharts.outstandingTab = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: values,
+                                backgroundColor: ['#EF4444', '#6366F1', '#10B981', '#F59E0B', '#3B82F6'],
+                                borderColor: '#fff',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { position: 'top' } }
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error('Error loading outstanding tab data:', err);
+            }
+        }
+        
         // Get filter parameters
         function getFilterParams() {
             const compareToggle = document.getElementById('compareToggle').checked;
@@ -1317,6 +1452,36 @@
         }
 
 
+         function getOutstandingFilterParams() {
+            const yearChoice = document.getElementById('outstandingYearSelect').value;
+            const locationSelect = document.getElementById('outstandingLocationSelect');
+            const courseSelect = document.getElementById('outstandingCourseSelect');
+
+            const selectedLocations = Array.from(locationSelect.selectedOptions).map(opt => opt.value);
+            const locationParam = selectedLocations.length === 0 || selectedLocations.includes('all') ? 'all' : selectedLocations.join(',');
+
+            const selectedCourses = Array.from(courseSelect.selectedOptions).map(opt => opt.value);
+            const courseParam = selectedCourses.length === 0 || selectedCourses.includes('all') ? 'all' : selectedCourses.join(',');
+
+            if (yearChoice === 'future') {
+                // treat future as a range from current year to +20 years (adjustable)
+                const start = new Date().getFullYear();
+                const end = start + 20;
+                return {
+                    location: locationParam,
+                    course: courseParam,
+                    range: true,
+                    range_start_year: start,
+                    range_end_year: end
+                };
+            } else {
+                return {
+                    year: new Date().getFullYear(),
+                    location: locationParam,
+                    course: courseParam
+                };
+            }
+        }
 
 
         document.addEventListener('DOMContentLoaded', function () {

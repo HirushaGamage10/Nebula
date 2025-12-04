@@ -763,6 +763,24 @@ class DGMDashboardController extends Controller
         $month = $request->input('month');
         $day = $request->input('date');
         $location = $request->input('location', 'all');
+
+        // new: accept course filter (comma separated ids or names)
+        $course = $request->input('course', 'all');
+        $courseIds = [];
+        if ($course !== 'all' && !empty($course)) {
+            $parts = array_filter(array_map('trim', explode(',', $course)));
+            foreach ($parts as $p) {
+                if (is_numeric($p)) {
+                    $courseIds[] = (int) $p;
+                } else {
+                    // attempt to resolve name -> id
+                    $id = Course::where('course_name', $p)->value('course_id');
+                    if ($id)
+                        $courseIds[] = (int) $id;
+                }
+            }
+        }
+
         $fromYear = $request->input('from_year');
         $toYear = $request->input('to_year');
         $range = $request->input('range');
@@ -780,10 +798,17 @@ class DGMDashboardController extends Controller
             $years = [date('Y')];
         }
 
+        // If range_start provided but not range_end (e.g. "future"), cap a sensible end
+        if ($range && $rangeStart && empty($rangeEnd)) {
+            $start = (int) $rangeStart;
+            $end = $start + 20; // configurable horizon
+            $years = range($start, $end);
+        }
+
         // Get all locations
         $locations = $location === 'all'
             ? ['Welisara', 'Moratuwa', 'Peradeniya']
-            : [$location];
+            : array_map('trim', explode(',', $location));
 
         $data = [];
         foreach ($years as $y) {
@@ -798,6 +823,13 @@ class DGMDashboardController extends Controller
                 }
                 if ($day) {
                     $query->whereDay('created_at', $day);
+                }
+
+                // apply course filter if provided (restrict payments to those having registration for these course ids)
+                if (!empty($courseIds)) {
+                    $query->whereHas('registration', function ($q) use ($courseIds) {
+                        $q->whereIn('course_id', $courseIds);
+                    });
                 }
 
                 $payments = $query->get();
