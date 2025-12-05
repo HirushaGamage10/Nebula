@@ -1,6 +1,6 @@
 @extends('inc.app')
 
-@section('title', 'NEBULA | DGMDashboard')
+@section('title', 'NEBULA | Dashboard')
 
 @section('content')
     <link rel="stylesheet" href="{{ asset('css/styles.min.css') }}">

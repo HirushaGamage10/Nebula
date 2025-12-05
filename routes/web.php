@@ -897,7 +897,7 @@ Route::post('/team/assign', [TeamPhaseController::class, 'assignMember'])->name(
 
 
 
-Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Administrator (level 02),Developer'])
+Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Administrator (level 02),Developer,Marketing Manager'])
     ->group(function () {
 
     // Show Course Change Page
