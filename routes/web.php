@@ -52,7 +52,8 @@ use App\Http\Controllers\{
     CourseChangeController,
     MarketingManagerDashboardController,
     StudentCounselorDashboardController,
-    HostelManagerDashboardController
+    HostelManagerDashboardController,
+    AdminL1DashboardController
 };
 // Default
 Route::redirect('/', 'login');
@@ -1037,4 +1038,53 @@ Route::middleware(['role:Hostel Manager,Developer'])->group(function () {
         [HostelManagerDashboardController::class, 'exportData'])
         ->name('api.hostel.manager.export');
 
+});
+
+// Add these routes to your web.php file
+
+Route::middleware(['role:Program Administrator (level 01),Developer'])->group(function () {
+    
+    // Main Dashboard
+    Route::get('/admin-l1-dashboard', 
+        [AdminL1DashboardController::class, 'showDashboard'])
+        ->name('admin.l1.dashboard');
+    
+    // API Endpoints
+    Route::prefix('api/admin-l1')->group(function () {
+        
+        // Overview Metrics
+        Route::get('/overview', 
+            [AdminL1DashboardController::class, 'getOverviewMetrics'])
+            ->name('api.admin.l1.overview');
+        
+        // Student Statistics
+        Route::get('/student-stats', 
+            [AdminL1DashboardController::class, 'getStudentStats'])
+            ->name('api.admin.l1.student.stats');
+        
+        // Course Registration Statistics
+        Route::get('/course-registration-stats', 
+            [AdminL1DashboardController::class, 'getCourseRegistrationStats'])
+            ->name('api.admin.l1.course.registration.stats');
+        
+        // Clearance Statistics
+        Route::get('/clearance-stats', 
+            [AdminL1DashboardController::class, 'getClearanceStats'])
+            ->name('api.admin.l1.clearance.stats');
+        
+        // Financial Statistics
+        Route::get('/financial-stats', 
+            [AdminL1DashboardController::class, 'getFinancialStats'])
+            ->name('api.admin.l1.financial.stats');
+        
+        // Recent Activities
+        Route::get('/recent-activities', 
+            [AdminL1DashboardController::class, 'getRecentActivities'])
+            ->name('api.admin.l1.recent.activities');
+        
+        // Action Items
+        Route::get('/action-items', 
+            [AdminL1DashboardController::class, 'getActionItems'])
+            ->name('api.admin.l1.action.items');
+    });
 });

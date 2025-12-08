@@ -39,7 +39,7 @@ class DashboardController extends Controller
         // Map roles to dashboard views with redirects
         $roleViews = [
             'DGM' => 'dgmdashboard',
-            'Program Administrator (level 01)' => 'dashboard',
+            'Program Administrator (level 01)' => 'adminl1.dashboard',
             'Program Administrator (level 02)' => 'dashboard',
             'Student Counselor' => 'student_counselor_dashboard',
             'Marketing Manager' => 'marketing_manager_dashboard',
