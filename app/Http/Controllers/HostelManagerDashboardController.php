@@ -8,6 +8,7 @@ use App\Models\Course;
 use App\Models\Intake;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class HostelManagerDashboardController extends Controller
 {
@@ -25,69 +26,64 @@ class HostelManagerDashboardController extends Controller
         $month = $request->month ?? now()->month;
         $range = $request->range ?? 'month';
         
-        $startDate = $this->getDateRange($range, $request);
-        $endDate = now();
+        // Get date range based on filter
+        list($startDate, $endDate) = $this->getDateRange($range, $year, $month, $request);
         
-        // Total counts
+        // Build query for filtered period
+        $filteredQuery = ClearanceRequest::where('clearance_type', 'hostel');
+        
+        // Apply date filter based on range
+        if ($range === 'custom' && $request->startDate && $request->endDate) {
+            $filteredQuery->whereBetween('requested_at', [
+                Carbon::parse($request->startDate)->startOfDay(),
+                Carbon::parse($request->endDate)->endOfDay()
+            ]);
+        } elseif ($range === 'month') {
+            $filteredQuery->whereYear('requested_at', $year)
+                         ->whereMonth('requested_at', $month);
+        } elseif ($range === 'week') {
+            $filteredQuery->whereBetween('requested_at', [
+                now()->startOfWeek(),
+                now()->endOfWeek()
+            ]);
+        } elseif ($range === 'today') {
+            $filteredQuery->whereDate('requested_at', now());
+        }
+        // For 'all' range, no date filter - show all time data
+        
+        // Get counts for filtered period
+        $filteredPending = (clone $filteredQuery)->where('status', 'pending')->count();
+        $filteredApproved = (clone $filteredQuery)->where('status', 'approved')->count();
+        $filteredRejected = (clone $filteredQuery)->where('status', 'rejected')->count();
+        
+        // Get previous period for comparison
+        $previousPeriodData = $this->getPreviousPeriodData($range, $year, $month, $request);
+        
+        // Calculate percentage changes
+        $pendingChange = $this->calculatePercentageChange($filteredPending, $previousPeriodData['pending']);
+        $approvedChange = $this->calculatePercentageChange($filteredApproved, $previousPeriodData['approved']);
+        $rejectedChange = $this->calculatePercentageChange($filteredRejected, $previousPeriodData['rejected']);
+        
+        // Get total pending (all time) for totalPending
         $totalPending = ClearanceRequest::where('clearance_type', 'hostel')
             ->where('status', 'pending')->count();
-            
-        $lastMonth = Carbon::now()->subMonth();
-        $lastMonthPending = ClearanceRequest::where('clearance_type', 'hostel')
-            ->where('status', 'pending')
-            ->whereYear('created_at', $lastMonth->year)
-            ->whereMonth('created_at', $lastMonth->month)
-            ->count();
-            
-        $pendingChange = $lastMonthPending > 0 
-            ? round((($totalPending - $lastMonthPending) / $lastMonthPending) * 100, 1)
-            : 0;
-            
-        // Monthly counts with date range
-        $monthlyQuery = ClearanceRequest::where('clearance_type', 'hostel')
-            ->whereBetween('requested_at', [$startDate, $endDate]);
-            
-        $monthlyApproved = (clone $monthlyQuery)->where('status', 'approved')->count();
-        $monthlyRejected = (clone $monthlyQuery)->where('status', 'rejected')->count();
         
-        // Last month for comparison
-        $lastMonthStart = Carbon::parse($startDate)->subMonth();
-        $lastMonthEnd = Carbon::parse($endDate)->subMonth();
-        
-        $lastMonthApproved = ClearanceRequest::where('clearance_type', 'hostel')
-            ->where('status', 'approved')
-            ->whereBetween('approved_at', [$lastMonthStart, $lastMonthEnd])
-            ->count();
-            
-        $lastMonthRejected = ClearanceRequest::where('clearance_type', 'hostel')
-            ->where('status', 'rejected')
-            ->whereBetween('updated_at', [$lastMonthStart, $lastMonthEnd])
-            ->count();
-            
-        $approvedChange = $lastMonthApproved > 0 
-            ? round((($monthlyApproved - $lastMonthApproved) / $lastMonthApproved) * 100, 1)
-            : 0;
-            
-        $rejectedChange = $lastMonthRejected > 0 
-            ? round((($monthlyRejected - $lastMonthRejected) / $lastMonthRejected) * 100, 1)
-            : 0;
-            
-        // Trends data for chart
+        // Trends data for chart - based on filtered period
         $trends = $this->getRequestTrends($startDate, $endDate);
         
-        // Status distribution
+        // Status distribution for filtered period
         $distribution = [
-            'pending' => $totalPending,
-            'approved' => $monthlyApproved,
-            'rejected' => $monthlyRejected
+            'pending' => $filteredPending,
+            'approved' => $filteredApproved,
+            'rejected' => $filteredRejected
         ];
 
         return response()->json([
-            'totalPending' => $totalPending,
-            'monthly' => [
-                'pending' => $totalPending,
-                'approved' => $monthlyApproved,
-                'rejected' => $monthlyRejected
+            'totalPending' => $totalPending, // Keep for compatibility
+            'filtered' => [ // New key for filtered data
+                'pending' => $filteredPending,
+                'approved' => $filteredApproved,
+                'rejected' => $filteredRejected
             ],
             'change' => [
                 'pending' => $pendingChange >= 0 ? "+{$pendingChange}%" : "{$pendingChange}%",
@@ -103,42 +99,40 @@ class HostelManagerDashboardController extends Controller
     {
         $year = $request->year ?? now()->year;
         $month = $request->month ?? now()->month;
+        $range = $request->range ?? 'month';
         
-        // Average processing time (in hours)
-        $avgProcessingTime = ClearanceRequest::where('clearance_type', 'hostel')
+        // Get date range based on filter
+        list($startDate, $endDate) = $this->getDateRange($range, $year, $month, $request);
+        
+        // Build query for filtered period
+        $query = ClearanceRequest::where('clearance_type', 'hostel')
+            ->whereBetween('requested_at', [$startDate, $endDate]);
+        
+        // Average processing time (in hours) - only for approved requests
+        $avgProcessingTime = (clone $query)
             ->where('status', 'approved')
-            ->whereYear('approved_at', $year)
-            ->whereMonth('approved_at', $month)
+            ->whereNotNull('approved_at')
             ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, requested_at, approved_at)) as avg_time')
             ->value('avg_time') ?? 0;
             
         // Clearance rate (approval percentage)
-        $totalRequests = ClearanceRequest::where('clearance_type', 'hostel')
-            ->whereYear('requested_at', $year)
-            ->whereMonth('requested_at', $month)
-            ->count();
-            
-        $approvedRequests = ClearanceRequest::where('clearance_type', 'hostel')
-            ->where('status', 'approved')
-            ->whereYear('requested_at', $year)
-            ->whereMonth('requested_at', $month)
-            ->count();
-            
+        $totalRequests = (clone $query)->count();
+        $approvedRequests = (clone $query)->where('status', 'approved')->count();
+        
         $clearanceRate = $totalRequests > 0 
             ? round(($approvedRequests / $totalRequests) * 100, 1)
             : 0;
             
-        // Active requests (last 7 days)
+        // Active requests (last 7 days) - this is always last 7 days regardless of filter
         $activeRequests = ClearanceRequest::where('clearance_type', 'hostel')
             ->where('status', 'pending')
             ->where('requested_at', '>=', now()->subDays(7))
             ->count();
             
-        // Average completion time (in days)
-        $avgCompletionTime = ClearanceRequest::where('clearance_type', 'hostel')
+        // Average completion time (in days) - only for approved requests
+        $avgCompletionTime = (clone $query)
             ->where('status', 'approved')
-            ->whereYear('approved_at', $year)
-            ->whereMonth('approved_at', $month)
+            ->whereNotNull('approved_at')
             ->selectRaw('AVG(TIMESTAMPDIFF(DAY, requested_at, approved_at)) as avg_days')
             ->value('avg_days') ?? 0;
 
@@ -152,7 +146,7 @@ class HostelManagerDashboardController extends Controller
 
     public function getActionList(Request $request)
     {
-        $perPage = 10;
+        $perPage = 15;
         $query = ClearanceRequest::where('clearance_type', 'hostel')
             ->with(['student', 'course', 'intake']);
             
@@ -169,16 +163,30 @@ class HostelManagerDashboardController extends Controller
             $query->where('status', $request->status);
         }
         
+        // Bulk filter (for bulk actions panel)
+        if ($request->bulk_filter && $request->bulk_filter !== 'all') {
+            $query->where('status', $request->bulk_filter);
+        }
+        
         if ($request->search) {
-            $query->whereHas('student', function($q) use ($request) {
-                $q->where('full_name', 'like', "%{$request->search}%")
-                  ->orWhere('student_id', 'like', "%{$request->search}%");
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->whereHas('student', function($q2) use ($search) {
+                    $q2->where('full_name', 'like', "%{$search}%")
+                      ->orWhere('student_id', 'like', "%{$search}%");
+                })
+                ->orWhereHas('course', function($q2) use ($search) {
+                    $q2->where('course_name', 'like', "%{$search}%");
+                })
+                ->orWhereHas('intake', function($q2) use ($search) {
+                    $q2->where('intake_name', 'like', "%{$search}%");
+                });
             });
         }
         
         // Apply date range
         if ($request->date_range && $request->date_range !== 'all') {
-            $dateRange = $this->getDateRange($request->date_range);
+            $dateRange = $this->getDateRangeForFilter($request->date_range, null, null, $request);
             $query->whereBetween('requested_at', $dateRange);
         }
         
@@ -189,11 +197,13 @@ class HostelManagerDashboardController extends Controller
                 break;
             case 'name_asc':
                 $query->join('students', 'clearance_requests.student_id', '=', 'students.id')
-                      ->orderBy('students.full_name', 'asc');
+                      ->orderBy('students.full_name', 'asc')
+                      ->select('clearance_requests.*');
                 break;
             case 'name_desc':
                 $query->join('students', 'clearance_requests.student_id', '=', 'students.id')
-                      ->orderBy('students.full_name', 'desc');
+                      ->orderBy('students.full_name', 'desc')
+                      ->select('clearance_requests.*');
                 break;
             default: // 'newest'
                 $query->orderBy('requested_at', 'desc');
@@ -283,10 +293,21 @@ class HostelManagerDashboardController extends Controller
 
     public function listByStatus(Request $request)
     {
-        $requests = ClearanceRequest::where('clearance_type', 'hostel')
+        $query = ClearanceRequest::where('clearance_type', 'hostel')
             ->where('status', $request->status)
-            ->with(['student', 'course', 'intake'])
-            ->orderBy('requested_at', 'desc')
+            ->with(['student', 'course', 'intake']);
+            
+        // Apply date range filter if provided
+        if ($request->year || $request->month || $request->range) {
+            $year = $request->year ?? now()->year;
+            $month = $request->month ?? now()->month;
+            $range = $request->range ?? 'month';
+            
+            list($startDate, $endDate) = $this->getDateRange($range, $year, $month, $request);
+            $query->whereBetween('requested_at', [$startDate, $endDate]);
+        }
+            
+        $requests = $query->orderBy('requested_at', 'desc')
             ->paginate(10)
             ->through(function ($request) {
                 $request->formatted_date = Carbon::parse($request->requested_at)->format('Y-m-d H:i');
@@ -296,22 +317,292 @@ class HostelManagerDashboardController extends Controller
         return response()->json($requests);
     }
     
-    private function getDateRange($range, $request = null)
+    public function updateRequestStatus(Request $request)
+    {
+        $request->validate([
+            'request_id' => 'required|exists:clearance_requests,id',
+            'status' => 'required|in:pending,approved,rejected',
+            'remarks' => 'nullable|string|max:500'
+        ]);
+        
+        $clearanceRequest = ClearanceRequest::findOrFail($request->request_id);
+        
+        // Ensure it's a hostel clearance
+        if ($clearanceRequest->clearance_type !== 'hostel') {
+            return response()->json(['error' => 'Invalid clearance type'], 400);
+        }
+        
+        $oldStatus = $clearanceRequest->status;
+        $clearanceRequest->status = $request->status;
+        $clearanceRequest->remarks = $request->remarks;
+        
+        if ($request->status === 'approved') {
+            $clearanceRequest->approved_by = Auth::id();
+            $clearanceRequest->approved_at = now();
+        } else {
+            $clearanceRequest->approved_by = null;
+            $clearanceRequest->approved_at = null;
+        }
+        
+        $clearanceRequest->save();
+        
+        // Log the status change
+        activity()
+            ->performedOn($clearanceRequest)
+            ->causedBy(Auth::user())
+            ->withProperties([
+                'old_status' => $oldStatus,
+                'new_status' => $request->status,
+                'remarks' => $request->remarks
+            ])
+            ->log('status_updated');
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Request status updated successfully'
+        ]);
+    }
+    
+    public function bulkUpdateRequests(Request $request)
+    {
+        $request->validate([
+            'request_ids' => 'required|array',
+            'request_ids.*' => 'exists:clearance_requests,id',
+            'status' => 'required|in:pending,approved,rejected',
+            'remarks' => 'nullable|string|max:500'
+        ]);
+        
+        $updatedCount = 0;
+        $failedCount = 0;
+        
+        foreach ($request->request_ids as $requestId) {
+            try {
+                $clearanceRequest = ClearanceRequest::find($requestId);
+                
+                // Ensure it's a hostel clearance
+                if ($clearanceRequest->clearance_type !== 'hostel') {
+                    $failedCount++;
+                    continue;
+                }
+                
+                $oldStatus = $clearanceRequest->status;
+                $clearanceRequest->status = $request->status;
+                $clearanceRequest->remarks = $request->remarks;
+                
+                if ($request->status === 'approved') {
+                    $clearanceRequest->approved_by = Auth::id();
+                    $clearanceRequest->approved_at = now();
+                } else {
+                    $clearanceRequest->approved_by = null;
+                    $clearanceRequest->approved_at = null;
+                }
+                
+                $clearanceRequest->save();
+                
+                // Log the status change
+                activity()
+                    ->performedOn($clearanceRequest)
+                    ->causedBy(Auth::user())
+                    ->withProperties([
+                        'old_status' => $oldStatus,
+                        'new_status' => $request->status,
+                        'remarks' => $request->remarks,
+                        'bulk_action' => true
+                    ])
+                    ->log('status_updated');
+                
+                $updatedCount++;
+            } catch (\Exception $e) {
+                $failedCount++;
+            }
+        }
+        
+        return response()->json([
+            'success' => true,
+            'updated' => $updatedCount,
+            'failed' => $failedCount,
+            'message' => "Updated {$updatedCount} request(s)" . ($failedCount > 0 ? ", {$failedCount} failed" : "")
+        ]);
+    }
+    
+    public function exportData(Request $request)
+    {
+        $query = ClearanceRequest::where('clearance_type', 'hostel')
+            ->with(['student', 'course', 'intake']);
+        
+        // Apply filters
+        if ($request->course_id) {
+            $query->where('course_id', $request->course_id);
+        }
+        
+        if ($request->intake_id) {
+            $query->where('intake_id', $request->intake_id);
+        }
+        
+        if ($request->status) {
+            $query->where('status', $request->status);
+        }
+        
+        if ($request->search) {
+            $search = $request->search;
+            $query->whereHas('student', function($q) use ($search) {
+                $q->where('full_name', 'like', "%{$search}%")
+                  ->orWhere('student_id', 'like', "%{$search}%");
+            });
+        }
+        
+        // Apply date range
+        if ($request->date_range && $request->date_range !== 'all') {
+            $dateRange = $this->getDateRangeForFilter($request->date_range, null, null, $request);
+            $query->whereBetween('requested_at', $dateRange);
+        }
+        
+        $requests = $query->orderBy('requested_at', 'desc')->get();
+        
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename=hostel_clearances_' . date('Y-m-d') . '.csv',
+        ];
+        
+        $callback = function() use ($requests) {
+            $file = fopen('php://output', 'w');
+            
+            // Add BOM for UTF-8
+            fwrite($file, "\xEF\xBB\xBF");
+            
+            // Headers
+            fputcsv($file, [
+                'Student ID',
+                'Student Name',
+                'Course',
+                'Intake',
+                'Status',
+                'Requested At',
+                'Updated At',
+                'Processing Time (hours)',
+                'Approved By',
+                'Remarks'
+            ]);
+            
+            // Data
+            foreach ($requests as $request) {
+                $processingTime = $request->approved_at 
+                    ? Carbon::parse($request->requested_at)->diffInHours(Carbon::parse($request->approved_at))
+                    : '';
+                    
+                fputcsv($file, [
+                    $request->student->student_id ?? '',
+                    $request->student->full_name ?? '',
+                    $request->course->course_name ?? '',
+                    $request->intake->intake_name ?? '',
+                    ucfirst($request->status),
+                    $request->requested_at->format('Y-m-d H:i:s'),
+                    $request->updated_at->format('Y-m-d H:i:s'),
+                    $processingTime,
+                    $request->approvedBy->name ?? '',
+                    $request->remarks ?? ''
+                ]);
+            }
+            
+            fclose($file);
+        };
+        
+        return response()->stream($callback, 200, $headers);
+    }
+    
+    private function getDateRange($range, $year, $month, $request = null)
     {
         switch ($range) {
             case 'today':
-                return now()->startOfDay();
+                return [now()->startOfDay(), now()->endOfDay()];
             case 'week':
-                return now()->startOfWeek();
+                return [now()->startOfWeek(), now()->endOfWeek()];
             case 'month':
-                return now()->startOfMonth();
+                return [
+                    Carbon::create($year, $month, 1)->startOfMonth(),
+                    Carbon::create($year, $month, 1)->endOfMonth()
+                ];
             case 'custom':
-                return $request && $request->startDate 
-                    ? Carbon::parse($request->startDate)->startOfDay()
-                    : now()->startOfMonth();
-            default:
-                return now()->subYear()->startOfDay();
+                if ($request && $request->startDate && $request->endDate) {
+                    return [
+                        Carbon::parse($request->startDate)->startOfDay(),
+                        Carbon::parse($request->endDate)->endOfDay()
+                    ];
+                }
+                return [now()->startOfMonth(), now()->endOfMonth()];
+            default: // 'all' or any other
+                return [
+                    Carbon::create(2020, 1, 1)->startOfDay(), // From beginning
+                    now()->endOfDay()
+                ];
         }
+    }
+    
+    private function getDateRangeForFilter($range, $year = null, $month = null, $request = null)
+    {
+        $year = $year ?? now()->year;
+        $month = $month ?? now()->month;
+        
+        return $this->getDateRange($range, $year, $month, $request);
+    }
+    
+    private function getPreviousPeriodData($range, $year, $month, $request)
+    {
+        $query = ClearanceRequest::where('clearance_type', 'hostel');
+        
+        switch ($range) {
+            case 'month':
+                $previousMonth = Carbon::create($year, $month, 1)->subMonth();
+                $query->whereYear('requested_at', $previousMonth->year)
+                     ->whereMonth('requested_at', $previousMonth->month);
+                break;
+                
+            case 'week':
+                $previousWeek = now()->subWeek();
+                $query->whereBetween('requested_at', [
+                    $previousWeek->startOfWeek(),
+                    $previousWeek->endOfWeek()
+                ]);
+                break;
+                
+            case 'today':
+                $query->whereDate('requested_at', now()->subDay());
+                break;
+                
+            case 'custom':
+                if ($request->startDate && $request->endDate) {
+                    $start = Carbon::parse($request->startDate);
+                    $end = Carbon::parse($request->endDate);
+                    $daysDiff = $end->diffInDays($start);
+                    
+                    $query->whereBetween('requested_at', [
+                        $start->subDays($daysDiff + 1),
+                        $end->subDays($daysDiff + 1)
+                    ]);
+                }
+                break;
+                
+            default: // 'all' or yearly comparison
+                $previousYear = $year - 1;
+                $query->whereYear('requested_at', $previousYear);
+                break;
+        }
+        
+        return [
+            'pending' => (clone $query)->where('status', 'pending')->count(),
+            'approved' => (clone $query)->where('status', 'approved')->count(),
+            'rejected' => (clone $query)->where('status', 'rejected')->count()
+        ];
+    }
+    
+    private function calculatePercentageChange($current, $previous)
+    {
+        if ($previous == 0) {
+            return $current > 0 ? 100 : 0;
+        }
+        
+        $change = (($current - $previous) / $previous) * 100;
+        return round($change, 1);
     }
     
     private function getRequestTrends($startDate, $endDate)

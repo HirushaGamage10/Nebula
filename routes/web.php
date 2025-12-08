@@ -1024,5 +1024,17 @@ Route::middleware(['role:Hostel Manager,Developer'])->group(function () {
     Route::get('/api/hostel-manager/list-by-status',
         [HostelManagerDashboardController::class, 'listByStatus'])
         ->name('api.hostel.manager.list.by.status');
+        
+    Route::post('/api/hostel-manager/update-status',
+        [HostelManagerDashboardController::class, 'updateRequestStatus'])
+        ->name('api.hostel.manager.update.status');
+        
+    Route::post('/api/hostel-manager/bulk-update',
+        [HostelManagerDashboardController::class, 'bulkUpdateRequests'])
+        ->name('api.hostel.manager.bulk.update');
+        
+    Route::post('/api/hostel-manager/export',
+        [HostelManagerDashboardController::class, 'exportData'])
+        ->name('api.hostel.manager.export');
 
 });

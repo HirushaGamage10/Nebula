@@ -49,6 +49,31 @@
         border-radius: 5px;
         font-weight: 500;
     }
+    
+    .select-all-checkbox {
+        margin-right: 10px;
+    }
+    
+    .bulk-actions-bar {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        background: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        display: none;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .status-selector {
+        width: 150px;
+    }
 </style>
 
 <div class="container-fluid">
@@ -240,9 +265,49 @@
             </div>
         </div>
 
+        <!-- Bulk Actions Panel -->
+        <div class="card shadow-sm p-4 mb-4 bg-white">
+            <h5 class="fw-semibold mb-3">Bulk Actions</h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label>Quick Filter for Bulk Actions</label>
+                    <select id="bulkFilterStatus" class="form-select">
+                        <option value="pending">Pending Only</option>
+                        <option value="all">All Status</option>
+                        <option value="approved">Approved Only</option>
+                        <option value="rejected">Rejected Only</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label>Bulk Action</label>
+                    <select id="bulkAction" class="form-select">
+                        <option value="">Select Action</option>
+                        <option value="approve">Approve Selected</option>
+                        <option value="reject">Reject Selected</option>
+                        <option value="pending">Mark as Pending</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" id="applyBulkAction" disabled>
+                        <i class="bi bi-check-circle"></i> Apply to Selected
+                    </button>
+                </div>
+            </div>
+            <div class="row g-3 mt-3">
+                <div class="col-md-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                        <label class="form-check-label" for="selectAllCheckbox">
+                            Select all records on this page
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Filters -->
         <div class="card shadow-sm p-4 mb-4 bg-white">
-            <h5 class="fw-semibold mb-3">Filters</h5>
+            <h5 class="fw-semibold mb-3">Advanced Filters</h5>
             <div class="row g-3">
                 <div class="col-md-3">
                     <label>Course</label>
@@ -298,6 +363,11 @@
                 <div class="col-md-3 d-flex align-items-end">
                     <button class="btn btn-outline-secondary w-100" id="resetFilters">Reset</button>
                 </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-success w-100" id="exportDataBtn">
+                        <i class="bi bi-download"></i> Export Data
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -306,7 +376,7 @@
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
                 <input id="searchInput" type="text" class="form-control p-3" 
-                       placeholder="Search by Student Name, ID, or Course...">
+                       placeholder="Search by Student Name, ID, Course, or Intake...">
                 <button class="btn btn-outline-secondary" type="button" id="clearSearch">Clear</button>
             </div>
         </div>
@@ -314,25 +384,36 @@
         <!-- Action List -->
         <div class="card shadow-sm p-4 mb-4 bg-white">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-semibold m-0">Students Requiring Action</h5>
-                <span class="badge bg-primary" id="actionCount">0 requests</span>
+                <div>
+                    <h5 class="fw-semibold m-0">Hostel Clearance Requests</h5>
+                    <small class="text-muted" id="selectedCountInfo">0 selected</small>
+                </div>
+                <div>
+                    <span class="badge bg-primary me-2" id="actionCount">0 requests</span>
+                    <button class="btn btn-sm btn-outline-primary" id="quickApproveBtn" style="display: none;">
+                        <i class="bi bi-check-lg"></i> Quick Approve Selected
+                    </button>
+                </div>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle text-center">
                     <thead class="table-light">
                         <tr>
+                            <th width="50">
+                                <input type="checkbox" id="selectAllHeader" class="form-check-input">
+                            </th>
                             <th>Student</th>
                             <th>Course</th>
                             <th>Intake</th>
                             <th>Requested At</th>
                             <th>Days Pending</th>
                             <th>Status</th>
-                            <th>Action</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="actionListTable">
                         <tr id="loadingRow">
-                            <td colspan="7" class="text-center py-4">
+                            <td colspan="8" class="text-center py-4">
                                 <div class="spinner-border text-primary" role="status">
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
@@ -369,6 +450,27 @@
             </div>
         </div>
 
+    </div>
+</div>
+
+<!-- Bulk Actions Bar (Fixed at Bottom) -->
+<div class="bulk-actions-bar" id="bulkActionsBar">
+    <div class="d-flex align-items-center">
+        <span class="me-3 fw-bold" id="selectedCount">0 items selected</span>
+        <div class="action-buttons">
+            <select id="bulkStatusChange" class="form-select status-selector me-2">
+                <option value="">Change Status To...</option>
+                <option value="approved">Approve</option>
+                <option value="rejected">Reject</option>
+                <option value="pending">Mark as Pending</option>
+            </select>
+            <button class="btn btn-success btn-sm" id="bulkApplyBtn" disabled>
+                <i class="bi bi-check-circle"></i> Apply
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" id="bulkClearBtn">
+                <i class="bi bi-x-circle"></i> Clear
+            </button>
+        </div>
     </div>
 </div>
 
@@ -425,6 +527,60 @@
     </div>
 </div>
 
+<!-- MODAL: BULK ACTION CONFIRMATION -->
+<div class="modal fade" id="bulkConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Bulk Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="bulkConfirmMessage">Are you sure you want to perform this action?</p>
+                <div class="mb-3">
+                    <label for="bulkRemarks" class="form-label">Remarks (Optional)</label>
+                    <textarea id="bulkRemarks" class="form-control" rows="3" placeholder="Add remarks for this bulk action..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmBulkAction">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: SINGLE ACTION -->
+<div class="modal fade" id="singleActionModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Request Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="singleStatus" class="form-label">Status</label>
+                    <select id="singleStatus" class="form-select">
+                        <option value="approved">Approve</option>
+                        <option value="rejected">Reject</option>
+                        <option value="pending">Mark as Pending</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="singleRemarks" class="form-label">Remarks</label>
+                    <textarea id="singleRemarks" class="form-control" rows="3" placeholder="Add remarks..."></textarea>
+                </div>
+                <input type="hidden" id="singleRequestId">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmSingleAction">Update</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -433,6 +589,9 @@
 let requestTrendsChart, statusDistributionChart;
 let currentPage = 1;
 let totalPages = 1;
+let selectedRequests = new Set();
+let currentBulkAction = '';
+let allRequestIds = [];
 
 document.addEventListener("DOMContentLoaded", function() {
     // Update real-time clock
@@ -464,12 +623,14 @@ document.addEventListener("DOMContentLoaded", function() {
     
     $("#searchInput").keyup(debounce(function() {
         if ($(this).val().length > 2 || $(this).val().length === 0) {
+            currentPage = 1;
             loadActionList();
         }
     }, 300));
     
     $("#clearSearch").click(function() {
         $("#searchInput").val('');
+        currentPage = 1;
         loadActionList();
     });
     
@@ -484,6 +645,7 @@ document.addEventListener("DOMContentLoaded", function() {
         $("#filterStatus").val('');
         $("#filterSort").val('newest');
         $("#dateRange").val('all');
+        $("#bulkFilterStatus").val('pending');
         currentPage = 1;
         loadActionList();
     });
@@ -491,6 +653,92 @@ document.addEventListener("DOMContentLoaded", function() {
     $("#pendingCard").click(() => openStatusModal("pending"));
     $("#approvedCard").click(() => openStatusModal("approved"));
     $("#rejectedCard").click(() => openStatusModal("rejected"));
+    
+    // Bulk action handlers
+    $("#bulkFilterStatus").change(function() {
+        currentPage = 1;
+        loadActionList();
+    });
+    
+    $("#bulkAction").change(function() {
+        $("#applyBulkAction").prop('disabled', !$(this).val());
+    });
+    
+    $("#applyBulkAction").click(function() {
+        const action = $("#bulkAction").val();
+        if (action && selectedRequests.size > 0) {
+            showBulkConfirmModal(action, Array.from(selectedRequests));
+        }
+    });
+    
+    $("#selectAllCheckbox").change(function() {
+        const isChecked = $(this).prop('checked');
+        $('.request-checkbox').prop('checked', isChecked);
+        
+        if (isChecked) {
+            allRequestIds.forEach(id => selectedRequests.add(id));
+        } else {
+            selectedRequests.clear();
+        }
+        
+        updateSelectionUI();
+    });
+    
+    $("#selectAllHeader").change(function() {
+        const isChecked = $(this).prop('checked');
+        $('.request-checkbox').prop('checked', isChecked);
+        
+        if (isChecked) {
+            allRequestIds.forEach(id => selectedRequests.add(id));
+        } else {
+            selectedRequests.clear();
+        }
+        
+        updateSelectionUI();
+    });
+    
+    // Quick approve button
+    $("#quickApproveBtn").click(function() {
+        if (selectedRequests.size > 0) {
+            showBulkConfirmModal('approve', Array.from(selectedRequests));
+        }
+    });
+    
+    // Export button
+    $("#exportDataBtn").click(function() {
+        exportFilteredData();
+    });
+    
+    // Bulk actions bar
+    $("#bulkStatusChange").change(function() {
+        $("#bulkApplyBtn").prop('disabled', !$(this).val());
+    });
+    
+    $("#bulkApplyBtn").click(function() {
+        const status = $("#bulkStatusChange").val();
+        if (status && selectedRequests.size > 0) {
+            showBulkConfirmModal(status, Array.from(selectedRequests));
+        }
+    });
+    
+    $("#bulkClearBtn").click(function() {
+        clearSelection();
+    });
+    
+    // Single action modal
+    $("#confirmSingleAction").click(function() {
+        const requestId = $("#singleRequestId").val();
+        const status = $("#singleStatus").val();
+        const remarks = $("#singleRemarks").val();
+        
+        updateRequestStatus(requestId, status, remarks);
+    });
+    
+    // Bulk confirm modal
+    $("#confirmBulkAction").click(function() {
+        const remarks = $("#bulkRemarks").val();
+        performBulkAction(currentBulkAction, selectedRequests, remarks);
+    });
 });
 
 function updateClock() {
@@ -608,7 +856,8 @@ function loadActionList(page = 1) {
         status: $('#filterStatus').val(),
         sort: $('#filterSort').val(),
         date_range: $('#dateRange').val(),
-        search: $('#searchInput').val()
+        search: $('#searchInput').val(),
+        bulk_filter: $('#bulkFilterStatus').val()
     };
     
     $("#loadingRow").show();
@@ -620,19 +869,33 @@ function loadActionList(page = 1) {
         $("#actionCount").text(response.total + " requests");
         renderPagination();
         $("#loadingRow").hide();
+        
+        // Update all request IDs for selection
+        allRequestIds = response.data.map(r => r.id);
+    }).fail(function() {
+        $("#loadingRow").hide();
+        $("#actionListTable").html('<tr><td colspan="8" class="text-center py-4 text-danger">Error loading data</td></tr>');
     });
 }
 
 function renderActionList(data) {
     let rows = "";
+    allRequestIds = [];
     
     if (data.length === 0) {
-        rows = `<tr><td colspan="7" class="text-center py-4 text-muted">No requests found</td></tr>`;
+        rows = `<tr><td colspan="8" class="text-center py-4 text-muted">No requests found</td></tr>`;
     } else {
         data.forEach(r => {
+            allRequestIds.push(r.id);
             let daysPending = r.days_pending || 'N/A';
+            let isSelected = selectedRequests.has(r.id);
+            
             rows += `
-                <tr>
+                <tr data-request-id="${r.id}">
+                    <td>
+                        <input type="checkbox" class="form-check-input request-checkbox" 
+                               data-request-id="${r.id}" ${isSelected ? 'checked' : ''}>
+                    </td>
                     <td>
                         <div class="d-flex align-items-center">
                             <div class="avatar bg-primary text-white rounded-circle me-2" 
@@ -655,18 +918,23 @@ function renderActionList(data) {
                     </td>
                     <td><span class="badge-status badge-${r.status}">${r.status}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary" onclick="openDetailModal(
-                            '${r.student?.full_name || ''}',
-                            '${r.student?.student_id || ''}',
-                            '${r.course?.course_name || ''}',
-                            '${r.intake?.intake_name || ''}',
-                            '${r.status}',
-                            '${r.requested_at}',
-                            '${r.updated_at || r.requested_at}',
-                            '${r.processing_time || ''}'
-                        )">
-                            <i class="bi bi-eye"></i> View
-                        </button>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="openDetailModal(
+                                '${r.student?.full_name || ''}',
+                                '${r.student?.student_id || ''}',
+                                '${r.course?.course_name || ''}',
+                                '${r.intake?.intake_name || ''}',
+                                '${r.status}',
+                                '${r.requested_at}',
+                                '${r.updated_at || r.requested_at}',
+                                '${r.processing_time || ''}'
+                            )">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-success" onclick="showSingleActionModal(${r.id})">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -674,6 +942,53 @@ function renderActionList(data) {
     }
     
     $("#actionListTable").html(rows);
+    
+    // Add event listeners to checkboxes
+    $('.request-checkbox').change(function() {
+        const requestId = $(this).data('request-id');
+        if ($(this).prop('checked')) {
+            selectedRequests.add(requestId);
+        } else {
+            selectedRequests.delete(requestId);
+        }
+        updateSelectionUI();
+    });
+    
+    // Update header checkbox state
+    const allChecked = allRequestIds.length > 0 && allRequestIds.every(id => selectedRequests.has(id));
+    $("#selectAllHeader").prop('checked', allChecked);
+    $("#selectAllCheckbox").prop('checked', allChecked);
+    
+    updateSelectionUI();
+}
+
+function updateSelectionUI() {
+    const selectedCount = selectedRequests.size;
+    
+    // Update counts
+    $("#selectedCount").text(selectedCount + " item" + (selectedCount !== 1 ? 's' : '') + " selected");
+    $("#selectedCountInfo").text(selectedCount + " selected");
+    
+    // Show/hide quick approve button
+    if (selectedCount > 0) {
+        $("#quickApproveBtn").show();
+        $("#bulkActionsBar").show();
+    } else {
+        $("#quickApproveBtn").hide();
+        $("#bulkActionsBar").hide();
+    }
+    
+    // Enable/disable bulk action button
+    $("#applyBulkAction").prop('disabled', selectedCount === 0 || !$("#bulkAction").val());
+    $("#bulkApplyBtn").prop('disabled', selectedCount === 0 || !$("#bulkStatusChange").val());
+}
+
+function clearSelection() {
+    selectedRequests.clear();
+    $('.request-checkbox').prop('checked', false);
+    $("#selectAllHeader").prop('checked', false);
+    $("#selectAllCheckbox").prop('checked', false);
+    updateSelectionUI();
 }
 
 function renderPagination() {
@@ -686,21 +1001,35 @@ function renderPagination() {
         <nav>
             <ul class="pagination">
                 <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="loadActionList(${currentPage - 1})">Previous</a>
+                    <a class="page-link" href="#" onclick="loadActionList(${currentPage - 1}); return false;">Previous</a>
                 </li>
     `;
     
-    for (let i = 1; i <= totalPages; i++) {
+    // Show limited pages
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    
+    if (startPage > 1) {
+        pagination += `<li class="page-item"><a class="page-link" href="#" onclick="loadActionList(1); return false;">1</a></li>`;
+        if (startPage > 2) pagination += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
         pagination += `
             <li class="page-item ${currentPage === i ? 'active' : ''}">
-                <a class="page-link" href="#" onclick="loadActionList(${i})">${i}</a>
+                <a class="page-link" href="#" onclick="loadActionList(${i}); return false;">${i}</a>
             </li>
         `;
     }
     
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) pagination += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        pagination += `<li class="page-item"><a class="page-link" href="#" onclick="loadActionList(${totalPages}); return false;">${totalPages}</a></li>`;
+    }
+    
     pagination += `
                 <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-                    <a class="page-link" href="#" onclick="loadActionList(${currentPage + 1})">Next</a>
+                    <a class="page-link" href="#" onclick="loadActionList(${currentPage + 1}); return false;">Next</a>
                 </li>
             </ul>
         </nav>
@@ -773,9 +1102,117 @@ function openDetailModal(student, studentId, course, intake, status, requested, 
     $("#detailModal").modal("show");
 }
 
+function showSingleActionModal(requestId) {
+    $("#singleRequestId").val(requestId);
+    $("#singleRemarks").val('');
+    $("#singleStatus").val('approved');
+    $("#singleActionModal").modal("show");
+}
+
+function updateRequestStatus(requestId, status, remarks = '') {
+    $.ajax({
+        url: "{{ route('api.hostel.manager.update.status') }}",
+        method: 'POST',
+        data: {
+            request_id: requestId,
+            status: status,
+            remarks: remarks,
+            _token: "{{ csrf_token() }}"
+        },
+        success: function(response) {
+            $("#singleActionModal").modal("hide");
+            showToast('Success', 'Request status updated successfully', 'success');
+            loadActionList(currentPage);
+            loadOverview();
+            loadRecent();
+        },
+        error: function() {
+            showToast('Error', 'Failed to update request status', 'error');
+        }
+    });
+}
+
+function showBulkConfirmModal(action, requestIds) {
+    currentBulkAction = action;
+    const actionText = {
+        'approve': 'Approve',
+        'reject': 'Reject',
+        'pending': 'Mark as Pending'
+    }[action] || action;
+    
+    $("#bulkConfirmMessage").text(`Are you sure you want to ${actionText.toLowerCase()} ${requestIds.length} selected request(s)?`);
+    $("#bulkRemarks").val('');
+    $("#bulkConfirmModal").modal("show");
+}
+
+function performBulkAction(action, requestIds, remarks = '') {
+    const requestIdsArray = Array.from(requestIds);
+    
+    $.ajax({
+        url: "{{ route('api.hostel.manager.bulk.update') }}",
+        method: 'POST',
+        data: {
+            request_ids: requestIdsArray,
+            status: action,
+            remarks: remarks,
+            _token: "{{ csrf_token() }}"
+        },
+        success: function(response) {
+            $("#bulkConfirmModal").modal("hide");
+            showToast('Success', `Successfully updated ${response.updated} request(s)`, 'success');
+            
+            // Clear selection and refresh data
+            clearSelection();
+            loadActionList(currentPage);
+            loadOverview();
+            loadRecent();
+            
+            // Reset bulk action dropdown
+            $("#bulkAction").val('');
+            $("#applyBulkAction").prop('disabled', true);
+        },
+        error: function(xhr) {
+            showToast('Error', 'Failed to update requests: ' + (xhr.responseJSON?.message || 'Unknown error'), 'error');
+        }
+    });
+}
+
+function exportFilteredData() {
+    let params = {
+        course_id: $('#filterCourse').val(),
+        intake_id: $('#filterIntake').val(),
+        status: $('#filterStatus').val(),
+        date_range: $('#dateRange').val(),
+        search: $('#searchInput').val(),
+        _token: "{{ csrf_token() }}"
+    };
+    
+    // Create form and submit
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = "{{ route('api.hostel.manager.export') }}";
+    
+    Object.keys(params).forEach(key => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = params[key];
+        form.appendChild(input);
+    });
+    
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+}
+
 function exportRecentData() {
-    // Implement export functionality
     alert('Export functionality would be implemented here');
+}
+
+function showToast(title, message, type = 'info') {
+    // You can implement a toast notification here
+    // For now, using alert
+    alert(`${title}: ${message}`);
 }
 
 let nextPageUrl = null;
