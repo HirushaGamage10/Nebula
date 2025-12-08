@@ -429,7 +429,6 @@
     </li>
 @endif -->
 
-
             @php
             // Guard against nulls and keep conditions readable
             $canPaymentPlan   = RoleHelper::hasPermission($role ?? null, 'payment.plan');
@@ -475,13 +474,17 @@
         {{-- Divider (light) --}}
         <li><hr class="my-2 border-gray-200 opacity-30"></li>
         {{-- 🔹 Payment Dashboard / Summary --}}
-        <li class="sidebar-item">
-            <a class="sidebar-link {{ request()->routeIs('payment.summary') ? 'active' : '' }}"
-            href="{{ route('payment.summary') }}">
-                <span><i class="ti ti-chart-pie"></i></span>
-                <span class="hide-menu">Payment Dashboard</span>
-            </a>
-        </li>
+        @if(RoleHelper::hasPermission($role, 'payment.dashboard'))
+<li class="sidebar-item">
+    <a class="sidebar-link {{ request()->routeIs('payment.summary') ? 'active' : '' }}"
+    href="{{ route('payment.summary') }}">
+        <span><i class="ti ti-chart-pie"></i></span>
+        <span class="hide-menu">Payment Dashboard</span>
+    </a>
+</li>
+@endif
+
+
         {{-- 🔹 Payments & Discounts --}}
         @if($canPayment)
             <li class="sidebar-item">

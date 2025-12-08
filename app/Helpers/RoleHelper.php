@@ -24,7 +24,8 @@ class RoleHelper
             'dashboard',
             'special.approval',
             'student.list',
-            'course.change'
+            'course.change',
+            'payment.dashboard'
 
         ],
         'Program Administrator (level 01)' => [
@@ -39,7 +40,9 @@ class RoleHelper
             'all.clearance',
             'student.list',
             'repeat.students.management',
-            'course.change'
+            'course.change',
+            'payment.dashboard'
+            
 
         ],
         'Program Administrator (level 02)' => [
@@ -56,7 +59,8 @@ class RoleHelper
             'overall.attendance',
             'student.list',
             'repeat.students.management',
-            'course.change'
+            'course.change',
+            'payment.dashboard'
 
         ],
         'Student Counselor' => [
@@ -68,14 +72,18 @@ class RoleHelper
             'late.payment',
             'payment.discounts',
             'student.list',
-            'course.change'
+            'course.change',
+            'payment.dashboard'
 
         ],
         'Marketing Manager' => [
             'dashboard',
             'payment.plan',
             'student.list',
-            'course.change'
+            'course.change',
+            'payment.summary',
+            'payment.dashboard'
+
 
         ],
         'Librarian' => [
@@ -145,7 +153,8 @@ class RoleHelper
             'file.cleanup',
             'repeat.students.management',
             'repeat.students.payment',
-            'course.change'
+            'course.change',
+            'payment.dashboard'
 
         ],
     ];
