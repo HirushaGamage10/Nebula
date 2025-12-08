@@ -67,15 +67,19 @@
         data-sidebar-position="fixed" data-header-position="fixed">
         <!-- Sidebar Start -->
         <aside class="left-sidebar">
-            <!-- Sidebar scroll-->
             @php
                 $role = auth()->user()->user_role ?? '';
             @endphp
 
             @if($role === 'Hostel Manager')
                 @include('components.sidebar.hostel_sidebar')
+
             @elseif($role === 'Marketing Manager')
                 @include('components.sidebar.marketing_sidebar')
+
+            @elseif($role === 'Student Counselor')
+                @include('components.sidebar.student_counselor_sidebar')
+
             @else
                 @include('components.sidebar')
             @endif

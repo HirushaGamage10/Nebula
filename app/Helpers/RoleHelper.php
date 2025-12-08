@@ -73,7 +73,9 @@ class RoleHelper
             'payment.discounts',
             'student.list',
             'course.change',
-            'payment.dashboard'
+            'payment.dashboard',
+            'latefee.approval',
+
 
         ],
         'Marketing Manager' => [
