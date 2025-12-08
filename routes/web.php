@@ -613,7 +613,7 @@ Route::middleware(['auth', 'role:Program Administrator (level 01),Program Admini
 });
 
 // Payment Plan - Marketing Manager and Developer only
-Route::middleware(['auth', 'role:Marketing Manager,Developer'])->group(function () {
+Route::middleware(['auth', 'role:Marketing Manager,Developer,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
 
     // LIST page (new)
     Route::get('/payment-plans', [App\Http\Controllers\PaymentPlanController::class, 'index'])
@@ -664,7 +664,7 @@ Route::middleware(['auth', 'role:DGM,Developer'])->group(function () {
 });
 
 // Payment Clearance - Bursar and Developer only
-Route::middleware(['auth', 'role:Bursar,Developer'])->group(function () {
+Route::middleware(['auth', 'role:Bursar,Developer,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
     Route::get('/payment-clearance', [App\Http\Controllers\PaymentClearanceController::class, 'index'])->name('payment.clearance');
     Route::post('/payment/approve-clearance', [App\Http\Controllers\PaymentClearanceController::class, 'approveClearance'])->name('payment.approve.clearance');
     Route::post('/payment/reject-clearance', [App\Http\Controllers\PaymentClearanceController::class, 'rejectClearance'])->name('payment.reject.clearance');
@@ -691,7 +691,7 @@ Route::post('/uh-index/save', [App\Http\Controllers\UhIndexController::class, 's
 Route::post('/uh-index/terminate', [UhIndexController::class, 'terminateStudent'])->name('uh.index.terminate');
 
 // Payment Discount - Marketing Manager and Developer only
-Route::middleware(['auth', 'role:Marketing Manager,Developer,Student Counselor'])->group(function () {
+Route::middleware(['auth', 'role:Marketing Manager,Developer,Student Counselor,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
     Route::get('/payment-discount', [App\Http\Controllers\PaymentDiscountController::class, 'showPage'])->name('payment.discount.page');
     Route::post('/payment-discount/courses', [App\Http\Controllers\PaymentDiscountController::class, 'getCoursesByLocation'])->name('payment.discount.courses');
     Route::post('/payment-discount/intakes', [App\Http\Controllers\PaymentDiscountController::class, 'getIntakesByCourse'])->name('payment.discount.intakes');
@@ -800,7 +800,7 @@ Route::post('/payment/download-statement', [PaymentController::class, 'downloadP
     ->name('payment.downloadStatement');
 
 // Late Payment Routes - Bursar and Developer only
-Route::middleware(['auth', 'role:Bursar,Developer,Student Counselor,DGM'])->group(function () {
+Route::middleware(['auth', 'role:Bursar,Developer,Student Counselor,DGM,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
     Route::get('/late-payment', [LatePaymentController::class, 'index'])->name('late.payment.index');
     Route::post('/late-payment/get-payment-plan', [LatePaymentController::class, 'getPaymentPlan'])->name('late.payment.get.payment.plan');
     Route::post('/late-payment/get-paid-payments', [LatePaymentController::class, 'getPaidPaymentDetails'])->name('late.payment.get.paid.payments');

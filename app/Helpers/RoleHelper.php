@@ -89,9 +89,6 @@ class RoleHelper
             'payment.discount.page',
             'latefee.approval.index',
 
-            // SPECIAL
-            'special.approval',
-
             // FOOTER
             'user.profile'
         ],

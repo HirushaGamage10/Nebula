@@ -88,6 +88,13 @@
 
             <?php elseif($role === 'DGM'): ?>
                 <?php echo $__env->make('components.sidebar.dgm_sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+
+            <?php elseif($role === 'Program Administrator (level 01)'): ?>
+                <?php echo $__env->make('components.sidebar.admin_l1_sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+
+            <?php elseif($role === 'Program Administrator (level 02)'): ?>
+                <?php echo $__env->make('components.sidebar.admin_l2_sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+
             <?php else: ?>
 
                 <?php echo $__env->make('components.sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>

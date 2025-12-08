@@ -39,8 +39,8 @@ class DashboardController extends Controller
         // Map roles to dashboard views with redirects
         $roleViews = [
             'DGM' => 'dgmdashboard',
-            'Program Administrator (level 01)' => 'dgmdashboard',
-            'Program Administrator (level 02)' => 'dgmdashboard',
+            'Program Administrator (level 01)' => 'dashboard',
+            'Program Administrator (level 02)' => 'dashboard',
             'Student Counselor' => 'student_counselor_dashboard',
             'Marketing Manager' => 'marketing_manager_dashboard',
             'Librarian' => 'dashboard',
@@ -61,9 +61,6 @@ class DashboardController extends Controller
             return redirect()->route('marketing.manager.dashboard');
         }
         
-        if (in_array($userRole, ['DGM', 'Program Administrator (level 01)', 'Developer'])) {
-            return redirect()->route('dgmdashboard');
-        }
 
         return view($viewName, compact('user', 'welcomeMessage', 'permissions', 'availableFeatures'));
     }
