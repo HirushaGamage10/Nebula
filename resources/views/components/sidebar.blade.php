@@ -9,7 +9,7 @@
               class="nav-link sidebartoggler d-xl-none position-absolute top-0 end-0 mt-1 me-3">
             <i class="ti ti-x fs-5"></i>
         </a>
-        <a href="/" class="text-nowrap logo-img">
+        <a href="/dashboard" class="text-nowrap logo-img">
             <img src="{{ asset('images/logos/nebula.png') }}" alt="Nebula" width="180">
         </a>
     </div>
