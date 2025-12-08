@@ -36,22 +36,34 @@ class DashboardController extends Controller
         // Get available features for this role
         $availableFeatures = $this->getAvailableFeatures($userRole);
         
-        // Map roles to dashboard views
+        // Map roles to dashboard views with redirects
         $roleViews = [
             'DGM' => 'dgmdashboard',
             'Program Administrator (level 01)' => 'dgmdashboard',
-            'Program Administrator (level 02)' => 'dashboard',
-            'Student Counselor' => 'dashboard',
+            'Program Administrator (level 02)' => 'dgmdashboard',
+            'Student Counselor' => 'student_counselor_dashboard',
+            'Marketing Manager' => 'marketing_manager_dashboard',
             'Librarian' => 'dashboard',
             'Hostel Manager' => 'dashboard',
             'Bursar' => 'dashboard',
             'Project Tutor' => 'dashboard',
-            'Marketing Manager' => 'dashboard',
             'Developer' => 'dgmdashboard',
-            // Add more as needed
         ];
 
         $viewName = $roleViews[$userRole] ?? 'dashboard_default';
+
+        // For specific roles, redirect to their dedicated dashboard routes
+        if ($userRole === 'Student Counselor') {
+            return redirect()->route('student.counselor.dashboard');
+        }
+        
+        if ($userRole === 'Marketing Manager') {
+            return redirect()->route('marketing.manager.dashboard');
+        }
+        
+        if (in_array($userRole, ['DGM', 'Program Administrator (level 01)', 'Developer'])) {
+            return redirect()->route('dgmdashboard');
+        }
 
         return view($viewName, compact('user', 'welcomeMessage', 'permissions', 'availableFeatures'));
     }
@@ -62,12 +74,12 @@ class DashboardController extends Controller
             'DGM' => 'Welcome Deputy General Manager! You have access to special approval features.',
             'Program Administrator (level 01)' => 'Welcome Program Administrator (level 01)! You can manage users, modules, courses, attendance, and clearances.',
             'Program Administrator (level 02)' => 'Welcome Program Administrator (level 02)! You can manage intakes, attendance, timetables, semesters, and exam results.',
-            'Student Counselor' => 'Welcome Student Counselor! You can assist students with registration, payments, and eligibility.',
+            'Student Counselor' => 'Welcome Student Counselor! Monitor student intake activity and marketing channel effectiveness.',
             'Librarian' => 'Welcome Librarian! You can manage library clearance processes.',
             'Hostel Manager' => 'Welcome Hostel Manager! You can manage hostel clearance processes.',
             'Bursar' => 'Welcome Bursar! You can manage financial and student records.',
             'Project Tutor' => 'Welcome Project Tutor! You can manage project clearance and attendance.',
-            'Marketing Manager' => 'Welcome Marketing Manager! You can manage payment plans.',
+            'Marketing Manager' => 'Welcome Marketing Manager! Track campaign performance and student acquisition metrics.',
             'Developer' => 'Welcome Developer! You have full system access to all features and functionalities.'
         ];
         
@@ -95,7 +107,12 @@ class DashboardController extends Controller
                 'System Management' => ['Attendance Management']
             ],
             'Student Counselor' => [
-                'Student Management' => ['Student Registration', 'Course Registration', 'Eligibility & Registration', 'Student Information', 'Student Lists']
+                'Student Management' => ['Student Registration', 'Course Registration', 'Eligibility & Registration', 'Student Information', 'Student Lists'],
+                'Analytics' => ['Registration Monitoring', 'Marketing Channel Analysis', 'Student Intake Tracking']
+            ],
+            'Marketing Manager' => [
+                'Marketing Analytics' => ['Campaign Performance', 'Channel ROI', 'Conversion Metrics', 'Student Acquisition'],
+                'Student Overview' => ['Registration Tracking', 'Demographic Insights', 'Enrollment Trends']
             ],
             'Librarian' => [
                 'Clearance Management' => ['Library Clearance']
@@ -174,4 +191,4 @@ class DashboardController extends Controller
         $courses = Course::select('course_id', 'course_name')->get();
         return response()->json($courses);
     }
-} 
+}

@@ -49,7 +49,9 @@ use App\Http\Controllers\{
     StudentViewController,
     DGMDashboardController,
     TeamPhaseController,
-    CourseChangeController
+    CourseChangeController,
+    MarketingManagerDashboardController,
+    StudentCounselorDashboardController
 };
 // Default
 Route::redirect('/', 'login');
@@ -923,4 +925,67 @@ Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Ad
     // Submit change
     Route::post('/course-change/submit', [CourseChangeController::class, 'submitChange'])
         ->name('course.change.submit');
+});
+
+// Student Counselor Dashboard Routes
+Route::middleware(['role:Student Counselor,Developer'])->group(function () {
+    Route::get('/student-counselor-dashboard', [StudentCounselorDashboardController::class, 'showDashboard'])
+        ->name('student.counselor.dashboard');
+
+    Route::get('/api/student-counselor/overview', [StudentCounselorDashboardController::class, 'getOverviewMetrics'])
+        ->name('api.student.counselor.overview');
+
+    Route::get('/api/student-counselor/recent-registrations', [StudentCounselorDashboardController::class, 'getRecentRegistrations'])
+        ->name('api.student.counselor.recent.registrations');
+
+    Route::get('/api/student-counselor/marketing-survey', [StudentCounselorDashboardController::class, 'getMarketingSurveyData'])
+        ->name('api.student.counselor.marketing.survey');
+
+    Route::get('/api/student-counselor/daily-trend', [StudentCounselorDashboardController::class, 'getDailyRegistrationTrend'])
+        ->name('api.student.counselor.daily.trend');
+
+    Route::get('/api/student-counselor/location-data', [StudentCounselorDashboardController::class, 'getRegistrationsByLocation'])
+        ->name('api.student.counselor.location.data');
+
+    Route::get('/api/student-counselor/course-data', [StudentCounselorDashboardController::class, 'getRegistrationsByCourse'])
+        ->name('api.student.counselor.course.data');
+
+    Route::get('/api/student-counselor/slt-employee-data', [StudentCounselorDashboardController::class, 'getSltEmployeeData'])
+        ->name('api.student.counselor.slt.employee.data');
+
+    Route::get('/api/student-counselor/foundation-data', [StudentCounselorDashboardController::class, 'getFoundationProgramData'])
+        ->name('api.student.counselor.foundation.data');
+});
+
+// Marketing Manager Dashboard Routes
+Route::middleware(['role:Marketing Manager,Developer'])->group(function () {
+    Route::get('/marketing-manager-dashboard', [MarketingManagerDashboardController::class, 'showDashboard'])
+        ->name('marketing.manager.dashboard');
+
+    Route::get('/api/marketing-manager/overview', [MarketingManagerDashboardController::class, 'getOverviewMetrics'])
+        ->name('api.marketing.manager.overview');
+
+    Route::get('/api/marketing-manager/recent-registrations', [MarketingManagerDashboardController::class, 'getRecentRegistrations'])
+        ->name('api.marketing.manager.recent.registrations');
+
+    Route::get('/api/marketing-manager/marketing-survey', [MarketingManagerDashboardController::class, 'getMarketingSurveyAnalysis'])
+        ->name('api.marketing.manager.marketing.survey');
+
+    Route::get('/api/marketing-manager/monthly-trend', [MarketingManagerDashboardController::class, 'getMonthlyRegistrationTrend'])
+        ->name('api.marketing.manager.monthly.trend');
+
+    Route::get('/api/marketing-manager/location-data', [MarketingManagerDashboardController::class, 'getRegistrationsByLocation'])
+        ->name('api.marketing.manager.location.data');
+
+    Route::get('/api/marketing-manager/top-courses', [MarketingManagerDashboardController::class, 'getTopPerformingCourses'])
+        ->name('api.marketing.manager.top.courses');
+
+    Route::get('/api/marketing-manager/conversion-funnel', [MarketingManagerDashboardController::class, 'getConversionFunnelData'])
+        ->name('api.marketing.manager.conversion.funnel');
+
+    Route::get('/api/marketing-manager/roi-data', [MarketingManagerDashboardController::class, 'getMarketingROIBySource'])
+        ->name('api.marketing.manager.roi.data');
+
+    Route::get('/api/marketing-manager/demographics', [MarketingManagerDashboardController::class, 'getDemographicInsights'])
+        ->name('api.marketing.manager.demographics');
 });
