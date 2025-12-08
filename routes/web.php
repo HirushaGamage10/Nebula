@@ -51,7 +51,8 @@ use App\Http\Controllers\{
     TeamPhaseController,
     CourseChangeController,
     MarketingManagerDashboardController,
-    StudentCounselorDashboardController
+    StudentCounselorDashboardController,
+    HostelManagerDashboardController
 };
 // Default
 Route::redirect('/', 'login');
@@ -988,4 +989,36 @@ Route::middleware(['role:Marketing Manager,Developer'])->group(function () {
 
     Route::get('/api/marketing-manager/demographics', [MarketingManagerDashboardController::class, 'getDemographicInsights'])
         ->name('api.marketing.manager.demographics');
+});
+
+Route::middleware(['role:Hostel Manager,Developer'])->group(function () {
+
+    Route::get('/hostel-manager-dashboard',
+        [HostelManagerDashboardController::class, 'showDashboard'])
+        ->name('hostel.manager.dashboard');
+
+    Route::get('/api/hostel-manager/overview',
+        [HostelManagerDashboardController::class, 'getOverviewMetrics'])
+        ->name('api.hostel.manager.overview');
+
+    Route::get('/api/hostel-manager/action-list',
+        [HostelManagerDashboardController::class, 'getActionList'])
+        ->name('api.hostel.manager.action.list');
+
+    Route::get('/api/hostel-manager/recent-clearances',
+        [HostelManagerDashboardController::class, 'getRecentHostelClearances'])
+        ->name('api.hostel.manager.recent.clearances');
+
+    Route::get('/api/hostel-manager/filter',
+        [HostelManagerDashboardController::class, 'filterRequests'])
+        ->name('api.hostel.manager.filter');
+
+    Route::get('/api/hostel-manager/search',
+        [HostelManagerDashboardController::class, 'searchRequests'])
+        ->name('api.hostel.manager.search');
+
+    Route::get('/api/hostel-manager/list-by-status',
+        [HostelManagerDashboardController::class, 'listByStatus'])
+        ->name('api.hostel.manager.list.by.status');
+
 });

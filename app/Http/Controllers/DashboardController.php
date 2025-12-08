@@ -44,7 +44,7 @@ class DashboardController extends Controller
             'Student Counselor' => 'student_counselor_dashboard',
             'Marketing Manager' => 'marketing_manager_dashboard',
             'Librarian' => 'dashboard',
-            'Hostel Manager' => 'dashboard',
+            'Hostel Manager' => 'hostel_manager_dashboard',
             'Bursar' => 'dashboard',
             'Project Tutor' => 'dashboard',
             'Developer' => 'dgmdashboard',
