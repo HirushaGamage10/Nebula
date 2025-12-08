@@ -53,7 +53,8 @@ use App\Http\Controllers\{
     MarketingManagerDashboardController,
     StudentCounselorDashboardController,
     HostelManagerDashboardController,
-    AdminL1DashboardController
+    AdminL1DashboardController,
+    ProgramAdminL2DashboardController
 };
 // Default
 Route::redirect('/', 'login');
@@ -1087,4 +1088,36 @@ Route::middleware(['role:Program Administrator (level 01),Developer'])->group(fu
             [AdminL1DashboardController::class, 'getActionItems'])
             ->name('api.admin.l1.action.items');
     });
+});
+// Program Administrator (Level 02) Dashboard Routes
+Route::middleware(['role:Program Administrator (level 02),Developer'])->group(function () {
+    Route::get('/program-admin-l2-dashboard', [ProgramAdminL2DashboardController::class, 'showDashboard'])
+        ->name('program.admin.l2.dashboard');
+
+    Route::get('/api/program-admin-l2/overview', [ProgramAdminL2DashboardController::class, 'getOverviewMetrics'])
+        ->name('api.program.admin.l2.overview');
+
+    Route::get('/api/program-admin-l2/pending-approvals', [ProgramAdminL2DashboardController::class, 'getPendingApprovals'])
+        ->name('api.program.admin.l2.pending.approvals');
+
+    Route::get('/api/program-admin-l2/active-semesters', [ProgramAdminL2DashboardController::class, 'getActiveSemesters'])
+        ->name('api.program.admin.l2.active.semesters');
+
+    Route::get('/api/program-admin-l2/academic-performance', [ProgramAdminL2DashboardController::class, 'getAcademicPerformance'])
+        ->name('api.program.admin.l2.academic.performance');
+
+    Route::get('/api/program-admin-l2/attendance-overview', [ProgramAdminL2DashboardController::class, 'getAttendanceOverview'])
+        ->name('api.program.admin.l2.attendance.overview');
+
+    Route::get('/api/program-admin-l2/clearance-status', [ProgramAdminL2DashboardController::class, 'getClearanceStatus'])
+        ->name('api.program.admin.l2.clearance.status');
+
+    Route::get('/api/program-admin-l2/payment-overview', [ProgramAdminL2DashboardController::class, 'getPaymentOverview'])
+        ->name('api.program.admin.l2.payment.overview');
+
+    Route::post('/api/program-admin-l2/approve-registration/{id}', [ProgramAdminL2DashboardController::class, 'approveRegistration'])
+        ->name('api.program.admin.l2.approve.registration');
+
+    Route::post('/api/program-admin-l2/reject-registration/{id}', [ProgramAdminL2DashboardController::class, 'rejectRegistration'])
+        ->name('api.program.admin.l2.reject.registration');
 });

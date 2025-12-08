@@ -40,7 +40,7 @@ class DashboardController extends Controller
         $roleViews = [
             'DGM' => 'dgmdashboard',
             'Program Administrator (level 01)' => 'adminl1.dashboard',
-            'Program Administrator (level 02)' => 'dashboard',
+            'Program Administrator (level 02)' => 'dashboards.program_admin_l2',
             'Student Counselor' => 'student_counselor_dashboard',
             'Marketing Manager' => 'marketing_manager_dashboard',
             'Librarian' => 'dashboard',
