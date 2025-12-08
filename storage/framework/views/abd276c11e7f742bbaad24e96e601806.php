@@ -68,7 +68,16 @@
         <!-- Sidebar Start -->
         <aside class="left-sidebar">
             <!-- Sidebar scroll-->
-            <?php echo $__env->make('components.sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+            <?php
+                $role = auth()->user()->user_role ?? '';
+            ?>
+
+            <?php if($role === 'Hostel Manager'): ?>
+                <?php echo $__env->make('components.sidebar.hostel_sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+            <?php else: ?>
+                <?php echo $__env->make('components.sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+            <?php endif; ?>
+
             <!-- End Sidebar scroll-->
         </aside>
         <div x-data x-init="

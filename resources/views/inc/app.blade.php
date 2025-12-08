@@ -68,7 +68,16 @@
         <!-- Sidebar Start -->
         <aside class="left-sidebar">
             <!-- Sidebar scroll-->
-            @include('components.sidebar')
+            @php
+                $role = auth()->user()->user_role ?? '';
+            @endphp
+
+            @if($role === 'Hostel Manager')
+                @include('components.sidebar.hostel_sidebar')
+            @else
+                @include('components.sidebar')
+            @endif
+
             <!-- End Sidebar scroll-->
         </aside>
         <div x-data x-init="
