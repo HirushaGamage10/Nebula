@@ -1000,6 +1000,10 @@ Route::middleware(['role:Hostel Manager,Developer'])->group(function () {
     Route::get('/api/hostel-manager/overview',
         [HostelManagerDashboardController::class, 'getOverviewMetrics'])
         ->name('api.hostel.manager.overview');
+        
+    Route::get('/api/hostel-manager/analytics',
+        [HostelManagerDashboardController::class, 'getAnalytics'])
+        ->name('api.hostel.manager.analytics');
 
     Route::get('/api/hostel-manager/action-list',
         [HostelManagerDashboardController::class, 'getActionList'])
