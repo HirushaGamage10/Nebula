@@ -46,7 +46,6 @@ class DashboardController extends Controller
             'Librarian' => 'dashboard',
             'Hostel Manager' => 'hostel_manager_dashboard',
             'Bursar' => 'dashboard',
-            'Project Tutor' => 'dashboard',
             'Developer' => 'dgmdashboard',
         ];
 
@@ -55,6 +54,10 @@ class DashboardController extends Controller
         // For specific roles, redirect to their dedicated dashboard routes
         if ($userRole === 'Student Counselor') {
             return redirect()->route('student.counselor.dashboard');
+        }
+
+        if ($userRole === 'Project Tutor') {
+            return redirect()->route('project.tutor.dashboard');
         }
         
         if ($userRole === 'Marketing Manager') {

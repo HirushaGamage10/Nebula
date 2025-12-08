@@ -54,7 +54,8 @@ use App\Http\Controllers\{
     StudentCounselorDashboardController,
     HostelManagerDashboardController,
     AdminL1DashboardController,
-    ProgramAdminL2DashboardController
+    ProgramAdminL2DashboardController,
+    ProjectTutorDashboardController
 };
 // Default
 Route::redirect('/', 'login');
@@ -1120,4 +1121,44 @@ Route::middleware(['role:Program Administrator (level 02),Developer'])->group(fu
 
     Route::post('/api/program-admin-l2/reject-registration/{id}', [ProgramAdminL2DashboardController::class, 'rejectRegistration'])
         ->name('api.program.admin.l2.reject.registration');
+});
+
+// Project Tutor Dashboard Routes
+Route::middleware(['role:Project Tutor,Developer'])->group(function () {
+
+    // Main dashboard
+    Route::get('/project-tutor-dashboard', [
+        App\Http\Controllers\ProjectTutorDashboardController::class,
+        'index'
+    ])->name('project.tutor.dashboard');
+
+    // API: Pending Project Clearances
+    Route::get('/api/project-tutor/pending-clearances', [
+        App\Http\Controllers\ProjectTutorDashboardController::class,
+        'getPendingClearances'
+    ])->name('api.project.tutor.pending.clearances');
+
+    // API: Recent project approvals
+    Route::get('/api/project-tutor/recent-updates', [
+        App\Http\Controllers\ProjectTutorDashboardController::class,
+        'getRecentUpdates'
+    ])->name('api.project.tutor.recent.updates');
+
+    // API: KPI summary
+    Route::get('/api/project-tutor/summary', [
+        App\Http\Controllers\ProjectTutorDashboardController::class,
+        'getSummary'
+    ])->name('api.project.tutor.summary');
+
+    // API: Approve project clearance
+    Route::post('/api/project-tutor/approve/{id}', [
+        App\Http\Controllers\ProjectTutorDashboardController::class,
+        'approveProject'
+    ])->name('api.project.tutor.approve');
+
+    // API: Reject project clearance
+    Route::post('/api/project-tutor/reject/{id}', [
+        App\Http\Controllers\ProjectTutorDashboardController::class,
+        'rejectProject'
+    ])->name('api.project.tutor.reject');
 });

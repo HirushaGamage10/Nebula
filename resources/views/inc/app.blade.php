@@ -95,6 +95,8 @@
             @elseif($role === 'Program Administrator (level 02)')
                 @include('components.sidebar.admin_l2_sidebar')
 
+            @elseif($role === 'Project Tutor')
+                @include('components.sidebar.project_tutor_sidebar')
             @else
 
                 @include('components.sidebar')

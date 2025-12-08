@@ -152,11 +152,11 @@ class RoleHelper
             'payment.clearance',
         ],
         'Project Tutor' => [
-            'dashboard',
+            'dashboard' => 'project.tutor.dashboard',
             'user.profile',
             'project.clearance.management',
-            'attendance'
-            
+            'attendance',
+            'student.list'
         ],
         'Developer' => [
             'dashboard',
