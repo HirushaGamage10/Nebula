@@ -313,7 +313,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
 
     //all clearance - DGM, Program Administrator (level 01), Developer
-    Route::middleware(['role:DGM,Program Administrator (level 01),Developer'])->group(function () {
+    Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Developer'])->group(function () {
         // Main page route
         //Route::get('/clearance', [AllClearanceController::class, 'showAllClearance'])->name('clearance.index');
 
