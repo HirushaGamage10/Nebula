@@ -80,7 +80,16 @@
             <?php elseif($role === 'Student Counselor'): ?>
                 <?php echo $__env->make('components.sidebar.student_counselor_sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
+            <?php elseif($role === 'Bursar'): ?>
+                <?php echo $__env->make('components.sidebar.bursar_sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+
+            <?php elseif($role === 'Librarian'): ?>
+                <?php echo $__env->make('components.sidebar.librarian_sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+
+            <?php elseif($role === 'DGM'): ?>
+                <?php echo $__env->make('components.sidebar.dgm_sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
             <?php else: ?>
+
                 <?php echo $__env->make('components.sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
             <?php endif; ?>
 

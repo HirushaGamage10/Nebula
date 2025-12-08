@@ -800,7 +800,7 @@ Route::post('/payment/download-statement', [PaymentController::class, 'downloadP
     ->name('payment.downloadStatement');
 
 // Late Payment Routes - Bursar and Developer only
-Route::middleware(['auth', 'role:Bursar,Developer,Student Counselor'])->group(function () {
+Route::middleware(['auth', 'role:Bursar,Developer,Student Counselor,DGM'])->group(function () {
     Route::get('/late-payment', [LatePaymentController::class, 'index'])->name('late.payment.index');
     Route::post('/late-payment/get-payment-plan', [LatePaymentController::class, 'getPaymentPlan'])->name('late.payment.get.payment.plan');
     Route::post('/late-payment/get-paid-payments', [LatePaymentController::class, 'getPaidPaymentDetails'])->name('late.payment.get.paid.payments');

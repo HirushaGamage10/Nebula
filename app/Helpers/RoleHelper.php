@@ -29,22 +29,73 @@ class RoleHelper
 
         ],
         'Program Administrator (level 01)' => [
+
+            // HOME
             'dashboard',
+
+            // USER MANAGEMENT
             'create.user',
             'user.management',
+
+            // STUDENT MANAGEMENT
+            'student.registration',
+            'course.registration',
+            'eligibility.registration',
+            'course.badge',
+            'student.other.information',
+            'student.list',
+            'student.profile',
+            'course.change',
+
+            // EXAMS
+            'exam.results',
+            'student.exam.result.management',
+            'exam.results.view.edit',
+
+            // REPEAT STUDENTS
+            'repeat.students.management',
+            'repeat.students.payment',
+
+            // ATTENDANCE
+            'attendance',
+            'overall.attendance',
+
+            // CLEARANCE
+            'all.clearance.management',
+            'hostel.clearance.form.management',
+            'library.clearance',
+            'project.clearance.management',
+            'payment.clearance',
+
+            // ACADEMIC
+            'module.creation',
             'module.management',
             'course.management',
-            'overall.attendance',
-            'student.profile',
-            'student.other.information',
-            'all.clearance',
-            'student.list',
-            'repeat.students.management',
-            'course.change',
-            'payment.dashboard'
-            
+            'intake.create',
+            'semester.create',
+            'semester.registration',
+            'timetable',
 
+            // FINANCIAL
+            'payment.plan',
+            'payment.plan.index',
+            'payment',
+            'late.payment',
+            'payment.discounts',
+            'payment.dashboard',
+            'payment.summary',
+            'misc.payment',
+            'payment.showDownloadPage',
+            'payment.discount.page',
+            'latefee.approval.index',
+
+            // SPECIAL
+            'special.approval',
+
+            // FOOTER
+            'user.profile'
         ],
+
         'Program Administrator (level 02)' => [
             'dashboard',
             'intake.create',
