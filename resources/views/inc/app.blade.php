@@ -74,6 +74,8 @@
 
             @if($role === 'Hostel Manager')
                 @include('components.sidebar.hostel_sidebar')
+            @elseif($role === 'Marketing Manager')
+                @include('components.sidebar.marketing_sidebar')
             @else
                 @include('components.sidebar')
             @endif

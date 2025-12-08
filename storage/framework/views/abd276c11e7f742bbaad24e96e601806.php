@@ -74,6 +74,8 @@
 
             <?php if($role === 'Hostel Manager'): ?>
                 <?php echo $__env->make('components.sidebar.hostel_sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+            <?php elseif($role === 'Marketing Manager'): ?>
+                <?php echo $__env->make('components.sidebar.marketing_sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
             <?php else: ?>
                 <?php echo $__env->make('components.sidebar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
             <?php endif; ?>
