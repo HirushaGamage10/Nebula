@@ -1,23 +1,17 @@
-
-
-<?php $__env->startSection('title', 'NEBULA | Project Tutor Dashboard'); ?>
+<?php $__env->startSection('title', 'NEBULA | Librarian Dashboard'); ?>
 
 <?php $__env->startSection('content'); ?>
 
 <style>
     .stat-card {
         transition: 0.2s;
-        border-left: 4px solid transparent;
+        border-left: 4px solid #0d6efd;
         background: white;
     }
     .stat-card:hover {
         transform: translateY(-3px);
         box-shadow: 0 6px 18px rgba(0,0,0,0.1);
     }
-    .pending { border-left-color: #0d6efd }
-    .approved { border-left-color: #198754 }
-    .rejected { border-left-color: #dc3545 }
-
     .badge-status {
         padding: 5px 12px;
         border-radius: 8px;
@@ -35,40 +29,26 @@
 
         <!-- Header -->
         <div class="card shadow-sm p-3 mb-4 bg-white">
-            <h3 class="fw-bold">Project Tutor Dashboard</h3>
+            <h3 class="fw-bold">Librarian Dashboard</h3>
             <small class="text-muted">
-                Reviewing project completion clearance requests
+                Managing library clearance requests and reviewing student eligibility
             </small>
         </div>
 
         <!-- KPI SUMMARY -->
-        <div class="row g-4 mb-4">
+        <div class="row mb-4">
             <div class="col-md-4">
-                <div class="card stat-card pending p-4 shadow-sm">
-                    <h6 class="text-muted">Pending Reviews</h6>
+                <div class="card stat-card p-4 shadow-sm">
+                    <h6 class="text-muted">Pending Library Approvals</h6>
                     <h2 class="text-primary fw-bold"><?php echo e($pendingCount); ?></h2>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card stat-card approved p-4 shadow-sm">
-                    <h6 class="text-muted">Approved This Month</h6>
-                    <h2 class="text-success fw-bold"><?php echo e($approvedCount); ?></h2>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card stat-card rejected p-4 shadow-sm">
-                    <h6 class="text-muted">Rejected This Month</h6>
-                    <h2 class="text-danger fw-bold"><?php echo e($rejectedCount); ?></h2>
                 </div>
             </div>
         </div>
 
-        <!-- STUDENT REVIEW LIST -->
+        <!-- PENDING LIBRARY CLEARANCE LIST -->
         <div class="card shadow-sm p-4 mb-4 bg-white">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-semibold m-0">Student Review List</h5>
+                <h5 class="fw-semibold m-0">Library Clearance Pending</h5>
                 <span class="badge bg-primary"><?php echo e(count($pendingList)); ?> pending</span>
             </div>
 
@@ -97,7 +77,7 @@
                                 <span class="badge-status badge-pending"><?php echo e($req->status); ?></span>
                             </td>
                             <td>
-                                <a href="<?php echo e(route('project.clearance.management', $req->id)); ?>"
+                                <a href="<?php echo e(route('library.clearance', $req->id)); ?>" 
                                    class="btn btn-sm btn-primary">
                                    Review
                                 </a>
@@ -105,7 +85,7 @@
                         </tr>
                         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <tr>
-                            <td colspan="7" class="text-muted py-3">No pending project clearances</td>
+                            <td colspan="7" class="text-muted py-3">No pending library clearances</td>
                         </tr>
                         <?php endif; ?>
                     </tbody>
@@ -113,9 +93,9 @@
             </div>
         </div>
 
-        <!-- RECENT PROJECT CLEARANCES -->
+        <!-- RECENT LIBRARY UPDATES -->
         <div class="card shadow-sm p-4 mb-4 bg-white">
-            <h5 class="fw-semibold mb-3">Recent Project Clearance Updates</h5>
+            <h5 class="fw-semibold mb-3">Recent Library Clearance Updates</h5>
 
             <div class="table-responsive">
                 <table class="table table-hover align-middle text-center">
@@ -153,4 +133,4 @@
 </div>
 <?php $__env->stopSection(); ?>
 
-<?php echo $__env->make('inc.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/dashboards/project_tutor_dashboard.blade.php ENDPATH**/ ?>
+<?php echo $__env->make('inc.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/dashboards/librarian_dashboard.blade.php ENDPATH**/ ?>

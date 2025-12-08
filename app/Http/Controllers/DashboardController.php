@@ -45,7 +45,6 @@ class DashboardController extends Controller
             'Marketing Manager' => 'marketing_manager_dashboard',
             'Librarian' => 'dashboard',
             'Hostel Manager' => 'hostel_manager_dashboard',
-            'Bursar' => 'dashboard',
             'Developer' => 'dgmdashboard',
         ];
 
@@ -59,7 +58,12 @@ class DashboardController extends Controller
         if ($userRole === 'Project Tutor') {
             return redirect()->route('project.tutor.dashboard');
         }
-        
+        if ($userRole === 'Bursar') {
+            return redirect()->route('bursar.dashboard');
+        }
+        if($userRole === 'Librarian'){
+            return redirect()->route('librarian.dashboard');
+        }
         if ($userRole === 'Marketing Manager') {
             return redirect()->route('marketing.manager.dashboard');
         }

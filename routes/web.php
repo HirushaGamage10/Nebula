@@ -1162,3 +1162,23 @@ Route::middleware(['role:Project Tutor,Developer'])->group(function () {
         'rejectProject'
     ])->name('api.project.tutor.reject');
 });
+
+// Bursar Dashboard Routes
+Route::middleware(['role:Bursar,Developer'])->group(function () {
+
+    // Main Bursar dashboard
+    Route::get('/bursar-dashboard', [
+        App\Http\Controllers\BursarDashboardController::class,
+        'index'
+    ])->name('bursar.dashboard');
+
+});
+// Librarian Dashboard Routes
+Route::middleware(['role:Librarian,Developer'])->group(function () {
+
+    Route::get('/librarian-dashboard', [
+        App\Http\Controllers\LibrarianDashboardController::class,
+        'index'
+    ])->name('librarian.dashboard');
+
+});
