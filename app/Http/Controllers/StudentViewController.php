@@ -54,4 +54,34 @@ class StudentViewController extends Controller
             'data' => $students,
         ]);
     }
+
+    public function getStudentCourses(Request $request)
+    {
+        $studentId = $request->query('student_id');
+        
+        $student = Student::where('student_id', $studentId)
+                    ->orWhere('id_value', $studentId)
+                    ->first();
+
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'courses' => [],
+                'message' => 'Student not found'
+            ]);
+        }
+
+        $courses = $student->courseRegistrations()
+                    ->with('course')
+                    ->get()
+                    ->pluck('course')
+                    ->unique('course_id')
+                    ->values();
+
+        return response()->json([
+            'success' => true,
+            'courses' => $courses,
+        ]);
+    }
+
 }

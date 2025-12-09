@@ -858,6 +858,7 @@ Route::middleware(['auth', 'role:DGM,Developer,Program Administrator (level 01),
 
 Route::get('/students/view', [StudentViewController::class, 'index'])->name('students.view');
 Route::post('/students/filter', [StudentViewController::class, 'filter'])->name('students.filter');
+Route::get('/students/courses', [StudentViewController::class, 'getStudentCourses'])->name('students.courses');
 
 Route::middleware(['role:DGM,Developer,Program Administrator (level 01)'])->group(function () {
     Route::get('/dgmdashboard', [DGMDashboardController::class, 'showDashboard'])->name('dgmdashboard');
