@@ -694,7 +694,7 @@ Route::post('/uh-index/save', [App\Http\Controllers\UhIndexController::class, 's
 Route::post('/uh-index/terminate', [UhIndexController::class, 'terminateStudent'])->name('uh.index.terminate');
 
 // Payment Discount - Marketing Manager and Developer only
-Route::middleware(['auth', 'role:Marketing Manager,Developer,Student Counselor,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
+Route::middleware(['auth', 'role:DGM,Marketing Manager,Developer,Student Counselor,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
     Route::get('/payment-discount', [App\Http\Controllers\PaymentDiscountController::class, 'showPage'])->name('payment.discount.page');
     Route::post('/payment-discount/courses', [App\Http\Controllers\PaymentDiscountController::class, 'getCoursesByLocation'])->name('payment.discount.courses');
     Route::post('/payment-discount/intakes', [App\Http\Controllers\PaymentDiscountController::class, 'getIntakesByCourse'])->name('payment.discount.intakes');
