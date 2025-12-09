@@ -25,6 +25,7 @@ class RoleHelper
             'special.approval',
             'student.list',
             'course.change',
+            'student.profile',
             'payment.dashboard'
 
         ],
