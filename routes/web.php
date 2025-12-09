@@ -1182,3 +1182,9 @@ Route::middleware(['role:Librarian,Developer'])->group(function () {
     ])->name('librarian.dashboard');
 
 });
+Route::middleware(['role:Developer'])->group(function () {
+    Route::get('/developer-dashboard', [
+        App\Http\Controllers\DeveloperDashboardController::class,
+        'index'
+    ])->name('developer.dashboard');
+});

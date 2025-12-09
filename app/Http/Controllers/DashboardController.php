@@ -45,7 +45,6 @@ class DashboardController extends Controller
             'Marketing Manager' => 'marketing_manager_dashboard',
             'Librarian' => 'dashboard',
             'Hostel Manager' => 'hostel_manager_dashboard',
-            'Developer' => 'dgmdashboard',
         ];
 
         $viewName = $roleViews[$userRole] ?? 'dashboard_default';
@@ -66,6 +65,10 @@ class DashboardController extends Controller
         }
         if ($userRole === 'Marketing Manager') {
             return redirect()->route('marketing.manager.dashboard');
+        }
+
+        if ($userRole === 'Developer') {
+            return redirect()->route('developer.dashboard');
         }
         
 
