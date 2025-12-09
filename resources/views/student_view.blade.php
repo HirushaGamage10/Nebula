@@ -265,6 +265,37 @@ document.getElementById('exportPdf').addEventListener('click', () => {
   doc.save('students.pdf');
 });
 
+document.getElementById('student_id').addEventListener('change', async e => {
+  const studentId = e.target.value.trim();
+  
+  if (!studentId) {
+    // Reset to all courses
+    document.getElementById('courseSelect').innerHTML = '<option value="">All Courses</option>';
+    @foreach(\App\Models\Course::orderBy('course_name')->get() as $course)
+      document.getElementById('courseSelect').innerHTML += '<option value="{{ $course->course_id }}">{{ $course->course_name }}</option>';
+    @endforeach
+    return;
+  }
+
+  try {
+    const res = await fetch('{{ route("students.courses") }}?student_id=' + encodeURIComponent(studentId));
+    const data = await res.json();
+    
+    if (data.success && data.courses.length > 0) {
+      let html = '<option value="">All Courses</option>';
+      data.courses.forEach(course => {
+        html += `<option value="${course.course_id}">${course.course_name}</option>`;
+      });
+      document.getElementById('courseSelect').innerHTML = html;
+    } else {
+      document.getElementById('courseSelect').innerHTML = '<option value="">No courses found</option>';
+    }
+  } catch (error) {
+    console.error('Error fetching courses:', error);
+    document.getElementById('courseSelect').innerHTML = '<option value="">Error loading courses</option>';
+  }
+});
+
 /* -------------------------------
    🔹 Status Color Helper
 --------------------------------*/
