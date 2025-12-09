@@ -6,7 +6,7 @@
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
-            <h2 class="text-center mb-4">Semester Registration Management</h2>
+            <h2 class="text-center mb-4">Semester Registration</h2>
             <hr>
             <form id="courseForm" method="POST" action="{{ route('semester.registration.store') }}">
                 @csrf
