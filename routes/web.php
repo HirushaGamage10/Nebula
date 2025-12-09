@@ -495,7 +495,7 @@ Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Ad
 });
 
 // Special Approval List - DGM and Developer only
-Route::middleware(['auth', 'role:DGM,Developer'])->group(function () {
+Route::middleware(['auth', 'role:DGM,Developer,Student Counselor'])->group(function () {
     Route::get('/special-approval-list', function () {
         return view('Special_approval_list');
     })->name('special.approval.list');
