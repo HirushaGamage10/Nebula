@@ -6,7 +6,7 @@
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
-            <h2 class="text-center mb-4">Semester Registration Management</h2>
+            <h2 class="text-center mb-4">Semester Registration</h2>
             <hr>
             <form id="courseForm" method="POST" action="<?php echo e(route('semester.registration.store')); ?>">
                 <?php echo csrf_field(); ?>
@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.success && data.courses.length > 0) {
                         let options = '<option value="" selected disabled>Select Course</option>';
                         data.courses.forEach(course => {
-                            options += `<option value="${course.course_id}">${course.course_name}</option>`;
+                            options += `<option value="${course.course_id}">${course.course_type} - ${course.course_name}</option>`;
                         });
                         courseSelect.innerHTML = options;
                         enableSelect(courseSelect);

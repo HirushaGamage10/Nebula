@@ -231,8 +231,8 @@ class SemesterRegistrationController extends Controller
     {
         $location = $request->input('location');
         $courses = Course::where('location', $location)
-            ->where('course_type', 'degree')
-            ->get(['course_id', 'course_name']);
+             ->whereIn('course_type', ['degree', 'diploma'])
+            ->get(['course_id', 'course_name', 'course_type']);
         return response()->json(['success' => true, 'courses' => $courses]);
     }
 
