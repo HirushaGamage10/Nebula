@@ -24,7 +24,6 @@ class RoleHelper
             'dashboard',
             'special.approval',
             'student.list',
-            'course.change',
             'student.profile',
             'payment.dashboard'
 
@@ -111,7 +110,6 @@ class RoleHelper
             'payment.summary',
             'student.list',
             'all.students.view',
-            'course.change',
             'payment.dashboard',
             'misc.payment',
             'latefee.approval',
@@ -124,7 +122,6 @@ class RoleHelper
             'payment.plan.index',
             'student.list',
             'all.students.view',
-            'course.change',
             'payment.summary',
             'payment.dashboard',
             'user.profile'
@@ -154,7 +151,6 @@ class RoleHelper
             'dashboard' => 'project.tutor.dashboard',
             'user.profile',
             'project.clearance.management',
-            'attendance',
             'all.students.view'
         ],
         'Developer' => [
