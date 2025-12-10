@@ -204,7 +204,7 @@
 
                   </p>
                   
-                  <!-- Supervisors Display -->
+                  <!-- Supervisors Display - 3 per row -->
                   <?php if($phase->supervisors && count($phase->supervisors) > 0): ?>
                   <div class="mb-3">
                     <h6 class="fw-semibold text-secondary mb-2">
@@ -212,17 +212,18 @@
                     </h6>
                     <div class="row g-2">
                       <?php $__currentLoopData = $phase->supervisors; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $supervisor): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                      <div class="col-12">
-                        <div class="card border-0 shadow-sm bg-white">
+                      <div class="col-lg-4 col-md-6 col-sm-12 mb-2">
+                        <div class="card border-0 shadow-sm bg-white h-100">
                           <div class="card-body py-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                              <div>
-                                <h6 class="mb-0 fw-semibold text-dark"><?php echo e($supervisor['name']); ?></h6>
-                                <small class="text-muted"><?php echo e($supervisor['designation']); ?></small>
+                            <div class="d-flex justify-content-between align-items-start">
+                              <div class="flex-grow-1">
+                                <h6 class="mb-1 fw-semibold text-dark" style="font-size: 0.9rem;"><?php echo e($supervisor['name']); ?></h6>
+                                <small class="text-muted" style="font-size: 0.8rem;"><?php echo e($supervisor['designation']); ?></small>
                               </div>
                               <?php if($isDeveloper): ?>
-                              <button class="btn btn-sm btn-outline-secondary" 
-                                      onclick="removeSupervisor('<?php echo e($phase->id); ?>', <?php echo e($index); ?>)">
+                              <button class="btn btn-sm btn-outline-secondary ms-2" 
+                                      onclick="removeSupervisor('<?php echo e($phase->id); ?>', <?php echo e($index); ?>)"
+                                      style="padding: 0.15rem 0.3rem; font-size: 0.7rem;">
                                 <i class="ti ti-trash"></i>
                               </button>
                               <?php endif; ?>
@@ -238,7 +239,6 @@
                   <h6 class="fw-semibold text-secondary mb-2">Team Members</h6>
                   <div class="row g-2">
                     <?php $__empty_1 = true; $__currentLoopData = $phase->teams; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $team): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-                      <!-- 4 team members per row - changed from col-12 to col-lg-3 col-md-6 -->
                       <div class="col-lg-3 col-md-6 col-sm-6">
                         <div class="card border-0 shadow-sm h-100 team-member-card mb-2">
                           <div class="card-body p-2 d-flex flex-column">
@@ -269,7 +269,7 @@
                                 </div>
                             </div>
                             
-                            <!-- Action Buttons - Pushed to bottom with mt-auto -->
+                            <!-- Action Buttons -->
                             <div class="d-flex gap-1 w-100 mt-auto">
                                 <!-- View Details Button -->
                                 <button class="btn btn-sm btn-outline-info flex-grow-1" 
@@ -482,7 +482,7 @@
                 <!-- Edit Phase Modal (Developer only) -->
                 <?php if($isDeveloper): ?>
                 <div class="modal fade" id="editPhaseModal_<?php echo e($phase->id); ?>" tabindex="-1" aria-hidden="true">
-                  <div class="modal-dialog modal-dialog-centered">
+                  <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
                       <div class="modal-header">
                         <h5 class="modal-title">Edit <?php echo e($phase->phase_name); ?></h5>
@@ -500,14 +500,14 @@
                             <label class="form-label">Phase Name</label>
                             <input type="text" name="phase_name" class="form-control" value="<?php echo e($phase->phase_name); ?>" required>
                           </div>
-                          <div class="row">
-                            <div class="col-md-6 mb-3">
+                          <div class="row mb-3">
+                            <div class="col-md-6">
                               <label class="form-label">Start Date</label>
-                              <input type="date" name="start_date" class="form-control" value="<?php echo e($phase->start_date); ?>" required>
+                              <input type="date" name="start_date" class="form-control" value="<?php echo e(\Carbon\Carbon::parse($phase->start_date)->format('Y-m-d')); ?>" required>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6">
                               <label class="form-label">End Date</label>
-                              <input type="date" name="end_date" class="form-control" value="<?php echo e($phase->end_date); ?>" required>
+                              <input type="date" name="end_date" class="form-control" value="<?php echo e(\Carbon\Carbon::parse($phase->end_date)->format('Y-m-d')); ?>" required>
                             </div>
                           </div>
                           
@@ -518,7 +518,7 @@
                               <?php if($phase->supervisors && count($phase->supervisors) > 0): ?>
                                 <?php $__currentLoopData = $phase->supervisors; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $supervisor): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                 <div class="row supervisor-row mb-2">
-                                  <div class="col-md-6">
+                                  <div class="col-md-5">
                                     <input type="text" name="supervisors[<?php echo e($index); ?>][name]" 
                                            class="form-control" 
                                            value="<?php echo e($supervisor['name']); ?>"
@@ -530,8 +530,8 @@
                                            value="<?php echo e($supervisor['designation']); ?>"
                                            placeholder="Designation">
                                   </div>
-                                  <div class="col-md-1">
-                                    <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor" 
+                                  <div class="col-md-2">
+                                    <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor-btn" 
                                             onclick="removeSupervisorRow(this)">
                                       <i class="ti ti-trash"></i>
                                     </button>
@@ -540,14 +540,15 @@
                                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                               <?php else: ?>
                                 <div class="row supervisor-row mb-2">
-                                  <div class="col-md-6">
+                                  <div class="col-md-5">
                                     <input type="text" name="supervisors[0][name]" class="form-control" placeholder="Supervisor Name">
                                   </div>
                                   <div class="col-md-5">
                                     <input type="text" name="supervisors[0][designation]" class="form-control" placeholder="Designation">
                                   </div>
-                                  <div class="col-md-1">
-                                    <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor" style="display: none;">
+                                  <div class="col-md-2">
+                                    <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor-btn" 
+                                            onclick="removeSupervisorRow(this)">
                                       <i class="ti ti-trash"></i>
                                     </button>
                                   </div>
@@ -617,9 +618,8 @@
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <form id="removeSupervisorForm" method="POST" action="">
           <?php echo csrf_field(); ?>
-          <?php echo method_field('PATCH'); ?>
+          <?php echo method_field('DELETE'); ?>
           <input type="hidden" name="supervisor_index" id="supervisorIndex">
-          <input type="hidden" name="remove_supervisor" value="1">
           <button type="submit" class="btn btn-warning">Remove</button>
         </form>
       </div>
@@ -648,8 +648,6 @@ function filterPhases(phaseId) {
 }
 
 // Supervisor management functions
-let supervisorCounter = 0;
-
 document.getElementById('addSupervisorBtn')?.addEventListener('click', function() {
     const container = document.getElementById('supervisorsContainer');
     const rows = container.querySelectorAll('.supervisor-row');
@@ -671,11 +669,6 @@ document.getElementById('addSupervisorBtn')?.addEventListener('click', function(
         </div>
     `;
     container.appendChild(newRow);
-    
-    // Show remove buttons if there's more than one row
-    if (rows.length > 0) {
-        container.querySelectorAll('.remove-supervisor').forEach(btn => btn.style.display = 'block');
-    }
 });
 
 function addSupervisorRow(phaseId) {
@@ -686,14 +679,14 @@ function addSupervisorRow(phaseId) {
     const newRow = document.createElement('div');
     newRow.className = 'row supervisor-row mb-2';
     newRow.innerHTML = `
-        <div class="col-md-6">
+        <div class="col-md-5">
             <input type="text" name="supervisors[${index}][name]" class="form-control" placeholder="Supervisor Name">
         </div>
         <div class="col-md-5">
             <input type="text" name="supervisors[${index}][designation]" class="form-control" placeholder="Designation">
         </div>
-        <div class="col-md-1">
-            <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor" onclick="removeSupervisorRow(this)">
+        <div class="col-md-2">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor-btn" onclick="removeSupervisorRow(this)">
                 <i class="ti ti-trash"></i>
             </button>
         </div>
@@ -718,11 +711,32 @@ function removeSupervisorRow(button) {
 }
 
 function removeSupervisor(phaseId, supervisorIndex) {
-    const modal = new bootstrap.Modal(document.getElementById('removeSupervisorModal'));
-    const form = document.getElementById('removeSupervisorForm');
-    form.action = `/phases/${phaseId}`;
-    document.getElementById('supervisorIndex').value = supervisorIndex;
-    modal.show();
+    if (confirm('Are you sure you want to remove this supervisor?')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/phases/${phaseId}/remove-supervisor`;
+        
+        const csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = '_token';
+        csrf.value = '<?php echo e(csrf_token()); ?>';
+        form.appendChild(csrf);
+        
+        const method = document.createElement('input');
+        method.type = 'hidden';
+        method.name = '_method';
+        method.value = 'DELETE';
+        form.appendChild(method);
+        
+        const indexInput = document.createElement('input');
+        indexInput.type = 'hidden';
+        indexInput.name = 'supervisor_index';
+        indexInput.value = supervisorIndex;
+        form.appendChild(indexInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
 }
 
 // Phase role checkboxes
@@ -784,6 +798,19 @@ function confirmRemovePhase(url) {
         form.submit();
     }
 }
+
+// Initialize date pickers with correct format
+document.addEventListener('DOMContentLoaded', function() {
+    // Set min date for end date based on start date
+    document.querySelectorAll('input[name="start_date"]').forEach(startDate => {
+        startDate.addEventListener('change', function() {
+            const endDate = this.closest('form').querySelector('input[name="end_date"]');
+            if (endDate) {
+                endDate.min = this.value;
+            }
+        });
+    });
+});
 </script>
 
 <style>
@@ -830,25 +857,10 @@ function confirmRemovePhase(url) {
 .team-member-card small {
     font-size: 0.7rem;
 }
-.team-member-card {
-    height: 50%;
-}
 
-.team-member-card .card-body {
-    height: 50%;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Filter buttons styling */
-.btn-group .btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
-}
-
-/* 4 columns layout for team members */
-.phases-container .col-lg-3 {
-    margin-bottom: 0.75rem;
+/* Supervisor cards styling - 3 per row */
+.supervisor-card {
+    min-height: 80px;
 }
 
 /* Responsive adjustments */
@@ -858,15 +870,19 @@ function confirmRemovePhase(url) {
         max-width: 100%;
     }
     
-    /* Show 2 team members per row on tablets */
     .team-member-card .col-lg-3 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+    
+    /* Supervisors - 2 per row on tablets */
+    .supervisor-card .col-lg-4 {
         flex: 0 0 50%;
         max-width: 50%;
     }
 }
 
 @media (max-width: 768px) {
-    /* Show 2 team members per row on mobile */
     .team-member-card .col-lg-3 {
         flex: 0 0 50%;
         max-width: 50%;
@@ -876,10 +892,15 @@ function confirmRemovePhase(url) {
         flex-wrap: wrap;
         margin-bottom: 1rem;
     }
+    
+    /* Supervisors - 1 per row on mobile */
+    .supervisor-card .col-lg-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
 }
 
 @media (max-width: 576px) {
-    /* Show 1 team member per row on small mobile */
     .team-member-card .col-lg-3 {
         flex: 0 0 100%;
         max-width: 100%;

@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class TeamPhaseController extends Controller
 {
@@ -232,6 +233,30 @@ class TeamPhaseController extends Controller
         }
 
         return back()->with('success', 'Team member removed from phase successfully!');
+    }
+
+    public function removeSupervisor(Request $request, Phase $phase)
+    {
+        $request->validate([
+            'supervisor_index' => 'required|integer|min:0',
+        ]);
+
+        $supervisorIndex = $request->input('supervisor_index');
+        $supervisors = $phase->supervisors ?? [];
+
+        if (isset($supervisors[$supervisorIndex])) {
+            // Remove the supervisor at the specified index
+            array_splice($supervisors, $supervisorIndex, 1);
+            
+            // Update the phase with the new supervisors array
+            $phase->update([
+                'supervisors' => $supervisors
+            ]);
+
+            return back()->with('success', '✅ Supervisor removed successfully!');
+        }
+
+        return back()->with('error', 'Supervisor not found.');
     }
 
     /**

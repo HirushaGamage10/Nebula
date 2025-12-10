@@ -896,7 +896,6 @@ Route::middleware(['role:DGM,Developer,Program Administrator (level 01)'])->grou
     Route::get('/api/dashboard/marketing-data', [DGMDashboardController::class, 'getMarketingData']);
 });
 
-
 // Team Phase Management Routes
 Route::get('/team-phase', [TeamPhaseController::class, 'index'])->name('team.phase.index');
 
@@ -904,6 +903,7 @@ Route::get('/team-phase', [TeamPhaseController::class, 'index'])->name('team.pha
 Route::post('/phase/create', [TeamPhaseController::class, 'createPhase'])->name('phase.create');
 Route::put('/phase/{phase}/update', [TeamPhaseController::class, 'updatePhase'])->name('phase.update');
 Route::delete('/phase/{phase}/delete', [TeamPhaseController::class, 'deletePhase'])->name('phase.delete');
+Route::delete('/phases/{phase}/remove-supervisor', [TeamPhaseController::class, 'removeSupervisor'])->name('phase.remove-supervisor');
 
 // Team Member Management (Developer only)
 Route::post('/team/assign', [TeamPhaseController::class, 'assignMember'])->name('team.assign');
@@ -913,10 +913,6 @@ Route::delete('/team/{team}/delete', [TeamPhaseController::class, 'deleteMember'
 // Member Phase Access Management (Developer only)
 Route::post('/team/{team}/add-phase', [TeamPhaseController::class, 'addMemberToPhase'])->name('team.add-phase');
 Route::delete('/team/{team}/remove-phase/{phase}', [TeamPhaseController::class, 'removeMemberFromPhase'])->name('team.remove-phase');
-
-// Add this route for removing specific supervisors
-Route::patch('/phases/{phase}/remove-supervisor', [TeamPhaseController::class, 'removeSupervisor'])
-    ->name('phase.remove-supervisor');
 
 Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Administrator (level 02),Developer,Marketing Manager,Student Counselor'])
     ->group(function () {
