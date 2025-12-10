@@ -202,40 +202,11 @@
                     <i class="ti ti-calendar"></i> {{ $phase->start_date }} → {{ $phase->end_date }}
                   </p>
                   
-                  <!-- Supervisors Display - 3 per row -->
-                  @if($phase->supervisors && count($phase->supervisors) > 0)
-                  <div class="mb-3">
-                    <h6 class="fw-semibold text-secondary mb-2">
-                      <i class="ti ti-user-check"></i> Supervisors
-                    </h6>
-                    <div class="row g-2">
-                      @foreach($phase->supervisors as $index => $supervisor)
-                      <div class="col-lg-4 col-md-6 col-sm-12 mb-2">
-                        <div class="card border-0 shadow-sm bg-white h-100">
-                          <div class="card-body py-2">
-                            <div class="d-flex justify-content-between align-items-start">
-                              <div class="flex-grow-1">
-                                <h6 class="mb-1 fw-semibold text-dark" style="font-size: 0.9rem;">{{ $supervisor['name'] }}</h6>
-                                <small class="text-muted" style="font-size: 0.8rem;">{{ $supervisor['designation'] }}</small>
-                              </div>
-                              @if($isDeveloper)
-                              <button class="btn btn-sm btn-outline-secondary ms-2" 
-                                      onclick="removeSupervisor('{{ $phase->id }}', {{ $index }})"
-                                      style="padding: 0.15rem 0.3rem; font-size: 0.7rem;">
-                                <i class="ti ti-trash"></i>
-                              </button>
-                              @endif
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      @endforeach
-                    </div>
-                  </div>
-                  @endif
-                  
-                  <h6 class="fw-semibold text-secondary mb-2">Team Members</h6>
-                  <div class="row g-2">
+                  <h6 class="fw-semibold text-secondary mb-2">
+                    <i class="ti ti-users-group"></i> Team Members
+                    <span class="badge bg-primary rounded-pill ms-1">{{ $phase->teams->count() }}</span>
+                  </h6>
+                  <div class="row g-2 mb-3">
                     @forelse($phase->teams as $team)
                       <div class="col-lg-3 col-md-6 col-sm-6">
                         <div class="card border-0 shadow-sm h-100 team-member-card mb-2">
@@ -243,13 +214,13 @@
                             <div class="d-flex flex-column align-items-center text-center">
                                 <!-- Profile Image -->
                                 <img src="{{ $team->profile_pic ? asset('storage/'.$team->profile_pic) : asset('images/default-user.png') }}"
-                                    alt="Profile" class="rounded-circle mb-2" width="60" height="60" style="object-fit: cover;">
+                                    alt="Profile" class="rounded-circle mb-2" width="50" height="50" style="object-fit: cover;">
                                 
                                 <!-- Member Info -->
-                                <h6 class="fw-semibold mb-0 text-dark">{{ $team->name }}</h6>
-                                <small class="text-muted mb-2">{{ $team->p_no ?? 'No contact' }}</small>
+                                <h6 class="fw-semibold mb-0 text-dark" style="font-size: 0.8rem;">{{ $team->name }}</h6>
+                                <small class="text-muted mb-2" style="font-size: 0.7rem;">{{ $team->p_no ?? 'No contact' }}</small>
                                 
-                                <!-- Roles Badges -->
+                                <!-- Roles Badges with added Mentor and Freelance -->
                                 <div class="mb-2">
                                     @foreach($team->roles as $role)
                                         @php
@@ -259,10 +230,12 @@
                                                 'ba' => 'info',
                                                 'qa' => 'warning',
                                                 'devops' => 'dark',
+                                                'mentor' => 'danger',
+                                                'freelance' => 'warning',
                                                 default => 'secondary'
                                             };
                                         @endphp
-                                        <span class="badge bg-{{ $badgeColor }} me-1 mb-1 text-uppercase" style="font-size: 0.6rem; padding: 0.2em 0.4em;">{{ $role->role }}</span>
+                                        <span class="badge bg-{{ $badgeColor }} me-1 mb-1 text-uppercase" style="font-size: 0.55rem; padding: 0.15em 0.3em;">{{ $role->role }}</span>
                                     @endforeach
                                 </div>
                             </div>
@@ -272,17 +245,19 @@
                                 <!-- View Details Button -->
                                 <button class="btn btn-sm btn-outline-info flex-grow-1" 
                                         data-bs-toggle="modal" 
-                                        data-bs-target="#memberModal_{{ $team->id }}">
+                                        data-bs-target="#memberModal_{{ $team->id }}"
+                                        style="padding: 0.15rem 0.3rem; font-size: 0.7rem;">
                                     <i class="ti ti-eye"></i>
                                 </button>
                                 
                                 @if($isDeveloper)
                                 <!-- Dropdown for actions -->
                                 <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary border-0" type="button" data-bs-toggle="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary border-0" type="button" data-bs-toggle="dropdown"
+                                            style="padding: 0.15rem 0.3rem; font-size: 0.7rem;">
                                         <i class="ti ti-dots-vertical"></i>
                                     </button>
-                                    <ul class="dropdown-menu dropdown-menu-end">
+                                    <ul class="dropdown-menu dropdown-menu-end" style="font-size: 0.8rem;">
                                         <li>
                                             <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editMemberModal_{{ $team->id }}">
                                                 <i class="ti ti-edit me-2"></i> Edit
@@ -307,9 +282,10 @@
                                 </div>
                                 @endif
                             </div>
-                        </div>
+                          </div>
                         </div>
                       </div>
+
 
                       <!-- View Details Modal -->
                       <div class="modal fade" id="memberModal_{{ $team->id }}" tabindex="-1" aria-hidden="true">
@@ -326,7 +302,19 @@
                                      class="rounded-circle mb-2" width="120" height="120">
                                 <h4>{{ $team->name }}</h4>
                                 @foreach ($team->roles as $r)
-                                  <span class="badge bg-primary">{{ $r->role }}</span>
+                                  @php
+                                    $badgeColor = match(strtolower($r->role)) {
+                                        'leader' => 'primary',
+                                        'developer' => 'success',
+                                        'ba' => 'info',
+                                        'qa' => 'warning',
+                                        'devops' => 'dark',
+                                        'mentor' => 'danger',
+                                        'freelance' => 'warning',
+                                        default => 'secondary'
+                                    };
+                                  @endphp
+                                  <span class="badge bg-{{ $badgeColor }}">{{ $r->role }}</span>
                                 @endforeach
                               </div>
 
@@ -397,7 +385,7 @@
                                 <div class="mb-3">
                                   <label class="form-label">Roles in {{ $phase->phase_name }}</label>
                                   <div class="d-flex flex-wrap gap-3">
-                                    @foreach(['Leader','Developer','BA','QA','DevOps'] as $role)
+                                    @foreach(['Leader','Developer','BA','QA','DevOps','Mentor','Freelance'] as $role)
                                       <div class="form-check">
                                         <input class="form-check-input" type="checkbox" 
                                                name="roles[]" 
@@ -444,7 +432,7 @@
                                 <div class="mb-3">
                                   <label class="form-label">Roles in New Phase</label>
                                   <div class="d-flex flex-wrap gap-3">
-                                    @foreach(['Leader','Developer','BA','QA','DevOps'] as $role)
+                                    @foreach(['Leader','Developer','BA','QA','DevOps','Mentor','Freelance'] as $role)
                                       <div class="form-check">
                                         <input class="form-check-input" type="checkbox" 
                                                name="roles[]" 
@@ -469,10 +457,43 @@
                       @endif
                     @empty
                       <div class="col-12">
-                        <p class="text-muted">No members assigned to this phase.</p>
+                        <p class="text-muted text-center py-2">No members assigned to this phase.</p>
                       </div>
                     @endforelse
                   </div>
+
+                  <!-- Supervisors Display - After Team Members -->
+                  @if($phase->supervisors && count($phase->supervisors) > 0)
+                  <div class="mt-4 pt-3 border-top">
+                    <h6 class="fw-semibold text-secondary mb-2">
+                      <i class="ti ti-user-check"></i> Supervisors
+                      <span class="badge bg-success rounded-pill ms-1">{{ count($phase->supervisors) }}</span>
+                    </h6>
+                    <div class="row g-1">
+                      @foreach($phase->supervisors as $index => $supervisor)
+                      <div class="col-lg-4 col-md-6 col-sm-12 mb-1">
+                        <div class="card border-0 shadow-sm bg-white supervisor-card">
+                          <div class="card-body py-1 px-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                              <div class="flex-grow-1">
+                                <h6 class="mb-0 fw-semibold text-dark" style="font-size: 0.75rem; line-height: 1.1;">{{ $supervisor['name'] }}</h6>
+                                <small class="text-muted" style="font-size: 0.65rem;">{{ $supervisor['designation'] }}</small>
+                              </div>
+                              @if($isDeveloper)
+                              <button class="btn btn-sm btn-outline-secondary ms-1" 
+                                      onclick="removeSupervisor('{{ $phase->id }}', {{ $index }})"
+                                      style="padding: 0.1rem 0.2rem; font-size: 0.6rem;">
+                                <i class="ti ti-trash"></i>
+                              </button>
+                              @endif
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      @endforeach
+                    </div>
+                  </div>
+                  @endif
                 </div>
 
                 <!-- Edit Phase Modal (Developer only) -->
@@ -748,7 +769,7 @@ document.querySelectorAll('.phase-checkbox').forEach(cb => {
                     <div class="card-body">
                         <h6 class="fw-semibold mb-2 text-primary">${phaseName} Roles</h6>
                         <div class="d-flex flex-wrap gap-3">
-                            ${['Leader','Developer','BA','QA','DevOps'].map(r => `
+                            ${['Leader','Developer','BA','QA','DevOps','Mentor','Freelance'].map(r => `
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="roles[${phaseId}][]" value="${r}" id="${r}_${phaseId}">
                                     <label class="form-check-label" for="${r}_${phaseId}">${r.toUpperCase()}</label>
@@ -817,13 +838,19 @@ document.addEventListener('DOMContentLoaded', function() {
     box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
 }
 
+.supervisor-card:hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+}
+
 .dropdown-menu {
-    min-width: 200px;
+    min-width: 180px;
 }
 
 .badge {
-    font-size: 0.6rem;
-    padding: 0.2em 0.4em;
+    font-size: 0.55rem;
+    padding: 0.15em 0.3em;
 }
 
 .supervisor-row {
@@ -839,24 +866,34 @@ document.addEventListener('DOMContentLoaded', function() {
     transition: all 0.3s ease;
 }
 
-/* Compact member cards for 4 per row */
+/* Compact member cards */
 .team-member-card .card-body {
-    padding: 0.75rem !important;
+    padding: 0.5rem !important;
 }
 
 .team-member-card h6 {
-    font-size: 0.85rem;
-    margin-bottom: 0.15rem !important;
-    line-height: 1.2;
+    font-size: 0.8rem;
+    margin-bottom: 0.1rem !important;
+    line-height: 1.1;
 }
 
 .team-member-card small {
     font-size: 0.7rem;
 }
 
-/* Supervisor cards styling - 3 per row */
-.supervisor-card {
-    min-height: 80px;
+/* Compact supervisor cards */
+.supervisor-card .card-body {
+    padding: 0.5rem !important;
+}
+
+.supervisor-card h6 {
+    font-size: 0.75rem;
+    margin-bottom: 0.05rem !important;
+    line-height: 1.1;
+}
+
+.supervisor-card small {
+    font-size: 0.65rem;
 }
 
 /* Responsive adjustments */
@@ -871,7 +908,6 @@ document.addEventListener('DOMContentLoaded', function() {
         max-width: 50%;
     }
     
-    /* Supervisors - 2 per row on tablets */
     .supervisor-card .col-lg-4 {
         flex: 0 0 50%;
         max-width: 50%;
@@ -884,20 +920,24 @@ document.addEventListener('DOMContentLoaded', function() {
         max-width: 50%;
     }
     
-    .btn-group {
-        flex-wrap: wrap;
-        margin-bottom: 1rem;
-    }
-    
-    /* Supervisors - 1 per row on mobile */
     .supervisor-card .col-lg-4 {
         flex: 0 0 100%;
         max-width: 100%;
+    }
+    
+    .btn-group {
+        flex-wrap: wrap;
+        margin-bottom: 0.5rem;
     }
 }
 
 @media (max-width: 576px) {
     .team-member-card .col-lg-3 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    .supervisor-card .col-lg-4 {
         flex: 0 0 100%;
         max-width: 100%;
     }
@@ -910,12 +950,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* Action buttons styling */
 .team-member-card .btn-sm {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
+    padding: 0.15rem 0.3rem;
+    font-size: 0.7rem;
 }
 
 .team-member-card .dropdown-toggle::after {
     display: none;
+}
+
+/* Border top for supervisors section */
+.border-top {
+    border-top: 1px solid rgba(0,0,0,0.1) !important;
 }
 </style>
 @endsection
