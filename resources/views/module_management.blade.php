@@ -24,12 +24,25 @@
                 <div class="mb-3 row mx-3">
                     <label for="elective_course" class="col-sm-2 col-form-label fw-bold">Course<span class="text-danger">*</span></label>
                     <div class="col-sm-10">
-                        <select class="form-select cursor-pointer bg-white" id="elective_course" name="elective_course">
-                            <option selected disabled value="">Select a course</option>
-                            @foreach($courses as $course)
-                                <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
-                            @endforeach
-                        </select>
+                       <select class="form-select cursor-pointer bg-white" id="elective_course" name="elective_course">
+                             <option selected disabled value="">Select a course</option>
+
+                              
+                               @foreach($degreeCourses as $course)
+                             <option value="{{ $course->course_id }}">
+                               degree - {{ $course->course_name }}
+                              </option>
+                             @endforeach
+                             
+
+                               
+                              @foreach($diplomaCourses as $course)
+                              <option value="{{ $course->course_id }}">
+                              diploma - {{ $course->course_name }}
+                               </option>
+                               @endforeach
+                           
+                              </select>
                     </div>
                 </div>
                 <div class="mb-3 row mx-3">

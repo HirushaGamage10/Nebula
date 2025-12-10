@@ -25,10 +25,11 @@ class ModuleManagementController extends Controller
             return redirect()->route('login')->with('error', 'Unauthorized access.');
         }
 
-        $courses = Course::where('course_type', 'degree')->orderBy('course_name')->get();
-        $modules = Module::orderBy('module_name')->get();
+       $degreeCourses = Course::where('course_type', 'degree')->orderBy('course_name')->get();
+       $diplomaCourses = Course::where('course_type', 'diploma')->orderBy('course_name')->get();
+       $modules = Module::orderBy('module_name')->get();
 
-        return view('module_management', compact('courses', 'modules'));
+return view('module_management', compact('degreeCourses', 'diplomaCourses', 'modules'));
     }
 
     /**
