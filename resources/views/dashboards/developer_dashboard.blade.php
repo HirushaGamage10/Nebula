@@ -174,16 +174,17 @@
     <!-- TAB CONTENT LOADER -->
     @php
         $tabs = [
-            'dgm' => route('dgmdashboard'),
-            'pa1' => route('admin.l1.dashboard'),
-            'pa2' => route('program.admin.l2.dashboard'),
-            'counselor' => route('student.counselor.dashboard'),
-            'marketing' => route('marketing.manager.dashboard'),
-            'librarian' => route('librarian.dashboard'),
-            'hostel' => route('hostel.manager.dashboard'),
-            'project' => route('project.tutor.dashboard'),
-            'bursar' => route('bursar.dashboard'),
+            'dgm' => route('dgmdashboard') . '?embed=1',
+            'pa1' => route('admin.l1.dashboard') . '?embed=1',
+            'pa2' => route('program.admin.l2.dashboard') . '?embed=1',
+            'counselor' => route('student.counselor.dashboard') . '?embed=1',
+            'marketing' => route('marketing.manager.dashboard') . '?embed=1',
+            'librarian' => route('librarian.dashboard') . '?embed=1',
+            'hostel' => route('hostel.manager.dashboard') . '?embed=1',
+            'project' => route('project.tutor.dashboard') . '?embed=1',
+            'bursar' => route('bursar.dashboard') . '?embed=1',
         ];
+
     @endphp
 
     @foreach($tabs as $id => $url)
