@@ -25,7 +25,7 @@
           <h5 class="fw-semibold text-dark mb-0">Add New Phase</h5>
         </div>
         <div class="card-body bg-white">
-          <form method="POST" action="{{ route('phase.create') }}" class="row g-3">
+          <form method="POST" action="{{ route('phase.create') }}" class="row g-3" id="addPhaseForm">
             @csrf
             <div class="col-md-3">
               <label class="form-label fw-semibold">Phase ID</label>
@@ -43,8 +43,32 @@
               <label class="form-label fw-semibold">End Date</label>
               <input type="date" name="end_date" class="form-control" required>
             </div>
-            <div class="col-md-1 d-flex align-items-end">
-              <button type="submit" class="btn btn-primary w-100">Add</button>
+            
+            <!-- Supervisors Section -->
+            <div class="col-12">
+              <label class="form-label fw-semibold">Supervisors</label>
+              <div id="supervisorsContainer">
+                <div class="row supervisor-row mb-2">
+                  <div class="col-md-6">
+                    <input type="text" name="supervisors[0][name]" class="form-control" placeholder="Supervisor Name">
+                  </div>
+                  <div class="col-md-5">
+                    <input type="text" name="supervisors[0][designation]" class="form-control" placeholder="Designation">
+                  </div>
+                  <div class="col-md-1">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor" style="display: none;">
+                      <i class="ti ti-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="addSupervisorBtn">
+                <i class="ti ti-plus"></i> Add Supervisor
+              </button>
+            </div>
+            
+            <div class="col-12 d-flex align-items-end justify-content-end">
+              <button type="submit" class="btn btn-primary px-4">Add Phase</button>
             </div>
           </form>
         </div>
@@ -106,10 +130,39 @@
       <div class="card shadow-sm border-0">
         <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
           <h5 class="fw-semibold text-dark mb-0">All Phases & Team Members</h5>
+          <!-- Hardcoded Image Slider -->
           @if(!$isDeveloper)
             <small class="text-muted">View Only Mode</small>
           @endif
         </div>
+        <div id="teamImageSlider" class="carousel slide mb-4" data-bs-ride="carousel">
+        <div class="carousel-inner">
+          <div class="carousel-item active">
+            <img src="{{ asset('images/logos/nebula.png') }}" class="d-block w-100" alt="Image 1">
+          </div>
+          <div class="carousel-item">
+            <img src="{{ asset('images/image2.jpg') }}" class="d-block w-100" alt="Image 2">
+          </div>
+          <div class="carousel-item">
+            <img src="{{ asset('images/image3.jpg') }}" class="d-block w-100" alt="Image 3">
+          </div>
+          <div class="carousel-item">
+            <img src="{{ asset('images/image4.jpg') }}" class="d-block w-100" alt="Image 4">
+          </div>
+          <div class="carousel-item">
+            <img src="{{ asset('images/image5.jpg') }}" class="d-block w-100" alt="Image 5">
+          </div>
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#teamImageSlider" data-bs-slide="prev">
+          <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+          <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#teamImageSlider" data-bs-slide="next">
+          <span class="carousel-control-next-icon" aria-hidden="true"></span>
+          <span class="visually-hidden">Next</span>
+        </button>
+      </div>
+
         <div class="card-body bg-white">
           @foreach($phases as $phase)
             <div class="mb-4 phase-container" data-phase-id="{{ $phase->id }}">
@@ -132,6 +185,38 @@
                 <i class="ti ti-calendar"></i> {{ $phase->start_date }} → {{ $phase->end_date }}
               </p>
               
+              <!-- Supervisors Display -->
+              @if($phase->supervisors && count($phase->supervisors) > 0)
+              <div class="mb-4">
+                <h6 class="fw-semibold text-secondary mb-2">
+                  <i class="ti ti-user-check"></i> Supervisors
+                </h6>
+                <div class="row g-2">
+                  @foreach($phase->supervisors as $index => $supervisor)
+                  <div class="col-md-6 col-lg-4">
+                    <div class="card border-0 shadow-sm bg-light">
+                      <div class="card-body py-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                          <div>
+                            <h6 class="mb-0 fw-semibold">{{ $supervisor['name'] }}</h6>
+                            <small class="text-muted">{{ $supervisor['designation'] }}</small>
+                          </div>
+                          @if($isDeveloper)
+                          <button class="btn btn-sm btn-outline-secondary" 
+                                  onclick="removeSupervisor('{{ $phase->id }}', {{ $index }})">
+                            <i class="ti ti-trash"></i>
+                          </button>
+                          @endif
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  @endforeach
+                </div>
+              </div>
+              @endif
+              
+              <h6 class="fw-semibold text-secondary mb-2">Team Members</h6>
               <div class="row g-3">
                 @forelse($phase->teams as $team)
                   <div class="col-md-6 col-lg-4">
@@ -376,7 +461,7 @@
                     <h5 class="modal-title">Edit {{ $phase->phase_name }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                   </div>
-                  <form method="POST" action="{{ route('phase.update', $phase) }}">
+                  <form method="POST" action="{{ route('phase.update', $phase) }}" id="editPhaseForm_{{ $phase->id }}">
                     @csrf
                     @method('PUT')
                     <div class="modal-body">
@@ -397,6 +482,55 @@
                           <label class="form-label">End Date</label>
                           <input type="date" name="end_date" class="form-control" value="{{ $phase->end_date }}" required>
                         </div>
+                      </div>
+                      
+                      <!-- Supervisors Edit Section -->
+                      <div class="mb-3">
+                        <label class="form-label fw-semibold">Supervisors</label>
+                        <div id="editSupervisorsContainer_{{ $phase->id }}">
+                          @if($phase->supervisors && count($phase->supervisors) > 0)
+                            @foreach($phase->supervisors as $index => $supervisor)
+                            <div class="row supervisor-row mb-2">
+                              <div class="col-md-6">
+                                <input type="text" name="supervisors[{{ $index }}][name]" 
+                                       class="form-control" 
+                                       value="{{ $supervisor['name'] }}"
+                                       placeholder="Supervisor Name">
+                              </div>
+                              <div class="col-md-5">
+                                <input type="text" name="supervisors[{{ $index }}][designation]" 
+                                       class="form-control" 
+                                       value="{{ $supervisor['designation'] }}"
+                                       placeholder="Designation">
+                              </div>
+                              <div class="col-md-1">
+                                <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor" 
+                                        onclick="removeSupervisorRow(this)">
+                                  <i class="ti ti-trash"></i>
+                                </button>
+                              </div>
+                            </div>
+                            @endforeach
+                          @else
+                            <div class="row supervisor-row mb-2">
+                              <div class="col-md-6">
+                                <input type="text" name="supervisors[0][name]" class="form-control" placeholder="Supervisor Name">
+                              </div>
+                              <div class="col-md-5">
+                                <input type="text" name="supervisors[0][designation]" class="form-control" placeholder="Designation">
+                              </div>
+                              <div class="col-md-1">
+                                <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor" style="display: none;">
+                                  <i class="ti ti-trash"></i>
+                                </button>
+                              </div>
+                            </div>
+                          @endif
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" 
+                                onclick="addSupervisorRow({{ $phase->id }})">
+                          <i class="ti ti-plus"></i> Add Supervisor
+                        </button>
                       </div>
                     </div>
                     <div class="modal-footer">
@@ -441,82 +575,195 @@
   </div>
 </div>
 
+<!-- Supervisor Removal Confirmation Modal -->
+<div class="modal fade" id="removeSupervisorModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-warning">Remove Supervisor</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to remove this supervisor?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form id="removeSupervisorForm" method="POST" action="">
+          @csrf
+          @method('PATCH')
+          <input type="hidden" name="supervisor_index" id="supervisorIndex">
+          <input type="hidden" name="remove_supervisor" value="1">
+          <button type="submit" class="btn btn-warning">Remove</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- JS for dynamic role checkboxes -->
 <script>
-document.querySelectorAll('.phase-checkbox').forEach(cb => {
-  cb.addEventListener('change', function() {
-    const container = document.getElementById('roleContainer');
-    container.innerHTML = '';
-    document.querySelectorAll('.phase-checkbox:checked').forEach(sel => {
-      const phaseId = sel.value;
-      const phaseName = sel.nextElementSibling.innerText;
-      const html = `
-        <div class="card mt-3 border-0 shadow-sm">
-          <div class="card-body">
-            <h6 class="fw-semibold mb-2 text-primary">${phaseName} Roles</h6>
-            <div class="d-flex flex-wrap gap-3">
-              ${['Leader','Developer','BA','QA','DevOps'].map(r => `
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" name="roles[${phaseId}][]" value="${r}" id="${r}_${phaseId}">
-                  <label class="form-check-label" for="${r}_${phaseId}">${r.toUpperCase()}</label>
-                </div>`).join('')}
-            </div>
-          </div>
-        </div>`;
-      container.insertAdjacentHTML('beforeend', html);
+// Supervisor management functions
+let supervisorCounter = 0;
+
+document.getElementById('addSupervisorBtn')?.addEventListener('click', function() {
+    const container = document.getElementById('supervisorsContainer');
+    const rows = container.querySelectorAll('.supervisor-row');
+    const index = rows.length;
+    
+    const newRow = document.createElement('div');
+    newRow.className = 'row supervisor-row mb-2';
+    newRow.innerHTML = `
+        <div class="col-md-6">
+            <input type="text" name="supervisors[${index}][name]" class="form-control" placeholder="Supervisor Name">
+        </div>
+        <div class="col-md-5">
+            <input type="text" name="supervisors[${index}][designation]" class="form-control" placeholder="Designation">
+        </div>
+        <div class="col-md-1">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor" onclick="removeSupervisorRow(this)">
+                <i class="ti ti-trash"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(newRow);
+    
+    // Show remove buttons if there's more than one row
+    if (rows.length > 0) {
+        container.querySelectorAll('.remove-supervisor').forEach(btn => btn.style.display = 'block');
+    }
+});
+
+function addSupervisorRow(phaseId) {
+    const container = document.getElementById(`editSupervisorsContainer_${phaseId}`);
+    const rows = container.querySelectorAll('.supervisor-row');
+    const index = rows.length;
+    
+    const newRow = document.createElement('div');
+    newRow.className = 'row supervisor-row mb-2';
+    newRow.innerHTML = `
+        <div class="col-md-6">
+            <input type="text" name="supervisors[${index}][name]" class="form-control" placeholder="Supervisor Name">
+        </div>
+        <div class="col-md-5">
+            <input type="text" name="supervisors[${index}][designation]" class="form-control" placeholder="Designation">
+        </div>
+        <div class="col-md-1">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor" onclick="removeSupervisorRow(this)">
+                <i class="ti ti-trash"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(newRow);
+}
+
+function removeSupervisorRow(button) {
+    const row = button.closest('.supervisor-row');
+    row.remove();
+    
+    // Re-index remaining rows
+    const container = row.parentElement;
+    const rows = container.querySelectorAll('.supervisor-row');
+    rows.forEach((row, index) => {
+        const nameInput = row.querySelector('input[name^="supervisors"][name$="[name]"]');
+        const designationInput = row.querySelector('input[name^="supervisors"][name$="[designation]"]');
+        
+        if (nameInput) nameInput.name = `supervisors[${index}][name]`;
+        if (designationInput) designationInput.name = `supervisors[${index}][designation]`;
     });
-  });
+}
+
+function removeSupervisor(phaseId, supervisorIndex) {
+    const modal = new bootstrap.Modal(document.getElementById('removeSupervisorModal'));
+    const form = document.getElementById('removeSupervisorForm');
+    form.action = `/phases/${phaseId}`;
+    document.getElementById('supervisorIndex').value = supervisorIndex;
+    modal.show();
+}
+
+// Phase role checkboxes
+document.querySelectorAll('.phase-checkbox').forEach(cb => {
+    cb.addEventListener('change', function() {
+        const container = document.getElementById('roleContainer');
+        container.innerHTML = '';
+        document.querySelectorAll('.phase-checkbox:checked').forEach(sel => {
+            const phaseId = sel.value;
+            const phaseName = sel.nextElementSibling.innerText;
+            const html = `
+                <div class="card mt-3 border-0 shadow-sm">
+                    <div class="card-body">
+                        <h6 class="fw-semibold mb-2 text-primary">${phaseName} Roles</h6>
+                        <div class="d-flex flex-wrap gap-3">
+                            ${['Leader','Developer','BA','QA','DevOps'].map(r => `
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="roles[${phaseId}][]" value="${r}" id="${r}_${phaseId}">
+                                    <label class="form-check-label" for="${r}_${phaseId}">${r.toUpperCase()}</label>
+                                </div>`).join('')}
+                        </div>
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+    });
 });
 
 function confirmDelete(url, type) {
-  const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-  const message = type === 'phase' 
-    ? 'Are you sure you want to delete this phase? This will also delete all team members and their roles in this phase.'
-    : 'Are you sure you want to delete this team member?';
-  
-  document.getElementById('deleteMessage').textContent = message;
-  document.getElementById('deleteForm').action = url;
-  modal.show();
+    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    const message = type === 'phase' 
+        ? 'Are you sure you want to delete this phase? This will also delete all team members and their roles in this phase.'
+        : 'Are you sure you want to delete this team member?';
+    
+    document.getElementById('deleteMessage').textContent = message;
+    document.getElementById('deleteForm').action = url;
+    modal.show();
 }
 
 function confirmRemovePhase(url) {
-  if (confirm('Are you sure you want to remove this member from this phase? This will not delete the member from other phases.')) {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = url;
-    
-    const csrf = document.createElement('input');
-    csrf.type = 'hidden';
-    csrf.name = '_token';
-    csrf.value = '{{ csrf_token() }}';
-    form.appendChild(csrf);
-    
-    const method = document.createElement('input');
-    method.type = 'hidden';
-    method.name = '_method';
-    method.value = 'DELETE';
-    form.appendChild(method);
-    
-    document.body.appendChild(form);
-    form.submit();
-  }
+    if (confirm('Are you sure you want to remove this member from this phase? This will not delete the member from other phases.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = url;
+        
+        const csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = '_token';
+        csrf.value = '{{ csrf_token() }}';
+        form.appendChild(csrf);
+        
+        const method = document.createElement('input');
+        method.type = 'hidden';
+        method.name = '_method';
+        method.value = 'DELETE';
+        form.appendChild(method);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
 }
 </script>
 
 <style>
 .team-member-card:hover {
-  transform: translateY(-2px);
-  transition: transform 0.2s;
-  cursor: pointer;
+    transform: translateY(-2px);
+    transition: transform 0.2s;
+    cursor: pointer;
 }
 
 .dropdown-menu {
-  min-width: 200px;
+    min-width: 200px;
 }
 
 .badge {
-  font-size: 0.7rem;
-  padding: 0.35em 0.65em;
+    font-size: 0.7rem;
+    padding: 0.35em 0.65em;
 }
+
+.supervisor-row {
+    align-items: center;
+}
+#teamImageSlider img {
+    height: 250px;
+    object-fit: cover;
+}
+
 </style>
 @endsection

@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class TeamPhaseController extends Controller
 {
@@ -47,7 +48,15 @@ class TeamPhaseController extends Controller
             'phase_name' => 'required|string|max:255',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
+            'supervisors' => 'nullable|array',
+            'supervisors.*.name' => 'required|string|max:255',
+            'supervisors.*.designation' => 'required|string|max:255',
         ]);
+
+        // Process supervisors JSON
+        if (isset($data['supervisors'])) {
+            $data['supervisors'] = $this->processSupervisors($data['supervisors']);
+        }
 
         Phase::create($data);
         return back()->with('success', '✅ Phase created successfully!');
@@ -60,7 +69,18 @@ class TeamPhaseController extends Controller
             'phase_name' => 'required|string|max:255',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
+            'supervisors' => 'nullable|array',
+            'supervisors.*.name' => 'required|string|max:255',
+            'supervisors.*.designation' => 'required|string|max:255',
         ]);
+
+        // Process supervisors JSON
+        if (isset($data['supervisors'])) {
+            $data['supervisors'] = $this->processSupervisors($data['supervisors']);
+        } else {
+            // Keep existing supervisors if not provided
+            $data['supervisors'] = $phase->supervisors;
+        }
 
         $phase->update($data);
         return back()->with('success', '✅ Phase updated successfully!');
@@ -212,5 +232,23 @@ class TeamPhaseController extends Controller
         }
 
         return back()->with('success', 'Team member removed from phase successfully!');
+    }
+
+    /**
+     * Process supervisors array to remove empty entries
+     */
+    private function processSupervisors($supervisors)
+    {
+        if (!is_array($supervisors)) {
+            return null;
+        }
+
+        // Filter out empty entries
+        $filtered = array_filter($supervisors, function($supervisor) {
+            return !empty(trim($supervisor['name'])) && !empty(trim($supervisor['designation']));
+        });
+
+        // Reset array keys
+        return array_values($filtered);
     }
 }
