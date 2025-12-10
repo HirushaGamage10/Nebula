@@ -31,67 +31,51 @@ class RoleHelper
         ],
         'Program Administrator (level 01)' => [
 
-            // HOME
             'dashboard',
-
-            // USER MANAGEMENT
             'create.user',
             'user.management',
-
-            // STUDENT MANAGEMENT
+            'course.badge',
+            'module.management',
+            'course.management',
+            'overall.attendance',
+            'student.profile',
+            'student.other.information',
+            'all.clearance',
+            'student.list',
+            'repeat.students.management',
+            'intake.create',
+            'attendance',
+            'timetable',
+            'exam.results',
+            'semester.create',
+            'semester.registration',
             'student.registration',
             'course.registration',
             'eligibility.registration',
-            'course.badge',
-            'student.other.information',
-            'student.list',
-            'student.profile',
-            'course.change',
-
-            // EXAMS
-            'exam.results',
-            'student.exam.result.management',
-            'exam.results.view.edit',
-
-            // REPEAT STUDENTS
-            'repeat.students.management',
-            'repeat.students.payment',
-
-            // ATTENDANCE
-            'attendance',
-            'overall.attendance',
-
-            // CLEARANCE
-            'all.clearance.management',
-            'hostel.clearance.form.management',
-            'library.clearance',
-            'project.clearance.management',
-            'payment.clearance',
-
-            // ACADEMIC
-            'module.creation',
-            'module.management',
-            'course.management',
-            'intake.create',
-            'semester.create',
-            'semester.registration',
-            'timetable',
-
-            // FINANCIAL
-            'payment.plan',
-            'payment.plan.index',
             'payment',
             'late.payment',
             'payment.discounts',
-            'payment.dashboard',
-            'payment.summary',
-            'misc.payment',
-            'payment.showDownloadPage',
-            'payment.discount.page',
-            'latefee.approval.index',
-
-            // FOOTER
-            'user.profile'
+            'payment.plan',
+            'user.profile',
+            'library.clearance',
+            'hostel.clearance.form.management',
+            'project.clearance.management',
+            'payment.clearance',
+            'reporting.dashboard',
+            'data.export.import',
+            'file.upload',
+            'file.uploadMultiple',
+            'file.download',
+            'file.delete',
+            'file.deleteMultiple',
+            'file.info',
+            'file.list',
+            'file.storageStats',
+            'file.cleanup',
+            'repeat.students.management',
+            'repeat.students.payment',
+            'course.change',
+            'payment.dashboard'
         ],
 
         'Program Administrator (level 02)' => [
@@ -102,14 +86,19 @@ class RoleHelper
             'student.other.information',
             'student.profile',
             'exam.results',
+            'student.exam.result.management',
+            'exam.results.view.edit',
             'semester.create',
             'semester.registration',
+            'semester.management',
             'module.management',
             'overall.attendance',
             'student.list',
             'repeat.students.management',
             'course.change',
-            'payment.dashboard'
+            'all.students.view',
+            'payment.dashboard',
+            'user.profile'
 
         ],
         'Student Counselor' => [
@@ -119,45 +108,54 @@ class RoleHelper
             'eligibility.registration',
             'payment',
             'late.payment',
-            'payment.discounts',
+            'payment.summary',
             'student.list',
+            'all.students.view',
             'course.change',
             'payment.dashboard',
+            'misc.payment',
             'latefee.approval',
-
+            'user.profile'
 
         ],
         'Marketing Manager' => [
             'dashboard',
             'payment.plan',
+            'payment.plan.index',
             'student.list',
+            'all.students.view',
             'course.change',
             'payment.summary',
-            'payment.dashboard'
-
+            'payment.dashboard',
+            'user.profile'
 
         ],
         'Librarian' => [
             'dashboard',
             'user.profile',
-            'library.clearance'
+            'all.students.view',
+            'library.clearance',
+            'user.profile'
 
         ],
         'Hostel Manager' => [
             'dashboard',
+            'all.students.view',
             'user.profile',
             'hostel.clearance.form.management'
         ],
         'Bursar' => [
             'dashboard',
+            'all.students.view',
             'payment.clearance',
+            'payment.dashboard'
         ],
         'Project Tutor' => [
             'dashboard' => 'project.tutor.dashboard',
             'user.profile',
             'project.clearance.management',
             'attendance',
-            'student.list'
+            'all.students.view'
         ],
         'Developer' => [
             'dashboard',
