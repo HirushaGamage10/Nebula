@@ -897,10 +897,22 @@ Route::middleware(['role:DGM,Developer,Program Administrator (level 01)'])->grou
 });
 
 
-
+// Team Phase Management Routes
 Route::get('/team-phase', [TeamPhaseController::class, 'index'])->name('team.phase.index');
+
+// Phase Management (Developer only)
 Route::post('/phase/create', [TeamPhaseController::class, 'createPhase'])->name('phase.create');
+Route::put('/phase/{phase}/update', [TeamPhaseController::class, 'updatePhase'])->name('phase.update');
+Route::delete('/phase/{phase}/delete', [TeamPhaseController::class, 'deletePhase'])->name('phase.delete');
+
+// Team Member Management (Developer only)
 Route::post('/team/assign', [TeamPhaseController::class, 'assignMember'])->name('team.assign');
+Route::put('/team/{team}/update', [TeamPhaseController::class, 'updateMember'])->name('team.update');
+Route::delete('/team/{team}/delete', [TeamPhaseController::class, 'deleteMember'])->name('team.delete');
+
+// Member Phase Access Management (Developer only)
+Route::post('/team/{team}/add-phase', [TeamPhaseController::class, 'addMemberToPhase'])->name('team.add-phase');
+Route::delete('/team/{team}/remove-phase/{phase}', [TeamPhaseController::class, 'removeMemberFromPhase'])->name('team.remove-phase');
 
 
 

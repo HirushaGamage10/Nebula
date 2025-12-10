@@ -10,12 +10,18 @@
       <!-- Header -->
       <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold mb-0 text-primary">Team and Phase Management</h3>
-        <small class="text-muted">Manage project phases and team members</small>
+        <div>
+          <small class="text-muted">Manage project phases and team members</small>
+          <?php if($isDeveloper): ?>
+            <span class="badge bg-success ms-2">Developer Mode</span>
+          <?php endif; ?>
+        </div>
       </div>
 
+      <?php if($isDeveloper): ?>
       <!-- Add New Phase -->
       <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header bg-white border-0">
+        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
           <h5 class="fw-semibold text-dark mb-0">Add New Phase</h5>
         </div>
         <div class="card-body bg-white">
@@ -94,31 +100,83 @@
           </form>
         </div>
       </div>
+      <?php endif; ?>
 
       <!-- Display Phases & Team Members -->
       <div class="card shadow-sm border-0">
-        <div class="card-header bg-white border-0">
+        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
           <h5 class="fw-semibold text-dark mb-0">All Phases & Team Members</h5>
+          <?php if(!$isDeveloper): ?>
+            <small class="text-muted">View Only Mode</small>
+          <?php endif; ?>
         </div>
         <div class="card-body bg-white">
           <?php $__currentLoopData = $phases; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $phase): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-            <div class="mb-4">
-              <h5 class="fw-semibold text-primary"><?php echo e($phase->phase_name); ?></h5>
+            <div class="mb-4 phase-container" data-phase-id="<?php echo e($phase->id); ?>">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="fw-semibold text-primary"><?php echo e($phase->phase_name); ?>
+
+                  <small class="text-muted">(ID: <?php echo e($phase->phase_id); ?>)</small>
+                </h5>
+                <?php if($isDeveloper): ?>
+                <div class="btn-group">
+                  <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editPhaseModal_<?php echo e($phase->id); ?>">
+                    <i class="ti ti-edit"></i> Edit
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDelete('<?php echo e(route('phase.delete', $phase)); ?>', 'phase')">
+                    <i class="ti ti-trash"></i> Delete
+                  </button>
+                </div>
+                <?php endif; ?>
+              </div>
               <p class="text-muted small mb-3">
                 <i class="ti ti-calendar"></i> <?php echo e($phase->start_date); ?> → <?php echo e($phase->end_date); ?>
 
               </p>
+              
               <div class="row g-3">
                 <?php $__empty_1 = true; $__currentLoopData = $phase->teams; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $team): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                   <div class="col-md-6 col-lg-4">
-                    <div class="card border-0 shadow-sm h-100 team-member-card" 
-                         data-bs-toggle="modal" data-bs-target="#memberModal_<?php echo e($team->id); ?>">
+                    <div class="card border-0 shadow-sm h-100 team-member-card">
                       <div class="card-body d-flex align-items-center gap-3">
                         <img src="<?php echo e($team->profile_pic ? asset('storage/'.$team->profile_pic) : asset('images/default-user.png')); ?>"
                              alt="Profile" class="rounded-circle" width="60" height="60" style="object-fit: cover;">
                         <div class="flex-grow-1">
-                          <h6 class="fw-semibold mb-0"><?php echo e($team->name); ?></h6>
-                          <small class="text-muted"><?php echo e($team->p_no ?? 'No contact'); ?></small>
+                          <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                              <h6 class="fw-semibold mb-0"><?php echo e($team->name); ?></h6>
+                              <small class="text-muted"><?php echo e($team->p_no ?? 'No contact'); ?></small>
+                            </div>
+                            <?php if($isDeveloper): ?>
+                            <div class="dropdown">
+                              <button class="btn btn-sm btn-outline-secondary border-0" type="button" data-bs-toggle="dropdown">
+                                <i class="ti ti-dots-vertical"></i>
+                              </button>
+                              <ul class="dropdown-menu">
+                                <li>
+                                  <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editMemberModal_<?php echo e($team->id); ?>">
+                                    <i class="ti ti-edit me-2"></i> Edit
+                                  </button>
+                                </li>
+                                <li>
+                                  <button class="dropdown-item text-danger" onclick="confirmDelete('<?php echo e(route('team.delete', $team)); ?>', 'member')">
+                                    <i class="ti ti-trash me-2"></i> Delete
+                                  </button>
+                                </li>
+                                <li>
+                                  <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addToPhaseModal_<?php echo e($team->id); ?>">
+                                    <i class="ti ti-plus me-2"></i> Add to Another Phase
+                                  </button>
+                                </li>
+                                <li>
+                                  <button class="dropdown-item text-warning" onclick="confirmRemovePhase('<?php echo e(route('team.remove-phase', ['team' => $team, 'phase' => $phase])); ?>')">
+                                    <i class="ti ti-x me-2"></i> Remove from this Phase
+                                  </button>
+                                </li>
+                              </ul>
+                            </div>
+                            <?php endif; ?>
+                          </div>
                           <div class="mt-2">
                             <?php $__currentLoopData = $team->roles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $role): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                               <?php
@@ -136,9 +194,17 @@
                           </div>
                         </div>
                       </div>
+                      <!-- View Details Button (for all roles) -->
+                      <div class="card-footer bg-transparent border-0 pt-0">
+                        <button class="btn btn-sm btn-outline-info w-100" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#memberModal_<?php echo e($team->id); ?>">
+                          <i class="ti ti-eye"></i> View Details
+                        </button>
+                      </div>
                     </div>
 
-                    <!-- Modal for each member -->
+                    <!-- View Details Modal -->
                     <div class="modal fade" id="memberModal_<?php echo e($team->id); ?>" tabindex="-1" aria-hidden="true">
                       <div class="modal-dialog modal-dialog-centered modal-lg">
                         <div class="modal-content">
@@ -147,7 +213,6 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                           </div>
                           <div class="modal-body">
-
                             <!-- Profile picture + roles -->
                             <div class="text-center mb-3">
                               <img src="<?php echo e($team->profile_pic ? asset('storage/'.$team->profile_pic) : asset('images/default-user.png')); ?>"
@@ -181,23 +246,201 @@
                                 <a href="<?php echo e($team->link2); ?>" target="_blank" class="btn btn-outline-secondary w-100">Visit Other Link</a>
                               </div>
                             <?php endif; ?>
-
                           </div>
                         </div>
                       </div>
                     </div>
 
+                    <!-- Edit Member Modal (Developer only) -->
+                    <?php if($isDeveloper): ?>
+                    <div class="modal fade" id="editMemberModal_<?php echo e($team->id); ?>" tabindex="-1" aria-hidden="true">
+                      <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h5 class="modal-title">Edit <?php echo e($team->name); ?></h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                          </div>
+                          <form method="POST" action="<?php echo e(route('team.update', $team)); ?>" enctype="multipart/form-data">
+                            <?php echo csrf_field(); ?>
+                            <?php echo method_field('PUT'); ?>
+                            <div class="modal-body">
+                              <div class="mb-3">
+                                <label class="form-label">Name</label>
+                                <input type="text" name="name" class="form-control" value="<?php echo e($team->name); ?>" required>
+                              </div>
+                              <div class="mb-3">
+                                <label class="form-label">Phone No</label>
+                                <input type="text" name="p_no" class="form-control" value="<?php echo e($team->p_no); ?>">
+                              </div>
+                              <div class="mb-3">
+                                <label class="form-label">Profile Picture</label>
+                                <input type="file" name="profile_pic" class="form-control">
+                                <?php if($team->profile_pic): ?>
+                                  <small class="text-muted">Current: <?php echo e(basename($team->profile_pic)); ?></small>
+                                <?php endif; ?>
+                              </div>
+                              <div class="mb-3">
+                                <label class="form-label">LinkedIn URL</label>
+                                <input type="url" name="link1" class="form-control" value="<?php echo e($team->link1); ?>">
+                              </div>
+                              <div class="mb-3">
+                                <label class="form-label">Other Link</label>
+                                <input type="url" name="link2" class="form-control" value="<?php echo e($team->link2); ?>">
+                              </div>
+                              <div class="mb-3">
+                                <label class="form-label">Roles in <?php echo e($phase->phase_name); ?></label>
+                                <div class="d-flex flex-wrap gap-3">
+                                  <?php $__currentLoopData = ['Leader','Developer','BA','QA','DevOps']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $role): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <div class="form-check">
+                                      <input class="form-check-input" type="checkbox" 
+                                             name="roles[]" 
+                                             value="<?php echo e($role); ?>"
+                                             id="edit_role_<?php echo e($role); ?>_<?php echo e($team->id); ?>"
+                                             <?php echo e($team->roles->contains('role', $role) ? 'checked' : ''); ?>>
+                                      <label class="form-check-label" for="edit_role_<?php echo e($role); ?>_<?php echo e($team->id); ?>">
+                                        <?php echo e($role); ?>
+
+                                      </label>
+                                    </div>
+                                  <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="modal-footer">
+                              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                              <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Add to Another Phase Modal -->
+                    <div class="modal fade" id="addToPhaseModal_<?php echo e($team->id); ?>" tabindex="-1" aria-hidden="true">
+                      <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h5 class="modal-title">Add <?php echo e($team->name); ?> to Another Phase</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                          </div>
+                          <form method="POST" action="<?php echo e(route('team.add-phase', $team)); ?>">
+                            <?php echo csrf_field(); ?>
+                            <div class="modal-body">
+                              <div class="mb-3">
+                                <label class="form-label">Select Phase</label>
+                                <select name="phase_id" class="form-select" required>
+                                  <option value="">Choose a phase...</option>
+                                  <?php $__currentLoopData = $phases->where('id', '!=', $phase->id); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $otherPhase): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <option value="<?php echo e($otherPhase->id); ?>"><?php echo e($otherPhase->phase_name); ?></option>
+                                  <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                </select>
+                              </div>
+                              <div class="mb-3">
+                                <label class="form-label">Roles in New Phase</label>
+                                <div class="d-flex flex-wrap gap-3">
+                                  <?php $__currentLoopData = ['Leader','Developer','BA','QA','DevOps']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $role): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <div class="form-check">
+                                      <input class="form-check-input" type="checkbox" 
+                                             name="roles[]" 
+                                             value="<?php echo e($role); ?>"
+                                             id="new_role_<?php echo e($role); ?>_<?php echo e($team->id); ?>">
+                                      <label class="form-check-label" for="new_role_<?php echo e($role); ?>_<?php echo e($team->id); ?>">
+                                        <?php echo e($role); ?>
+
+                                      </label>
+                                    </div>
+                                  <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="modal-footer">
+                              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                              <button type="submit" class="btn btn-success">Add to Phase</button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+                    <?php endif; ?>
                   </div>
                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
-                  <div class="col-12"><p class="text-muted">No members yet.</p></div>
+                  <div class="col-12">
+                    <p class="text-muted">No members assigned to this phase.</p>
+                  </div>
                 <?php endif; ?>
               </div>
             </div>
-            <hr>
+
+            <!-- Edit Phase Modal (Developer only) -->
+            <?php if($isDeveloper): ?>
+            <div class="modal fade" id="editPhaseModal_<?php echo e($phase->id); ?>" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Edit <?php echo e($phase->phase_name); ?></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <form method="POST" action="<?php echo e(route('phase.update', $phase)); ?>">
+                    <?php echo csrf_field(); ?>
+                    <?php echo method_field('PUT'); ?>
+                    <div class="modal-body">
+                      <div class="mb-3">
+                        <label class="form-label">Phase ID</label>
+                        <input type="text" name="phase_id" class="form-control" value="<?php echo e($phase->phase_id); ?>" required>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Phase Name</label>
+                        <input type="text" name="phase_name" class="form-control" value="<?php echo e($phase->phase_name); ?>" required>
+                      </div>
+                      <div class="row">
+                        <div class="col-md-6 mb-3">
+                          <label class="form-label">Start Date</label>
+                          <input type="date" name="start_date" class="form-control" value="<?php echo e($phase->start_date); ?>" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <label class="form-label">End Date</label>
+                          <input type="date" name="end_date" class="form-control" value="<?php echo e($phase->end_date); ?>" required>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                      <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+            <?php endif; ?>
+            
+            <?php if(!$loop->last): ?><hr><?php endif; ?>
           <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger">Confirm Delete</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p id="deleteMessage">Are you sure you want to delete this?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form id="deleteForm" method="POST" action="">
+          <?php echo csrf_field(); ?>
+          <?php echo method_field('DELETE'); ?>
+          <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+      </div>
     </div>
   </div>
 </div>
@@ -228,7 +471,57 @@ document.querySelectorAll('.phase-checkbox').forEach(cb => {
     });
   });
 });
-</script>
-<?php $__env->stopSection(); ?>
 
+function confirmDelete(url, type) {
+  const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+  const message = type === 'phase' 
+    ? 'Are you sure you want to delete this phase? This will also delete all team members and their roles in this phase.'
+    : 'Are you sure you want to delete this team member?';
+  
+  document.getElementById('deleteMessage').textContent = message;
+  document.getElementById('deleteForm').action = url;
+  modal.show();
+}
+
+function confirmRemovePhase(url) {
+  if (confirm('Are you sure you want to remove this member from this phase? This will not delete the member from other phases.')) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = url;
+    
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = '_token';
+    csrf.value = '<?php echo e(csrf_token()); ?>';
+    form.appendChild(csrf);
+    
+    const method = document.createElement('input');
+    method.type = 'hidden';
+    method.name = '_method';
+    method.value = 'DELETE';
+    form.appendChild(method);
+    
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+</script>
+
+<style>
+.team-member-card:hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s;
+  cursor: pointer;
+}
+
+.dropdown-menu {
+  min-width: 200px;
+}
+
+.badge {
+  font-size: 0.7rem;
+  padding: 0.35em 0.65em;
+}
+</style>
+<?php $__env->stopSection(); ?>
 <?php echo $__env->make('inc.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/team_phase/index.blade.php ENDPATH**/ ?>
