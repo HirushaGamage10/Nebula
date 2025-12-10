@@ -808,7 +808,7 @@ function confirmRemovePhase(url) {
 }
 
 #teamImageSlider img {
-    height: 250px;
+    height: 350px;
     object-fit: cover;
 }
 
