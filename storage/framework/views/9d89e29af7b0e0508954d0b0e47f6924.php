@@ -9,7 +9,7 @@
 
       <!-- Header -->
       <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="fw-bold mb-0 text-primary">Team and Phase Management</h3>
+        <h3 class="fw-bold mb-0 text-primary">Nebula IT Team</h3>
         <div>
           <small class="text-muted">Manage project phases and team members</small>
           <?php if($isDeveloper): ?>
@@ -136,32 +136,32 @@
           <?php endif; ?>
         </div>
         <div id="teamImageSlider" class="carousel slide mb-4" data-bs-ride="carousel">
-  <div class="carousel-inner">
-    <div class="carousel-item active">
-      <img src="<?php echo e(asset('images/logos/nebula.png')); ?>" class="d-block w-100" alt="Image 1">
-    </div>
-    <div class="carousel-item">
-      <img src="<?php echo e(asset('images/image2.jpg')); ?>" class="d-block w-100" alt="Image 2">
-    </div>
-    <div class="carousel-item">
-      <img src="<?php echo e(asset('images/image3.jpg')); ?>" class="d-block w-100" alt="Image 3">
-    </div>
-    <div class="carousel-item">
-      <img src="<?php echo e(asset('images/image4.jpg')); ?>" class="d-block w-100" alt="Image 4">
-    </div>
-    <div class="carousel-item">
-      <img src="<?php echo e(asset('images/image5.jpg')); ?>" class="d-block w-100" alt="Image 5">
-    </div>
-  </div>
-  <button class="carousel-control-prev" type="button" data-bs-target="#teamImageSlider" data-bs-slide="prev">
-    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-    <span class="visually-hidden">Previous</span>
-  </button>
-  <button class="carousel-control-next" type="button" data-bs-target="#teamImageSlider" data-bs-slide="next">
-    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-    <span class="visually-hidden">Next</span>
-  </button>
-</div>
+        <div class="carousel-inner">
+          <div class="carousel-item active">
+            <img src="<?php echo e(asset('images/team/1.jpg')); ?>" class="d-block w-100" alt="Image 1">
+          </div>
+          <div class="carousel-item">
+            <img src="<?php echo e(asset('images/team/3.jpg')); ?>" class="d-block w-100" alt="Image 2">
+          </div>
+          <div class="carousel-item">
+            <img src="<?php echo e(asset('images/team/4.jpg')); ?>" class="d-block w-100" alt="Image 5">
+          </div>
+          <div class="carousel-item">
+            <img src="<?php echo e(asset('images/team/5.jpg')); ?>" class="d-block w-100" alt="Image 5">
+          </div>
+          <div class="carousel-item">
+            <img src="<?php echo e(asset('images/team/7.jpg')); ?>" class="d-block w-100" alt="Image 5">
+          </div>
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#teamImageSlider" data-bs-slide="prev">
+          <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+          <span class="visually-hidden">Previous</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#teamImageSlider" data-bs-slide="next">
+          <span class="carousel-control-next-icon" aria-hidden="true"></span>
+          <span class="visually-hidden">Next</span>
+        </button>
+      </div>
 
         <div class="card-body bg-white">
           <?php $__currentLoopData = $phases; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $phase): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
@@ -765,7 +765,7 @@ function confirmRemovePhase(url) {
     align-items: center;
 }
 #teamImageSlider img {
-    height: 100px;
+    height: 250px;
     object-fit: cover;
 }
 

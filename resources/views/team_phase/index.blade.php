@@ -9,7 +9,7 @@
 
       <!-- Header -->
       <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="fw-bold mb-0 text-primary">Team and Phase Management</h3>
+        <h3 class="fw-bold mb-0 text-primary">Nebula IT Team</h3>
         <div>
           <small class="text-muted">Manage project phases and team members</small>
           @if($isDeveloper)
@@ -138,19 +138,19 @@
         <div id="teamImageSlider" class="carousel slide mb-4" data-bs-ride="carousel">
         <div class="carousel-inner">
           <div class="carousel-item active">
-            <img src="{{ asset('images/logos/nebula.png') }}" class="d-block w-100" alt="Image 1">
+            <img src="{{ asset('images/team/1.jpg') }}" class="d-block w-100" alt="Image 1">
           </div>
           <div class="carousel-item">
-            <img src="{{ asset('images/image2.jpg') }}" class="d-block w-100" alt="Image 2">
+            <img src="{{ asset('images/team/3.jpg') }}" class="d-block w-100" alt="Image 2">
           </div>
           <div class="carousel-item">
-            <img src="{{ asset('images/image3.jpg') }}" class="d-block w-100" alt="Image 3">
+            <img src="{{ asset('images/team/4.jpg') }}" class="d-block w-100" alt="Image 5">
           </div>
           <div class="carousel-item">
-            <img src="{{ asset('images/image4.jpg') }}" class="d-block w-100" alt="Image 4">
+            <img src="{{ asset('images/team/5.jpg') }}" class="d-block w-100" alt="Image 5">
           </div>
           <div class="carousel-item">
-            <img src="{{ asset('images/image5.jpg') }}" class="d-block w-100" alt="Image 5">
+            <img src="{{ asset('images/team/7.jpg') }}" class="d-block w-100" alt="Image 5">
           </div>
         </div>
         <button class="carousel-control-prev" type="button" data-bs-target="#teamImageSlider" data-bs-slide="prev">
