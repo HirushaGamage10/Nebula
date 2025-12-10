@@ -7,16 +7,16 @@
   <div class="row justify-content-center">
     <div class="col-lg-10">
 
-      <!-- HEADER -->
+      <!-- Header -->
       <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3 class="fw-bold mb-0 text-primary">Team & Phase Management</h3>
+        <h3 class="fw-bold mb-0 text-primary">Team and Phase Management</h3>
         <small class="text-muted">Manage project phases and team members</small>
       </div>
 
-      <!-- ADD PHASE -->
+      <!-- Add New Phase -->
       <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-white border-0">
-          <h5 class="fw-semibold text-dark mb-0">➕ Add New Phase</h5>
+          <h5 class="fw-semibold text-dark mb-0">Add New Phase</h5>
         </div>
         <div class="card-body bg-white">
           <form method="POST" action="{{ route('phase.create') }}" class="row g-3">
@@ -44,10 +44,10 @@
         </div>
       </div>
 
-      <!-- ASSIGN MEMBER -->
+      <!-- Assign Team Member -->
       <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-white border-0">
-          <h5 class="fw-semibold text-dark mb-0">👥 Assign Team Member to Multiple Phases</h5>
+          <h5 class="fw-semibold text-dark mb-0">Assign Team Member to Multiple Phases</h5>
         </div>
         <div class="card-body bg-white">
           <form method="POST" action="{{ route('team.assign') }}" enctype="multipart/form-data" id="assignForm">
@@ -55,7 +55,7 @@
             <div class="row g-3 mb-3">
               <div class="col-md-3">
                 <label class="form-label fw-semibold">Member Name</label>
-                <input type="text" name="name" class="form-control" placeholder="e.g. Savindu Fernando" required>
+                <input type="text" name="name" class="form-control" placeholder="Savindu Fernando" required>
               </div>
               <div class="col-md-3">
                 <label class="form-label fw-semibold">Phone No</label>
@@ -67,12 +67,12 @@
               </div>
               <div class="col-md-3">
                 <label class="form-label fw-semibold">Links</label>
-                <input type="url" name="link1" class="form-control mb-2" placeholder="LinkedIn / GitHub">
+                <input type="url" name="link1" class="form-control mb-2" placeholder="LinkedIn">
                 <input type="url" name="link2" class="form-control" placeholder="Other link">
               </div>
             </div>
 
-            <!-- MULTI-PHASE SELECT -->
+            <!-- Phase selection -->
             <div class="mb-3">
               <label class="form-label fw-semibold">Select Phases</label>
               <div class="d-flex flex-wrap gap-3">
@@ -85,7 +85,7 @@
               </div>
             </div>
 
-            <!-- ROLE SELECTION CONTAINER -->
+            <!-- Dynamic roles container -->
             <div id="roleContainer" class="mt-3"></div>
 
             <div class="text-end mt-3">
@@ -95,10 +95,10 @@
         </div>
       </div>
 
-      <!-- DISPLAY ALL -->
+      <!-- Display Phases & Team Members -->
       <div class="card shadow-sm border-0">
         <div class="card-header bg-white border-0">
-          <h5 class="fw-semibold text-dark mb-0">📋 All Phases & Team Members</h5>
+          <h5 class="fw-semibold text-dark mb-0">All Phases & Team Members</h5>
         </div>
         <div class="card-body bg-white">
           @foreach($phases as $phase)
@@ -110,7 +110,8 @@
               <div class="row g-3">
                 @forelse($phase->teams as $team)
                   <div class="col-md-6 col-lg-4">
-                    <div class="card border-0 shadow-sm h-100">
+                    <div class="card border-0 shadow-sm h-100 team-member-card" 
+                         data-bs-toggle="modal" data-bs-target="#memberModal_{{ $team->id }}">
                       <div class="card-body d-flex align-items-center gap-3">
                         <img src="{{ $team->profile_pic ? asset('storage/'.$team->profile_pic) : asset('images/default-user.png') }}"
                              alt="Profile" class="rounded-circle" width="60" height="60" style="object-fit: cover;">
@@ -125,6 +126,7 @@
                                   'developer' => 'success',
                                   'ba' => 'info',
                                   'qa' => 'warning',
+                                  'devops' => 'dark',
                                   default => 'secondary'
                                 };
                               @endphp
@@ -134,6 +136,56 @@
                         </div>
                       </div>
                     </div>
+
+                    <!-- Modal for each member -->
+                    <div class="modal fade" id="memberModal_{{ $team->id }}" tabindex="-1" aria-hidden="true">
+                      <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h5 class="modal-title">{{ $team->name }} - Details</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                          </div>
+                          <div class="modal-body">
+
+                            <!-- Profile picture + roles -->
+                            <div class="text-center mb-3">
+                              <img src="{{ $team->profile_pic ? asset('storage/'.$team->profile_pic) : asset('images/default-user.png') }}"
+                                   class="rounded-circle mb-2" width="120" height="120">
+                              <h4>{{ $team->name }}</h4>
+                              @foreach ($team->roles as $r)
+                                <span class="badge bg-primary">{{ $r->role }}</span>
+                              @endforeach
+                            </div>
+
+                            <!-- LinkedIn visual preview -->
+                            @if($team->link1)
+                              <div class="card shadow-sm border-0 p-3">
+                                <div class="d-flex align-items-center mb-2">
+                                  <img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png" 
+                                       width="40" class="me-3">
+                                  <div>
+                                    <h5 class="mb-0">LinkedIn Profile</h5>
+                                    <small class="text-muted">Connected account</small>
+                                  </div>
+                                </div>
+                                <hr>
+                                <p class="mb-1"><strong>{{ $team->name }}</strong></p>
+                                <p class="text-muted">Click the button below to view full LinkedIn details.</p>
+                                <a href="{{ $team->link1 }}" target="_blank" class="btn btn-primary w-100">View LinkedIn Profile</a>
+                              </div>
+                            @endif
+
+                            @if($team->link2)
+                              <div class="mt-3">
+                                <a href="{{ $team->link2 }}" target="_blank" class="btn btn-outline-secondary w-100">Visit Other Link</a>
+                              </div>
+                            @endif
+
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                   </div>
                 @empty
                   <div class="col-12"><p class="text-muted">No members yet.</p></div>
@@ -149,12 +201,12 @@
   </div>
 </div>
 
-<!-- JS to dynamically show roles for each selected phase -->
+<!-- JS for dynamic role checkboxes -->
 <script>
 document.querySelectorAll('.phase-checkbox').forEach(cb => {
   cb.addEventListener('change', function() {
     const container = document.getElementById('roleContainer');
-    container.innerHTML = ''; // reset
+    container.innerHTML = '';
     document.querySelectorAll('.phase-checkbox:checked').forEach(sel => {
       const phaseId = sel.value;
       const phaseName = sel.nextElementSibling.innerText;
@@ -163,7 +215,7 @@ document.querySelectorAll('.phase-checkbox').forEach(cb => {
           <div class="card-body">
             <h6 class="fw-semibold mb-2 text-primary">${phaseName} Roles</h6>
             <div class="d-flex flex-wrap gap-3">
-              ${['leader','developer','BA','QA'].map(r => `
+              ${['Leader','Developer','BA','QA','DevOps'].map(r => `
                 <div class="form-check">
                   <input class="form-check-input" type="checkbox" name="roles[${phaseId}][]" value="${r}" id="${r}_${phaseId}">
                   <label class="form-check-label" for="${r}_${phaseId}">${r.toUpperCase()}</label>
