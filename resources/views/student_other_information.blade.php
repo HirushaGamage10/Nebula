@@ -173,14 +173,14 @@
                                         <label for="jobTitle" class="col-sm-2 col-form-label">Job Title <span class="text-danger">*</span></label>
                                         <div class="col-sm-10">
                                             <input type="text" class="form-control bg-white" id="jobTitle"
-                                                name="jobTitle" placeholder="Enter job title" required>
+                                                name="jobTitle" placeholder="Enter job title" >
                                         </div>
                                     </div>
                                     <div class="mb-1 row align-items-center">
                                         <label for="workplace" class="col-sm-2 col-form-label">Workplace <span class="text-danger">*</span></label>
                                         <div class="col-sm-10">
                                             <input type="text" class="form-control bg-white" id="workplace"
-                                                name="workplace" placeholder="Enter workplace" required>
+                                                name="workplace" placeholder="Enter workplace">
                                         </div>
                                     </div>
                                 </div>
