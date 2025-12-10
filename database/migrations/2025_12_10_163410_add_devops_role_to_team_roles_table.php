@@ -6,23 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::table('team_roles', function (Blueprint $table) {
-            //
+            $table->enum('role', ['Leader', 'Developer', 'BA', 'QA', 'DevOps'])
+                  ->change();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('team_roles', function (Blueprint $table) {
-            //
+            $table->enum('role', ['leader', 'developer', 'BA', 'QA'])
+                  ->change();
         });
     }
 };
