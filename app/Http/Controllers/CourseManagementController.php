@@ -24,7 +24,14 @@ class CourseManagementController extends Controller
         $validatedData = $request->validate([
             'location' => ['required', Rule::in(['Welisara', 'Moratuwa', 'Peradeniya'])],
             'course_type' => ['required', Rule::in(['degree', 'diploma', 'certificate'])],
-            'course_name' => 'required|string|max:255|unique:courses,course_name',
+            'course_name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('courses')->where(function ($query) use ($request) {
+                    return $query->where('location', $request->location);
+                })
+            ],
             'no_of_semesters' => 'required_if:course_type,degree,required_if:course_type,diploma|nullable|integer|min:1',
             'duration_years' => 'required|integer|min:0',
             'duration_months' => 'required|integer|min:0|max:11',
@@ -154,7 +161,14 @@ class CourseManagementController extends Controller
         $validatedData = $request->validate([
             'location' => ['required', Rule::in(['Welisara', 'Moratuwa', 'Peradeniya'])],
             'course_type' => ['required', Rule::in(['degree', 'diploma', 'certificate'])],
-            'course_name' => 'required|string|max:255|unique:courses,course_name,' . $id . ',course_id',
+            'course_name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('courses')->where(function ($query) use ($request) {
+                    return $query->where('location', $request->location);
+                })->ignore($id, 'course_id')
+            ],
             'no_of_semesters' => 'required_if:course_type,degree,required_if:course_type,diploma|nullable|integer|min:1',
             'duration_years' => 'required|integer|min:0',
             'duration_months' => 'required|integer|min:0|max:11',
