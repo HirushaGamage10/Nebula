@@ -242,7 +242,7 @@ public function updateUserStatus(Request $request)
             'Nebula Institute of Technology – Peradeniya'
         ];
 
-        return view('user_management', [
+        return view('user_management.index', [
             'usersArray' => $usersArray->toArray(),
             'userRoles' => $userRoles,
             'locations' => $locations,
@@ -262,7 +262,7 @@ public function updateUserStatus(Request $request)
             'Nebula Institute of Technology – Moratuwa',
             'Nebula Institute of Technology – Peradeniya'
         ];
-        return view('create_user', [
+        return view('user_management.create_user', [
             'userRoles' => $userRoles,
             'locations' => $locations,
         ]);

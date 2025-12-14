@@ -20,7 +20,7 @@ class DGMDashboardController extends Controller
 {
     public function showDashboard()
     {
-        return view('dgmdashboard');
+        return view('dashboards.dgmdashboard');
     }
 
     /**

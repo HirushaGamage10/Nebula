@@ -14,7 +14,7 @@ class StudentViewController extends Controller
     {
         $courses = Course::orderBy('course_name')->get();
         $intakes = Intake::orderBy('batch')->get();
-        return view('student_view', compact('courses', 'intakes'));
+        return view('student_management.student_view', compact('courses', 'intakes'));
     }
 
     public function filter(Request $request)

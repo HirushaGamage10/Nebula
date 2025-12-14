@@ -15,7 +15,7 @@ class StudentListController extends Controller
     public function showStudentList()
     {
         $locations = ['Welisara', 'Moratuwa', 'Peradeniya'];
-        return view('student_list', compact('locations'));
+        return view('student_management.student_list', compact('locations'));
     }
 
     /**
@@ -121,7 +121,7 @@ class StudentListController extends Controller
             'status'       => $status,
         ];
 
-        $pdf = Pdf::loadView('student_list_pdf', $data);
+        $pdf = Pdf::loadView('student_management.student_list_pdf', $data);
         return $pdf->download('student_list.pdf');
     }
 

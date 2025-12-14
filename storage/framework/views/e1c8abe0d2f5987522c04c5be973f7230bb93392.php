@@ -15,7 +15,7 @@
     </div>
 
     <nav class="sidebar-nav scroll-sidebar" data-simplebar="">
-        <ul id="sidebarnav">
+        <?php echo $__env->make('components.sidebar-menu', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
             
             <li class="nav-small-cap">
                 <span class="nav-small-cap-text">HOME</span>

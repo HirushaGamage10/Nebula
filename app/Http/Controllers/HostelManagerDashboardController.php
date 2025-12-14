@@ -17,7 +17,7 @@ class HostelManagerDashboardController extends Controller
         $courses = Course::all();
         $intakes = Intake::all();
         
-        return view('hostel_manager_dashboard', compact('courses', 'intakes'));
+        return view('dashboards.hostel_manager', compact('courses', 'intakes'));
     }
 
     public function getOverviewMetrics(Request $request)

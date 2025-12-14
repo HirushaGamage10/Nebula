@@ -10,7 +10,7 @@ class AdminL1DashboardController extends Controller
 {
     public function showDashboard()
     {
-        return view('adminl1.dashboard');
+        return view('dashboards.admin_l1');
     }
 
     public function getOverviewMetrics(Request $request)

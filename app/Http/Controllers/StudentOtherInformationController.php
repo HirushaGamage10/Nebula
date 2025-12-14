@@ -15,7 +15,7 @@ class StudentOtherInformationController extends Controller
     // View
     public function showStudentOtherInformation()
     {
-        return view('student_other_information');
+        return view('student_management.student_other_information');
     }
 
     // Search by NIC or reg no (unchanged)
