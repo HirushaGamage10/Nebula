@@ -69,7 +69,7 @@ class StudentRegistraionController extends Controller
             // Get exam types from StudentExam model
             $examTypes = StudentExam::getExamTypes();
 
-            return view('student_registration', compact('titles', 'genders', 'idTypes', 'campuses', 'btecCourses', 'examTypes'));
+            return view('student_management.student_registration', compact('titles', 'genders', 'idTypes', 'campuses', 'btecCourses', 'examTypes'));
         } else {
             return redirect()->route('login')->with('error', 'You are not authorized to access this page.');
         }

@@ -17,7 +17,7 @@ class MarketingManagerDashboardController extends Controller
     {
         $user = Auth::user();
         
-        return view('marketing_manager_dashboard', compact('user'));
+        return view('dashboards.marketing_manager', compact('user'));
     }
 
     // Get overview metrics

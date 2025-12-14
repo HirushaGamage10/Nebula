@@ -17,7 +17,7 @@ class StudentCounselorDashboardController extends Controller
     {
         $user = Auth::user();
         
-        return view('student_counselor_dashboard', compact('user'));
+        return view('dashboards.student_counselor', compact('user'));
     }
 
     // Get overview metrics

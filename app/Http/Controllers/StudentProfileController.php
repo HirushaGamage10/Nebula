@@ -36,7 +36,7 @@ class StudentProfileController extends Controller
             $studentId = $user->student_id;
         }
         if ($studentId == 0) {
-            return view('student_profile');
+            return view('student_management.student_profile');
         }
         $student = Student::with('parentGuardian')->find($studentId);
         if (!$student) {
@@ -45,7 +45,7 @@ class StudentProfileController extends Controller
         $student->parent = $student->parentGuardian;
         $student->other_information = StudentOtherInformation::where('student_id', $studentId)->first();
         Log::info('Student profile parent (Blade):', ['parent' => $student->parent]);
-        return view('student_profile', compact('student'));
+        return view('student_management.student_profile', compact('student'));
     }
 
     // Get student details (AJAX)
