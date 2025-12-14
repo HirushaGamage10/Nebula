@@ -65,12 +65,40 @@
     <!--  Body Wrapper -->
     <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
         data-sidebar-position="fixed" data-header-position="fixed">
-        <!-- Sidebar Start -->
-        <aside class="left-sidebar">
-            <!-- Sidebar scroll-->
-            <?php echo $__env->make('components.sidebar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
-            <!-- End Sidebar scroll-->
-        </aside>
+        <?php
+            $isEmbed = request()->has('embed');
+        ?>
+
+        <?php if(!$isEmbed): ?>
+            <!-- Sidebar Start -->
+            <aside class="left-sidebar">
+                <?php
+                    $role = auth()->user()->user_role ?? '';
+                ?>
+                <?php if($role === 'Hostel Manager'): ?>
+                    <?php echo $__env->make('components.sidebar.hostel_sidebar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+                <?php elseif($role === 'Marketing Manager'): ?>
+                    <?php echo $__env->make('components.sidebar.marketing_sidebar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+                <?php elseif($role === 'Student Counselor'): ?>
+                    <?php echo $__env->make('components.sidebar.student_counselor_sidebar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+                <?php elseif($role === 'Bursar'): ?>
+                    <?php echo $__env->make('components.sidebar.bursar_sidebar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+                <?php elseif($role === 'Librarian'): ?>
+                    <?php echo $__env->make('components.sidebar.librarian_sidebar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+                <?php elseif($role === 'DGM'): ?>
+                    <?php echo $__env->make('components.sidebar.dgm_sidebar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+                <?php elseif($role === 'Program Administrator (level 01)'): ?>
+                    <?php echo $__env->make('components.sidebar.admin_l1_sidebar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+                <?php elseif($role === 'Program Administrator (level 02)'): ?>
+                    <?php echo $__env->make('components.sidebar.admin_l2_sidebar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+                <?php elseif($role === 'Project Tutor'): ?>
+                    <?php echo $__env->make('components.sidebar.project_tutor_sidebar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+                <?php else: ?>
+                    <?php echo $__env->make('components.sidebar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+                <?php endif; ?>
+            </aside>
+        <?php endif; ?>
+
         <div x-data x-init="
     $nextTick(() => {
         const sidebar = document.querySelector('.scroll-sidebar');

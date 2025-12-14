@@ -204,7 +204,7 @@
                 'module.management' => ['module.management', 'ti ti-briefcase', 'Module Management'],
                 'course.management' => ['course.management', 'ti ti-notebook', 'Course Management'],
                 'intake.create' => ['intake.create', 'ti ti-pencil', 'Create Intake'],
-                'semester.create' => ['semesters.create', 'ti ti-calendar', 'Semester Creation'],
+                'semesters.create' => ['semesters.create', 'ti ti-calendar', 'Semester Creation'],
                 'semester.registration' => ['semester.registration', 'ti ti-user-check', 'Semester Registration'],
                 'timetable' => ['timetable.show', 'ti ti-calendar', 'Timetable'],
             ] as $perm => [$route, $icon, $label])
