@@ -72,30 +72,7 @@
         @if(!$isEmbed)
             <!-- Sidebar Start -->
             <aside class="left-sidebar">
-                @php
-                    $role = auth()->user()->user_role ?? '';
-                @endphp
-                @if($role === 'Hostel Manager')
-                    @include('components.sidebar.hostel_sidebar')
-                @elseif($role === 'Marketing Manager')
-                    @include('components.sidebar.marketing_sidebar')
-                @elseif($role === 'Student Counselor')
-                    @include('components.sidebar.student_counselor_sidebar')
-                @elseif($role === 'Bursar')
-                    @include('components.sidebar.bursar_sidebar')
-                @elseif($role === 'Librarian')
-                    @include('components.sidebar.librarian_sidebar')
-                @elseif($role === 'DGM')
-                    @include('components.sidebar.dgm_sidebar')
-                @elseif($role === 'Program Administrator (level 01)')
-                    @include('components.sidebar.admin_l1_sidebar')
-                @elseif($role === 'Program Administrator (level 02)')
-                    @include('components.sidebar.admin_l2_sidebar')
-                @elseif($role === 'Project Tutor')
-                    @include('components.sidebar.project_tutor_sidebar')
-                @else
-                    @include('components.sidebar')
-                @endif
+                @include('components.sidebar')
             </aside>
         @endif
 
