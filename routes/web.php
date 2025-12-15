@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Models\Intake;
 use Illuminate\Http\Request;
 use App\Http\Controllers\{
     AllClearanceController,
@@ -752,6 +753,14 @@ Route::middleware(['auth', 'role:DGM,Marketing Manager,Developer,Student Counsel
 });
 Route::get('/verify-badge/{code}', [BadgeController::class, 'verify'])->name('badges.verify');
 Route::get('/intakes-by-course/{courseId}', function ($courseId) {
+    return Intake::where('course_id', $courseId)
+        ->select('intake_id', 'batch', 'location')
+        ->orderBy('batch')
+        ->get();
+});
+
+// Alias for badges page JS which calls /api/intakes-by-course/{courseId}
+Route::get('/api/intakes-by-course/{courseId}', function ($courseId) {
     return Intake::where('course_id', $courseId)
         ->select('intake_id', 'batch', 'location')
         ->orderBy('batch')
