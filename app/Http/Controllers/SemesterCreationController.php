@@ -37,7 +37,7 @@ class SemesterCreationController extends Controller
             ->where('semester_id', $semester->id)
             ->get();
         
-        return view('semester_edit', compact('semester', 'courses', 'intakes', 'modules', 'semesterModules'));
+        return view('courses_&_modules.semester_edit', compact('semester', 'courses', 'intakes', 'modules', 'semesterModules'));
     }
 
     public function update(Request $request, Semester $semester)

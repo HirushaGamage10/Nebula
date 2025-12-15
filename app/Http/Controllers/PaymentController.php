@@ -2523,7 +2523,13 @@ public function downloadPaymentStatement(Request $request)
         ];
 
         // 🔹 Generate PDF
-    $pdf = \PDF::loadView('payments.payment_statement', $data);
+        $pdf = \PDF::loadView('payments.payment_statement', $data);
+
+        $filename = "Payment_Statement_{$student->student_id}_"
+            . (optional($registration->course)->course_code ?? 'Course') . ".pdf";
+
+        return $pdf->download($filename);
+
     } catch (\Exception $e) {
         \Log::error('Payment Statement PDF Error: ' . $e->getMessage());
         return back()->with('error', 'Error generating statement: '.$e->getMessage());
