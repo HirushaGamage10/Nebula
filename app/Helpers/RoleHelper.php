@@ -297,13 +297,20 @@ class RoleHelper
             'payment.plan.edit',
             'payment.plan.index',
             'payment.dashboard',
+            'payment.summary',
             'misc.payment',
             'payment.showDownloadPage',
+            'payment.discount.page',
             
             // APPROVALS
             'special.approval',
+            'latefee.approval',
+            'latefee.approval.index',
             'reporting.dashboard',       
             'data.export.import',
+
+            // PROJECT TUTOR
+            'project.tutor.dashboard',
 
             // FOOTER
             'user.profile',
