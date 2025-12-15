@@ -156,9 +156,10 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
     // Student Other Information
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Student Counselor,Bursar,Marketing Manager,Developer'])->group(function () {
-        Route::get('/student/other-information', [StudentOtherInformationController::class, 'showOtherInformation'])->name('student_management.other.information');
-        Route::post('/student/other-information/save', [StudentOtherInformationController::class, 'saveOtherInformation'])->name('student.other.information.save');
-        Route::post('/student/other-information/get', [StudentOtherInformationController::class, 'getOtherInformation'])->name('student.other.information.get');
+        Route::get('/student/other-information', [StudentOtherInformationController::class, 'showStudentOtherInformation'])->name('student_management.other.information');
+        Route::post('/student/other-information/save', [StudentOtherInformationController::class, 'storeOtherInformations'])->name('student_management.store.other.informations');
+        Route::post('/student/other-information/get', [StudentOtherInformationController::class, 'getStudentDetails'])->name('student_management.retrieve.details');
+        Route::post('/student/reinstate', [StudentOtherInformationController::class, 'reinstateStudent'])->name('student.reinstate');
     });
 
     // Student List

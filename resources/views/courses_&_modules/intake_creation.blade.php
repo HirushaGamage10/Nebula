@@ -114,9 +114,9 @@
                     </div>
                 </div>
                 <div class="mb-3 row mx-3">
-                    <label for="bank_charges" class="col-sm-2 col-form-label">Bank Charges (LKR)</label>
+                    <label for="bank_charges" class="col-sm-2 col-form-label">Bank Charges (LKR)<span class="text-danger">*</span></label>
                     <div class="col-sm-10">
-                        <input type="number" class="form-control" id="bank_charges" name="bank_charges" placeholder="e.g., 500.00" step="0.01" min="0">
+                        <input type="number" class="form-control" id="bank_charges" name="bank_charges" placeholder="e.g., 500.00" step="0.01" min="0" required>
                     </div>
                 </div>
                 <div class="mb-3 row mx-3">
