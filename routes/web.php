@@ -35,6 +35,7 @@ use App\Http\Controllers\{
     SpecialApprovalController,
     UhIndexController,
     PaymentDiscountController,
+    PaymentPlanController,
     PaymentController,
     LatePaymentController,
     SemesterRegistrationController,

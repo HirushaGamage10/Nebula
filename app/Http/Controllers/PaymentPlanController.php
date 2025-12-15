@@ -155,7 +155,7 @@ class PaymentPlanController extends Controller
             ? $plan->installments 
             : (json_decode($plan->installments, true) ?? []);
 
-        return view('payment_plan_edit', compact('plan','courses','intakes','installments'));
+        return view('payments.payment_plan_edit', compact('plan','courses','intakes','installments'));
     }
 
 
