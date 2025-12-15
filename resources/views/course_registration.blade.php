@@ -1,4 +1,8 @@
-{{-- DEPRECATED: moved to resources/views/registration/course_registration.blade.php --}}
+@extends('inc.app')
+
+@section('title', 'NEBULA | Course Registration')
+
+@section('content')
 <style>
     /* Existing styles */
     .terminated-disabled {

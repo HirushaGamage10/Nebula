@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Student Registration')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Student Registration'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -13,13 +13,13 @@
                 <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
             </div>
 
-            {{-- Success/Error Modals can be included here if needed --}}
+            
 
-            <form id="registrationForm" action="{{ route('student.register') }}" method="POST" enctype="multipart/form-data" novalidate>
-                @csrf
+            <form id="registrationForm" action="<?php echo e(route('student.register')); ?>" method="POST" enctype="multipart/form-data" novalidate>
+                <?php echo csrf_field(); ?>
                 <div id="formErrorSummary" class="alert alert-danger d-none" role="alert"></div>
                 
-                {{-- Personal Information Section --}}
+                
                 <h5 class="mb-3">Personal Information</h5>
                 
                 <div class="row mb-3">
@@ -27,9 +27,9 @@
                     <div class="col-sm-10">
                         <select class="form-select" id="title" name="title" required>
                             <option selected disabled value="#">Select a Title</option>
-                            @foreach ($titles as $title)
-                            <option value="{{ $title['TitleID'] }}">{{ $title['TitleName'] }}</option>
-                            @endforeach
+                            <?php $__currentLoopData = $titles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $title): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($title['TitleID']); ?>"><?php echo e($title['TitleName']); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>
                         <div id="titleOtherContainer" class="mt-2" style="display: none;">
                             <input type="text" class="form-control" id="titleOther" name="titleOther" placeholder="Please specify your title">
@@ -66,9 +66,9 @@
                     <div class="col-sm-10">
                         <select class="form-select" id="gender" name="gender" required>
                             <option selected disabled value="#">Select a Gender</option>
-                            @foreach($genders as $gender)
-                            <option value="{{ $gender['id'] }}">{{ $gender['name'] }}</option>
-                            @endforeach
+                            <?php $__currentLoopData = $genders; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $gender): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($gender['id']); ?>"><?php echo e($gender['name']); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>
                     </div>
                 </div>
@@ -78,9 +78,9 @@
                     <div class="col-sm-10">
                         <div class="input-group">
                             <select class="form-select bg-primary text-white" id="identificationType" name="identificationType" style="flex: 0 0 150px;" required>
-                                @foreach($idTypes as $idType)
-                                <option value="{{ $idType['id'] }}">{{ $idType['id_type'] }}</option>
-                                @endforeach
+                                <?php $__currentLoopData = $idTypes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $idType): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($idType['id']); ?>"><?php echo e($idType['id_type']); ?></option>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </select>
                             <input type="text" class="form-control" id="idValue" name="idValue" placeholder="Enter ID value" required>
                         </div>
@@ -146,7 +146,7 @@
 
                 <hr class="my-4">
 
-                {{-- Academic Qualifications Section --}}
+                
                 <h5 class="mb-3">Academic Qualifications</h5>
                 <div class="row mb-3">
                     <label for="pending_result" class="col-sm-2 col-form-label">O/L Result Pending?<span class="text-danger">*</span></label>
@@ -180,9 +180,9 @@
                                         <div class="col-sm-4">
                                             <select class="form-select" id="ol_exam_type" name="ol_exam_type">
                                                 <option selected disabled>Select an Exam Type</option>
-                                                @foreach($examTypes as $examType)
-                                                <option value="{{ $examType }}">{{ $examType }}</option>
-                                                @endforeach
+                                                <?php $__currentLoopData = $examTypes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $examType): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                <option value="<?php echo e($examType); ?>"><?php echo e($examType); ?></option>
+                                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                             </select>
                                             <div id="olExamTypeOtherContainer" class="mt-2" style="display: none;">
                                                 <input type="text" class="form-control" id="olExamTypeOther" name="olExamTypeOther" placeholder="Please specify the exam type">
@@ -198,7 +198,7 @@
                                         <div class="col-sm-4">
                                             <select class="form-select" id="ol_subject_select">
                                                 <option selected disabled>Select a Subject</option>
-                                                {{-- Add O/L Subjects here --}}
+                                                
                                             </select>
                                             <input type="text" class="form-control mt-2" id="ol_subject_other_input" name="ol_subject_other" placeholder="Enter subject name" style="display:none;">
                                         </div>
@@ -230,7 +230,7 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {{-- JS will add results here --}}
+                                                    
                                                 </tbody>
                                             </table>
                                         </div>
@@ -279,9 +279,9 @@
                                         <div class="col-sm-4">
                                             <select class="form-select" id="al_exam_type" name="al_exam_type">
                                                 <option selected disabled>Select an Exam Type</option>
-                                                @foreach($examTypes as $examType)
-                                                <option value="{{ $examType }}">{{ $examType }}</option>
-                                                @endforeach
+                                                <?php $__currentLoopData = $examTypes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $examType): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                                <option value="<?php echo e($examType); ?>"><?php echo e($examType); ?></option>
+                                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                             </select>
                                             <div id="alExamTypeOtherContainer" class="mt-2" style="display: none;">
                                                 <input type="text" class="form-control" id="alExamTypeOther" name="alExamTypeOther" placeholder="Please specify the exam type">
@@ -310,16 +310,16 @@
                      </div>
                 </div>
 
-                {{-- Program/Intake Section --}}
+                
                 <h5 class="mb-3 mt-4">Program & Intake</h5>
                 <div class="row mb-3">
                     <label for="course_id" class="col-sm-2 col-form-label">Course<span class="text-danger">*</span></label>
                     <div class="col-sm-10">
                         <select class="form-select" id="course_id" name="course_id" required>
                             <option value="" selected disabled>Select a Course</option>
-                            @foreach($btecCourses as $course)
-                                <option value="{{ $course['course_id'] }}">{{ $course['course_name'] }}</option>
-                            @endforeach
+                            <?php $__currentLoopData = $btecCourses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($course['course_id']); ?>"><?php echo e($course['course_name']); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>
                     </div>
                 </div>
@@ -346,15 +346,15 @@
 
                 <hr class="my-4">
 
-                {{-- Location and Preferences --}}
+                
                 <div class="row mb-3">
                     <label for="campus" class="col-sm-2 col-form-label">Campus<span class="text-danger">*</span></label>
                     <div class="col-sm-10">
                         <select class="form-select" id="campus" name="campus" required>
                             <option value="" selected disabled>Select Campus</option>
-                            @foreach($campuses as $campus)
-                            <option value="{{ $campus['id'] }}">{{ $campus['campus_name'] }}</option>
-                            @endforeach
+                            <?php $__currentLoopData = $campuses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $campus): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                            <option value="<?php echo e($campus['id']); ?>"><?php echo e($campus['campus_name']); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>
                     </div>
                 </div>
@@ -378,4 +378,6 @@
     </div>
 </div>
 
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/student_management/student_registration.blade.php ENDPATH**/ ?>
