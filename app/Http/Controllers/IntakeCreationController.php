@@ -34,7 +34,7 @@ class IntakeCreationController extends Controller
         ->orderBy('start_date', 'desc')
         ->get();
 
-    return view('intake_creation', compact('courses', 'intakes', 'selectedLocation'));
+    return view('courses_&_modules.intake_creation', compact('courses', 'intakes', 'selectedLocation'));
 }
 
 
