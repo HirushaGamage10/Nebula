@@ -11,7 +11,7 @@ class MiscPaymentController extends Controller
 {
     public function index()
     {
-        return view('finance.misc_payment');
+        return view('payments.misc_payment');
     }
 
     public function store(Request $request)

@@ -18,7 +18,7 @@ class LatePaymentController extends Controller
      */
     public function index()
     {
-        return view('late_payment');
+        return view('payments.late_payment');
     }
 
     /**

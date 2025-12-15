@@ -435,7 +435,7 @@
                     </a>
                 </li>
             <?php endif; ?>
-            <?php if(RoleHelper::hasPermission($role, 'payment.statement')): ?>
+            <?php if(RoleHelper::hasPermission($role, 'payment.showDownloadPage')): ?>
                 <li class="sidebar-item">
                     <a class="sidebar-link <?php echo e(request()->routeIs('payment.showDownloadPage') ? 'active' : ''); ?>"
                     href="<?php echo e(route('payment.showDownloadPage')); ?>">
