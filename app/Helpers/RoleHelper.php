@@ -11,6 +11,7 @@ class RoleHelper
         'Program Administrator (level 02)' => 'Program Administrator (level 02)',
         'Program Administrator (level 02) Trainee' => 'Program Administrator (level 02) Trainee',
         'Student Counselor' => 'Student Counselor',
+        'Student Counselor Trainee' => 'Student Counselor Trainee',
         'Librarian' => 'Librarian',
         'Hostel Manager' => 'Hostel Manager',
         'Bursar' => 'Bursar',
@@ -28,24 +29,19 @@ class RoleHelper
 
             // SPECIAL APPROVALS
             'special.approval',
-            // CLEARANCE
-            'all.clearance.management',
-            'student.clearance.form.management',
+            'latefee.approval',
+            'latefee.approval.index',
 
             // STUDENT MANAGEMENT
-            'student.registration',
             'student.list',
             'student.profile',
-            'attendance',
-            'payment.dashboard',
+            'student.view',
 
-            // ACADEMIC MANAGEMENT
-            'module.creation',
-            'module.management',
-            'course.management',
-            'intake.create',
-            'semesters.create',
-            'timetable',
+            // FINANCIAL            
+            'payment.dashboard',
+            
+            // FOOTER
+            'user.profile'
         ],
 
         'Program Administrator (level 01)' => [
@@ -59,22 +55,25 @@ class RoleHelper
 
             // STUDENT MANAGEMENT
             'student.registration',
-            'course.registration',
-            'eligibility.registration',
             'course.badge',
             'student.other.information',
             'student.list',
             'student.profile',
+            'student.view',
+
+            // REGISTRATIONS
+            'course.registration',
+            'eligibility.registration',
+            'semester.registration',
+            'module.management',
+            'uh.index.page',
             'course.change',
 
-            // EXAMS
+            // EXAMS & RESULTS
             'exam.results',
             'student.exam.result.management',
             'exam.results.view.edit',
-
-            // REPEAT STUDENTS
             'repeat.students.management',
-            'repeat.students.payment',
 
             // ATTENDANCE
             'attendance',
@@ -82,15 +81,9 @@ class RoleHelper
 
             // CLEARANCE
             'all.clearance.management',
-            'student.clearance.form.management',
-            'hostel.clearance.form.management',
-            'library.clearance',
-            'project.clearance.management',
-            'payment.clearance',
 
-            // ACADEMIC
+            // COURSES & MODULES
             'module.creation',
-            'module.management',
             'course.management',
             'intake.create',
             'semesters.create',
@@ -98,23 +91,15 @@ class RoleHelper
             'timetable',
 
             // FINANCIAL
-            'payment.plan',
-            'payment.plan.index',
-            'payment',
-            'late.payment',
-            'payment.discounts',
             'payment.dashboard',
-            'payment.summary',
-            'misc.payment',
-            'payment.showDownloadPage',
-            'payment.discount.page',
-            'latefee.approval.index',
 
             // FOOTER
             'user.profile'
         ],
 
         'Program Administrator (level 02)' => [
+
+            // HOME
             'dashboard',
             'intake.create',
             'attendance',
