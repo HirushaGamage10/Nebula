@@ -414,7 +414,7 @@ class PaymentSummaryController extends Controller
             ]);
         }
 
-        return view('payment.summary', compact(
+        return view('payments.summary', compact(
             'totalCollected', 'totalPending', 'totalLateFee', 'totalDiscount',
             'totalTransactions', 'averageTransaction', 'ssclTaxTotal', 'bankChargesTotal',
             'paymentByMethod', 'paymentByType', 'paymentByStatus', 'monthlyIncome',
