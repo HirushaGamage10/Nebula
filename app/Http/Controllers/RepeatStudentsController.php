@@ -47,7 +47,7 @@ class RepeatStudentsController extends Controller
                 return $intake;
             });
 
-        return view('repeat_students', compact('courses', 'modules', 'intakes'));
+        return view('exam_&_results.repeat_students', compact('courses', 'modules', 'intakes'));
     }
 
     /**

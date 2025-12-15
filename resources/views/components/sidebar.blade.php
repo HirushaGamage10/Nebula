@@ -198,7 +198,7 @@
                     </a>
                 </li>
             @endif
-            @if(RoleHelper::hasPermission($role, 'student.exam.result.management'))
+            @if(RoleHelper::hasPermission($role, 'exam.results.view.edit'))
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ Route::currentRouteName() == 'exam.results.view.edit' ? 'active' : '' }}" href="{{ route('exam.results.view.edit') }}">
                         <span><i class="ti ti-edit"></i></span>

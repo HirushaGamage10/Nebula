@@ -30,7 +30,7 @@ class AttendanceController extends Controller
         $courses = Course::all(['course_id', 'course_name']);
         $intakes = Intake::all(['intake_id', 'batch']);
         
-        return view('attendance', compact('courses', 'intakes'));
+        return view('attendance.attendance', compact('courses', 'intakes'));
     }
 
     public function getCoursesByLocation(Request $request)
