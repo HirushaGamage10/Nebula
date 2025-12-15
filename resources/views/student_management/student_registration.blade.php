@@ -1,8 +1,4 @@
-@extends('inc.app')
-
-@section('title', 'NEBULA | Student Registration')
-
-@section('content')
+{{-- DEPRECATED: moved to resources/views/registration/student_registration.blade.php --}}
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
