@@ -33,7 +33,7 @@ class PaymentPlanController extends Controller
             ->get(['intake_id', 'batch']);
     }
 
-    return view('payment_plan_index', compact('plans','locations','courses','intakes'));
+    return view('payments.payment_plan_index', compact('plans','locations','courses','intakes'));
 }
 
     public function getCoursesByLocation(Request $request)
@@ -67,7 +67,7 @@ class PaymentPlanController extends Controller
     ->get(['course_id', 'course_name', 'course_type']);
     }
 
-    return view('payment_plan', compact('courses', 'locations', 'selectedLocation'));
+    return view('payments.payment_plan', compact('courses', 'locations', 'selectedLocation'));
 }
 
 

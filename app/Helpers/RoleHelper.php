@@ -298,6 +298,7 @@ class RoleHelper
             'payment.plan.index',
             'payment.dashboard',
             'misc.payment',
+            'payment.showDownloadPage',
             
             // APPROVALS
             'special.approval',

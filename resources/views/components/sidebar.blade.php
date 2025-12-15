@@ -435,7 +435,7 @@
                     </a>
                 </li>
             @endif
-            @if(RoleHelper::hasPermission($role, 'payment.statement'))
+            @if(RoleHelper::hasPermission($role, 'payment.showDownloadPage'))
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ request()->routeIs('payment.showDownloadPage') ? 'active' : '' }}"
                     href="{{ route('payment.showDownloadPage') }}">

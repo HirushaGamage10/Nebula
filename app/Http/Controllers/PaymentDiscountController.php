@@ -15,7 +15,7 @@ class PaymentDiscountController extends Controller
     // Show the payment discount page
     public function showPage()
     {
-        return view('payment_discount');
+        return view('payments.payment_discount');
     }
 
     // Fetch courses by location (AJAX)

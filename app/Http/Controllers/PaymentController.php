@@ -32,7 +32,7 @@ class PaymentController extends Controller
                 return $intake;
             });
 
-        return view('payment', compact('courses', 'intakes'));
+        return view('payments.payment', compact('courses', 'intakes'));
     }
 
     /**
