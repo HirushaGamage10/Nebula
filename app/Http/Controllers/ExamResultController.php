@@ -31,7 +31,7 @@ class ExamResultController extends Controller
                 return $intake;
             });
 
-        return view('exam_results', compact('courses', 'modules', 'intakes'));
+        return view('exam_&_results.exam_results', compact('courses', 'modules', 'intakes'));
     }
 
     /**
@@ -459,7 +459,7 @@ class ExamResultController extends Controller
      */
     public function showExamResultsViewEdit()
     {
-        return view('exam_results_view_edit');
+        return view('exam_&_results.exam_results_view_edit');
     }
 
     /**

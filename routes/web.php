@@ -489,7 +489,7 @@ Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Ad
     Route::get('/overall-attendance', function () {
         $courses = \App\Models\Course::all(['course_id', 'course_name']);
         $intakes = \App\Models\Intake::all(['intake_id', 'batch']);
-        return view('overall_attendance', compact('courses', 'intakes'));
+        return view('attendance.overall_attendance', compact('courses', 'intakes'));
     })->name('overall.attendance');
     Route::post('/get-overall-attendance', [\App\Http\Controllers\AttendanceController::class, 'getOverallAttendance'])->name('get.overall.attendance');
     Route::post('/download-attendance-excel', [\App\Http\Controllers\AttendanceController::class, 'downloadAttendanceExcel'])->name('download.attendance.excel');

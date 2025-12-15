@@ -122,6 +122,8 @@ class RoleHelper
             'student.other.information',
             'student.profile',
             'exam.results',
+            'student.exam.result.management',
+            'exam.results.view.edit',
             'semesters.create',
             'semester.registration',
             'module.management',
@@ -264,6 +266,7 @@ class RoleHelper
             // EXAMS & RESULTS
             'exam.results',            
             'repeat.students.management',
+            'exam.results.view.edit',
             'repeat.students.payment',
 
             // ATTENDANCE

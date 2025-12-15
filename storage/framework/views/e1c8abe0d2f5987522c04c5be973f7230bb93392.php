@@ -198,7 +198,7 @@
                     </a>
                 </li>
             <?php endif; ?>
-            <?php if(RoleHelper::hasPermission($role, 'student.exam.result.management')): ?>
+            <?php if(RoleHelper::hasPermission($role, 'exam.results.view.edit')): ?>
                 <li class="sidebar-item">
                     <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'exam.results.view.edit' ? 'active' : ''); ?>" href="<?php echo e(route('exam.results.view.edit')); ?>">
                         <span><i class="ti ti-edit"></i></span>
