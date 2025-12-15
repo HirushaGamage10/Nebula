@@ -35,7 +35,7 @@ class ProjectClearanceController extends Controller
                 ->limit(50)
                 ->get();
 
-            return view('project_clearance', compact('pendingRequests', 'processedRequests'));
+            return view('clearance.project_clearance', compact('pendingRequests', 'processedRequests'));
         } 
         else {
         // Log unauthorized access attempt

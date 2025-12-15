@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Hostel Clearance')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Hostel Clearance'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-md-12 mt-2">
@@ -10,22 +10,22 @@
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2 class="mb-0">Hostel Clearance Management</h2>
                     <div class="search-box" style="width: 300px;">
-                        <form method="GET" action="{{ route('hostel.clearance.form.management') }}">
+                        <form method="GET" action="<?php echo e(route('hostel.clearance.form.management')); ?>">
                             <div class="input-group">
                                 <input type="text" 
                                        class="form-control" 
                                        placeholder="Search by Student ID or Name..." 
                                        name="search"
-                                       value="{{ request('search') }}">
-                                <input type="hidden" name="tab" value="{{ $tab }}">
+                                       value="<?php echo e(request('search')); ?>">
+                                <input type="hidden" name="tab" value="<?php echo e($tab); ?>">
                                 <button class="btn btn-outline-primary" type="submit">
                                     <i class="ti ti-search"></i>
                                 </button>
-                                @if(request('search'))
-                                    <a href="{{ route('hostel.clearance.form.management') }}" class="btn btn-outline-secondary">
+                                <?php if(request('search')): ?>
+                                    <a href="<?php echo e(route('hostel.clearance.form.management')); ?>" class="btn btn-outline-secondary">
                                         <i class="ti ti-x"></i>
                                     </a>
-                                @endif
+                                <?php endif; ?>
                             </div>
                         </form>
                     </div>
@@ -35,42 +35,42 @@
                 <!-- Tabs Navigation -->
                 <ul class="nav nav-tabs mb-4" id="clearanceTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link {{ $tab == 'pending' ? 'active' : '' }}" 
+                        <button class="nav-link <?php echo e($tab == 'pending' ? 'active' : ''); ?>" 
                                 id="pending-tab" 
                                 data-bs-toggle="tab" 
                                 data-bs-target="#pending" 
                                 type="button" 
                                 role="tab"
-                                data-url="{{ route('hostel.clearance.form.management', ['tab' => 'pending']) }}">
+                                data-url="<?php echo e(route('hostel.clearance.form.management', ['tab' => 'pending'])); ?>">
                             <i class="ti ti-clock me-1"></i>
                             Pending
-                            <span class="badge bg-warning ms-2">{{ $pendingRequests->total() }}</span>
+                            <span class="badge bg-warning ms-2"><?php echo e($pendingRequests->total()); ?></span>
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link {{ $tab == 'approved' ? 'active' : '' }}" 
+                        <button class="nav-link <?php echo e($tab == 'approved' ? 'active' : ''); ?>" 
                                 id="approved-tab" 
                                 data-bs-toggle="tab" 
                                 data-bs-target="#approved" 
                                 type="button" 
                                 role="tab"
-                                data-url="{{ route('hostel.clearance.form.management', ['tab' => 'approved']) }}">
+                                data-url="<?php echo e(route('hostel.clearance.form.management', ['tab' => 'approved'])); ?>">
                             <i class="ti ti-check me-1"></i>
                             Approved
-                            <span class="badge bg-success ms-2">{{ $approvedRequests->total() }}</span>
+                            <span class="badge bg-success ms-2"><?php echo e($approvedRequests->total()); ?></span>
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link {{ $tab == 'rejected' ? 'active' : '' }}" 
+                        <button class="nav-link <?php echo e($tab == 'rejected' ? 'active' : ''); ?>" 
                                 id="rejected-tab" 
                                 data-bs-toggle="tab" 
                                 data-bs-target="#rejected" 
                                 type="button" 
                                 role="tab"
-                                data-url="{{ route('hostel.clearance.form.management', ['tab' => 'rejected']) }}">
+                                data-url="<?php echo e(route('hostel.clearance.form.management', ['tab' => 'rejected'])); ?>">
                             <i class="ti ti-x me-1"></i>
                             Rejected
-                            <span class="badge bg-danger ms-2">{{ $rejectedRequests->total() }}</span>
+                            <span class="badge bg-danger ms-2"><?php echo e($rejectedRequests->total()); ?></span>
                         </button>
                     </li>
                 </ul>
@@ -78,39 +78,39 @@
                 <!-- Tab Content -->
                 <div class="tab-content" id="clearanceTabsContent">
                     <!-- Pending Tab -->
-                    <div class="tab-pane fade {{ $tab == 'pending' ? 'show active' : '' }}" 
+                    <div class="tab-pane fade <?php echo e($tab == 'pending' ? 'show active' : ''); ?>" 
                          id="pending" 
                          role="tabpanel" 
                          aria-labelledby="pending-tab">
-                        @include('clearance.hostel-clearance-tab', [
+                        <?php echo $__env->make('clearance.hostel-clearance-tab', [
                             'requests' => $pendingRequests,
                             'type' => 'pending',
                             'tab' => 'pending'
-                        ])
+                        ], \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
                     </div>
 
                     <!-- Approved Tab -->
-                    <div class="tab-pane fade {{ $tab == 'approved' ? 'show active' : '' }}" 
+                    <div class="tab-pane fade <?php echo e($tab == 'approved' ? 'show active' : ''); ?>" 
                          id="approved" 
                          role="tabpanel" 
                          aria-labelledby="approved-tab">
-                        @include('clearance.hostel-clearance-tab', [
+                        <?php echo $__env->make('clearance.hostel-clearance-tab', [
                             'requests' => $approvedRequests,
                             'type' => 'approved',
                             'tab' => 'approved'
-                        ])
+                        ], \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
                     </div>
 
                     <!-- Rejected Tab -->
-                    <div class="tab-pane fade {{ $tab == 'rejected' ? 'show active' : '' }}" 
+                    <div class="tab-pane fade <?php echo e($tab == 'rejected' ? 'show active' : ''); ?>" 
                          id="rejected" 
                          role="tabpanel" 
                          aria-labelledby="rejected-tab">
-                        @include('clearance.hostel-clearance-tab', [
+                        <?php echo $__env->make('clearance.hostel-clearance-tab', [
                             'requests' => $rejectedRequests,
                             'type' => 'rejected',
                             'tab' => 'rejected'
-                        ])
+                        ], \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
                     </div>
                 </div>
             </div>
@@ -150,9 +150,9 @@
 
 <!-- Toast Container -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('styles')
+<?php $__env->startPush('styles'); ?>
 <style>
     .nav-tabs .nav-link {
         border: none;
@@ -219,9 +219,9 @@
         overflow: hidden;
     }
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 $(document).ready(function() {
     let currentRequestId = null;
@@ -268,13 +268,13 @@ $(document).ready(function() {
         if (!currentRequestId || !currentAction) return;
 
         const url = currentAction === 'approve' 
-            ? '{{ route("hostel.approve.clearance") }}'
-            : '{{ route("hostel.reject.clearance") }}';
+            ? '<?php echo e(route("hostel.approve.clearance")); ?>'
+            : '<?php echo e(route("hostel.reject.clearance")); ?>';
 
         const formData = new FormData();
         formData.append('request_id', currentRequestId);
         formData.append('remarks', $('#remarks').val());
-        formData.append('_token', '{{ csrf_token() }}');
+        formData.append('_token', '<?php echo e(csrf_token()); ?>');
         
         const fileInput = document.getElementById('clearance_slip');
         if (fileInput.files.length > 0) {
@@ -351,4 +351,5 @@ $(document).ready(function() {
     });
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/clearance/hostel_clearance.blade.php ENDPATH**/ ?>

@@ -61,7 +61,7 @@ class HostelClearanceController extends Controller
         $approvedRequests = $approvedRequestsQuery->paginate($perPage, ['*'], 'approved_page');
         $rejectedRequests = $rejectedRequestsQuery->paginate($perPage, ['*'], 'rejected_page');
 
-        return view('hostel_clearance', compact(
+        return view('clearance.hostel_clearance', compact(
             'pendingRequests',
             'approvedRequests',
             'rejectedRequests',

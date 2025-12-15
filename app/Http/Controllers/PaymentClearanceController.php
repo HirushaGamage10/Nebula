@@ -26,7 +26,7 @@ class PaymentClearanceController extends Controller
             ->limit(50)
             ->get();
 
-        return view('payment_clearance', compact('pendingRequests', 'processedRequests'));
+        return view('clearance.payment_clearance', compact('pendingRequests', 'processedRequests'));
     }
 
     /**
