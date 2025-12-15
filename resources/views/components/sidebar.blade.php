@@ -142,7 +142,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ Route::currentRouteName() == 'eligibility.registration' ? 'active' : '' }}" href="{{ route('eligibility.registration') }}">
                         <span><i class="ti ti-checks"></i></span>
-                        <span class="hide-menu">Eligibility Registration</span>
+                        <span class="hide-menu">Eligibility & Registration</span>
                     </a>
                 </li>
             @endif
@@ -158,7 +158,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ Route::currentRouteName() == 'module.management' ? 'active' : '' }}" href="{{ route('module.management') }}">
                         <span><i class="ti ti-briefcase"></i></span>
-                        <span class="hide-menu">Module Management</span>
+                        <span class="hide-menu">Elective Module Registrations</span>
                     </a>
                 </li>
             @endif
@@ -166,7 +166,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ Route::currentRouteName() == 'uh.index.page' ? 'active' : '' }}" href="{{ route('uh.index.page') }}">
                         <span><i class="ti ti-id-badge"></i></span>
-                        <span class="hide-menu">UH Index Numbers</span>
+                        <span class="hide-menu">External Institute IDs</span>
                     </a>
                 </li>
             @endif
@@ -311,7 +311,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ Route::currentRouteName() == 'module.creation' ? 'active' : '' }}" href="{{ route('module.creation') }}">
                         <span><i class="ti ti-plus"></i></span>
-                        <span class="hide-menu">Module Creation</span>
+                        <span class="hide-menu">Create New Modules</span>
                     </a>
                 </li>
             @endif
@@ -319,7 +319,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ Route::currentRouteName() == 'course.management' ? 'active' : '' }}" href="{{ route('course.management') }}">
                         <span><i class="ti ti-notebook"></i></span>
-                        <span class="hide-menu">Course Management</span>
+                        <span class="hide-menu">Create New Courses</span>
                     </a>
                 </li>
             @endif
@@ -327,7 +327,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ Route::currentRouteName() == 'intake.create' ? 'active' : '' }}" href="{{ route('intake.create') }}">
                         <span><i class="ti ti-pencil"></i></span>
-                        <span class="hide-menu">Create New Intake</span>
+                        <span class="hide-menu">Create New Intakes</span>
                     </a>
                 </li>
             @endif
@@ -340,7 +340,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ Route::currentRouteName() == 'semesters.create' ? 'active' : '' }}" href="{{ route('semesters.create') }}">
                         <span><i class="ti ti-calendar"></i></span>
-                        <span class="hide-menu">Semester Creation</span>
+                        <span class="hide-menu">Create New Semesters</span>
                     </a>
                 </li>
                 <li class="sidebar-item">
@@ -387,7 +387,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ request()->routeIs('payment.discount.page') ? 'active' : '' }}" href="{{ route('payment.discount.page') }}">
                         <span><i class="ti ti-discount"></i></span>
-                        <span class="hide-menu">Payment Discount</span>
+                        <span class="hide-menu">Create Discounts</span>
                     </a>
                 </li>
             @endif
@@ -395,7 +395,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ request()->routeIs('payment.plan.index') ? 'active' : '' }}" href="{{ route('payment.plan.index') }}">
                         <span><i class="ti ti-cash"></i></span>
-                        <span class="hide-menu">Create Payment Plans</span>
+                        <span class="hide-menu">Existing Payment Plans</span>
                     </a>
                 </li>
             @endif
@@ -407,7 +407,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ request()->routeIs('payment.plan') ? 'active' : '' }}" href="{{ route('payment.plan') }}">
                         <span><i class="ti ti-plus"></i></span>
-                        <span class="hide-menu">Payment Plan</span>
+                        <span class="hide-menu">Intake Payment Plans</span>
                     </a>
                 </li>
             @endif
@@ -415,7 +415,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ request()->routeIs('payment.index') ? 'active' : '' }}" href="{{ route('payment.index') }}">
                         <span><i class="ti ti-credit-card"></i></span>
-                        <span class="hide-menu">Payments</span>
+                        <span class="hide-menu">Student Payment Plans</span>
                     </a>
                 </li>
             @endif
@@ -440,7 +440,7 @@
                     <a class="sidebar-link {{ request()->routeIs('payment.showDownloadPage') ? 'active' : '' }}"
                     href="{{ route('payment.showDownloadPage') }}">
                         <span><i class="ti ti-file-download"></i></span>
-                        <span class="hide-menu">Payment Statement</span>
+                        <span class="hide-menu">Payment Statements</span>
                     </a>
                 </li>
             @endif
