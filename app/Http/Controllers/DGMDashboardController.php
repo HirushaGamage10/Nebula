@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use App\Models\PaymentPlan;
 
 class DGMDashboardController extends Controller
 {
@@ -136,18 +137,31 @@ class DGMDashboardController extends Controller
             : 0;
 
         // Outstanding Amount calculations remain the same
-        $outstandingQuery = PaymentDetail::query();
+        $outstanding = 0;
+        $planQuery = PaymentPlan::query();
         if ($location !== 'all') {
-            $outstandingQuery->whereHas('student', function ($q) use ($location) {
+            $planQuery->whereHas('student', function ($q) use ($location) {
                 $q->where('institute_location', $location);
             });
         }
         if ($course !== 'all') {
-            $outstandingQuery->whereHas('registration.course', function ($q) use ($course) {
+            $planQuery->whereHas('registration.course', function ($q) use ($course) {
                 $q->where('course_id', $course);
             });
         }
-        $outstanding = $outstandingQuery->sum('remaining_amount');
+
+        $plans = $planQuery->get();
+
+        foreach ($plans as $plan) {
+            if (is_array($plan->installments)) {
+                foreach ($plan->installments as $inst) {
+                    $dueDate = Carbon::parse($inst['due_date']);
+                    if ($dueDate->isAfter(Carbon::now())) {
+                        $outstanding += ($inst['local_amount'] ?? 0);
+                    }
+                }
+            }
+        }
 
         $outstandingCurrentYear = 0.0;
         try {
@@ -220,6 +234,23 @@ class DGMDashboardController extends Controller
                 }
             }
 
+            // Outstanding from payment_plans
+            $outstandingtable = 0;
+            $locPlans = PaymentPlan::where('location', $loc)
+                ->when($course !== 'all', fn($q) => $q->where('course_id', $course))
+                ->get();
+
+            foreach ($locPlans as $plan) {
+                if (is_array($plan->installments)) {
+                    foreach ($plan->installments as $inst) {
+                        $dueDate = Carbon::parse($inst['due_date']);
+                        if ($dueDate->isAfter(Carbon::now())) {
+                            $outstandingtable += ($inst['local_amount'] ?? 0);
+                        }
+                    }
+                }
+            }
+
             $currTotal = $currBulkRev + $currPartialRev;
             $prevTotal = $prevBulkRev + $prevPartialRev;
             $growth = $prevTotal > 0 ? round((($currTotal - $prevTotal) / $prevTotal) * 100, 1) : 0;
@@ -229,7 +260,7 @@ class DGMDashboardController extends Controller
                 'current_year' => number_format($currTotal, 2),
                 'previous_year' => number_format($prevTotal, 2),
                 'growth' => $growth,
-                'outstanding' => number_format($locPayments->sum('remaining_amount'), 2),
+                'outstanding' => number_format($outstandingtable, 2),
             ];
         }
 
@@ -757,6 +788,7 @@ class DGMDashboardController extends Controller
     /**
      * Get outstanding data by year and location
      */
+
     public function getOutstandingByYearCourse(Request $request)
     {
         $year = $request->input('year');
@@ -815,10 +847,8 @@ class DGMDashboardController extends Controller
 
         foreach ($years as $y) {
             foreach ($locations as $loc) {
-                $query = \App\Models\PaymentDetail::whereYear('created_at', $y)
-                    ->whereHas('student', function ($q) use ($loc) {
-                        $q->where('institute_location', $loc);
-                    });
+                $query = PaymentPlan::whereYear('created_at', $y)
+                    ->where('location', $loc);
 
                 if ($month) {
                     $query->whereMonth('created_at', $month);
@@ -827,50 +857,36 @@ class DGMDashboardController extends Controller
                     $query->whereDay('created_at', $day);
                 }
 
-                // apply course filter if provided (restrict payments to those having registration for these course ids)
+                // apply course filter if provided
                 if (!empty($courseIds)) {
-                    $query->whereHas('registration', function ($q) use ($courseIds) {
-                        $q->whereIn('course_id', $courseIds);
-                    });
+                    $query->whereIn('course_id', $courseIds);
                 }
 
-                $payments = $query->with('registration')->get();
+                $plans = $query->get();
 
-                foreach ($payments as $payment) {
-                    // determine course name for this payment (via registration)
+                foreach ($plans as $plan) {
+                    // determine course name for this plan (via course_id)
                     $courseName = 'Unknown';
                     try {
-                        if (!empty($payment->registration)) {
-                            $reg = $payment->registration;
-                            if (!empty($reg->course_id)) {
-                                $courseName = Course::where('course_id', $reg->course_id)->value('course_name') ?? (string) $reg->course_id;
-                            } elseif (!empty($reg->course_name)) {
-                                $courseName = $reg->course_name;
-                            }
-                        }
+                        $courseName = Course::where('course_id', $plan->course_id)->value('course_name') ?? (string) $plan->course_id;
                     } catch (\Throwable $ex) {
                         // swallow and keep 'Unknown'
                     }
 
-                    // compute remaining / outstanding for this payment
-                    if (isset($payment->remaining_amount) && $payment->remaining_amount !== null) {
-                        $rem = floatval($payment->remaining_amount);
-                    } else {
-                        $total = floatval($payment->total_amount ?? $payment->amount ?? 0);
-                        $paid = 0.0;
-                        if (!empty($payment->partial_payments) && is_array($payment->partial_payments)) {
-                            foreach ($payment->partial_payments as $partial) {
-                                $paid += floatval($partial['amount'] ?? 0);
+                    // compute outstanding from future installments
+                    $outstanding = 0;
+                    if (is_array($plan->installments)) {
+                        foreach ($plan->installments as $inst) {
+                            $dueDate = Carbon::parse($inst['due_date']);
+                            if ($dueDate->isAfter(Carbon::now())) {
+                                $outstanding += ($inst['local_amount'] ?? 0);
                             }
                         }
-                        $rem = $total - $paid;
                     }
-                    $rem = max(0, $rem);
 
                     // Respect course filter: if frontend passed course names/ids but course couldn't be resolved skip
                     if (!empty($courseIds)) {
-                        // if registration doesn't exist or not in filter, skip
-                        if (empty($payment->registration) || !in_array((int) $payment->registration->course_id, $courseIds, true)) {
+                        if (!in_array((int) $plan->course_id, $courseIds, true)) {
                             continue;
                         }
                     }
@@ -884,7 +900,7 @@ class DGMDashboardController extends Controller
                             'outstanding' => 0.0
                         ];
                     }
-                    $aggregate[$key]['outstanding'] += $rem;
+                    $aggregate[$key]['outstanding'] += $outstanding;
                 }
             }
         }
