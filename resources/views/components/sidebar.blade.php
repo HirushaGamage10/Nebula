@@ -170,7 +170,7 @@
                     </a>
                 </li>
             @endif
-            @if(RoleHelper::hasPermission($role, 'course.change.index'))
+            @if(RoleHelper::hasPermission($role, 'course.change'))
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ Route::currentRouteName() == 'course.change.index' ? 'active' : '' }}" href="{{ route('course.change.index') }}">
                         <span><i class="ti ti-repeat"></i></span>

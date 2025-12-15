@@ -14,7 +14,7 @@ class UhIndexController extends Controller
     // Page
     public function showPage()
     {
-        return view('uh_index_numbers');
+        return view('registration.uh_index_numbers');
     }
 
     // Courses by location
