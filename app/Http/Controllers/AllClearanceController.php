@@ -77,7 +77,7 @@ class AllClearanceController extends Controller
                             ->first();
         }
 
-        return view('all_clearance', compact(
+        return view('clearance.all_clearance', compact(
             'student',
             'courses',
             'allClearanceRequests',

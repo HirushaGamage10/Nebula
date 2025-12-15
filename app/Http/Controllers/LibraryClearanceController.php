@@ -27,7 +27,7 @@ class LibraryClearanceController extends Controller
             ->limit(50)
             ->get();
 
-        return view('library_clearance', compact('pendingRequests', 'processedRequests'));
+        return view('clearance.library_clearance', compact('pendingRequests', 'processedRequests'));
     }
 
     public function details($id)
