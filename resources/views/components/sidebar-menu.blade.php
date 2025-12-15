@@ -15,10 +15,6 @@
             if(isset($item['permission'])) {
                 return RoleHelper::hasPermission($role, $item['permission']);
             }
-            // Also ensure a named route exists for the item when provided
-            if(isset($item['route'])) {
-                return Route::has($item['route']);
-            }
             return true;
         });
     @endphp
@@ -52,22 +48,11 @@
                             <span class="hide-menu">{{ $item['label'] }}</span>
                         </a>
                     @else
-                        @php
-                            $active = request()->routeIs($item['route']) || Route::currentRouteName() == $item['route'];
-                            $routeExists = isset($item['route']) && Route::has($item['route']);
-                        @endphp
-
-                        @if($routeExists)
-                            <a class="sidebar-link {{ $active ? 'active' : '' }}" href="{{ route($item['route']) }}">
-                                <span><i class="{{ $item['icon'] }}"></i></span>
-                                <span class="hide-menu">{{ $item['label'] }}</span>
-                            </a>
-                        @else
-                            <a class="sidebar-link disabled" href="#" title="Route '{{ $item['route'] ?? 'undefined' }}' not found">
-                                <span><i class="{{ $item['icon'] }}"></i></span>
-                                <span class="hide-menu">{{ $item['label'] }}</span>
-                            </a>
-                        @endif
+                        @php $active = request()->routeIs($item['route']) || Route::currentRouteName() == $item['route']; @endphp
+                        <a class="sidebar-link {{ $active ? 'active' : '' }}" href="{{ route($item['route']) }}">
+                            <span><i class="{{ $item['icon'] }}"></i></span>
+                            <span class="hide-menu">{{ $item['label'] }}</span>
+                        </a>
                     @endif
                 </li>
             @endif

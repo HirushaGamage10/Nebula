@@ -44,7 +44,7 @@ class EligibilityCheckingAndRegistrationController extends Controller
     // Show the eligibility registration view
     public function showEligibilityRegistration()
     {
-        return view('registration.eligibility_registration');
+        return view('eligibility_registration');
     }
 
     // Fetch courses by location

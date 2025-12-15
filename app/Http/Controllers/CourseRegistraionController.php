@@ -80,7 +80,7 @@ class CourseRegistraionController extends Controller
         }
 
         // Pass to view
-        return view('registration.course_registration', [
+        return view('course_registration', [
             // ...other variables...
             'olSubjects' => $olSubjects,
             'alSubjects' => $alSubjects,
