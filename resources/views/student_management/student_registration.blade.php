@@ -15,7 +15,7 @@
 
             {{-- Success/Error Modals can be included here if needed --}}
 
-            <form id="registrationForm" action="{{ route('student.register') }}" method="POST" enctype="multipart/form-data" novalidate>
+            <form id="registrationForm" action="{{ route('student_management.register') }}" method="POST" enctype="multipart/form-data" novalidate>
                 @csrf
                 <div id="formErrorSummary" class="alert alert-danger d-none" role="alert"></div>
                 

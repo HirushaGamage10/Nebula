@@ -78,8 +78,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
     // Student Registration Routes - DGM, Program Administrator (level 01), Program Administrator (level 02), Student Counselor, Bursar, Marketing Manager, Developer
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Student Counselor,Bursar,Marketing Manager,Developer'])->group(function () {
-        Route::get('/student/register', [StudentRegistraionController::class, 'showStudentRegistration'])->name('student.registration');
-        Route::post('/student/register', [StudentRegistraionController::class, 'register'])->name('student.register');
+        Route::get('/student/register', [StudentRegistraionController::class, 'showStudentRegistration'])->name('student_management.registration');
+        Route::post('/student/register', [StudentRegistraionController::class, 'register'])->name('student_management.register');
         Route::get('/student/subjects/{examTypeId}', [StudentRegistraionController::class, 'getSubjectsByExamType']);
         Route::get('/student/streams/{examTypeId}', [StudentRegistraionController::class, 'getStreamsByExamType']);
     });
@@ -381,7 +381,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
     // Student List Page - DGM, Program Administrator (level 01), Program Administrator (level 02), Student Counselor, Bursar, Marketing Manager, Developer
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Student Counselor,Bursar,Marketing Manager,Developer'])->group(function () {
-        Route::get('/student-list', [StudentListController::class, 'showStudentList'])->name('student.list');
+        Route::get('/student-list', [StudentListController::class, 'showStudentList'])->name('student_management.list');
         Route::post('/get-student-list-data', [StudentListController::class, 'getStudentListData'])->name('student.getListData');
         Route::post('/download-student-list', [StudentListController::class, 'downloadStudentList'])->name('student.downloadList');
         Route::post('/download-student-list-excel', [StudentListController::class, 'downloadStudentListExcel'])->name('student.downloadList.excel');
@@ -395,20 +395,20 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
     // Student Other Information page - DGM, Program Administrator (level 01), Program Administrator (level 02), Student Counselor, Bursar, Marketing Manager, Developer
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Student Counselor,Bursar,Marketing Manager,Developer'])->group(function () {
-        Route::get('/student-other-information', [StudentOtherInformationController::class, 'showStudentOtherInformation'])->name('student.other.information');
-        Route::post('/retrieve-student-details', [StudentOtherInformationController::class, 'getStudentDetails'])->name('retrieve.student.details');
-        Route::post('/store-other-informations', [StudentOtherInformationController::class, 'storeOtherInformations'])->name('store.other.informations');
+        Route::get('/student-other-information', [StudentOtherInformationController::class, 'showStudentOtherInformation'])->name('student_management.other.information');
+        Route::post('/retrieve-student-details', [StudentOtherInformationController::class, 'getStudentDetails'])->name('student_management.retrieve.details');
+        Route::post('/store-other-informations', [StudentOtherInformationController::class, 'storeOtherInformations'])->name('student_management.store.other.informations');
         Route::post('/reinstate-student', [StudentOtherInformationController::class, 'reinstateStudent'])->name('reinstate.student');
 
     });
 
     // Student Profile Page - DGM, Program Administrator (level 01), Program Administrator (level 02), Student Counselor, Bursar, Marketing Manager, Developer
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Student Counselor,Bursar,Marketing Manager,Developer'])->group(function () {
-        Route::get('/student-profile/{studentId}', [StudentProfileController::class, 'showStudentProfile'])->name('student.profile');
+        Route::get('/student-profile/{studentId}', [StudentProfileController::class, 'showStudentProfile'])->name('student_management.profile');
         Route::post('/get-student-details', [StudentProfileController::class, 'getStudentDetails'])->name('student.details');
         Route::put('/student/update/{studentId}', [StudentProfileController::class, 'updatePersonalInfo'])->name('student.updatePersonalInfo');
-        Route::post('/student/update-personal-info', [StudentProfileController::class, 'updatePersonalInfoAjax'])->name('student.update.personal.info');
-        Route::post('/student/update-parent-info', [StudentProfileController::class, 'updateParentInfoAjax'])->name('student.update.parent.info');
+        Route::post('/student/update-personal-info', [StudentProfileController::class, 'updatePersonalInfoAjax'])->name('student_management.update.personal.info');
+        Route::post('/student/update-parent-info', [StudentProfileController::class, 'updateParentInfoAjax'])->name('student_management.update.parent.info');
         Route::post('/student/update-profile-picture/{studentId}', [StudentProfileController::class, 'updateStudentProfilePicture'])->name('student.updateProfilePicture');
         Route::get('/student/academic', [StudentProfileController::class, 'getAcademicDetails'])->name('student.academic');
         Route::get('/student/exam-results', [StudentProfileController::class, 'getExamResults'])->name('student.examResults');
@@ -445,8 +445,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/api/course/{courseId}/specializations', [StudentProfileController::class, 'getCourseSpecializations']);
         Route::post('/api/course-registration/{id}/update-grade', [StudentProfileController::class, 'updateCourseRegistrationGrade']);
 
-        Route::post('/student/terminate', [StudentProfileController::class, 'terminate'])->name('student.terminate');
-        Route::post('/student/reinstate', [StudentProfileController::class, 'reinstate'])->name('student.reinstate');
+        Route::post('/student/terminate', [StudentProfileController::class, 'terminate'])->name('student_management.terminate');
+        Route::post('/student/reinstate', [StudentProfileController::class, 'reinstate'])->name('student_management.reinstate');
 
     });
 
@@ -856,9 +856,9 @@ Route::middleware(['auth', 'role:DGM,Developer,Program Administrator (level 01),
 });
 
 
-Route::get('/students/view', [StudentViewController::class, 'index'])->name('students.view');
-Route::post('/students/filter', [StudentViewController::class, 'filter'])->name('students.filter');
-Route::get('/students/courses', [StudentViewController::class, 'getStudentCourses'])->name('students.courses');
+Route::get('/students/view', [StudentViewController::class, 'index'])->name('student_management.view');
+Route::post('/students/filter', [StudentViewController::class, 'filter'])->name('student_management.filter');
+Route::get('/students/courses', [StudentViewController::class, 'getStudentCourses'])->name('student_management.courses');
 
 Route::middleware(['role:DGM,Developer,Program Administrator (level 01)'])->group(function () {
     Route::get('/dgmdashboard', [DGMDashboardController::class, 'showDashboard'])->name('dgmdashboard');

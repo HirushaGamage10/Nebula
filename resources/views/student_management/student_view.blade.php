@@ -128,7 +128,7 @@ document.getElementById('filterForm').addEventListener('submit', async e => {
     status: document.getElementById('statusSelect').value,
   };
 
-  const res = await fetch('{{ route("students.filter") }}', {
+  const res = await fetch('{{ route("student_management.filter") }}', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
     body: JSON.stringify(payload)
@@ -278,7 +278,7 @@ document.getElementById('student_id').addEventListener('change', async e => {
   }
 
   try {
-    const res = await fetch('{{ route("students.courses") }}?student_id=' + encodeURIComponent(studentId));
+    const res = await fetch('{{ route("student_management.courses") }}?student_id=' + encodeURIComponent(studentId));
     const data = await res.json();
     
     if (data.success && data.courses.length > 0) {

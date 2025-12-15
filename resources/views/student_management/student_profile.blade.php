@@ -922,7 +922,7 @@ $('#updateParentInfoBtn').on('click', function() {
         _token: '{{ csrf_token() }}'
     };
 
-  $.post("{{ route('student.update.parent.info') }}", data, function(resp) {
+  $.post("{{ route('student_management.update.parent.info') }}", data, function(resp) {
     if (resp.success) {
       // Clear any inline errors
       $('.invalid-feedback').text('').hide();
@@ -1214,7 +1214,7 @@ $(function(){
       _token:'{{ csrf_token() }}'
     };
     
-    $.post("{{ route('student.update.personal.info') }}", data, function(resp){
+    $.post("{{ route('student_management.update.personal.info') }}", data, function(resp){
       if(resp.success){
         // Remove any validation error classes
         $('.is-invalid').removeClass('is-invalid');
@@ -1771,7 +1771,7 @@ $(function(){
     const sid=$('#studentIdHidden').val(); const reason=$('#terminateReason').val().trim(); const doc=$('#terminateDocument')[0].files[0];
     if(!sid) return showErrorMessage('No student selected.'); if(!reason) return $('#terminateReason').focus();
     const fd=new FormData(); fd.append('_token','{{ csrf_token() }}'); fd.append('student_id',sid); fd.append('reason',reason); if(doc) fd.append('document',doc);
-    $.ajax({type:'POST',url:"{{ route('student.terminate') }}",data:fd,processData:false,contentType:false,
+    $.ajax({type:'POST',url:"{{ route('student_management.terminate') }}",data:fd,processData:false,contentType:false,
       success:function(res){
         if(res.success){ showSuccessMessage(res.message||'Student terminated.'); setStatusUI('terminated'); $('#terminateReason').val(''); $('#terminateDocument').val(''); bootstrap.Modal.getInstance(document.getElementById('terminateModal')).hide(); }
         else{ showErrorMessage(res.message||'Failed to terminate.'); }
@@ -1783,7 +1783,7 @@ $(function(){
     const sid=$('#studentIdHidden').val(); const reason=$('#reinstateReason').val().trim(); const doc=$('#reinstateDocument')[0].files[0];
     if(!sid) return showErrorMessage('No student selected.'); if(!reason) return $('#reinstateReason').focus();
     const fd=new FormData(); fd.append('_token','{{ csrf_token() }}'); fd.append('student_id',sid); fd.append('reason',reason); if(doc) fd.append('document',doc);
-    $.ajax({type:'POST',url:"{{ route('student.reinstate') }}",data:fd,processData:false,contentType:false,
+    $.ajax({type:'POST',url:"{{ route('student_management.reinstate') }}",data:fd,processData:false,contentType:false,
       success:function(res){
         if(res.success){ showSuccessMessage(res.message||'Student re‑registered.'); setStatusUI(res.academic_status||'active'); $('#reinstateReason').val(''); $('#reinstateDocument').val(''); bootstrap.Modal.getInstance(document.getElementById('reinstateModal')).hide(); }
         else{ showErrorMessage(res.message||'Failed to re‑register.'); }

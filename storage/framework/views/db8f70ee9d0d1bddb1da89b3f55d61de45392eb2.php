@@ -15,7 +15,7 @@
 
             
 
-            <form id="registrationForm" action="<?php echo e(route('student.register')); ?>" method="POST" enctype="multipart/form-data" novalidate>
+            <form id="registrationForm" action="<?php echo e(route('student_management.register')); ?>" method="POST" enctype="multipart/form-data" novalidate>
                 <?php echo csrf_field(); ?>
                 <div id="formErrorSummary" class="alert alert-danger d-none" role="alert"></div>
                 
@@ -1623,4 +1623,4 @@ setupPhoneValidator('emergencyContactNo', 'emergencyContactNoError');
 </script>
 <?php $__env->stopPush(); ?>
 
-<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/registration/student_registration.blade.php ENDPATH**/ ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/student_management//student_registration.blade.php ENDPATH**/ ?>
