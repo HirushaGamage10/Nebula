@@ -1,0 +1,294 @@
+@extends('inc.app')
+
+@section('title', 'NEBULA | Course Registration')
+
+@section('content')
+<style>
+    /* Existing styles copied from root course_registration view */
+    .terminated-disabled { opacity: 0.6; filter: grayscale(100%); pointer-events: none; }
+    .terminated-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; cursor: not-allowed; background: rgba(255,255,255,0); }
+    .form-control:focus, .form-select:focus { border-color: #0d6efd; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); transition: all 0.2s ease; }
+    .table tbody tr:hover { background-color: #f8f9fa; }
+    .alert { border-left: 4px solid; }
+    .alert-danger { border-left-color: #dc3545; }
+    .alert-success { border-left-color: #198754; }
+    .alert-warning { border-left-color: #ffc107; }
+    .card { box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    #spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999; display: flex; justify-content: center; align-items: center; }
+    .lds-ring { display: inline-block; position: relative; width: 80px; height: 80px; }
+    .lds-ring div { box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; border: 8px solid #fff; border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: #fff transparent transparent transparent; }
+    .lds-ring div:nth-child(1) { animation-delay: -0.45s; }
+    .lds-ring div:nth-child(2) { animation-delay: -0.3s; }
+    .lds-ring div:nth-child(3) { animation-delay: -0.15s; }
+    @keyframes lds-ring { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .is-invalid { border-color: #dc3545 !important; }
+    .is-valid { border-color: #198754 !important; }
+</style>
+
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-body">
+            <h2 class="text-center mb-4">Course Registration</h2>
+            <hr>
+            <div id="spinner-overlay" style="display:none;">
+                <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
+            </div>
+            <div class="accordion" id="searchAccordion">
+                <div class="accordion-item">
+                    <div class="accordion-body">
+                        <form id="searchForm">
+                            @csrf
+                            <div class="mb-3 row mx-3">
+                                <label for="studentNicSearch" class="col-sm-2 col-form-label">Student NIC<span class="text-danger">*</span></label>
+                                <div class="col-sm-8">
+                                    <input type="text" class="form-control bg-white" id="studentNicSearch" name="studentNicSearch" placeholder="Enter Student ID (NIC)">
+                                </div>
+                                <div class="col-sm-2">
+                                    <button type="button" class="btn btn-primary w-100" id="searchNicBtn">Search</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div id="searchMessageContainer" class="mx-3"></div>
+            <div id="studentDetailsSection" style="display: none;">
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="mb-3 row mx-3">
+                            <label for="studentName" class="col-sm-3 col-form-label">Name</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control bg-white" id="studentName" name="studentName" readonly>
+                            </div>
+                        </div>
+                        <div class="mb-3 row mx-3">
+                            <label for="studentNIC" class="col-sm-3 col-form-label">NIC</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control bg-white" id="studentNIC" name="studentNIC" readonly>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @if(isset($resultsPending) && $resultsPending)
+                    <div class="alert alert-warning mt-4"><strong>Pending Results:</strong> Some or all of the student's exam results are still pending.</div>
+                @else
+                    <div class="mb-3 mt-4">
+                        <h5 class="bg-danger p-2 text-white"><strong>O/L Exam Details</strong></h5>
+                        <div class="row mt-4 mb-4 mx-3">
+                            <div class="mb-3 col-sm-6">
+                                <label for="olExamType" class="form-label">Exam Type</label>
+                                <input type="text" class="form-control bg-white" id="olExamType" name="olExamType" readonly>
+                            </div>
+                            <div class="mb-3 col-sm-6">
+                                <label for="olExamYear" class="form-label">Exam Year</label>
+                                <input type="text" class="form-control bg-white" id="olExamYear" name="olExamYear" readonly>
+                            </div>
+                        </div>
+                        <h6 class="mb-4 mx-3">O/L Exam Subjects and Grades</h6>
+                        <div class="col-11 mx-3 mb-4">
+                            <table class="table table-bordered table-striped">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="bg-primary text-white" scope="col">Subject</th>
+                                        <th class="bg-primary text-white" scope="col">Grade</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="olExamSubjectsAndGradesTableBody">
+                                    @foreach($olSubjects as $subject)
+                                        <tr>
+                                            <td>{{ $subject['subject'] ?? 'N/A' }}</td>
+                                            <td>{{ $subject['result'] ?? 'N/A' }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <h5 class="bg-danger p-2 text-white mx-3"><strong>A/L Exam Details</strong></h5>
+                    <div class="row mt-4 mx-3">
+                        <div class="mb-3 col-sm-6">
+                            <label for="alExamType" class="col-form-label">Exam Type</label>
+                            <input type="text" class="form-control bg-white" id="alExamType" name="alExamType" readonly>
+                        </div>
+                        <div class="mb-3 col-sm-6">
+                            <label for="alExamYear" class="col-form-label">Exam Year</label>
+                            <input type="text" class="form-control bg-white" id="alExamYear" name="alExamYear" readonly>
+                        </div>
+                    </div>
+                    <div class="mb-4 row mx-3">
+                        <label for="alExamStream" class="col-sm-2 col-form-label">Exam Stream</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control bg-white" id="alExamStream" name="alExamStream" readonly>
+                        </div>
+                    </div>
+                    <h6 class="mb-4 mx-3">A/L Exam Subjects and Grades</h6>
+                    <div class="col-11 mx-3 mb-4">
+                        <table class="table table-bordered table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="bg-primary text-white" scope="col">Subject</th>
+                                    <th class="bg-primary text-white" scope="col">Grade</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alExamSubjectsAndGradesTableBody">
+                                @foreach($alSubjects as $subject)
+                                    <tr>
+                                        <td>{{ $subject['subject'] ?? 'N/A' }}</td>
+                                        <td>{{ $subject['result'] ?? 'N/A' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+                <hr>
+                <input type="hidden" id="studentId" name="studentId">
+                <input type="hidden" id="studentRegistrationId" name="studentRegistrationId">
+                <div class="mb-3 row mx-3">
+                    <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
+                    <div class="col-sm-10">
+                        <select class="form-select" id="location" name="location" required>
+                            <option selected disabled value="">Choose a location...</option>
+                            <option value="Welisara">Nebula Institute of Technology - Welisara</option>
+                            <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
+                            <option value="Peradeniya">Nebula Institute of Technology - Peradeniya</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3 row mx-3">
+                    <label for="courseSearch" class="col-sm-2 col-form-label">Course<span class="text-danger">*</span></label>
+                    <div class="col-sm-10">
+                        <select class="form-select bg-white" id="courseSearch" name="courseSearch" style="cursor: pointer;" required disabled>
+                            <option selected disabled>Select a location first</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3 row mx-3">
+                    <label for="intakeId" class="col-sm-2 col-form-label">Intake<span class="text-danger">*</span></label>
+                    <div class="col-sm-10">
+                        <select class="form-select" id="intakeId" name="intakeId" required disabled>
+                            <option value="" selected disabled>Select a course first</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3 row mx-3">
+                    <label for="registrationFee" class="col-sm-2 col-form-label">Registration Fee<span class="text-danger">*</span></label>
+                    <div class="col-sm-10">
+                        <div class="input-group">
+                            <span class="input-group-text bg-primary text-white">LKR</span>
+                            <input type="number" class="form-control bg-white" id="registrationFee" name="registrationFee" placeholder="Enter registration fee" required>
+                        </div>
+                    </div>
+                </div>
+                <hr class="mt-4">
+                <fieldset class="mx-3 mt-4">
+                    <legend class="mb-4" style="font-size: 20px;">Student Counsellor Details</legend>
+                    <div class="row mx-3 align-items-center">
+                        <label class="col-sm-3 col-form-label">SLT Employee</label>
+                        <div class="col-sm-9 d-flex align-items-center">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input cursor-pointer" type="radio" name="slt_employee" id="sltYes" value="yes">
+                                <label class="form-check-label" for="sltYes">Yes</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input cursor-pointer" type="radio" name="slt_employee" id="sltNo" value="no" checked>
+                                <label class="form-check-label" for="sltNo">No</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="serviceNoField" style="display: none;">
+                        <div class="mb-3 mt-3 row mx-3">
+                            <label for="serviceNo" class="col-sm-3 col-form-label">Service No<span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="serviceNo" name="service_no" placeholder="Enter service number" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="externalCounselorFields" style="display: none;">
+                        <div class="mb-3 mt-3 row mx-3">
+                            <label for="counselorName" class="col-sm-3 col-form-label">Counselor Name<span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="counselorName" name="counselor_name" placeholder="Enter counselor's name" required>
+                            </div>
+                        </div>
+                        <div class="mb-3 row mx-3">
+                            <label for="counselorNic" class="col-sm-3 col-form-label">Counselor NIC<span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="counselorNic" name="counselor_nic" placeholder="Enter counselor's NIC number" required>
+                                <div class="invalid-feedback"><span class="text-danger">✖</span> Invalid NIC. Use 12 digits or 9 digits + 1 letter.</div>
+                                <div class="valid-feedback"><span class="text-success">✔</span> Valid NIC.</div>
+                            </div>
+                        </div>
+                        <div class="mb-3 row mx-3">
+                            <label for="counselorPhone" class="col-sm-3 col-form-label">Counselor Phone<span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <input type="tel" class="form-control" id="counselorPhone" name="counselor_phone" placeholder="Enter counselor's phone number" required>
+                                <div class="invalid-feedback"><span class="text-danger">✖</span> Invalid phone. Use "07x xxxxxxx" or "+94 xxxxxxxxx".</div>
+                                <div class="valid-feedback"><span class="text-success">✔</span> Valid phone.</div>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+                <hr class="mt-4">
+                <h4 class="mb-4 fw-bold">Course Details</h4>
+                <div class="row align-items-center mx-3 mb-3">
+                    <label for="courseStartDate" class="col-sm-2 col-form-label fw-bold">Start Date<span class="text-danger">*</span></label>
+                    <div class="col-sm-10">
+                        <input type="date" class="form-control" id="courseStartDate" name="courseStartDate" placeholder="Select start date" style="cursor: pointer;" min="<?php echo date('Y-m-d'); ?>" required>
+                    </div>
+                </div>
+                <hr class="mt-4">
+                <fieldset class="mx-3">
+                    <legend class="mb-4" style="font-size: 20px;">Marketing Survey</legend>
+                    <p class="mx-3"><strong>How did you hear about our institute?</strong></p>
+                    <div class="mx-4">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="LinkedIn" id="checkboxLinkedIn">
+                                    <label class="form-check-label" for="checkboxLinkedIn">LinkedIn</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="Facebook" id="checkboxFacebook">
+                                    <label class="form-check-label" for="checkboxFacebook">Facebook</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="Radio Advertisement" id="checkboxRadio">
+                                    <label class="form-check-label" for="checkboxRadio">Radio Advertisement</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="TV advertisement" id="checkboxTV">
+                                    <label class="form-check-label" for="checkboxTV">TV advertisement</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="Other" id="checkboxOther">
+                                    <label class="form-check-label" for="checkboxOther">Other</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3" id="otherMarketingSurveyRow" style="display: none;">
+                            <div class="col-md-12">
+                                <input type="text" class="form-control" id="marketing_survey_other" name="marketing_survey_other" placeholder="Please describe how you heard about us">
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+                <div class="d-flex flex-column gap-3 mt-5">
+                    <button id="finalRegister" type="submit" class="btn btn-primary w-100">Pre Register</button>
+                    <button id="checkEligibility" type="button" class="btn btn-dark w-100" onclick="redirectToEligibility()">Check Eligibility --></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@endsection

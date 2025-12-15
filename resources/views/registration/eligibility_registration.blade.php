@@ -1,4 +1,8 @@
-{{-- DEPRECATED: moved to resources/views/registration/eligibility_registration.blade.php --}}
+@extends('inc.app')
+
+@section('title', 'NEBULA | Eligibility & Registration')
+
+@section('content')
     <div class="container-fluid">
         <div class="card">
             <div class="card-body">
