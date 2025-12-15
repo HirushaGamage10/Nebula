@@ -101,87 +101,201 @@ class RoleHelper
 
             // HOME
             'dashboard',
-            'intake.create',
-            'attendance',
-            'timetable',
+
+            // STUDENT MANAGEMENT
             'student.other.information',
             'student.profile',
-            'exam.results',
-            'student.exam.result.management',
-            'exam.results.view.edit',
-            'semesters.create',
+            'student.list',
+            
+            // REGISTRATIONS
             'semester.registration',
             'module.management',
-            'overall.attendance',
-            'student.list',
-            'repeat.students.management',
             'course.change',
-            'payment.dashboard'
-            ,
-            // CLEARANCE
-            'all.clearance.management',
-
-        ],
-
-        'Program Administrator (level 02) Trainee' => [
-            'dashboard',
-            'student.other.information',
-            'student.list',
-            'student.profile',
-
-            //exam results
+            'uh.index.page',
+            
+            // EXAMS & RESULTS
             'exam.results',
             'student.exam.result.management',
             'exam.results.view.edit',
-
-            // REPEAT STUDENTS
             'repeat.students.management',
 
             // ATTENDANCE
             'attendance',
             'overall.attendance',
+
+            // COURSES & MODULES
+            'module.creation',
+            'semesters.create',
+            'intake.create',
+            'timetable',
+               
+            // FINANCIAL       
+            'payment.dashboard',
+
+            // CLEARANCE
+            'all.clearance.management',
+
+            // FOOTER
+            'user.profile'
+        ],
+
+        'Program Administrator (level 02) Trainee' => [
+
+            // HOME
+            'dashboard',
+
+            // STUDENT MANAGEMENT
+            'student.other.information',
+            'student.list',
+            'student.profile',
+
+            // REGISTRATIONS
+            'semester.registration',
+
+            //exam results
+            'exam.results',
+            'student.exam.result.management',
+            'exam.results.view.edit',
+            'repeat.students.management',
+
+            // ATTENDANCE
+            'attendance',
+            'overall.attendance',
+
+            // COURSES & MODULES
+            'module.creation',
+            'course.management',
+            'semesters.create',
+            'intake.create',
+            'semester.management',
+            'timetable',
+
+            // FOOTER
+            'user.profile'
         ],
 
         'Student Counselor' => [
+            
+            // HOME
             'dashboard',
+
+            // STUDENT MANAGEMENT
             'student.registration',
+            'student.list',
+            'student.view',
+
+            // REGISTRATIONS
             'course.registration',
             'eligibility.registration',
+            'course.change',            
+
+            // FINANCIAL
             'payment',
             'late.payment',
             'payment.discounts',
-            'student.list',
-            'course.change',
+            'payment.plan',
+            'payment.plan.edit',
+            'payment.plan.index',
             'payment.dashboard',
-            'latefee.approval',
+            'payment.summary',
+            'misc.payment',
+            'payment.showDownloadPage',
+            'payment.discount.page',
+
+            // FOOTER
+            'user.profile'            
+        ],
+
+        'Student Counselor Trainee' => [
+            
+            // HOME
+            'dashboard',
+
+            // STUDENT MANAGEMENT
+            'student.registration',
+            'student.list',
+            'student.view',
+
+            // REGISTRATIONS
+            'course.registration',
+            'eligibility.registration',
+            'course.change',            
+
+            // FINANCIAL
+            'payment',
+            'late.payment',
+            'payment.discounts',
+            'payment.plan',
+            'payment.plan.edit',
+            'payment.plan.index',
+            'payment.dashboard',
+            'payment.summary',
+            'misc.payment',
+            'payment.showDownloadPage',
+            'payment.discount.page',
+
+            // FOOTER
+            'user.profile'            
         ],
 
         'Marketing Manager' => [
+
+            // HOME
             'dashboard',
-            'payment.plan',
+            
+            // STUDENT MANAGEMENT
             'student.list',
+            'student.view',
+
+            // REGISTRATIONS
             'course.change',
+
+            // FINANCIAL
+            'payment.plan',
+            'create.payment.plan',
             'payment.summary',
             'payment.dashboard',
+
+            // FOOTER
+            'user.profile'  
         ],
 
         'Librarian' => [
+
+            // HOME
             'dashboard',
-            'user.profile',
+            
+            // STUDENT MANAGEMENT
+            'student.list',
+
+            // CLEARANCE    
             'library.clearance',
-            'student.clearance.form.management'
+            'student.clearance.form.management',
+
+            // FOOTER
+            'user.profile' 
         ],
 
         'Hostel Manager' => [
+
+            // HOME
             'dashboard',
-            'user.profile',
-            'hostel.clearance.form.management'
+            
+            // CLEARANCE
+            'hostel.clearance.form.management',
+            'hostel.clearance',
+
+            // FOOTER
+            'user.profile' 
         ],
 
         'Bursar' => [
 
             // HOME
             'dashboard',
+
+            // STUDENT MANAGEMENT
+            'student.list',
 
             // CLEARANCE
             'payment.clearance',
@@ -197,6 +311,9 @@ class RoleHelper
             'misc.payment',
             'payment.showDownloadPage',
             'payment.discount.page',
+
+            // FOOTER
+            'user.profile', 
         ],
 
         'Project Tutor' => [
@@ -205,14 +322,11 @@ class RoleHelper
             'dashboard',
             'project.tutor.dashboard',
 
+            // STUDENT MANAGEMENT
+            'student.list',
+
             // CLEARANCE
             'project.clearance.management',
-
-            // ATTENDANCE
-            'attendance',
-
-            // 
-            'student.list',
 
             // FOOTER
             'user.profile',
