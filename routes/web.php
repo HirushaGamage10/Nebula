@@ -182,15 +182,28 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
     // Student Profile
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Student Counselor,Bursar,Marketing Manager,Developer'])->group(function () {
-        Route::get('/student/profile/{studentId}', [StudentProfileController::class, 'showProfile'])->name('student_management.profile');
-        Route::post('/student/profile/update-basic', [StudentProfileController::class, 'updateBasicInfo'])->name('student.profile.update.basic');
-        Route::post('/student/profile/update-contact', [StudentProfileController::class, 'updateContactInfo'])->name('student.profile.update.contact');
-        Route::post('/student/profile/update-academic', [StudentProfileController::class, 'updateAcademicInfo'])->name('student.profile.update.academic');
-        Route::post('/student/profile/update-marketing', [StudentProfileController::class, 'updateMarketingInfo'])->name('student.profile.update.marketing');
-        Route::post('/student/profile/update-photo', [StudentProfileController::class, 'updatePhoto'])->name('student.profile.update.photo');
-        Route::get('/student/profile/download-photo/{studentId}', [StudentProfileController::class, 'downloadPhoto'])->name('student.profile.download.photo');
+        Route::get('/student/profile/{studentId}', [StudentProfileController::class, 'showStudentProfile'])->name('student_management.profile');
+        Route::post('/student/profile/update-personal', [StudentProfileController::class, 'updatePersonalInfoAjax'])->name('student_management.update.personal.info');
+        Route::post('/student/profile/update-parent', [StudentProfileController::class, 'updateParentInfoAjax'])->name('student_management.update.parent.info');
+        Route::post('/student/profile/update-photo/{studentId}', [StudentProfileController::class, 'updateStudentProfilePicture'])->name('student.updateProfilePicture');
+        Route::post('/student/terminate', [StudentProfileController::class, 'terminate'])->name('student_management.terminate');
+        Route::post('/student/reinstate', [StudentProfileController::class, 'reinstate'])->name('student_management.reinstate');
         Route::get('/api/student/{studentId}/history', [StudentProfileController::class, 'getCourseRegistrationHistory']);
         Route::get('/api/student-details-by-nic', [StudentProfileController::class, 'getStudentDetailsByNic']);
+        Route::get('/api/student/{studentId}/courses', [StudentProfileController::class, 'getRegisteredCourses']);
+        Route::get('/api/student/{studentId}/course/{courseId}/semesters', [StudentProfileController::class, 'getSemesters']);
+        Route::get('/api/student/{studentId}/course/{courseId}/semester/{semester}/results', [StudentProfileController::class, 'getModuleResults']);
+        Route::get('/api/student/{studentId}/course/{courseId}/payment-summary', [StudentProfileController::class, 'getPaymentSummary']);
+        Route::get('/api/student/{studentId}/course/{courseId}/semester/{semester}/attendance', [StudentProfileController::class, 'getAttendance']);
+        Route::get('/api/student/{studentId}/clearances', [StudentProfileController::class, 'getStudentClearances']);
+        Route::get('/api/student/{studentId}/status-history', [StudentProfileController::class, 'getStudentStatusHistory']);
+        Route::get('/student/{studentId}/certificates', [StudentProfileController::class, 'getStudentCertificates']);
+        Route::get('/api/course/{courseId}/specializations', [StudentProfileController::class, 'getCourseSpecializations']);
+        Route::post('/api/course-registration/{id}/update-grade', [StudentProfileController::class, 'updateCourseRegistrationGrade']);
+        Route::get('/api/student/{studentId}/course/{courseId}/intakes', [StudentProfileController::class, 'getIntakesForCourse'])->name('student.intakes.for.course');
+        Route::get('/api/student/{studentId}/course/{courseId}/intake/{intake}/payment-details', [StudentProfileController::class, 'getPaymentDetails'])->name('student.payment.details');
+        Route::get('/api/student/{studentId}/course/{courseId}/intake/{intake}/payment-history', [StudentProfileController::class, 'getPaymentHistory'])->name('student.payment.history');
+        Route::get('/api/student/{studentId}/course/{courseId}/intake/{intake}/payment-schedule', [StudentProfileController::class, 'getPaymentSchedule'])->name('student.payment.schedule');
     });
 
     // ========================================================================
