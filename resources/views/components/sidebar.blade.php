@@ -15,7 +15,7 @@
     </div>
 
     <nav class="sidebar-nav scroll-sidebar" data-simplebar="">
-        <ul class="metismenu" id="menu">
+        @include('components.sidebar-menu')
             {{-- HOME --}}
             <li class="nav-small-cap">
                 <span class="nav-small-cap-text">HOME</span>
