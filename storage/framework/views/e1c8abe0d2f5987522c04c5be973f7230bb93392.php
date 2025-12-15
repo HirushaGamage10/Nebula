@@ -142,7 +142,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'eligibility.registration' ? 'active' : ''); ?>" href="<?php echo e(route('eligibility.registration')); ?>">
                         <span><i class="ti ti-checks"></i></span>
-                        <span class="hide-menu">Eligibility Registration</span>
+                        <span class="hide-menu">Eligibility & Registration</span>
                     </a>
                 </li>
             <?php endif; ?>
@@ -158,7 +158,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'module.management' ? 'active' : ''); ?>" href="<?php echo e(route('module.management')); ?>">
                         <span><i class="ti ti-briefcase"></i></span>
-                        <span class="hide-menu">Module Management</span>
+                        <span class="hide-menu">Elective Module Registrations</span>
                     </a>
                 </li>
             <?php endif; ?>
@@ -166,7 +166,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'uh.index.page' ? 'active' : ''); ?>" href="<?php echo e(route('uh.index.page')); ?>">
                         <span><i class="ti ti-id-badge"></i></span>
-                        <span class="hide-menu">UH Index Numbers</span>
+                        <span class="hide-menu">External Institute IDs</span>
                     </a>
                 </li>
             <?php endif; ?>
@@ -311,7 +311,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'module.creation' ? 'active' : ''); ?>" href="<?php echo e(route('module.creation')); ?>">
                         <span><i class="ti ti-plus"></i></span>
-                        <span class="hide-menu">Module Creation</span>
+                        <span class="hide-menu">Create New Modules</span>
                     </a>
                 </li>
             <?php endif; ?>
@@ -319,7 +319,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'course.management' ? 'active' : ''); ?>" href="<?php echo e(route('course.management')); ?>">
                         <span><i class="ti ti-notebook"></i></span>
-                        <span class="hide-menu">Course Management</span>
+                        <span class="hide-menu">Create New Courses</span>
                     </a>
                 </li>
             <?php endif; ?>
@@ -327,7 +327,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'intake.create' ? 'active' : ''); ?>" href="<?php echo e(route('intake.create')); ?>">
                         <span><i class="ti ti-pencil"></i></span>
-                        <span class="hide-menu">Create New Intake</span>
+                        <span class="hide-menu">Create New Intakes</span>
                     </a>
                 </li>
             <?php endif; ?>
@@ -340,7 +340,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'semesters.create' ? 'active' : ''); ?>" href="<?php echo e(route('semesters.create')); ?>">
                         <span><i class="ti ti-calendar"></i></span>
-                        <span class="hide-menu">Semester Creation</span>
+                        <span class="hide-menu">Create New Semesters</span>
                     </a>
                 </li>
                 <li class="sidebar-item">
@@ -387,7 +387,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link <?php echo e(request()->routeIs('payment.discount.page') ? 'active' : ''); ?>" href="<?php echo e(route('payment.discount.page')); ?>">
                         <span><i class="ti ti-discount"></i></span>
-                        <span class="hide-menu">Payment Discount</span>
+                        <span class="hide-menu">Create Discounts</span>
                     </a>
                 </li>
             <?php endif; ?>
@@ -395,7 +395,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link <?php echo e(request()->routeIs('payment.plan.index') ? 'active' : ''); ?>" href="<?php echo e(route('payment.plan.index')); ?>">
                         <span><i class="ti ti-cash"></i></span>
-                        <span class="hide-menu">Create Payment Plans</span>
+                        <span class="hide-menu">Existing Payment Plans</span>
                     </a>
                 </li>
             <?php endif; ?>
@@ -407,7 +407,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link <?php echo e(request()->routeIs('payment.plan') ? 'active' : ''); ?>" href="<?php echo e(route('payment.plan')); ?>">
                         <span><i class="ti ti-plus"></i></span>
-                        <span class="hide-menu">Payment Plan</span>
+                        <span class="hide-menu">Intake Payment Plans</span>
                     </a>
                 </li>
             <?php endif; ?>
@@ -415,7 +415,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link <?php echo e(request()->routeIs('payment.index') ? 'active' : ''); ?>" href="<?php echo e(route('payment.index')); ?>">
                         <span><i class="ti ti-credit-card"></i></span>
-                        <span class="hide-menu">Payments</span>
+                        <span class="hide-menu">Student Payment Plans</span>
                     </a>
                 </li>
             <?php endif; ?>
@@ -440,7 +440,7 @@
                     <a class="sidebar-link <?php echo e(request()->routeIs('payment.showDownloadPage') ? 'active' : ''); ?>"
                     href="<?php echo e(route('payment.showDownloadPage')); ?>">
                         <span><i class="ti ti-file-download"></i></span>
-                        <span class="hide-menu">Payment Statement</span>
+                        <span class="hide-menu">Payment Statements</span>
                     </a>
                 </li>
             <?php endif; ?>
