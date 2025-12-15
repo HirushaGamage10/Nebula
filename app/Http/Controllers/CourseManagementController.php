@@ -16,7 +16,7 @@ class CourseManagementController extends Controller
     {
         $courses = Course::with('modules')->orderBy('course_name', 'asc')->get();
         $modules = Module::orderBy('module_name', 'asc')->get();
-        return view('course_management', compact('courses', 'modules'));
+        return view('courses_&_modules.course_management', compact('courses', 'modules'));
     }
 
     public function storeCourseData(Request $request)

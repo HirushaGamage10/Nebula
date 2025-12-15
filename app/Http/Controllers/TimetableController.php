@@ -23,7 +23,7 @@ class TimetableController extends Controller
     {
         $courses = Course::all();
         $intakes = Intake::all();
-        return view('timetable', compact('courses', 'intakes'));
+        return view('courses_&_modules.timetable', compact('courses', 'intakes'));
     }
 
     public function store(Request $request)

@@ -12,7 +12,7 @@ class ModuleCreationController extends Controller
     public function create()
     {
         $modules = Module::orderBy('module_name', 'asc')->get();
-        return view('module_creation', compact('modules'));
+        return view('courses_&_modules.module_creation', compact('modules'));
     }
 
     public function store(Request $request)

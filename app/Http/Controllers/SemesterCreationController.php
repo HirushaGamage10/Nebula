@@ -14,7 +14,7 @@ class SemesterCreationController extends Controller
     {
         $semesters = Semester::with(['course', 'intake', 'modules'])->orderBy('created_at', 'desc')->get();
         $courses = Course::orderBy('course_name', 'asc')->get();
-        return view('semester_index', compact('semesters', 'courses'));
+        return view('courses_&_modules.semester_index', compact('semesters', 'courses'));
     }
 
     public function create()
@@ -22,7 +22,7 @@ class SemesterCreationController extends Controller
         $courses = Course::all();
         $intakes = Intake::all();
         $modules = Module::all();
-        return view('semester_creation', compact('courses', 'intakes', 'modules'));
+        return view('courses_&_modules.semester_creation', compact('courses', 'intakes', 'modules'));
     }
 
     public function edit(Semester $semester)
