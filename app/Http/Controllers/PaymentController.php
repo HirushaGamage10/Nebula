@@ -2401,7 +2401,7 @@ private function buildSlipDataFromPaymentDetail(\App\Models\PaymentDetail $payme
      */
     public function showDownloadPage()
     {
-        return view('payment.statement_download');
+        return view('payments.statement_download');
     }
 
     /**
