@@ -349,7 +349,7 @@
                     <h5 class="card-title mb-4">🔗 Quick Links</h5>
                     <div class="row g-3">
                         <div class="col-md-3 col-sm-6">
-                            <a href="{{ route('student.registration') }}" class="text-decoration-none">
+                            <a href="{{ route('student_management.registration') }}" class="text-decoration-none">
                                 <div class="p-3 bg-light rounded text-center">
                                     <i class="fas fa-user-plus fa-2x text-primary mb-2"></i>
                                     <div class="fw-medium">Student Registration</div>
