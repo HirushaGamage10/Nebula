@@ -264,7 +264,7 @@
         document.getElementById('spinner-overlay').style.display='flex';
         $.ajax({
             type:'POST',
-            url:'{{ route("retrieve.student.details") }}',
+            url:'{{ route("student_management.retrieve.details") }}',
             data:{ _token:'{{ csrf_token() }}', identificationType:'nic', idValue:nic },
             success:function(res){
                 document.getElementById('spinner-overlay').style.display='none';
@@ -306,7 +306,7 @@
         document.getElementById('spinner-overlay').style.display='flex';
         $.ajax({
             type:'POST',
-            url:'{{ route("store.other.informations") }}',
+            url:'{{ route("student_management.store.other.informations") }}',
             data:fd,
             processData:false,
             contentType:false,

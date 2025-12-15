@@ -54,8 +54,7 @@
                 RoleHelper::hasPermission($role, 'student.other.information') ||
                 RoleHelper::hasPermission($role, 'student.list') ||
                 RoleHelper::hasPermission($role, 'student.view') ||
-                RoleHelper::hasPermission($role, 'badges.generate') ||
-                RoleHelper::hasPermission($role, 'badges.verify') ||
+                RoleHelper::hasPermission($role, 'course.badge') ||
                 RoleHelper::hasPermission($role, 'student.profile')
                 )
                 <li class="nav-small-cap">
@@ -64,7 +63,7 @@
             @endif
             @if(RoleHelper::hasPermission($role, 'student.registration'))
                 <li class="sidebar-item">
-                    <a class="sidebar-link {{ Route::currentRouteName() == 'student.registration' ? 'active' : '' }}" href="{{ route('student.registration') }}">
+                    <a class="sidebar-link {{ Route::currentRouteName() == 'student_management.registration' ? 'active' : '' }}" href="{{ route('student_management.registration') }}">
                         <span><i class="ti ti-user"></i></span>
                         <span class="hide-menu">Student Registration</span>
                     </a>
@@ -72,7 +71,7 @@
             @endif
             @if(RoleHelper::hasPermission($role, 'student.other.information'))
                 <li class="sidebar-item">
-                    <a class="sidebar-link {{ Route::currentRouteName() == 'student.other.information' ? 'active' : '' }}" href="{{ route('student.other.information') }}">
+                    <a class="sidebar-link {{ Route::currentRouteName() == 'student_management.other.information' ? 'active' : '' }}" href="{{ route('student_management.other.information') }}">
                         <span><i class="ti ti-layout"></i></span>
                         <span class="hide-menu">Student Other Information</span>
                     </a>
@@ -80,7 +79,7 @@
             @endif
             @if(RoleHelper::hasPermission($role, 'student.list'))
                 <li class="sidebar-item">
-                    <a class="sidebar-link {{ Route::currentRouteName() == 'student.list' ? 'active' : '' }}" href="{{ route('student.list') }}">
+                    <a class="sidebar-link {{ Route::currentRouteName() == 'student_management.list' ? 'active' : '' }}" href="{{ route('student_management.list') }}">
                         <span><i class="ti ti-menu"></i></span>
                         <span class="hide-menu">Student Lists</span>
                     </a>
@@ -88,16 +87,15 @@
             @endif
             @if(RoleHelper::hasPermission($role, 'student.view'))
                 <li class="sidebar-item">
-                    <a class="sidebar-link {{ Route::currentRouteName() == 'students.view' ? 'active' : '' }}" href="{{ route('students.view') }}">
+                    <a class="sidebar-link {{ Route::currentRouteName() == 'student_management.view' ? 'active' : '' }}" href="{{ route('student_management.view') }}">
                         <span><i class="ti ti-users"></i></span>
                         <span class="hide-menu">All Students View</span>
                     </a>
                 </li>
             @endif
-            @if(RoleHelper::hasPermission($role, 'badges.generate') ||
-                RoleHelper::hasPermission($role, 'badges.verify'))
+            @if(RoleHelper::hasPermission($role, 'course.badge'))
                 <li class="sidebar-item">
-                    <a class="sidebar-link {{ Route::currentRouteName() == 'badges.generate' ? 'active' : '' }}" href="{{ route('badges.generate') }}">
+                    <a class="sidebar-link {{ Route::currentRouteName() == 'badges.index' ? 'active' : '' }}" href="{{ route('badges.index') }}">
                         <span><i class="ti ti-id-badge"></i></span>
                         <span class="hide-menu">Badges Generation</span>
                     </a>
@@ -108,10 +106,10 @@
                     @php
                         $user = auth()->user();
                         $studentProfileUrl = isset($user->student_id) && $user->student_id
-                            ? route('student.profile', ['studentId' => $user->student_id])
-                            : route('student.profile', ['studentId' => 0]);
+                            ? route('student_management.profile', ['studentId' => $user->student_id])
+                            : route('student_management.profile', ['studentId' => 0]);
                     @endphp
-                    <a class="sidebar-link {{ Route::currentRouteName() == 'student.profile' ? 'active' : '' }}" href="{{ $studentProfileUrl }}">
+                    <a class="sidebar-link {{ Route::currentRouteName() == 'student_management.profile' ? 'active' : '' }}" href="{{ $studentProfileUrl }}">
                         <span><i class="ti ti-id"></i></span>
                         <span class="hide-menu">Student Profile</span>
                     </a>

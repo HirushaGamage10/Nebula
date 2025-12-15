@@ -44,8 +44,8 @@
                         @php
                             $user = auth()->user();
                             $studentId = $user->student_id ?? 0;
-                            $url = route('student.profile', ['studentId' => $studentId]);
-                            $active = request()->routeIs('student.profile');
+                            $url = route('student_management.profile', ['studentId' => $studentId]);
+                            $active = request()->routeIs('student_management.profile');
                         @endphp
                         <a class="sidebar-link {{ $active ? 'active' : '' }}" href="{{ $url }}">
                             <span><i class="{{ $item['icon'] }}"></i></span>

@@ -22,7 +22,7 @@ return [
             'items' => [
                 ['label' => 'Student Registration', 'route' => 'student.registration', 'icon' => 'ti ti-user', 'permission' => 'student.registration'],
                 ['label' => 'Other Information', 'route' => 'student.other.information', 'icon' => 'ti ti-layout', 'permission' => 'student.other.information'],
-                ['label' => 'Student Lists', 'route' => 'student.list', 'icon' => 'ti ti-menu', 'permission' => 'student.list'],
+                ['label' => 'Student Lists', 'route' => 'student_management.list', 'icon' => 'ti ti-menu', 'permission' => 'student.list'],
                 ['label' => 'All Students View', 'route' => 'students.view', 'icon' => 'ti ti-users'],
                 ['label' => 'Badges Generation', 'route' => 'badges.generate', 'icon' => 'ti ti-id-badge', 'permission' => 'badges.generate'],
                 ['label' => 'Student Profile', 'route' => 'student.profile', 'icon' => 'ti ti-id', 'permission' => 'student.profile', 'is_profile' => true],
