@@ -14,7 +14,7 @@ class BadgeController extends Controller
 {
     public function index()
     {
-        return view('badges.generate');
+        return view('student_management.generate');
     }
 
     public function searchStudent(Request $request)
@@ -310,6 +310,6 @@ public function completeCourse(Request $request)
             abort(404, 'Invalid badge link.');
         }
 
-        return view('badges.verify', compact('badge'));
+        return view('student_management.verify', compact('badge'));
     }
 }
