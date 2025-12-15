@@ -164,6 +164,9 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // Student List
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Student Counselor,Bursar,Marketing Manager,Developer'])->group(function () {
         Route::get('/student/list', [StudentListController::class, 'showStudentList'])->name('student_management.list');
+        Route::post('/get-student-list-data', [StudentListController::class, 'getStudentListData'])->name('student.getListData');
+        Route::post('/download-student-list', [StudentListController::class, 'downloadStudentList'])->name('student.downloadList');
+        Route::post('/download-student-list-excel', [StudentListController::class, 'downloadStudentListExcel'])->name('student.downloadList.excel');
         Route::get('/student/export', [StudentListController::class, 'exportStudentList'])->name('student.export');
         Route::post('/student/filter', [StudentListController::class, 'filterStudents'])->name('student.filter');
         Route::get('/download-student-list-template', [StudentListController::class, 'downloadTemplate'])->name('download.student.list.template');
