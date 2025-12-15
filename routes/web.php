@@ -52,7 +52,13 @@ use App\Http\Controllers\{
     HostelManagerDashboardController,
     AdminL1DashboardController,
     ProgramAdminL2DashboardController,
-    ProjectTutorDashboardController
+    ProjectTutorDashboardController,
+    BursarDashboardController,
+    LibrarianDashboardController,
+    DeveloperDashboardController,
+    PaymentClearanceController,
+    RepeatStudentPaymentController,
+    AcademicDetailsController
 };
 
 /*
@@ -435,9 +441,9 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
     // Payment Clearance
     Route::middleware(['role:Bursar,Developer,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
-        Route::get('/payment-clearance', [App\Http\Controllers\PaymentClearanceController::class, 'index'])->name('payment.clearance');
-        Route::post('/payment/approve-clearance', [App\Http\Controllers\PaymentClearanceController::class, 'approveClearance'])->name('payment.approve.clearance');
-        Route::post('/payment/reject-clearance', [App\Http\Controllers\PaymentClearanceController::class, 'rejectClearance'])->name('payment.reject.clearance');
+        Route::get('/payment-clearance', [PaymentClearanceController::class, 'index'])->name('payment.clearance');
+        Route::post('/payment/approve-clearance', [PaymentClearanceController::class, 'approveClearance'])->name('payment.approve.clearance');
+        Route::post('/payment/reject-clearance', [PaymentClearanceController::class, 'rejectClearance'])->name('payment.reject.clearance');
     });
 
     // All Clearance Management
@@ -497,14 +503,14 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/api/semesters', [RepeatStudentsController::class, 'apiSemesters']);
 
         // Repeat Student Payment Routes
-        Route::get('/repeat-student-payment', [App\Http\Controllers\RepeatStudentPaymentController::class, 'index'])
+        Route::get('/repeat-student-payment', [RepeatStudentPaymentController::class, 'index'])
             ->name('repeat.payment.index');
 
-        Route::get('/api/repeat-payment-plan/{student_id}/{course_id}', [App\Http\Controllers\RepeatStudentPaymentController::class, 'getArchivedPaymentPlan']);
+        Route::get('/api/repeat-payment-plan/{student_id}/{course_id}', [RepeatStudentPaymentController::class, 'getArchivedPaymentPlan']);
 
-        Route::post('/repeat-student-payment/save', [App\Http\Controllers\RepeatStudentPaymentController::class, 'saveNewPaymentPlan']);
+        Route::post('/repeat-student-payment/save', [RepeatStudentPaymentController::class, 'saveNewPaymentPlan']);
 
-        Route::get('/api/repeat-created-plans/{student_id}/{course_id}', [App\Http\Controllers\RepeatStudentPaymentController::class, 'getCreatedPaymentPlans']);
+        Route::get('/api/repeat-created-plans/{student_id}/{course_id}', [RepeatStudentPaymentController::class, 'getCreatedPaymentPlans']);
     });
 
     // ========================================================================
