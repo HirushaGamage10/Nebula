@@ -16,7 +16,7 @@ class LateFeeApprovalController extends Controller
      */
     public function index()
     {
-        return view('late_fee.approval');
+        return view('approvals.late_fee_approval');
     }
 
     /**

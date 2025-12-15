@@ -856,7 +856,7 @@ Route::middleware(['auth', 'role:Bursar,Developer,Student Counselor,DGM,Program 
 Route::get('/courses/by-location', [App\Http\Controllers\SemesterCreationController::class, 'getCoursesByLocation'])->name('courses.byLocation');
 
 Route::middleware(['auth', 'role:DGM,Developer,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
-    Route::get('/special-approval-list', fn() => view('Special_approval_list'))->name('special.approval.list');
+    Route::get('/special-approval-list', fn() => view('approvals.Special_approval_list'))->name('special.approval.list');
 
     // NEW endpoints for the third tab
     Route::get('/semester-registration/terminated-requests', [SemesterRegistrationController::class, 'terminatedRequests']);
