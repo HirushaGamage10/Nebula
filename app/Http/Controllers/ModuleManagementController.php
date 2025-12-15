@@ -29,7 +29,7 @@ class ModuleManagementController extends Controller
        $diplomaCourses = Course::where('course_type', 'diploma')->orderBy('course_name')->get();
        $modules = Module::orderBy('module_name')->get();
 
-return view('module_management', compact('degreeCourses', 'diplomaCourses', 'modules'));
+return view('registration.module_management', compact('degreeCourses', 'diplomaCourses', 'modules'));
     }
 
     /**

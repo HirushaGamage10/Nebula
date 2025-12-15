@@ -22,7 +22,8 @@ class SemesterRegistrationController extends Controller
         $courses   = Course::all();
         $intakes   = Intake::all();
         $semesters = Semester::all();
-        return view('semester_registration', compact('courses', 'intakes', 'semesters'));
+        // Render Semester Registration UI
+        return view('registration.semester_registration', compact('courses', 'intakes', 'semesters'));
     }
 
     /**

@@ -13,7 +13,7 @@ class CourseChangeController extends Controller
 {
     public function index()
     {
-        return view('course_change.index');
+        return view('registration.course_change');
     }
 
     public function findStudent(Request $request)

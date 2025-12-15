@@ -170,7 +170,7 @@
                     </a>
                 </li>
             <?php endif; ?>
-            <?php if(RoleHelper::hasPermission($role, 'course.change.index')): ?>
+            <?php if(RoleHelper::hasPermission($role, 'course.change')): ?>
                 <li class="sidebar-item">
                     <a class="sidebar-link <?php echo e(Route::currentRouteName() == 'course.change.index' ? 'active' : ''); ?>" href="<?php echo e(route('course.change.index')); ?>">
                         <span><i class="ti ti-repeat"></i></span>
