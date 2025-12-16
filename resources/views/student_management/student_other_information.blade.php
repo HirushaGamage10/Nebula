@@ -70,6 +70,7 @@
                     <div id="studentOtherInformationForm" style="display:none;">
                         <form id="otherInformationForm" class="p-4 rounded w-100 bg-white mt-2"
                             enctype="multipart/form-data" novalidate>
+                            @csrf
 
                             {{-- Student Details --}}
                             <div class="mb-4">

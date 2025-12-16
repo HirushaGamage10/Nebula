@@ -113,7 +113,7 @@ class StudentOtherInformationController extends Controller
 
                 // Termination fields (sent only if terminating)
                 'terminateStudent'    => 'nullable|in:true,false',
-                'terminationReason'   => 'required_if:terminateStudent,true|string',
+                'terminationReason'   => 'required_if:terminateStudent,true|nullable|string',
                 'termination_document' => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
             ]);
 
@@ -170,10 +170,14 @@ class StudentOtherInformationController extends Controller
                 ? 'Data stored and student terminated successfully'
                 : 'Data stored successfully';
 
-            return response()->json(['success' => true, 'message' => $msg, 'redirect' => route('student.other.information')], Response::HTTP_OK);
+            return response()->json(['success' => true, 'message' => $msg], Response::HTTP_OK);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'message' => 'Validation error: ' . collect($e->errors())->flatten()->first()], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (QueryException $e) {
+            \Log::error('Database error in storeOtherInformations: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Database error: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         } catch (\Exception $e) {
+            \Log::error('Error in storeOtherInformations: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
             return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }

@@ -333,7 +333,16 @@
             @endif
 
             {{-- Divider (light) --}}
-            <li><hr class="my-2 border-gray-200 opacity-30"></li>
+            @if(
+                RoleHelper::hasPermission($role, 'module.creation') ||
+                RoleHelper::hasPermission($role, 'course.management') ||
+                RoleHelper::hasPermission($role, 'intake.create') ||             
+                RoleHelper::hasPermission($role, 'semesters.create') ||
+                RoleHelper::hasPermission($role, 'semester.management') ||
+                RoleHelper::hasPermission($role, 'timetable')
+                )
+                <li><hr class="my-2 border-gray-200 opacity-30"></li>
+                @endif
 
             {{-- 🔹 Semester Lifecycle --}}
             @if(RoleHelper::hasPermission($role, 'semesters.create'))
@@ -401,13 +410,25 @@
             @endif
 
             {{-- Divider (light) --}}
+            @if(
+                RoleHelper::hasPermission($role, 'payment.dashboard') ||
+                RoleHelper::hasPermission($role, 'payment.discounts') ||
+                RoleHelper::hasPermission($role, 'payment.plan') ||
+                RoleHelper::hasPermission($role, 'payment.plan.index') ||
+                RoleHelper::hasPermission($role, 'payment') ||
+                RoleHelper::hasPermission($role, 'misc.payment') ||
+                RoleHelper::hasPermission($role, 'late.payment') ||
+                RoleHelper::hasPermission($role, 'payment.discount.page') ||
+                RoleHelper::hasPermission($role, 'repeat.students.payment')                
+            )
             <li><hr class="my-2 border-gray-200 opacity-30"></li>
+            @endif
 
             @if(RoleHelper::hasPermission($role, 'payment.plan.index'))
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ request()->routeIs('payment.plan') ? 'active' : '' }}" href="{{ route('payment.plan') }}">
                         <span><i class="ti ti-plus"></i></span>
-                        <span class="hide-menu">Intake Payment Plans</span>
+                        <span class="hide-menu">Intake Payment Plan</span>
                     </a>
                 </li>
             @endif
@@ -415,7 +436,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ request()->routeIs('payment.index') ? 'active' : '' }}" href="{{ route('payment.index') }}">
                         <span><i class="ti ti-credit-card"></i></span>
-                        <span class="hide-menu">Student Payment Plans</span>
+                        <span class="hide-menu">Student Payment Plan</span>
                     </a>
                 </li>
             @endif

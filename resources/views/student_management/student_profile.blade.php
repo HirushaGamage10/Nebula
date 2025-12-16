@@ -1847,7 +1847,7 @@ $(function(){
       submitBtn.disabled = true;
       submitBtn.textContent = 'Uploading...';
       
-      fetch(`/student/update-profile-picture/${studentId}`, {
+      fetch(`/student/profile/update-photo/${studentId}`, {
         method: 'POST',
         headers: {
           'X-CSRF-TOKEN': csrf,
