@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'Course Change - Switch Intake')
 
-@section('content')
+<?php $__env->startSection('title', 'Course Change - Switch Intake'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container mt-5 mb-5">
     <div class="card shadow border-0">
         <div class="card-body">
@@ -100,11 +100,11 @@ let searchedNIC = null; // Store the searched NIC
 
 // ========================= SEARCH STUDENT =========================
 async function searchStudent(nic) {
-    const res = await fetch("{{ route('course.change.find.student') }}", {
+    const res = await fetch("<?php echo e(route('course.change.find.student')); ?>", {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({ nic: nic })
     });
@@ -182,7 +182,7 @@ function loadCourseOptions(regId, courseId, location, intakeId) {
     selectedRegistration = regId;
     currentIntakeId = intakeId;
 
-    fetch("{{ route('course.change.courses') }}")
+    fetch("<?php echo e(route('course.change.courses')); ?>")
     .then(res => res.json())
     .then(data => {
 
@@ -237,11 +237,11 @@ document.getElementById('course_select').addEventListener('change', function () 
 
     if (!courseId) return;
 
-    fetch("{{ route('course.change.new.intakes') }}", {
+    fetch("<?php echo e(route('course.change.new.intakes')); ?>", {
         method: 'POST',
         headers: {
             'Content-Type':'application/json',
-            'X-CSRF-TOKEN':'{{ csrf_token() }}'
+            'X-CSRF-TOKEN':'<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({ course_id: courseId })
     })
@@ -272,11 +272,11 @@ document.getElementById('new_intake').addEventListener('change', function () {
     let intakeId = this.value;
     if (!intakeId) return;
 
-    fetch("{{ route('course.change.generateId') }}", {
+    fetch("<?php echo e(route('course.change.generateId')); ?>", {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
         },
         body: JSON.stringify({ intake_id: intakeId })
     })
@@ -312,11 +312,11 @@ async function submitChange() {
     loaderEl.style.display = 'block';
 
     try {
-        const res = await fetch("{{ route('course.change.submit') }}", {
+        const res = await fetch("<?php echo e(route('course.change.submit')); ?>", {
             method:'POST',
             headers:{
                 'Content-Type':'application/json',
-                'X-CSRF-TOKEN':'{{ csrf_token() }}'
+                'X-CSRF-TOKEN':'<?php echo e(csrf_token()); ?>'
             },
             body: JSON.stringify({
                 registration_id: selectedRegistration,
@@ -365,4 +365,5 @@ async function submitChange() {
 }
 </script>
 
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/registration/course_change.blade.php ENDPATH**/ ?>

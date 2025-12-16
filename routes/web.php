@@ -236,12 +236,12 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // COURSE CHANGE
     // ========================================================================
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Developer,Marketing Manager,Student Counselor'])->group(function () {
-        Route::get('/course-change', [CourseChangeController::class, 'index'])->name('course.change.index');
-        Route::post('/course-change/find-student', [CourseChangeController::class, 'findStudent'])->name('course.change.find.student');
-        Route::get('/course-change/courses', [CourseChangeController::class, 'getCourses'])->name('course.change.courses');
-        Route::post('/course-change/new-intakes', [CourseChangeController::class, 'getNewIntakes'])->name('course.change.new.intakes');
-        Route::post('/course-change/generate-id', [CourseChangeController::class, 'generateNewCourseRegId'])->name('course.change.generate.id');
-        Route::post('/course-change/submit', [CourseChangeController::class, 'submitChange'])->name('course.change.submit');
+        Route::get('/registration/course-change', [CourseChangeController::class, 'index'])->name('course.change.index');
+        Route::post('/registration/course-change/find-student', [CourseChangeController::class, 'findStudent'])->name('course.change.find.student');
+        Route::get('/registration/course-change/courses', [CourseChangeController::class, 'getCourses'])->name('course.change.courses');
+        Route::post('/registration/course-change/new-intakes', [CourseChangeController::class, 'getNewIntakes'])->name('course.change.new.intakes');
+        Route::post('/registration/course-change/generate-id', [CourseChangeController::class, 'generateNewCourseRegId'])->name('course.change.generateId');
+        Route::post('/registration/course-change/submit', [CourseChangeController::class, 'submitChange'])->name('course.change.submit');
     });
 
     // ========================================================================
