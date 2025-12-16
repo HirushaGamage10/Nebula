@@ -36,20 +36,19 @@ class DashboardController extends Controller
         // Get available features for this role
         $availableFeatures = $this->getAvailableFeatures($userRole);
         
-        // Map roles to dashboard views with redirects
-        $roleViews = [
-            'DGM' => 'dgmdashboard',
-            'Program Administrator (level 01)' => 'adminl1.dashboard',
-            'Program Administrator (level 02)' => 'dashboards.program_admin_l2',
-            'Student Counselor' => 'student_counselor_dashboard',
-            'Marketing Manager' => 'marketing_manager_dashboard',
-            'Librarian' => 'dashboard',
-            'Hostel Manager' => 'dashboards.hostel_manager',
-        ];
+        // Redirect to role-specific dashboard routes
+        if ($userRole === 'DGM') {
+            return redirect()->route('dgmdashboard');
+        }
 
-        $viewName = $roleViews[$userRole] ?? 'dashboard_default';
+        if ($userRole === 'Program Administrator (level 01)') {
+            return redirect()->route('admin.l1.dashboard');
+        }
 
-        // For specific roles, redirect to their dedicated dashboard routes
+        if ($userRole === 'Program Administrator (level 02)') {
+            return redirect()->route('program.admin.l2.dashboard');
+        }
+
         if ($userRole === 'Student Counselor') {
             return redirect()->route('student.counselor.dashboard');
         }
@@ -57,22 +56,29 @@ class DashboardController extends Controller
         if ($userRole === 'Project Tutor') {
             return redirect()->route('project.tutor.dashboard');
         }
+
         if ($userRole === 'Bursar') {
             return redirect()->route('bursar.dashboard');
         }
-        if($userRole === 'Librarian'){
+
+        if ($userRole === 'Librarian') {
             return redirect()->route('librarian.dashboard');
         }
+
         if ($userRole === 'Marketing Manager') {
             return redirect()->route('marketing.manager.dashboard');
+        }
+
+        if ($userRole === 'Hostel Manager') {
+            return redirect()->route('hostel.manager.dashboard');
         }
 
         if ($userRole === 'Developer') {
             return redirect()->route('developer.dashboard');
         }
         
-
-        return view($viewName, compact('user', 'welcomeMessage', 'permissions', 'availableFeatures'));
+        // Default fallback
+        return view('dashboard', compact('user', 'welcomeMessage', 'permissions', 'availableFeatures'));
     }
     
     private function getWelcomeMessage($role)

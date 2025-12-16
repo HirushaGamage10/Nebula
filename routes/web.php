@@ -177,9 +177,11 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     });
 
     // Student View (All Students)
-    Route::get('/students/view', [StudentViewController::class, 'index'])->name('student_management.view');
-    Route::post('/students/filter', [StudentViewController::class, 'filter'])->name('student_management.filter');
-    Route::get('/students/courses', [StudentViewController::class, 'getStudentCourses'])->name('student_management.courses');
+    Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Student Counselor,Bursar,Marketing Manager,Developer'])->group(function () {
+        Route::get('/students/view', [StudentViewController::class, 'index'])->name('student_management.view');
+        Route::post('/students/filter', [StudentViewController::class, 'filter'])->name('student_management.filter');
+        Route::get('/students/courses', [StudentViewController::class, 'getStudentCourses'])->name('student_management.courses');
+    });
 
     // Student Profile
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Student Counselor,Bursar,Marketing Manager,Developer'])->group(function () {
@@ -852,9 +854,6 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/semester-registration/terminated-requests', [SemesterRegistrationController::class, 'terminatedRequests']);
         Route::post('/semester-registration/approve-reregister', [SemesterRegistrationController::class, 'approveReRegister'])->name('semester.registration.approveReRegister');
         Route::post('/semester-registration/reject-reregister', [SemesterRegistrationController::class, 'rejectReRegister'])->name('semester.registration.rejectReRegister');
-        Route::get('/students/view', [StudentViewController::class, 'index'])->name('student_management.view');
-        Route::post('/students/filter', [StudentViewController::class, 'filter'])->name('student_management.filter');
-        Route::get('/students/courses', [StudentViewController::class, 'getStudentCourses'])->name('student_management.courses');
     });
 
     // Admin L2 Dashboard
