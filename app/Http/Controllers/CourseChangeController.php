@@ -566,6 +566,12 @@ public function checkPaymentStatus(Request $request)
                 $result['has_payments'] = true;
             }
 
+            $remarksPrefix = $paymentDetail->remarks ? rtrim($paymentDetail->remarks) . ' | ' : '';
+            $paidNote = 'Cancelled due to course change on ' . now()->format('Y-m-d H:i:s');
+            if ($paidAmount > 0) {
+                $paidNote .= ' | Paid amount: LKR ' . number_format($paidAmount, 2);
+            }
+
             // Update payment detail to cancelled
             $paymentDetail->update([
                 'amount' => 0,
@@ -575,7 +581,7 @@ public function checkPaymentStatus(Request $request)
                 'approved_late_fee' => 0,
                 'partial_payments' => [],
                 'status' => 'cancelled',
-                'remarks' => 'Cancelled due to course change on ' . now()->format('Y-m-d H:i:s'),
+                'remarks' => $remarksPrefix . $paidNote,
                 'updated_at' => now()
             ]);
 

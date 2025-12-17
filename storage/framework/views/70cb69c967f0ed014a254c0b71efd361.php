@@ -227,6 +227,27 @@
     </div>
 </div>
 
+<!-- Payment Plan Panel -->
+<div id="paymentPlanPanel" class="container mt-4 d-none">
+    <div class="card border-success shadow-sm">
+        <div class="card-header bg-success text-white">
+            <h6 class="mb-0">
+                <i class="ti ti-credit-card me-2"></i> Payment Summary & Student Payment Plans
+            </h6>
+        </div>
+        <div class="card-body">
+            <p class="mb-3">
+                <strong>Last paid amount:</strong>
+                <span id="lastPaidAmount" class="text-primary">LKR 0.00</span>
+            </p>
+            <iframe id="paymentPlanFrame"
+                    title="Student Payment Plans"
+                    style="width: 100%; height: 650px; border: 1px solid #dee2e6; border-radius: 6px;"
+                    loading="lazy"></iframe>
+        </div>
+    </div>
+</div>
+
 <!-- Toast Container -->
 <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1090">
     <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert">
@@ -304,6 +325,21 @@ function showToast(message, type = 'success') {
     
     const toast = bootstrap.Toast.getOrCreateInstance(toastEl);
     toast.show();
+}
+
+function showPaymentPlanPanel(totalPaidAmount) {
+    const panel = document.getElementById('paymentPlanPanel');
+    const amountEl = document.getElementById('lastPaidAmount');
+    const frame = document.getElementById('paymentPlanFrame');
+
+    const amount = Number(totalPaidAmount || 0);
+    amountEl.textContent = `LKR ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    if (!frame.src) {
+        frame.src = "<?php echo e(route('payment.index')); ?>";
+    }
+
+    panel.classList.remove('d-none');
 }
 
 // Clear errors
@@ -807,6 +843,8 @@ async function submitChange() {
             
             // Show success toast
             showToast(data.message || 'Course changed successfully');
+
+            showPaymentPlanPanel(data.payment_summary?.total_paid_amount || 0);
             
             // Show payment summary if applicable
             if (data.payment_summary && data.payment_summary.has_payments) {
