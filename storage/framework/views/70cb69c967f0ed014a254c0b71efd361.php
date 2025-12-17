@@ -50,9 +50,14 @@
                         <h5 class="mb-0">
                             <i class="ti ti-user"></i> Student Details
                         </h5>
-                        <button type="button" class="btn btn-light btn-sm" onclick="showCancelledPayments()" id="remarksBtn" disabled>
-                            <i class="ti ti-notes me-1"></i> Remarks
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-light btn-sm" onclick="showChangeLogs()" id="logsBtn" disabled>
+                                <i class="ti ti-list-details me-1"></i> View Logs
+                            </button>
+                            <button type="button" class="btn btn-light btn-sm" onclick="showCancelledPayments()" id="remarksBtn" disabled>
+                                <i class="ti ti-notes me-1"></i> Remarks
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="row">
@@ -255,6 +260,35 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Course Change Logs Modal -->
+            <div class="modal fade" id="courseChangeLogsModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title">
+                                <i class="ti ti-list-details me-2"></i> Course Change History
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="courseChangeLogsContent">
+                                <div class="text-center py-3">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Loading course change history...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="ti ti-x me-2"></i> Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -424,18 +458,17 @@ async function showCancelledPayments() {
 
         let rowsHtml = '';
         data.payments.forEach(payment => {
-            const totalFee = Number(payment.total_fee ?? payment.amount ?? 0);
-            const remaining = Number(payment.remaining_amount ?? 0);
-            const totalFeeText = totalFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            const remainingText = remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
+            const isCancelled = isCancelledByRemarks(payment.remarks || '');
             rowsHtml += `
                 <tr>
                     <td>${payment.course_registration_id ?? '-'}</td>
-                    <td>${totalFeeText}</td>
-                    <td>${remainingText}</td>
                     <td>${payment.remarks ?? '-'}</td>
                     <td>${payment.updated_at ?? '-'}</td>
+                    <td class="text-center">
+                        <input type="checkbox"
+                               ${isCancelled ? 'checked' : ''}
+                               onchange="toggleCancelledPaymentStatus(${payment.id}, this.checked)">
+                    </td>
                 </tr>
             `;
         });
@@ -446,10 +479,9 @@ async function showCancelledPayments() {
                     <thead class="table-light">
                         <tr>
                             <th>Registration ID</th>
-                            <th>Total Fee</th>
-                            <th>Remaining</th>
                             <th>Remarks</th>
                             <th>Updated</th>
+                            <th>Cancel</th>
                         </tr>
                     </thead>
                     <tbody>${rowsHtml}</tbody>
@@ -463,6 +495,167 @@ async function showCancelledPayments() {
                 Failed to load cancelled payments: ${error.message}
             </div>
         `;
+    }
+}
+
+async function showChangeLogs() {
+    if (!studentId) {
+        showAlert('Please search a student first', 'warning');
+        return;
+    }
+
+    const content = document.getElementById('courseChangeLogsContent');
+    content.innerHTML = `
+        <div class="text-center py-3">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading course change history...</p>
+        </div>
+    `;
+
+    const modal = new bootstrap.Modal(document.getElementById('courseChangeLogsModal'));
+    modal.show();
+
+    try {
+        const response = await fetch(`<?php echo e(url('registration/course-change/change-history')); ?>/${studentId}`);
+        const data = await response.json();
+
+        if (data.status !== 'success') {
+            throw new Error(data.message || 'Failed to load history');
+        }
+
+        let logsHtml = '';
+        if (data.logs && data.logs.length > 0) {
+            data.logs.forEach(log => {
+                logsHtml += `
+                    <tr>
+                        <td>${log.changed_at ?? '-'}</td>
+                        <td>${log.old_course_id ?? '-'}</td>
+                        <td>${log.new_course_id ?? '-'}</td>
+                        <td>${log.old_intake_id ?? '-'}</td>
+                        <td>${log.new_intake_id ?? '-'}</td>
+                        <td>${log.total_paid_amount ?? '-'}</td>
+                        <td>${log.changed_by_name ?? '-'}</td>
+                        <td>${log.remarks ?? '-'}</td>
+                    </tr>
+                `;
+            });
+        } else {
+            logsHtml = `
+                <tr>
+                    <td colspan="8" class="text-center text-muted">No course change logs found.</td>
+                </tr>
+            `;
+        }
+
+        let paymentsHtml = '';
+        if (data.payments && data.payments.length > 0) {
+            data.payments.forEach(payment => {
+                paymentsHtml += `
+                    <tr>
+                        <td>${payment.created_at ?? '-'}</td>
+                        <td>${payment.old_course_id ?? '-'}</td>
+                        <td>${payment.old_intake_id ?? '-'}</td>
+                        <td>${payment.old_payment_plan_id ?? '-'}</td>
+                        <td>${payment.total_paid_amount ?? '-'}</td>
+                        <td>${payment.remarks ?? '-'}</td>
+                    </tr>
+                `;
+            });
+        } else {
+            paymentsHtml = `
+                <tr>
+                    <td colspan="6" class="text-center text-muted">No course change payments found.</td>
+                </tr>
+            `;
+        }
+
+        content.innerHTML = `
+            <div class="mb-4">
+                <h6 class="text-primary">Course Change Logs</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Changed At</th>
+                                <th>Old Course</th>
+                                <th>New Course</th>
+                                <th>Old Intake</th>
+                                <th>New Intake</th>
+                                <th>Total Paid</th>
+                                <th>Changed By</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>${logsHtml}</tbody>
+                    </table>
+                </div>
+            </div>
+            <div>
+                <h6 class="text-primary">Course Change Payments</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Created At</th>
+                                <th>Old Course</th>
+                                <th>Old Intake</th>
+                                <th>Old Plan</th>
+                                <th>Total Paid</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>${paymentsHtml}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Course change history error:', error);
+        content.innerHTML = `
+            <div class="alert alert-danger">
+                Failed to load course change history: ${error.message}
+            </div>
+        `;
+    }
+}
+
+function isCancelledByRemarks(remarks) {
+    const text = remarks || '';
+    const lastUpdated = text.lastIndexOf('Payment Updated');
+    const lastPending = text.lastIndexOf('Pending the Payment Update');
+
+    if (lastUpdated === -1 && lastPending === -1) {
+        return true;
+    }
+
+    return lastUpdated > lastPending;
+}
+
+async function toggleCancelledPaymentStatus(paymentId, isChecked) {
+    try {
+        const response = await fetch(`<?php echo e(url('registration/course-change/cancelled-payments')); ?>/${paymentId}/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '<?php echo e(csrf_token()); ?>'
+            },
+            body: JSON.stringify({
+                status: isChecked ? 'cancelled' : 'pending'
+            })
+        });
+
+        const data = await response.json();
+        if (data.status !== 'success') {
+            throw new Error(data.message || 'Failed to update payment');
+        }
+
+        await showCancelledPayments();
+    } catch (error) {
+        console.error('Update payment status error:', error);
+        showAlert('Failed to update payment status: ' + error.message, 'danger');
+        await showCancelledPayments();
     }
 }
 
@@ -524,6 +717,7 @@ async function searchStudent(nic) {
             searchedNIC = nic;
             studentId = data.student.student_id;
             document.getElementById('remarksBtn').disabled = false;
+            document.getElementById('logsBtn').disabled = false;
             
             // Show student section
             document.getElementById('student-section').classList.remove('d-none');
@@ -583,6 +777,7 @@ async function searchStudent(nic) {
         } else {
             showAlert(data.message || 'Student not found', 'danger');
             document.getElementById('remarksBtn').disabled = true;
+            document.getElementById('logsBtn').disabled = true;
         }
         
     } catch (error) {

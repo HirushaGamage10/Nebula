@@ -831,7 +831,7 @@ public function checkPaymentStatus(Request $request)
             $payments = PaymentDetail::where('student_id', $studentId)
                 ->where('status', 'cancelled')
                 ->orderBy('updated_at', 'desc')
-                ->get(['id', 'course_registration_id', 'amount', 'total_fee', 'remaining_amount', 'remarks', 'updated_at']);
+                ->get(['id', 'course_registration_id', 'remarks', 'status', 'updated_at']);
 
             return response()->json([
                 'status' => 'success',
@@ -842,6 +842,81 @@ public function checkPaymentStatus(Request $request)
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to get cancelled payments'
+            ], 500);
+        }
+    }
+
+    public function updateCancelledPaymentStatus(Request $request, $paymentDetailId)
+    {
+        try {
+            $request->validate([
+                'status' => 'required|in:cancelled,pending'
+            ]);
+
+            $payment = PaymentDetail::find($paymentDetailId);
+            if (!$payment) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Payment record not found'
+                ], 404);
+            }
+
+            $today = now()->toDateString();
+            $statusNote = $request->status === 'cancelled'
+                ? "Payment Updated {$today}"
+                : "Pending the Payment Update";
+
+            $remarksBase = $payment->remarks ?? '';
+            $remarksBase = preg_replace(
+                '/\s*\|\s*(Payment Updated\s\d{4}-\d{2}-\d{2}|Pending the Payment Update)\s*$/',
+                '',
+                trim($remarksBase)
+            );
+            $remarksBase = trim($remarksBase, " \t\n\r\0\x0B|");
+            $remarksBase = $remarksBase === '' ? '' : $remarksBase;
+            $note = $remarksBase === '' ? $statusNote : $remarksBase . ' | ' . $statusNote;
+
+            $payment->update([
+                'remarks' => $note,
+                'updated_at' => now()
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Payment updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error updating cancelled payment status: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update payment'
+            ], 500);
+        }
+    }
+
+    public function getCourseChangeHistory($studentId)
+    {
+        try {
+            $logs = DB::table('course_change_logs')
+                ->where('student_id', $studentId)
+                ->orderBy('changed_at', 'desc')
+                ->get();
+
+            $payments = DB::table('course_change_payments')
+                ->where('student_id', $studentId)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'status' => 'success',
+                'logs' => $logs,
+                'payments' => $payments
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting course change history: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to load course change history'
             ], 500);
         }
     }
