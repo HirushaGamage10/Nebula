@@ -46,10 +46,13 @@
             <!-- Student Details Section -->
             <div id="student-section" class="d-none">
                 <div class="card mb-4 border-info">
-                    <div class="card-header bg-info text-white">
+                    <div class="card-header bg-info text-white d-flex align-items-center justify-content-between">
                         <h5 class="mb-0">
                             <i class="ti ti-user"></i> Student Details
                         </h5>
+                        <button type="button" class="btn btn-light btn-sm" onclick="showCancelledPayments()" id="remarksBtn" disabled>
+                            <i class="ti ti-notes me-1"></i> Remarks
+                        </button>
                     </div>
                     <div class="card-body">
                         <div class="row">
@@ -223,6 +226,35 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Cancelled Payments Remarks Modal -->
+            <div class="modal fade" id="cancelledPaymentsModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-secondary text-white">
+                            <h5 class="modal-title">
+                                <i class="ti ti-notes me-2"></i> Cancelled Payments Remarks
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="cancelledPaymentsContent">
+                                <div class="text-center py-3">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Loading cancelled payments...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="ti ti-x me-2"></i> Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -230,10 +262,13 @@
 <!-- Payment Plan Panel -->
 <div id="paymentPlanPanel" class="container mt-4 d-none">
     <div class="card border-success shadow-sm">
-        <div class="card-header bg-success text-white">
+        <div class="card-header bg-success text-white d-flex align-items-center justify-content-between">
             <h6 class="mb-0">
                 <i class="ti ti-credit-card me-2"></i> Payment Summary & Student Payment Plans
             </h6>
+            <button type="button" class="btn btn-light btn-sm" onclick="refreshPaymentPlanFrame()">
+                <i class="ti ti-refresh me-1"></i> Refresh
+            </button>
         </div>
         <div class="card-body">
             <p class="mb-3">
@@ -342,6 +377,95 @@ function showPaymentPlanPanel(totalPaidAmount) {
     panel.classList.remove('d-none');
 }
 
+function refreshPaymentPlanFrame() {
+    const frame = document.getElementById('paymentPlanFrame');
+    if (frame.src) {
+        frame.src = frame.src;
+    } else {
+        frame.src = "<?php echo e(route('payment.index')); ?>";
+    }
+}
+
+async function showCancelledPayments() {
+    if (!studentId) {
+        showAlert('Please search a student first', 'warning');
+        return;
+    }
+
+    const content = document.getElementById('cancelledPaymentsContent');
+    content.innerHTML = `
+        <div class="text-center py-3">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading cancelled payments...</p>
+        </div>
+    `;
+
+    const modal = new bootstrap.Modal(document.getElementById('cancelledPaymentsModal'));
+    modal.show();
+
+    try {
+        const response = await fetch(`<?php echo e(url('registration/course-change/cancelled-payments')); ?>/${studentId}`);
+        const data = await response.json();
+
+        if (data.status !== 'success') {
+            throw new Error(data.message || 'Failed to load cancelled payments');
+        }
+
+        if (!data.payments || data.payments.length === 0) {
+            content.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="ti ti-info-circle me-2"></i>No cancelled payments found.
+                </div>
+            `;
+            return;
+        }
+
+        let rowsHtml = '';
+        data.payments.forEach(payment => {
+            const totalFee = Number(payment.total_fee ?? payment.amount ?? 0);
+            const remaining = Number(payment.remaining_amount ?? 0);
+            const totalFeeText = totalFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const remainingText = remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            rowsHtml += `
+                <tr>
+                    <td>${payment.course_registration_id ?? '-'}</td>
+                    <td>${totalFeeText}</td>
+                    <td>${remainingText}</td>
+                    <td>${payment.remarks ?? '-'}</td>
+                    <td>${payment.updated_at ?? '-'}</td>
+                </tr>
+            `;
+        });
+
+        content.innerHTML = `
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Registration ID</th>
+                            <th>Total Fee</th>
+                            <th>Remaining</th>
+                            <th>Remarks</th>
+                            <th>Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Cancelled payments error:', error);
+        content.innerHTML = `
+            <div class="alert alert-danger">
+                Failed to load cancelled payments: ${error.message}
+            </div>
+        `;
+    }
+}
+
 // Clear errors
 function clearErrors() {
     ['courseError', 'intakeError', 'idError'].forEach(id => {
@@ -399,6 +523,7 @@ async function searchStudent(nic) {
         if (data.status === 'success') {
             searchedNIC = nic;
             studentId = data.student.student_id;
+            document.getElementById('remarksBtn').disabled = false;
             
             // Show student section
             document.getElementById('student-section').classList.remove('d-none');
@@ -457,6 +582,7 @@ async function searchStudent(nic) {
             
         } else {
             showAlert(data.message || 'Student not found', 'danger');
+            document.getElementById('remarksBtn').disabled = true;
         }
         
     } catch (error) {
