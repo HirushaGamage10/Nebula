@@ -6,317 +6,791 @@
 <div class="container mt-5 mb-5">
     <div class="card shadow border-0">
         <div class="card-body">
+            <h3 class="text-primary mb-4">
+                <i class="ti ti-refresh"></i> Course Change (Switch Intake)
+            </h3>
 
-            <h3 class="text-primary mb-4">Course Change (Switch Intake)</h3>
+            <!-- Alert Messages -->
+            <div id="alert-container"></div>
 
             <!-- Search Student -->
-            <form id="searchForm" class="mb-4">
-                <div class="input-group">
-                    <input type="text" class="form-control" id="nic" placeholder="Enter Student NIC">
-                    <button class="btn btn-primary" type="submit">Search</button>
+            <div class="card mb-4 border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="ti ti-search"></i> Search Student
+                    </h5>
                 </div>
-            </form>
+                <div class="card-body">
+                    <form id="searchForm" class="mb-0">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-8">
+                                <label for="nic" class="form-label">Enter Student NIC</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="ti ti-id"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="nic" 
+                                           placeholder="Enter Student NIC" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-primary w-100" type="submit" id="searchBtn">
+                                    <i class="ti ti-search me-2"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
 
             <!-- Student Details Section -->
-            <div id="student-section" style="display:none;">
-
-                <div class="mb-4">
-                    <h5 class="text-info">Student Details</h5>
-                    <p><strong>Name:</strong> <span id="s_name"></span></p>
-                    <p><strong>ID:</strong> <span id="s_id"></span></p>
-                </div>
-
-                <h5 class="text-secondary">Current Course Registrations</h5>
-
-                <!-- Loading Spinner -->
-                <div id="table-loader" style="display:none;" class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
+            <div id="student-section" class="d-none">
+                <div class="card mb-4 border-info">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="ti ti-user"></i> Student Details
+                        </h5>
                     </div>
-                    <p class="mt-2 text-muted">Refreshing course registrations...</p>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <p><strong>Name:</strong> <span id="s_name" class="text-primary"></span></p>
+                            </div>
+                            <div class="col-md-4">
+                                <p><strong>Student ID:</strong> <span id="s_id" class="text-primary"></span></p>
+                            </div>
+                            <div class="col-md-4">
+                                <p><strong>NIC:</strong> <span id="s_nic" class="text-primary"></span></p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <table class="table table-bordered align-middle" id="reg_table">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Course</th>
-                            <th>Intake</th>
-                            <th>Start Date</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <div class="card border-secondary">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">
+                            <i class="ti ti-book"></i> Current Course Registrations
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <!-- Loading Spinner -->
+                        <div id="table-loader" class="d-none text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Refreshing course registrations...</p>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" id="reg_table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Course</th>
+                                        <th>Intake/Batch</th>
+                                        <th>Start Date</th>
+                                        <th>Status</th>
+                                        <th>Payment Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Rows will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Course + Intake Selection -->
-            <div id="intake-section" style="display:none;" class="mt-4">
-                <h5 class="text-info">Change Course and Intake</h5>
+            <!-- Course + Intake Selection Modal -->
+            <div class="modal fade" id="changeCourseModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-warning text-dark">
+                            <h5 class="modal-title">
+                                <i class="ti ti-refresh me-2"></i> Change Course & Intake
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <!-- Payment Warning -->
+                            <div id="paymentWarning" class="alert alert-warning d-none">
+                                <i class="ti ti-alert-triangle me-2"></i>
+                                <strong>Payment Records Found!</strong>
+                                <span id="paymentWarningText"></span>
+                            </div>
 
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Select Course</label>
-                        <select id="course_select" class="form-select">
-                            <option value="">Select Course</option>
-                        </select>
-                    </div>
+                            <!-- Year Warning -->
+                            <div id="yearWarning" class="alert alert-danger d-none">
+                                <i class="ti ti-alert-octagon me-2"></i>
+                                <strong>Course Change Not Allowed!</strong>
+                                <span id="yearWarningText"></span>
+                            </div>
 
-                    <div class="col-md-6">
-                        <label class="form-label">Select New Intake</label>
-                        <select id="new_intake" class="form-select">
-                            <option value="">Select Intake</option>
-                        </select>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Select New Course</label>
+                                    <select id="course_select" class="form-select" disabled>
+                                        <option value="">Select Course</option>
+                                    </select>
+                                    <div class="form-text" id="courseError" style="color: red; display: none;"></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Select New Intake</label>
+                                    <select id="new_intake" class="form-select" disabled>
+                                        <option value="">Select course first</option>
+                                    </select>
+                                    <div class="form-text" id="intakeError" style="color: red; display: none;"></div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <div class="card border-primary">
+                                    <div class="card-header bg-primary text-white py-2">
+                                        <small>New Course Registration ID</small>
+                                    </div>
+                                    <div class="card-body p-3">
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="ti ti-id-badge"></i>
+                                            </span>
+                                            <input type="text" id="generated_id" class="form-control" readonly placeholder="Select intake to generate">
+                                            <button class="btn btn-outline-secondary" type="button" 
+                                                    onclick="generateNewId()" id="generateBtn" disabled>
+                                                <i class="ti ti-refresh"></i> Generate
+                                            </button>
+                                        </div>
+                                        <div class="form-text" id="idError" style="color: red; display: none;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-3">
+                                <div class="alert alert-info">
+                                    <i class="ti ti-info-circle me-2"></i>
+                                    <small>
+                                        <strong>Note:</strong> All payment records for the old course will be:
+                                        <ul class="mb-0 mt-1">
+                                            <li>Amounts set to zero</li>
+                                            <li>Payment status changed to "cancelled"</li>
+                                            <li>Payment installments marked as "archived"</li>
+                                            <li>Payment plan marked as "cancelled"</li>
+                                        </ul>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="ti ti-x me-2"></i> Cancel
+                            </button>
+                            <button type="button" class="btn btn-success" onclick="submitChange()" id="submitBtn" disabled>
+                                <i class="ti ti-check me-2"></i> Confirm Change
+                            </button>
+                        </div>
                     </div>
                 </div>
-
-                <div class="mt-3">
-                    <label class="form-label text-primary">New Course Registration ID</label>
-                    <input type="text" id="generated_id" class="form-control" readonly placeholder="Will auto generate">
-                </div>
-
-                <button class="btn btn-success mt-3" onclick="submitChange()">Confirm Change</button>
             </div>
 
+            <!-- Payment Summary Modal -->
+            <div class="modal fade" id="paymentSummaryModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title">
+                                <i class="ti ti-credit-card me-2"></i> Payment Summary
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="paymentSummaryContent">
+                                <div class="text-center py-3">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Loading payment information...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="ti ti-x me-2"></i> Close
+                            </button>
+                            <a href="{{ route('payment.index') }}" class="btn btn-primary" target="_blank">
+                                <i class="ti ti-credit-card me-2"></i> Student Payment Plans
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 <!-- Toast Container -->
-<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 11">
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1090">
     <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert">
         <div class="d-flex">
             <div class="toast-body">
-                Course change completed successfully!
+                <i class="ti ti-check me-2"></i>
+                <span id="successMessage">Course change completed successfully!</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+    <div id="errorToast" class="toast align-items-center text-white bg-danger border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="ti ti-alert-triangle me-2"></i>
+                <span id="errorMessage"></span>
             </div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
     </div>
 </div>
+@endsection
 
+@section('scripts')
 <script>
+// Global variables
 let selectedRegistration = null;
 let currentIntakeId = null;
-let searchedNIC = null; // Store the searched NIC
+let currentCourseId = null;
+let courseStartDate = null;
+let searchedNIC = null;
+let studentId = null;
+let paymentInfo = null;
 
-// ========================= SEARCH STUDENT =========================
-async function searchStudent(nic) {
-    const res = await fetch("{{ route('course.change.find.student') }}", {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({ nic: nic })
-    });
-
-    const data = await res.json();
-
-    if (data.status === 'success') {
-        document.getElementById('student-section').style.display = 'block';
-
-        document.getElementById('s_name').innerText = data.student.full_name;
-        document.getElementById('s_id').innerText = data.student.student_id;
-
-        const tbody = document.querySelector('#reg_table tbody');
-        tbody.innerHTML = '';
-
-        data.registrations.forEach(r => {
-
-    let actionColumn = r.is_future
-        ? `<button class="btn btn-warning btn-sm"
-                onclick="loadCourseOptions(${r.id}, ${r.course_id}, '${r.location}', ${r.intake_id})">
-                Change
-           </button>`
-        : `<span class="text-muted">Restricted</span>`;
-
-    tbody.innerHTML += `
-        <tr>
-            <td>${r.course.course_name} (${r.course.location})</td>
-            <td>${r.intake.batch}</td>
-            <td>${r.course_start_date}</td>
-            <td>${actionColumn}</td>
-        </tr>
+// Show alert message
+function showAlert(message, type = 'info', duration = 5000) {
+    const alertContainer = document.getElementById('alert-container');
+    const alertId = 'alert-' + Date.now();
+    
+    const alertHTML = `
+        <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+            <i class="ti ti-${type === 'success' ? 'check' : type === 'warning' ? 'alert-triangle' : type === 'danger' ? 'alert-circle' : 'info-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     `;
-});
-
-        // Hide intake section when showing new results
-        document.getElementById('intake-section').style.display = 'none';
-
-        // Hide loader and show table
-        document.getElementById('table-loader').style.display = 'none';
-        document.getElementById('reg_table').style.visibility = 'visible';
-
-    } else {
-        alert(data.message || 'Student not found');
-        document.getElementById('table-loader').style.display = 'none';
+    
+    alertContainer.innerHTML = alertHTML;
+    
+    // Auto remove after duration
+    if (duration > 0) {
+        setTimeout(() => {
+            const alert = document.getElementById(alertId);
+            if (alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }
+        }, duration);
     }
 }
 
-document.getElementById('searchForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    let nic = document.getElementById('nic').value.trim();
-    if (!nic) return alert('Enter NIC');
+// Show toast message
+function showToast(message, type = 'success') {
+    let toastEl;
+    
+    if (type === 'success') {
+        toastEl = document.getElementById('successToast');
+        const toastMessage = document.getElementById('successMessage');
+        toastMessage.textContent = message;
+    } else {
+        toastEl = document.getElementById('errorToast');
+        const toastMessage = document.getElementById('errorMessage');
+        toastMessage.textContent = message;
+    }
+    
+    const toast = bootstrap.Toast.getOrCreateInstance(toastEl);
+    toast.show();
+}
 
-    searchedNIC = nic; // Store the NIC for later re-search
-    await searchStudent(nic);
-});
-// Generate unique color for any text
+// Clear errors
+function clearErrors() {
+    ['courseError', 'intakeError', 'idError'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.style.display = 'none';
+            el.textContent = '';
+        }
+    });
+}
+
+// Show error
+function showError(fieldId, message) {
+    const el = document.getElementById(fieldId);
+    if (el) {
+        el.textContent = message;
+        el.style.display = 'block';
+    }
+}
+
+// Generate color from string
 function stringToColor(str) {
     let hash = 0;
-
     for (let i = 0; i < str.length; i++) {
         hash = str.charCodeAt(i) + ((hash << 5) - hash);
     }
-
     let color = '#';
     for (let i = 0; i < 3; i++) {
         let value = (hash >> (i * 8)) & 255;
         color += ('00' + value.toString(16)).slice(-2);
     }
-
     return color;
 }
 
-// Load course list
-function loadCourseOptions(regId, courseId, location, intakeId) {
-    selectedRegistration = regId;
-    currentIntakeId = intakeId;
-
-    fetch("{{ route('course.change.courses') }}")
-    .then(res => res.json())
-    .then(data => {
-
-        let courseSelect = document.getElementById('course_select');
-        courseSelect.innerHTML = '<option value="">Select Course</option>';
-
-        data.courses.sort((a, b) => {
-            if (a.location < b.location) return -1;
-            if (a.location > b.location) return 1;
-            return a.course_name.localeCompare(b.course_name);
+// ========================= SEARCH STUDENT =========================
+async function searchStudent(nic) {
+    const searchBtn = document.getElementById('searchBtn');
+    const originalText = searchBtn.innerHTML;
+    
+    try {
+        searchBtn.innerHTML = '<i class="ti ti-loader spinner me-2"></i>Searching...';
+        searchBtn.disabled = true;
+        
+        const response = await fetch("{{ route('course.change.find.student') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ nic: nic })
         });
-
-        let lastLocation = null;
-
-        data.courses.forEach(c => {
-            if (c.location !== lastLocation) {
-
-                let color = stringToColor(c.location);
-
-                courseSelect.innerHTML += `
-                    <option disabled
-                        style="
-                            font-weight:bold;
-                            color:${color};
-                            padding:6px;
-                            border-top:2px solid ${color};
-                            border-bottom:2px solid ${color};
-                            background:#f0f4ff;
-                        ">
-                        ${c.location}
-                    </option>
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            searchedNIC = nic;
+            studentId = data.student.student_id;
+            
+            // Show student section
+            document.getElementById('student-section').classList.remove('d-none');
+            
+            // Update student details
+            document.getElementById('s_name').textContent = data.student.full_name;
+            document.getElementById('s_id').textContent = data.student.student_id;
+            document.getElementById('s_nic').textContent = data.student.id_value;
+            
+            // Populate registrations table
+            const tbody = document.querySelector('#reg_table tbody');
+            tbody.innerHTML = '';
+            
+            if (data.registrations.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="ti ti-book-off me-2"></i>No course registrations found
+                        </td>
+                    </tr>
                 `;
-
-                lastLocation = c.location;
+            } else {
+                data.registrations.forEach(reg => {
+                    const isFuture = new Date(reg.course_start_date) >= new Date();
+                    const statusClass = isFuture ? 'badge bg-success' : 'badge bg-warning';
+                    const statusText = isFuture ? 'Active' : 'Completed';
+                    
+                    const actionButton = isFuture 
+                        ? `<button class="btn btn-warning btn-sm" 
+                                  onclick="showChangeModal(${reg.id}, ${reg.course_id}, ${reg.intake_id}, '${reg.course_start_date}')">
+                              <i class="ti ti-refresh me-1"></i> Change
+                           </button>`
+                        : `<span class="text-muted">Not Allowed</span>`;
+                    
+                    const row = `
+                        <tr>
+                            <td>
+                                <strong>${reg.course?.course_name || 'N/A'}</strong><br>
+                                <small class="text-muted">${reg.course?.location || ''} | ${reg.course?.course_type || ''}</small>
+                            </td>
+                            <td>${reg.intake?.batch || 'N/A'}</td>
+                            <td>${reg.course_start_date}</td>
+                            <td><span class="${statusClass}">${statusText}</span></td>
+                            <td>
+                                <button class="btn btn-info btn-sm" 
+                                        onclick="checkPaymentStatus(${reg.id})">
+                                    <i class="ti ti-credit-card me-1"></i> Check
+                                </button>
+                            </td>
+                            <td>${actionButton}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
             }
-
-            courseSelect.innerHTML += `
-                <option value="${c.course_id}">
-                   ${c.course_type} - ${c.course_name} 
-                </option>
-            `;
-        });
-
-        document.getElementById('intake-section').style.display = 'block';
-    });
+            
+        } else {
+            showAlert(data.message || 'Student not found', 'danger');
+        }
+        
+    } catch (error) {
+        console.error('Search error:', error);
+        showAlert('Error searching student: ' + error.message, 'danger');
+    } finally {
+        searchBtn.innerHTML = originalText;
+        searchBtn.disabled = false;
+    }
 }
 
-
-// ========================= LOAD INTAKES AFTER COURSE SELECT =========================
-document.getElementById('course_select').addEventListener('change', function () {
-    let courseId = this.value;
-
-    if (!courseId) return;
-
-    fetch("{{ route('course.change.new.intakes') }}", {
-        method: 'POST',
-        headers: {
-            'Content-Type':'application/json',
-            'X-CSRF-TOKEN':'{{ csrf_token() }}'
-        },
-        body: JSON.stringify({ course_id: courseId })
-    })
-    .then(res => res.json())
-    .then(res => {
-        let select = document.getElementById('new_intake');
-        select.innerHTML = '<option value="">Select Intake</option>';
-
-        res.intakes
-            .filter(i => i.intake_id != currentIntakeId)
-            .sort((a,b) => new Date(b.start_date) - new Date(a.start_date))
-            .forEach(i => {
-
-                let formattedDate = new Date(i.start_date).toISOString().split('T')[0];
-
-                select.innerHTML += `
-                    <option value="${i.intake_id}">
-                        ${i.batch} (Starts: ${formattedDate})
-                    </option>`;
-            });
-
-    });
-});
-
-
-// ========================= GENERATE NEW ID AFTER INTAKE SELECT =========================
-document.getElementById('new_intake').addEventListener('change', function () {
-    let intakeId = this.value;
-    if (!intakeId) return;
-
-    fetch("{{ route('course.change.generateId') }}", {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({ intake_id: intakeId })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.status === 'success') {
-            document.getElementById('generated_id').value = data.new_id;
+// Check payment status
+// Check payment status
+async function checkPaymentStatus(registrationId) {
+    try {
+        console.log('Checking payment status for registration:', registrationId);
+        
+        showAlert('Checking payment status...', 'info', 2000);
+        
+        // Debug: Show what we're sending
+        console.log('Sending request to:', "{{ route('course.change.check.payment') }}");
+        console.log('CSRF Token exists:', !!document.querySelector('meta[name="csrf-token"]')?.content);
+        
+        const response = await fetch("{{ route('course.change.check.payment') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ 
+                registration_id: registrationId,
+                _token: '{{ csrf_token() }}'
+            })
+        });
+        
+        console.log('Response status:', response.status, response.statusText);
+        
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Non-JSON response:', text.substring(0, 500));
+            throw new Error(`Server returned ${response.status}: ${response.statusText}. Response: ${text.substring(0, 200)}`);
         }
-    });
+        
+        const data = await response.json();
+        console.log('Payment check response:', data);
+        
+        if (data.status === 'success') {
+            let message, alertType;
+            if (!data.has_payment_plan) {
+                message = 'No active payment plan found for this course.';
+                alertType = 'info';
+            } else if (!data.has_payments) {
+                message = 'Payment plan exists but no payments have been made yet.';
+                alertType = 'info';
+            } else {
+                message = `Payment plan found with LKR ${data.total_paid_amount.toLocaleString()} paid.`;
+                alertType = 'warning';
+            }
+            
+            showAlert(message, alertType);
+        } else {
+            console.error('Payment check error from server:', data);
+            showAlert(data.message || 'Error checking payment status', 'danger');
+        }
+        
+    } catch (error) {
+        console.error('Payment check error:', error);
+        console.error('Error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+        });
+        showAlert('Error checking payment status: ' + error.message, 'danger');
+    }
+}
+// Show change modal
+async function showChangeModal(regId, courseId, intakeId, startDate) {
+    selectedRegistration = regId;
+    currentCourseId = courseId;
+    currentIntakeId = intakeId;
+    courseStartDate = startDate;
+    
+    // Clear previous errors and reset modal
+    clearErrors();
+    document.getElementById('paymentWarning').classList.add('d-none');
+    document.getElementById('yearWarning').classList.add('d-none');
+    document.getElementById('course_select').innerHTML = '<option value="">Loading...</option>';
+    document.getElementById('new_intake').innerHTML = '<option value="">Loading...</option>';
+    document.getElementById('generated_id').value = '';
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('generateBtn').disabled = true;
+    
+    // Check if within 1 year
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    const courseStart = new Date(startDate);
+    
+    if (courseStart < oneYearAgo) {
+        const warningDiv = document.getElementById('yearWarning');
+        const warningText = document.getElementById('yearWarningText');
+        
+        warningText.textContent = `Course started on ${startDate}. Course changes are only allowed within 1 year from start date.`;
+        warningDiv.classList.remove('d-none');
+        
+        // Disable modal buttons
+        document.getElementById('submitBtn').disabled = true;
+        
+        // Show modal anyway for information
+        const modal = new bootstrap.Modal(document.getElementById('changeCourseModal'));
+        modal.show();
+        return;
+    }
+    
+    // Check payment status
+    try {
+        const response = await fetch("{{ route('course.change.check.payment') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ registration_id: regId })
+        });
+        
+        paymentInfo = await response.json();
+        
+        // Show payment warning if payments exist
+        const warningDiv = document.getElementById('paymentWarning');
+        const warningText = document.getElementById('paymentWarningText');
+        
+        if (paymentInfo.status === 'success' && paymentInfo.has_payments) {
+            warningText.textContent = `Student has paid LKR ${paymentInfo.total_paid_amount.toLocaleString()} for this course. All payment records will be cancelled.`;
+            warningDiv.classList.remove('d-none');
+        } else {
+            warningDiv.classList.add('d-none');
+        }
+        
+    } catch (error) {
+        console.error('Payment check error:', error);
+        warningDiv.classList.add('d-none');
+    }
+    
+    // Load courses
+    await loadCourses();
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('changeCourseModal'));
+    modal.show();
+}
+
+// Load courses
+async function loadCourses() {
+    const courseSelect = document.getElementById('course_select');
+    courseSelect.innerHTML = '<option value="">Loading courses...</option>';
+    courseSelect.disabled = true;
+    clearErrors();
+    
+    try {
+        const response = await fetch("{{ route('course.change.courses') }}");
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        console.log('Courses response:', data); // Debug log
+        
+        if (data.status !== 'success' || !data.courses) {
+            throw new Error(data.message || 'Invalid response from server');
+        }
+        
+        courseSelect.innerHTML = '<option value="">Select New Course</option>';
+        
+        if (data.courses.length === 0) {
+            courseSelect.innerHTML = '<option value="">No courses available</option>';
+            return;
+        }
+        
+        // Group by location
+        const coursesByLocation = {};
+        data.courses.forEach(course => {
+            if (!coursesByLocation[course.location]) {
+                coursesByLocation[course.location] = [];
+            }
+            coursesByLocation[course.location].push(course);
+        });
+        
+        // Populate with location groups
+        Object.keys(coursesByLocation).sort().forEach(location => {
+            const color = stringToColor(location);
+            
+            // Location header
+            courseSelect.innerHTML += `
+                <option disabled style="
+                    font-weight: bold;
+                    color: ${color};
+                    padding: 8px;
+                    border-top: 2px solid ${color};
+                    background: linear-gradient(to right, ${color}20, transparent);
+                    cursor: default;
+                ">
+                    📍 ${location.toUpperCase()}
+                </option>
+            `;
+            
+            // Courses in this location
+            coursesByLocation[location].forEach(course => {
+                const isCurrentCourse = course.course_id == currentCourseId;
+                courseSelect.innerHTML += `
+                    <option value="${course.course_id}" ${isCurrentCourse ? 'disabled' : ''}>
+                        ${isCurrentCourse ? '⮕ ' : ''}${course.course_type} - ${course.course_name}
+                    </option>
+                `;
+            });
+        });
+        
+        courseSelect.disabled = false;
+        
+    } catch (error) {
+        console.error('Error loading courses:', error);
+        courseSelect.innerHTML = '<option value="">Error loading courses</option>';
+        showError('courseError', 'Failed to load courses: ' + error.message);
+        showAlert('Error loading courses. Please try again.', 'danger');
+    }
+}
+// ========================= LOAD INTAKES =========================
+document.getElementById('course_select').addEventListener('change', async function() {
+    const courseId = this.value;
+    const intakeSelect = document.getElementById('new_intake');
+    const generateBtn = document.getElementById('generateBtn');
+    
+    if (!courseId) {
+        intakeSelect.innerHTML = '<option value="">Select course first</option>';
+        intakeSelect.disabled = true;
+        generateBtn.disabled = true;
+        document.getElementById('submitBtn').disabled = true;
+        return;
+    }
+    
+    intakeSelect.innerHTML = '<option value="">Loading intakes...</option>';
+    intakeSelect.disabled = true;
+    generateBtn.disabled = true;
+    document.getElementById('generated_id').value = '';
+    clearErrors();
+    
+    try {
+        const response = await fetch("{{ route('course.change.new.intakes') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ course_id: courseId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            intakeSelect.innerHTML = '<option value="">Select New Intake</option>';
+            
+            // Filter out current intake and sort by start date (newest first)
+            const filteredIntakes = data.intakes.filter(intake => intake.intake_id != currentIntakeId);
+            filteredIntakes.sort((a, b) => new Date(b.start_date) - new Date(a.start_date));
+            
+            if (filteredIntakes.length === 0) {
+                intakeSelect.innerHTML = '<option value="">No other intakes available</option>';
+            } else {
+                filteredIntakes.forEach(intake => {
+                    const startDate = new Date(intake.start_date).toLocaleDateString();
+                    intakeSelect.innerHTML += `
+                        <option value="${intake.intake_id}">
+                            ${intake.batch} (Starts: ${startDate})
+                        </option>
+                    `;
+                });
+                intakeSelect.disabled = false;
+                generateBtn.disabled = false;
+            }
+            
+        } else {
+            intakeSelect.innerHTML = '<option value="">Error loading intakes</option>';
+            showError('intakeError', data.message || 'Failed to load intakes');
+        }
+        
+    } catch (error) {
+        console.error('Error loading intakes:', error);
+        intakeSelect.innerHTML = '<option value="">Error loading intakes</option>';
+        showError('intakeError', 'Failed to load intakes. Please try again.');
+    }
 });
 
+// ========================= GENERATE NEW ID =========================
+async function generateNewId() {
+    const intakeId = document.getElementById('new_intake').value;
+    const generatedIdInput = document.getElementById('generated_id');
+    const generateBtn = document.getElementById('generateBtn');
+    
+    if (!intakeId) {
+        showAlert('Please select an intake first', 'warning');
+        return;
+    }
+    
+    generateBtn.innerHTML = '<i class="ti ti-loader spinner me-1"></i>Generating...';
+    generateBtn.disabled = true;
+    clearErrors();
+    
+    try {
+        const response = await fetch("{{ route('course.change.generateId') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ intake_id: intakeId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            generatedIdInput.value = data.new_id;
+            document.getElementById('submitBtn').disabled = false;
+            showAlert('Registration ID generated successfully', 'success', 2000);
+        } else {
+            showError('idError', data.message || 'Error generating ID');
+            showAlert(data.message || 'Error generating ID', 'danger');
+        }
+        
+    } catch (error) {
+        console.error('Error generating ID:', error);
+        showError('idError', 'Failed to generate ID. Please try again.');
+        showAlert('Error generating registration ID', 'danger');
+    } finally {
+        generateBtn.innerHTML = '<i class="ti ti-refresh me-1"></i>Generate';
+        generateBtn.disabled = false;
+    }
+}
+
+// Intake change event
+document.getElementById('new_intake').addEventListener('change', function() {
+    const generatedIdInput = document.getElementById('generated_id');
+    generatedIdInput.value = '';
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('generateBtn').disabled = false;
+    clearErrors();
+});
 
 // ========================= SUBMIT CHANGE =========================
 async function submitChange() {
-    let intakeId = document.getElementById('new_intake').value;
-    let newCourseRegId = document.getElementById('generated_id').value;
-
-    if (!intakeId) return alert('Select a new intake');
-
-    // Show success toast immediately
-    const toastEl = document.getElementById('successToast');
-    const toast = new bootstrap.Toast(toastEl);
-    toast.show();
-
-    // Hide the intake selection section
-    document.getElementById('intake-section').style.display = 'none';
-
-    // Show loading animation and hide table
-    const tableEl = document.getElementById('reg_table');
-    const loaderEl = document.getElementById('table-loader');
+    const intakeId = document.getElementById('new_intake').value;
+    const newCourseRegId = document.getElementById('generated_id').value;
+    const submitBtn = document.getElementById('submitBtn');
+    const modal = bootstrap.Modal.getInstance(document.getElementById('changeCourseModal'));
     
-    tableEl.style.visibility = 'hidden';
-    loaderEl.style.display = 'block';
-
+    if (!intakeId || !newCourseRegId) {
+        showAlert('Please select both intake and generate ID first', 'warning');
+        return;
+    }
+    
+    submitBtn.innerHTML = '<i class="ti ti-loader spinner me-2"></i>Processing...';
+    submitBtn.disabled = true;
+    
     try {
-        const res = await fetch("{{ route('course.change.submit') }}", {
-            method:'POST',
-            headers:{
-                'Content-Type':'application/json',
-                'X-CSRF-TOKEN':'{{ csrf_token() }}'
+        const response = await fetch("{{ route('course.change.submit') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
             },
             body: JSON.stringify({
                 registration_id: selectedRegistration,
@@ -324,45 +798,152 @@ async function submitChange() {
                 new_course_registration_id: newCourseRegId
             })
         });
-
-        // Check if response is OK (status 200-299)
-        if (!res.ok) {
-            console.error('Server error:', res.status);
-            // Even if server returns error, the DB update might have worked
-            // So we still refresh the table
-        }
-
-        // Try to parse JSON, but if it fails, continue anyway
-        let data = {};
-        try {
-            data = await res.json();
-        } catch (jsonError) {
-            console.log('Could not parse JSON response, but continuing with refresh');
-        }
-
-        // Wait for backend to complete
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        // Always re-run the search to refresh the table
-        if (searchedNIC) {
-            await searchStudent(searchedNIC);
-        }
-
-    } catch (error) {
-        console.error('Fetch error:', error);
         
-        // Even on error, try to refresh the table (DB might have updated)
-        await new Promise(resolve => setTimeout(resolve, 800));
+        const data = await response.json();
         
-        if (searchedNIC) {
-            await searchStudent(searchedNIC);
+        if (data.status === 'success') {
+            // Close modal
+            if (modal) modal.hide();
+            
+            // Show success toast
+            showToast(data.message || 'Course changed successfully');
+            
+            // Show payment summary if applicable
+            if (data.payment_summary && data.payment_summary.has_payments) {
+                const summaryContent = document.getElementById('paymentSummaryContent');
+                summaryContent.innerHTML = `
+                    <div class="alert alert-success">
+                        <h6><i class="ti ti-check me-2"></i>Course Change Successful!</h6>
+                        <hr>
+                        <p><strong>Total Amount Paid for Old Course:</strong></p>
+                        <h4 class="text-center text-primary my-3">
+                            LKR ${data.payment_summary.total_paid_amount?.toLocaleString() || '0.00'}
+                        </h4>
+                        <p class="mb-2">Payment records have been updated:</p>
+                        <ul class="mb-3">
+                            <li>✓ All amounts set to zero</li>
+                            <li>✓ Payment status changed to "cancelled"</li>
+                            <li>✓ Payment installments marked as "archived"</li>
+                            <li>✓ Payment plan marked as "cancelled"</li>
+                        </ul>
+                        <p class="mb-0">
+                            <i class="ti ti-info-circle me-1"></i>
+                            You can view the updated payment plans in the Student Payment Plans section.
+                        </p>
+                    </div>
+                `;
+                
+                const paymentModal = new bootstrap.Modal(document.getElementById('paymentSummaryModal'));
+                paymentModal.show();
+            } else {
+                // Show simple success alert
+                showAlert('Course changed successfully', 'success');
+            }
+            
+            // Refresh student data after delay
+            setTimeout(() => {
+                if (searchedNIC) {
+                    searchStudent(searchedNIC);
+                }
+            }, 1500);
+            
         } else {
-            // If refresh fails, hide loader and show table
-            loaderEl.style.display = 'none';
-            tableEl.style.visibility = 'visible';
+            showAlert(data.message || 'Error changing course', 'danger');
         }
+        
+    } catch (error) {
+        console.error('Submit error:', error);
+        showAlert('Error submitting change: ' + error.message, 'danger');
+    } finally {
+        submitBtn.innerHTML = '<i class="ti ti-check me-2"></i>Confirm Change';
+        submitBtn.disabled = false;
     }
 }
+
+// ========================= EVENT LISTENERS =========================
+document.addEventListener('DOMContentLoaded', function() {
+    // Search form submission
+    document.getElementById('searchForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const nic = document.getElementById('nic').value.trim();
+        
+        if (!nic) {
+            showAlert('Please enter a NIC number', 'warning');
+            return;
+        }
+        
+        await searchStudent(nic);
+    });
+    
+    // Modal hidden event
+    document.getElementById('changeCourseModal').addEventListener('hidden.bs.modal', function() {
+        // Reset modal
+        document.getElementById('course_select').value = '';
+        document.getElementById('new_intake').value = '';
+        document.getElementById('generated_id').value = '';
+        document.getElementById('paymentWarning').classList.add('d-none');
+        document.getElementById('yearWarning').classList.add('d-none');
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('generateBtn').disabled = true;
+        clearErrors();
+        selectedRegistration = null;
+        paymentInfo = null;
+    });
+    
+    // Debug: Test routes
+    console.log('Course change routes loaded');
+    console.log('Check payment route:', "{{ route('course.change.check.payment') }}");
+});
 </script>
 
+<style>
+.spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.badge {
+    font-size: 0.75em;
+    padding: 0.35em 0.65em;
+}
+
+.card-header {
+    font-weight: 600;
+}
+
+#paymentWarning, #yearWarning {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.alert ul {
+    margin-bottom: 0;
+}
+
+.toast {
+    z-index: 1090;
+}
+
+.form-text[style*="color: red"] {
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+}
+
+#course_select option:disabled {
+    background-color: #f8f9fa;
+    font-weight: bold;
+}
+</style>
 @endsection
