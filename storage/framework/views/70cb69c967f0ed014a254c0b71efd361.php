@@ -741,11 +741,14 @@ async function searchStudent(nic) {
                 `;
             } else {
                 data.registrations.forEach(reg => {
-                    const isFuture = new Date(reg.course_start_date) >= new Date();
-                    const statusClass = isFuture ? 'badge bg-success' : 'badge bg-warning';
-                    const statusText = isFuture ? 'Active' : 'Completed';
+                    const startDate = new Date(reg.course_start_date);
+                    const deadline = new Date(startDate);
+                    deadline.setFullYear(deadline.getFullYear() + 1);
+                    const isAllowed = new Date() < deadline;
+                    const statusClass = isAllowed ? 'badge bg-success' : 'badge bg-warning';
+                    const statusText = isAllowed ? 'Change Allowed' : 'Restricted';
                     
-                    const actionButton = isFuture 
+                    const actionButton = isAllowed 
                         ? `<button class="btn btn-warning btn-sm" 
                                   onclick="showChangeModal(${reg.id}, ${reg.course_id}, ${reg.intake_id}, '${reg.course_start_date}')">
                               <i class="ti ti-refresh me-1"></i> Change
@@ -872,16 +875,16 @@ async function showChangeModal(regId, courseId, intakeId, startDate) {
     document.getElementById('submitBtn').disabled = true;
     document.getElementById('generateBtn').disabled = true;
     
-    // Check if within 1 year
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-    const courseStart = new Date(startDate);
-    
-    if (courseStart < oneYearAgo) {
+    // Check if within 1 year from course start date
+    const referenceDate = new Date(startDate);
+    const deadline = new Date(referenceDate);
+    deadline.setFullYear(deadline.getFullYear() + 1);
+
+    if (new Date() >= deadline) {
         const warningDiv = document.getElementById('yearWarning');
         const warningText = document.getElementById('yearWarningText');
         
-        warningText.textContent = `Course started on ${startDate}. Course changes are only allowed within 1 year from start date.`;
+        warningText.textContent = `Course start date is ${referenceDate.toISOString().split('T')[0]}. Course changes are only allowed within 1 year from the start date.`;
         warningDiv.classList.remove('d-none');
         
         // Disable modal buttons
