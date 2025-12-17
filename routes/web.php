@@ -230,6 +230,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/check-blacklist-status', [CourseRegistraionController::class, 'checkBlacklistStatus']);
         Route::post('/intakes/get', [CourseRegistraionController::class, 'getIntakes'])->name('intakes.get');
         Route::post('/students/find', [CourseRegistraionController::class, 'findStudent'])->name('students.find');
+        Route::get('/api/course-registration/student-by-nic/{nic}', [CourseRegistraionController::class, 'getStudentByNic'])->name('course.registration.student.by.nic');
         Route::post('/api/course-registration', [CourseRegistraionController::class, 'storeCourseRegistrationAPI'])->name('register.course.api');
         Route::post('/api/course-registration-eligibility', [CourseRegistraionController::class, 'storeCourseRegistrationForEligibilityAPI'])->name('register.course.eligibility.api');
     });
