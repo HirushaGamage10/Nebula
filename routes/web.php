@@ -277,6 +277,14 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
             // Cancelled Payments Remarks
             Route::get('/cancelled-payments/{studentId}', [CourseChangeController::class, 'getCancelledPayments'])
                  ->name('course.change.cancelled.payments');
+
+            // Update Cancelled Payment Status
+            Route::post('/cancelled-payments/{paymentDetailId}/status', [CourseChangeController::class, 'updateCancelledPaymentStatus'])
+                 ->name('course.change.cancelled.payments.status');
+
+            // Course Change History (Logs + Payments)
+            Route::get('/change-history/{studentId}', [CourseChangeController::class, 'getCourseChangeHistory'])
+                 ->name('course.change.history');
         });
     });
     // ========================================================================
