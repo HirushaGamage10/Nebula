@@ -273,6 +273,10 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
             // Course Change Logs
             Route::get('/change-logs/{studentId}', [CourseChangeController::class, 'getChangeLogs'])
                  ->name('course.change.logs');
+
+            // Cancelled Payments Remarks
+            Route::get('/cancelled-payments/{studentId}', [CourseChangeController::class, 'getCancelledPayments'])
+                 ->name('course.change.cancelled.payments');
         });
     });
     // ========================================================================

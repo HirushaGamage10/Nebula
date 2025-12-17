@@ -824,4 +824,25 @@ public function checkPaymentStatus(Request $request)
             ], 500);
         }
     }
+
+    public function getCancelledPayments($studentId)
+    {
+        try {
+            $payments = PaymentDetail::where('student_id', $studentId)
+                ->where('status', 'cancelled')
+                ->orderBy('updated_at', 'desc')
+                ->get(['id', 'course_registration_id', 'amount', 'total_fee', 'remaining_amount', 'remarks', 'updated_at']);
+
+            return response()->json([
+                'status' => 'success',
+                'payments' => $payments
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting cancelled payments: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get cancelled payments'
+            ], 500);
+        }
+    }
 }
