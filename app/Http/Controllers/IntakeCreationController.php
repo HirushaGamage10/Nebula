@@ -34,7 +34,21 @@ class IntakeCreationController extends Controller
         ->orderBy('start_date', 'desc')
         ->get();
 
-    return view('courses_&_modules.intake_creation', compact('courses', 'intakes', 'selectedLocation'));
+    $allCourses = Course::select('course_id', 'course_name', 'course_type', 'location')
+        ->orderByRaw("FIELD(course_type, 'degree', 'diploma', 'certificate')")
+        ->orderBy('course_name', 'asc')
+        ->get();
+
+    $allCoursesForJson = $allCourses->map(function ($course) {
+        return [
+            'course_id' => $course->course_id,
+            'course_name' => $course->course_name,
+            'course_type' => $course->course_type,
+            'location' => $course->location,
+        ];
+    });
+
+    return view('courses_&_modules.intake_creation', compact('courses', 'intakes', 'selectedLocation', 'allCoursesForJson'));
 }
 
 

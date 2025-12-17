@@ -62,7 +62,13 @@ class CourseChangeController extends Controller
                 ->orderBy('course_start_date', 'desc')
                 ->get()
                 ->map(function($reg) use ($today) {
-                    $reg->is_future = $reg->course_start_date >= $today;
+                    $startDate = Carbon::parse($reg->course_start_date);
+                    $deadline = $startDate->copy()->addYear();
+                    $now = Carbon::parse($today);
+
+                    $reg->is_change_allowed = $now->lt($deadline);
+                    $reg->change_deadline = $deadline->toDateString();
+                    $reg->is_future = $startDate->toDateString() >= $today;
                     return $reg;
                 });
 
@@ -448,12 +454,12 @@ public function checkPaymentStatus(Request $request)
                 'new_intake_id' => $newIntake->intake_id
             ]);
 
-            // Check if course change is within 1 year
-            $courseStartDate = Carbon::parse($registration->course_start_date);
-            $currentDate = Carbon::now();
-            
-            if ($courseStartDate->diffInYears($currentDate) >= 1) {
-                throw new \Exception('Course change is only allowed within 1 year from course start date. Course started on ' . $courseStartDate->format('Y-m-d'));
+            // Check if course change is within 1 year from course start date
+            $startDate = Carbon::parse($registration->course_start_date);
+            $deadline = $startDate->copy()->addYear();
+
+            if (Carbon::now()->greaterThanOrEqualTo($deadline)) {
+                throw new \Exception('Course change is only allowed within 1 year from course start date. Start date: ' . $startDate->format('Y-m-d'));
             }
 
             // Process payment records
