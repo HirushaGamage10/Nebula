@@ -234,18 +234,47 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::post('/api/course-registration-eligibility', [CourseRegistraionController::class, 'storeCourseRegistrationForEligibilityAPI'])->name('register.course.eligibility.api');
     });
 
-    // ========================================================================
-    // COURSE CHANGE
+        // ========================================================================
+    // COURSE CHANGE MANAGEMENT
     // ========================================================================
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Developer,Marketing Manager,Student Counselor'])->group(function () {
-        Route::get('/registration/course-change', [CourseChangeController::class, 'index'])->name('course.change.index');
-        Route::post('/registration/course-change/find-student', [CourseChangeController::class, 'findStudent'])->name('course.change.find.student');
-        Route::get('/registration/course-change/courses', [CourseChangeController::class, 'getCourses'])->name('course.change.courses');
-        Route::post('/registration/course-change/new-intakes', [CourseChangeController::class, 'getNewIntakes'])->name('course.change.new.intakes');
-        Route::post('/registration/course-change/generate-id', [CourseChangeController::class, 'generateNewCourseRegId'])->name('course.change.generateId');
-        Route::post('/registration/course-change/submit', [CourseChangeController::class, 'submitChange'])->name('course.change.submit');
+        Route::prefix('registration/course-change')->group(function () {
+            // Course Change Interface
+            Route::get('/', [CourseChangeController::class, 'index'])
+                 ->name('course.change.index');
+            
+            // Student Search
+            Route::post('/find-student', [CourseChangeController::class, 'findStudent'])
+                 ->name('course.change.find.student');
+            
+            // Course & Intake Selection
+            Route::get('/courses', [CourseChangeController::class, 'getCourses'])
+                 ->name('course.change.courses');
+            
+            Route::post('/new-intakes', [CourseChangeController::class, 'getNewIntakes'])
+                 ->name('course.change.new.intakes');
+            
+            // ID Generation
+            Route::post('/generate-id', [CourseChangeController::class, 'generateNewCourseRegId'])
+                 ->name('course.change.generateId');
+            
+            // Payment Check
+            Route::post('/check-payment', [CourseChangeController::class, 'checkPaymentStatus'])
+                 ->name('course.change.check.payment');
+            
+            // Submit Change
+            Route::post('/submit', [CourseChangeController::class, 'submitChange'])
+                 ->name('course.change.submit');
+            
+            // Payment Summary
+            Route::get('/payment-summary/{studentId}/{courseId}', [CourseChangeController::class, 'getPaymentSummary'])
+                 ->name('course.change.payment.summary');
+            
+            // Course Change Logs
+            Route::get('/change-logs/{studentId}', [CourseChangeController::class, 'getChangeLogs'])
+                 ->name('course.change.logs');
+        });
     });
-
     // ========================================================================
     // ELIGIBILITY CHECKING & REGISTRATION
     // ========================================================================
