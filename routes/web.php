@@ -662,7 +662,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     // PAYMENT PLAN
     // ========================================================================
-    Route::middleware(['auth', 'role:Marketing Manager,Developer,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
+    Route::middleware(['auth', 'role:Bursar,Marketing Manager,Developer,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
         Route::get('/payment-plans', [PaymentPlanController::class, 'index'])->name('payment.plan.index');
         Route::get('/payment-plan', [PaymentPlanController::class, 'create'])->name('payment.plan');
         Route::get('/payment-plan/create', [PaymentPlanController::class, 'create'])->name('payment.plan.create');
@@ -682,7 +682,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     // PAYMENT DISCOUNT
     // ========================================================================
-    Route::middleware(['auth', 'role:DGM,Marketing Manager,Developer,Student Counselor,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
+    Route::middleware(['auth', 'role:DGM,Bursar,Marketing Manager,Developer,Student Counselor,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
         Route::get('/payment-discount', [PaymentDiscountController::class, 'showPage'])->name('payment.discount.page');
         Route::post('/payment-discount/courses', [PaymentDiscountController::class, 'getCoursesByLocation'])->name('payment.discount.courses');
         Route::post('/payment-discount/intakes', [PaymentDiscountController::class, 'getIntakesByCourse'])->name('payment.discount.intakes');
@@ -698,7 +698,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     // MISCELLANEOUS PAYMENT
     // ========================================================================
-    Route::middleware(['auth', 'role:DGM,Marketing Manager,Developer,Student Counselor,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
+    Route::middleware(['auth', 'role:DGM,Bursar,Marketing Manager,Developer,Student Counselor,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
         Route::get('/misc-payment', [MiscPaymentController::class, 'index'])->name('misc.payment.index');
         Route::post('/misc-payment/store', [MiscPaymentController::class, 'store'])->name('misc.payment.store');
         Route::get('/misc-payment/fetch/{studentId}', [MiscPaymentController::class, 'fetchByStudent']);
@@ -707,7 +707,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     // PAYMENT SUMMARY
     // ========================================================================
-    Route::middleware(['auth', 'role:DGM,Marketing Manager,Developer,Student Counselor,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
+    Route::middleware(['auth', 'role:DGM,Bursar,Marketing Manager,Developer,Student Counselor,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
         Route::get('/payments/summary', [PaymentSummaryController::class, 'index'])->name('payment.summary');
         Route::get('/payments/summary/filter', [PaymentSummaryController::class, 'filter'])->name('payment.summary.filter');
         Route::get('/payments/summary/student/{studentId}', [PaymentSummaryController::class, 'studentSummary'])->name('payment.summary.student');
