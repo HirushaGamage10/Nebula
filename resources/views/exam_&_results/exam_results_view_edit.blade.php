@@ -34,7 +34,7 @@
                         <select class="form-select filter-param" id="course_type" name="course_type" required>
                             <option value="" selected disabled>Select a Course Type</option>
                             <option value="degree">Degree</option>
-                            <option value="degree">Diploma</option>
+                            <option value="diploma">Diploma</option>
                             <option value="certificate">Certificate Program</option>
                         </select>
                     </div>
@@ -189,8 +189,8 @@ document.addEventListener('DOMContentLoaded', function() {
     resetAndDisable(semesterSelect, 'Select a Semester');
     resetAndDisable(moduleSelect, 'Select a Module');
 
-    // Enable course if location is pre-selected
-    if (locationSelect.value) {
+    // Enable course if location and course type are pre-selected
+    if (locationSelect.value && courseTypeSelect.value) {
         fetchCoursesByLocation(locationSelect.value, courseTypeSelect.value);
     }
 
@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // When course type changes
     courseTypeSelect.addEventListener('change', function() {
-        if (this.value === 'degree') {
+        if (this.value === 'degree' || this.value === 'diploma') {
             fieldsContainer.style.display = 'block';
             semesterRow.style.display = 'flex';
         } else if (this.value === 'certificate') {
@@ -406,7 +406,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Helper to check if all filters are filled
     function allFiltersFilled() {
-        if (courseTypeSelect.value === 'degree') {
+        if (courseTypeSelect.value === 'degree' || courseTypeSelect.value === 'diploma') {
             return locationSelect.value && courseTypeSelect.value && courseSelect.value && intakeSelect.value && semesterSelect.value && moduleSelect.value;
         } else if (courseTypeSelect.value === 'certificate') {
             return locationSelect.value && courseTypeSelect.value && courseSelect.value && intakeSelect.value && moduleSelect.value;
@@ -431,7 +431,7 @@ document.addEventListener('DOMContentLoaded', function() {
             course_type: courseTypeSelect.value,
             course_id: courseSelect.value,
             intake_id: intakeSelect.value,
-            semester: courseTypeSelect.value === 'degree' ? semesterSelect.value : null,
+            semester: (courseTypeSelect.value === 'degree' || courseTypeSelect.value === 'diploma') ? semesterSelect.value : null,
             module_id: moduleSelect.value
         };
         showSpinner(true);
@@ -820,11 +820,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update fetchCoursesByLocation to accept both params
     function fetchCoursesByLocation(location, courseType) {
+        console.log('fetchCoursesByLocation called with:', { location, courseType });
         showSpinner(true);
-        fetch(`/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=${encodeURIComponent(courseType)}`)
+        const url = `/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=${encodeURIComponent(courseType)}`;
+        console.log('Fetching from URL:', url);
+        fetch(url)
             .then(response => response.json())
             .then(data => {
+                console.log('Response data:', data);
                 if (data.success && data.courses && data.courses.length > 0) {
+                    console.log('Courses received:', data.courses);
                     populateDropdown(courseSelect, data.courses, 'course_id', 'course_name', 'Course');
                     courseSelect.disabled = false;
                 } else {
@@ -832,7 +837,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     showToast('Error', data.message || 'No courses found for this location and type.', 'bg-danger');
                 }
             })
-            .catch(() => {
+            .catch((error) => {
+                console.error('Error fetching courses:', error);
                 resetAndDisable(courseSelect, 'Select a Course');
                 showToast('Error', 'Failed to fetch courses for this location and type.', 'bg-danger');
             })
