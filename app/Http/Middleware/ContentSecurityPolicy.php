@@ -41,29 +41,27 @@ class ContentSecurityPolicy
             // Development: allow inline style attributes (style-src-attr) to avoid refactoring sidebar/button styles.
             // Allow CDNs via element-specific directives.
             $csp = "default-src 'self' https:; "
-                . "script-src 'self' 'nonce-$nonce'; "
-                . "script-src-elem 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com; "
-                . "style-src 'self' 'nonce-$nonce' https://fonts.googleapis.com; "
+                . "script-src 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
+                . "script-src-elem 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
+                . "style-src 'self' 'nonce-$nonce' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
                 . "style-src-elem 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
                 . "style-src-attr 'unsafe-inline'; "
                 . "img-src 'self' data: blob: https:; "
-                . "connect-src 'self' ws: https:; "
-                . "font-src 'self' https://fonts.gstatic.com https:; "
-                . "block-all-mixed-content; "
+                . "connect-src 'self' ws: wss: https:; "
+                . "font-src 'self' data: https://fonts.gstatic.com https:; "
                 . "frame-ancestors 'self';";
         } else {
             // Production: strict; allow self, trusted Google font origins, and required CDNs, rely on nonce for inline elements
             // Note: style-src-attr 'unsafe-inline' is needed for inline style attributes used in the UI
             $csp = "default-src 'self'; "
-                . "script-src 'self' 'nonce-$nonce'; "
-                . "script-src-elem 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com; "
-                . "style-src 'self' 'nonce-$nonce' https://fonts.googleapis.com; "
+                . "script-src 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
+                . "script-src-elem 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
+                . "style-src 'self' 'nonce-$nonce' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
                 . "style-src-elem 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
                 . "style-src-attr 'unsafe-inline'; "
-                . "img-src 'self' data:; "
-                . "connect-src 'self'; "
-                . "font-src 'self' https://fonts.gstatic.com; "
-                . "block-all-mixed-content; "
+                . "img-src 'self' data: blob: https:; "
+                . "connect-src 'self' wss: https:; "
+                . "font-src 'self' data: https://fonts.gstatic.com https:; "
                 . "frame-ancestors 'self';";
         }
 

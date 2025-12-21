@@ -13,7 +13,7 @@
 <div class="mb-4">
     <h5 class="mb-3">Select Student & Course</h5>
 
-    <form method="GET" onsubmit="event.preventDefault(); goToApprovalPage();">
+    <form method="GET" id="late-fee-form">
         <div class="row mb-3">
 
             
@@ -48,8 +48,8 @@
                 <div class="d-flex w-100 gap-2">
                     <button type="submit" class="btn btn-primary flex-fill">Load</button>
                     <button type="button" 
-                            class="btn btn-outline-secondary flex-fill"
-                            onclick="window.location.href='<?php echo e(url('/late-fee/approval')); ?>'">
+                            id="clear-btn"
+                            class="btn btn-outline-secondary flex-fill">
                         Clear
                     </button>
                 </div>
@@ -222,7 +222,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="<?php echo e($cspNonce); ?>">
 document.addEventListener("DOMContentLoaded", function () {
     const studentNicInput = document.getElementById("student-nic");
     const courseSelect = document.getElementById("course_id");
@@ -309,6 +309,23 @@ function goToApprovalPage() {
     const url = "<?php echo e(url('/late-fee/approval')); ?>/" + nic + "/" + courseId;
     window.location.href = url;
 }
+
+// Add event listeners
+const lateFeeForm = document.getElementById("late-fee-form");
+if (lateFeeForm) {
+    lateFeeForm.addEventListener("submit", function(e) {
+        e.preventDefault();
+        goToApprovalPage();
+    });
+}
+
+const clearBtn = document.getElementById("clear-btn");
+if (clearBtn) {
+    clearBtn.addEventListener("click", function() {
+        window.location.href = "<?php echo e(url('/late-fee/approval')); ?>";
+    });
+}
+});
 </script>
 
 <?php $__env->stopSection(); ?>

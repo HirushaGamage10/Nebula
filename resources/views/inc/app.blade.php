@@ -7,12 +7,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'NEBULA')</title>
     <meta name="csrf-token" content="{{ csrf_token() }}"> <!-- CSRF Token -->
+    <meta name="csp-nonce" content="{{ $cspNonce }}">
     <link rel="shortcut icon" type="image/png" href="{{ asset('images/logos/favicon.jpg') }}" />
 
     <!-- Tabler Icons CSS -->
     <link rel="stylesheet" href="{{ asset('css/icons/tabler-icons/tabler-icons.css') }}">
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Bootstrap Icons (self-hosted) -->
+    <link href="{{ asset('libs/bootstrap-icons/bootstrap-icons.css') }}" rel="stylesheet">
 
     <!-- CSS -->
     <link href="{{ asset('css/styles.min.css') }}" rel="stylesheet">
@@ -25,7 +26,7 @@
     <!-- Sidebar + layout interactions (hamburger toggle, responsive sidebar) -->
     <script src="{{ asset('js/app.min.js') }}"></script>
     <script src="{{ asset('js/sidebarmenu.js') }}"></script>
-    <style>
+    <style nonce="{{ $cspNonce }}">
         body {
             background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E') no-repeat center center fixed;
             background-size: cover;
@@ -51,7 +52,7 @@
         }
     </style>
 
-    <script async defer>
+    <script nonce="{{ $cspNonce }}">
         document.addEventListener('DOMContentLoaded', function() {
             const body = document.querySelector('body');
             body.classList.add('loaded');
@@ -65,17 +66,12 @@
     <!--  Body Wrapper -->
     <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
         data-sidebar-position="fixed" data-header-position="fixed">
-        @php
-            $isEmbed = request()->has('embed');
-        @endphp
-
-        @if(!$isEmbed)
-            <!-- Sidebar Start -->
-            <aside class="left-sidebar">
-                @include('components.sidebar')
-            </aside>
-        @endif
-
+        <!-- Sidebar Start -->
+        <aside class="left-sidebar">
+            <!-- Sidebar scroll-->
+            @include('components.sidebar')
+            <!-- End Sidebar scroll-->
+        </aside>
         <div x-data x-init="
     $nextTick(() => {
         const sidebar = document.querySelector('.scroll-sidebar');
@@ -83,8 +79,8 @@
         if (activeLink && sidebar) {
             activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-    })
-"><script>
+    })">
+<script nonce="{{ $cspNonce }}">
     document.addEventListener('DOMContentLoaded', () => {
         const sidebar = document.querySelector('.scroll-sidebar');
         const activeLink = sidebar?.querySelector('.sidebar-link.active');
@@ -177,7 +173,7 @@
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ $cspNonce }}">
         document.addEventListener("DOMContentLoaded", function() {
             // Get the current time
             var currentTime = new Date();
@@ -203,7 +199,7 @@
         });
     </script>
 
-    <script>
+    <script nonce="{{ $cspNonce }}">
         // Global AJAX setup for CSRF token
         $.ajaxSetup({
             headers: {
@@ -215,7 +211,7 @@
     @yield('scripts')
     @stack('scripts')
 
-    <script>
+    <script nonce="{{ $cspNonce }}">
         document.addEventListener("DOMContentLoaded", function() {
             const courseManagementLink = document.getElementById('course-management-link');
             if (courseManagementLink && window.location.pathname.startsWith('/course-management')) {
