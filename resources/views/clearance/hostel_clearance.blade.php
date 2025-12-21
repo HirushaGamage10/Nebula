@@ -153,7 +153,7 @@
 @endsection
 
 @push('styles')
-<style>
+<style nonce="{{ $cspNonce }}">
     .nav-tabs .nav-link {
         border: none;
         color: #6c757d;
@@ -222,7 +222,7 @@
 @endpush
 
 @push('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
 $(document).ready(function() {
     let currentRequestId = null;
     let currentAction = null;

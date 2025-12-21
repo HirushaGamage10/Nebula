@@ -158,7 +158,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
 $(document).ready(function() {
     let currentRequestId = null;
     let currentAction = null;

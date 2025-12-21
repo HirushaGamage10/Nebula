@@ -431,7 +431,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
 $(document).ready(function() {
     // Intake dropdown population
     $('#courseDropdown, #locationDropdown').on('change', function() {
@@ -637,7 +637,7 @@ $(document).ready(function() {
 });
 </script>
 
-<script>
+<script nonce="{{ $cspNonce }}">
 // --- Individual Clearance tab dynamic population ---
 $(function(){
     function resetIndividual(selectors){
