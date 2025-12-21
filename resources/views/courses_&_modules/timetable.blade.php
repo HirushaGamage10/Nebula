@@ -356,7 +356,7 @@
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 @push('scripts')
-    <script>
+    <script nonce="{{ $cspNonce }}">
         $(document).ready(function () {
             var latestEventsRaw = []; // raw server rows
             var latestFcEvents = [];  // mapped fullcalendar events
@@ -1980,7 +1980,7 @@
     </script>
 @endpush
 
-    <style>
+    <style nonce="{{ $cspNonce }}">
         /* Allow FullCalendar to handle positioning for agendaWeek/agendaDay.
            Do not override position/left/top; only adjust width if needed. */
         #calendar .fc-event {
