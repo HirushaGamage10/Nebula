@@ -2,7 +2,7 @@
 @section('title', 'NEBULA | Special Approval List')
 
 @section('content')
-<style>
+<style nonce="{{ $cspNonce }}">
 /* Toast-like messages */
 .success-message,.error-message{
   position:fixed;top:20px;right:20px;z-index:9999;color:#fff;padding:15px 20px;border-radius:10px;
@@ -323,7 +323,7 @@
   </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
 // mini toast helpers
 function showSuccessMessage(msg){const m=document.createElement('div');m.className='success-message';m.innerHTML=`<i class="ti ti-check-circle success-icon"></i>${msg}`;document.body.appendChild(m);setTimeout(()=>m.classList.add('show'),100);setTimeout(()=>{m.classList.remove('show');setTimeout(()=>m.remove(),300)},4000)}
 function showErrorMessage(msg){const m=document.createElement('div');m.className='error-message';m.innerHTML=`<i class="ti ti-alert-circle error-icon"></i>${msg}`;document.body.appendChild(m);setTimeout(()=>m.classList.add('show'),100);setTimeout(()=>{m.classList.remove('show');setTimeout(()=>m.remove(),300)},5000)}
