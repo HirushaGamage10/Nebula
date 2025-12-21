@@ -190,7 +190,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
 $(document).ready(function() {
     let editMode = false;
     let editingModuleId = null;

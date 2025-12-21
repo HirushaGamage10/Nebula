@@ -138,7 +138,7 @@
 @endsection
 
 @section('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
 let courseSpecializations = [];
 document.addEventListener('DOMContentLoaded', function() {
     const locationSelect = document.getElementById('location');
@@ -627,7 +627,7 @@ semesterForm.addEventListener('submit', function(e) {
 </script>
 @endsection
 
-<style>
+<style nonce="{{ $cspNonce }}">
     select:disabled {
         background-color: #f5f5f5 !important;
         border-color: #ddd !important;

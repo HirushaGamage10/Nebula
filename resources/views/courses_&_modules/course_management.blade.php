@@ -363,7 +363,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
 $(document).ready(function() {
     let allCourses = [];
     let filteredCourses = [];

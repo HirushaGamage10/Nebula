@@ -175,7 +175,7 @@
 @endsection
 
 @section('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
 let courseSpecializations = [];
 let addedModules = [];
 let allModules = [];
@@ -562,7 +562,7 @@ function showToast(message, type = 'success') {
 </script>
 @endsection
 
-<style>
+<style nonce="{{ $cspNonce }}">
     select:disabled {
         background-color: #f5f5f5 !important;
         border-color: #ddd !important;
