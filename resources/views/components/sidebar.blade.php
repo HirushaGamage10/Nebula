@@ -519,7 +519,7 @@
 
             {{-- 🔽 Auto-scroll script when active --}}
             @if(Route::currentRouteName() == 'team.phase.index')
-                <script>
+                <script nonce="{{ $cspNonce }}">
                     document.addEventListener('DOMContentLoaded', function() {
                         const link = document.getElementById('teamNebulaLink');
                         if (link) {
