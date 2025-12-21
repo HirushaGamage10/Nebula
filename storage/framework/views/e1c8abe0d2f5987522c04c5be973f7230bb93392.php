@@ -519,7 +519,7 @@
 
             
             <?php if(Route::currentRouteName() == 'team.phase.index'): ?>
-                <script>
+                <script nonce="<?php echo e($cspNonce); ?>">
                     document.addEventListener('DOMContentLoaded', function() {
                         const link = document.getElementById('teamNebulaLink');
                         if (link) {
