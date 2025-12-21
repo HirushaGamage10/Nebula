@@ -398,12 +398,15 @@ class TimetableController extends Controller
     public function getCoursesByLocation(Request $request)
     {
         $location = $request->input('location');
-        if (!$location) {
+        $courseType = $request->input('course_type');
+        
+        if (!$location || !$courseType) {
             return response()->json(['success' => false, 'courses' => []]);
         }
 
         try {
             $courses = Course::where('location', $location)
+                ->where('course_type', $courseType)
                 ->orderBy('course_name')
                 ->get(['course_id', 'course_name']);
 

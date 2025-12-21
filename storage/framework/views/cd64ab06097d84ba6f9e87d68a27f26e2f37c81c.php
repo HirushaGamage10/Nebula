@@ -31,7 +31,8 @@
                     <div class="col-sm-10">
                         <select class="form-select filter-param" id="course_type" name="course_type" required>
                             <option value="" selected disabled>Select a Course Type</option>
-                            <option value="degree">Degree/Diploma Program</option>
+                            <option value="degree">Degree Program</option>
+                            <option value="diploma">Diploma Program</option>
                             <option value="certificate">Certificate Program</option>
                         </select>
                     </div>
@@ -43,9 +44,6 @@
                         <div class="col-sm-10">
                             <select class="form-select filter-param" id="course" name="course_id" required>
                                 <option selected disabled value="">Select a Course</option>
-                                <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                    <option value="<?php echo e($course->course_id); ?>"><?php echo e($course->course_name); ?></option>
-                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </select>
                         </div>
                     </div>
@@ -54,9 +52,6 @@
                         <div class="col-sm-10">
                             <select class="form-select filter-param" id="intake" name="intake_id" required>
                                 <option selected disabled value="">Select an Intake</option>
-                                <?php $__currentLoopData = $intakes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $intake): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                                    <option value="<?php echo e($intake->intake_id); ?>"><?php echo e($intake->batch); ?></option>
-                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </select>
                         </div>
                     </div>
@@ -185,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function() {
     courseTypeSelect.addEventListener('change', function() {
         if (this.value) {
             fieldsContainer.style.display = 'block';
-            semesterRow.style.display = this.value === 'degree' ? 'flex' : 'none';
+            semesterRow.style.display = (this.value === 'degree' || this.value === 'diploma') ? 'flex' : 'none';
             fetchCoursesByLocation(locationSelect.value, this.value);
         } else {
             fieldsContainer.style.display = 'none';
@@ -295,11 +290,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function fetchCoursesByLocation(location, courseType) {
+        console.log('fetchCoursesByLocation called with:', { location, courseType });
         showSpinner(true);
-        fetch(`/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=${encodeURIComponent(courseType)}`)
+        const url = `/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=${encodeURIComponent(courseType)}`;
+        console.log('Fetching from URL:', url);
+        fetch(url)
             .then(response => response.json())
             .then(data => {
+                console.log('Response data:', data);
                 if (data.success && data.courses && data.courses.length > 0) {
+                    console.log('Courses received:', data.courses);
                     populateDropdown(courseSelect, data.courses, 'course_id', 'course_name', 'Course');
                     courseSelect.disabled = false;
                 } else {
@@ -307,7 +307,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     showToast('Error', data.message || 'No courses found for this location and type.', 'bg-danger');
                 }
             })
-            .catch(() => {
+            .catch((error) => {
+                console.error('Error fetching courses:', error);
                 resetAndDisable(courseSelect, 'Select a Course');
                 showToast('Error', 'Failed to fetch courses for this location and type.', 'bg-danger');
             })

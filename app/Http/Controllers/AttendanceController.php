@@ -38,15 +38,33 @@ class AttendanceController extends Controller
         $location = $request->query('location');
         $courseType = $request->query('course_type');
 
+        Log::info('getCoursesByLocation called', [
+            'location' => $location,
+            'course_type' => $courseType,
+            'all_params' => $request->all()
+        ]);
+
         if (!$location || !$courseType) {
             return response()->json(['success' => false, 'message' => 'Location and Course Type are required.']);
         }
         try {
-            $courses = Course::select('course_id', 'course_name')
+            // First, let's see what's actually in the database for this location
+            $allCoursesAtLocation = Course::where('location', $location)
+                ->select('course_id', 'course_name', 'course_type')
+                ->get();
+            
+            Log::info('All courses at location:', $allCoursesAtLocation->toArray());
+            
+            $query = Course::select('course_id', 'course_name', 'course_type')
                 ->where('location', $location)
                 ->where('course_type', $courseType)
-                ->orderBy('course_name', 'asc')
-                ->get();
+                ->orderBy('course_name', 'asc');
+            
+            Log::info('SQL Query: ' . $query->toSql(), ['bindings' => $query->getBindings()]);
+            
+            $courses = $query->get();
+            
+            Log::info('Filtered courses found: ' . $courses->count(), $courses->toArray());
 
             if ($courses->isEmpty()) {
                 return response()->json(['success' => false, 'message' => 'No courses found for this location and type.']);
