@@ -129,7 +129,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ $cspNonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     let students = [];
     const courseSelect = document.getElementById('course');
@@ -417,15 +417,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${student.registration_number}</td>
                 <td>${student.name_with_initials}</td>
                 <td class="text-center">
-                    <input type="checkbox" ${student.status ? 'checked' : ''} onchange="window.toggleAttendanceStatus(${index}, this.checked)">
+                    <input type="checkbox" ${student.status ? 'checked' : ''} data-student-index="${index}" class="attendance-checkbox">
                 </td>
             </tr>`;
             attendanceTableBody.insertAdjacentHTML('beforeend', row);
         });
-    }
-
-    window.toggleAttendanceStatus = function(index, checked) {
-        students[index].status = checked;
+        
+        // Add event listeners to checkboxes
+        document.querySelectorAll('.attendance-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const index = parseInt(this.getAttribute('data-student-index'));
+                students[index].status = this.checked;
+            });
+        });
     }
 
     saveAttendanceBtn.addEventListener('click', function() {
@@ -534,7 +538,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<style>
+<style nonce="{{ $cspNonce }}">
     .lds-ring { display: inline-block; position: relative; width: 80px; height: 80px; }
     .lds-ring div { box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; border: 8px solid #fff; border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: #fff transparent transparent transparent; }
     .lds-ring div:nth-child(1) { animation-delay: -0.45s; }
