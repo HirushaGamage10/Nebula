@@ -5,10 +5,9 @@
 <?php $__env->startSection('content'); ?>
     <link nonce="<?php echo e($cspNonce); ?>" rel="stylesheet" href="<?php echo e(asset('css/styles.min.css')); ?>">
     <link nonce="<?php echo e($cspNonce); ?>" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script nonce="<?php echo e($cspNonce); ?>" src="https://cdn-script.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-3fpdtzA5GqT1zvYxW3BXZ1KOB1p5MNpAuOf9m7z5b0k=" crossorigin="anonymous"></script>
     <script nonce="<?php echo e($cspNonce); ?>" src="<?php echo e(asset('js/tailwindcss.js')); ?>"></script>
     <script nonce="<?php echo e($cspNonce); ?>" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script nonce="<?php echo e($cspNonce); ?>" src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <div id="pageContent" class="bg-gray-50">
 
         <!-- Navigation Tabs -->
