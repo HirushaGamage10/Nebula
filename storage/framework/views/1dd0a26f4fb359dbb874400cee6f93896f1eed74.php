@@ -12,15 +12,15 @@
 
     <!-- Tabler Icons CSS -->
     <link nonce="<?php echo e($cspNonce); ?>" rel="stylesheet" href="<?php echo e(asset('css/icons/tabler-icons/tabler-icons.css')); ?>">
-    <!-- Bootstrap Icons (self-hosted) -->
-    <link nonce="<?php echo e($cspNonce); ?>" href="<?php echo e(asset('libs/bootstrap-icons/bootstrap-icons.css')); ?>" rel="stylesheet">
+    <!-- Bootstrap Icons (CDN) -->
+    <link nonce="<?php echo e($cspNonce); ?>" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
     <!-- CSS -->
     <link nonce="<?php echo e($cspNonce); ?>" href="<?php echo e(asset('css/styles.min.css')); ?>" rel="stylesheet">
     
 
     <!-- JS -->
-    <script nonce="<?php echo e($cspNonce); ?>" src="<?php echo e(asset('libs/jquery/dist/jquery.min.js')); ?>"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
     <script nonce="<?php echo e($cspNonce); ?>" src="<?php echo e(asset('libs/bootstrap/dist/js/bootstrap.bundle.min.js')); ?>"></script>
     <script nonce="<?php echo e($cspNonce); ?>" src="<?php echo e(asset('libs/simplebar/dist/simplebar.js')); ?>"></script>
     <!-- Sidebar + layout interactions (hamburger toggle, responsive sidebar) -->
