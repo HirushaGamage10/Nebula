@@ -18,7 +18,7 @@
     <link nonce="{{ $cspNonce }}" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
     <!-- JS -->
-    <script nonce="{{ $cspNonce }}" src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-3fpdtzA5GqT1zvYxW3BXZ1KOB1p5MNpAuOf9m7z5b0k=" crossorigin="anonymous"></script>
+    <script nonce="{{ $cspNonce }}" src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
     <script nonce="{{ $cspNonce }}" src="{{ asset('libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
     <script nonce="{{ $cspNonce }}" src="{{ asset('js/login.js') }}"></script>
 </head>

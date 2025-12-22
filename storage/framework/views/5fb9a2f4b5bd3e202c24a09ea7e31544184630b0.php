@@ -234,7 +234,7 @@
 <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
 
 <!-- Include DataTables CSS and JS -->
-<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+<link nonce="<?php echo e($cspNonce); ?>" rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
 <script nonce="<?php echo e($cspNonce); ?>" type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 <script nonce="<?php echo e($cspNonce); ?>" type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 
@@ -410,4 +410,4 @@ function showToast(message, type) {
 
 <?php $__env->stopSection(); ?>
 
-<?php echo $__env->make('inc.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/user_management/index.blade.php ENDPATH**/ ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/user_management/index.blade.php ENDPATH**/ ?>

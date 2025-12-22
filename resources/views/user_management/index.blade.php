@@ -234,7 +234,7 @@
 <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
 
 <!-- Include DataTables CSS and JS -->
-<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+<link nonce="{{ $cspNonce }}" rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
 <script nonce="{{ $cspNonce }}" type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 <script nonce="{{ $cspNonce }}" type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 
