@@ -49,6 +49,29 @@
     .dataTables_length, .dataTables_filter {
         margin-bottom: 1rem;
     }
+    .dataTables_length {
+        float: left;
+    }
+    .dataTables_filter {
+        float: right;
+        text-align: right;
+    }
+    .dataTables_length label,
+    .dataTables_filter label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0;
+    }
+    .dataTables_length select {
+        width: auto;
+        display: inline-block;
+    }
+    .dataTables_filter input {
+        width: auto;
+        display: inline-block;
+        margin-left: 0.5rem;
+    }
     @media (max-width: 991px) {
         .user-mgmt-card { padding: 1.2rem 0.5rem; }
         .user-mgmt-title { font-size: 1.4rem; }
@@ -209,6 +232,11 @@
 
 <!-- Toast Container -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
+<!-- Include DataTables CSS and JS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+<script nonce="{{ $cspNonce }}" type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script nonce="{{ $cspNonce }}" type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 
 <script nonce="{{ $cspNonce }}">
 document.addEventListener('DOMContentLoaded', function() {
@@ -379,10 +407,5 @@ function showToast(message, type) {
     return toast;
 }
 </script>
-
-<!-- Include DataTables CSS and JS -->
-<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
-<script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 
 @endsection
