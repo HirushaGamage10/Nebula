@@ -103,6 +103,7 @@ class RoleHelper
             'dashboard',
 
             // STUDENT MANAGEMENT
+            'student.registration',
             'student.other.information',
             'student.profile',
             'student.list',
