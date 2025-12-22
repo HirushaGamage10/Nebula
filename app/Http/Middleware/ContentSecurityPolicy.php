@@ -48,7 +48,9 @@ class ContentSecurityPolicy
                 . "style-src-attr 'unsafe-inline'; "
                 . "img-src 'self' data: blob: https:; "
                 . "connect-src 'self' ws: wss: https:; "
-                . "font-src 'self' data: https://fonts.gstatic.com https:; "
+                . "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https:; "
+                . "object-src 'none'; "
+                . "base-uri 'self'; "
                 . "frame-ancestors 'self';";
         } else {
             // Production: strict; allow self, trusted Google font origins, and required CDNs, rely on nonce for inline elements
