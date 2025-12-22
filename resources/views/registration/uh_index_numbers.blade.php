@@ -3,7 +3,7 @@
 @section('title', 'NEBULA | Add External Institute Student ID')
 
 @section('content')
-<style>
+<style nonce="{{ $cspNonce }}">
 /* Success Message Styles */
 .success-message{
   position:fixed;top:20px;right:20px;z-index:9999;background:linear-gradient(135deg,#28a745,#20c997);
@@ -80,7 +80,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ $cspNonce }}">
 // toast helpers
 function showSuccessMessage(msg){document.querySelectorAll('.success-message,.error-message').forEach(n=>n.remove());const d=document.createElement('div');d.className='success-message';d.innerHTML=`<i class="ti ti-check-circle success-icon"></i>${msg}`;document.body.appendChild(d);setTimeout(()=>d.classList.add('show'),100);setTimeout(()=>{d.classList.remove('show');setTimeout(()=>d.remove(),300)},4000)}
 function showErrorMessage(msg){document.querySelectorAll('.success-message,.error-message').forEach(n=>n.remove());const d=document.createElement('div');d.className='error-message';d.innerHTML=`<i class="ti ti-alert-circle error-icon"></i>${msg}`;document.body.appendChild(d);setTimeout(()=>d.classList.add('show'),100);setTimeout(()=>{d.classList.remove('show');setTimeout(()=>d.remove(),300)},5000)}

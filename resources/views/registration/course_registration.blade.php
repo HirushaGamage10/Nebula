@@ -3,7 +3,7 @@
 @section('title', 'NEBULA | Course Registration')
 
 @section('content')
-<style>
+<style nonce="{{ $cspNonce }}">
     /* Existing styles copied from root course_registration view */
     .terminated-disabled { opacity: 0.6; filter: grayscale(100%); pointer-events: none; }
     .terminated-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; cursor: not-allowed; background: rgba(255,255,255,0); }
@@ -292,7 +292,7 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
 document.addEventListener('DOMContentLoaded', function () {
     const searchBtn = document.getElementById('searchNicBtn');
     const nicInput = document.getElementById('studentNicSearch');

@@ -51,10 +51,10 @@
                             <i class="ti ti-user"></i> Student Details
                         </h5>
                         <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-light btn-sm" onclick="showChangeLogs()" id="logsBtn" disabled>
+                            <button type="button" class="btn btn-light btn-sm" id="logsBtn" disabled>
                                 <i class="ti ti-list-details me-1"></i> View Logs
                             </button>
-                            <button type="button" class="btn btn-light btn-sm" onclick="showCancelledPayments()" id="remarksBtn" disabled>
+                            <button type="button" class="btn btn-light btn-sm" id="remarksBtn" disabled>
                                 <i class="ti ti-notes me-1"></i> Remarks
                             </button>
                         </div>
@@ -163,8 +163,7 @@
                                                 <i class="ti ti-id-badge"></i>
                                             </span>
                                             <input type="text" id="generated_id" class="form-control" readonly placeholder="Select intake to generate">
-                                            <button class="btn btn-outline-secondary" type="button" 
-                                                    onclick="generateNewId()" id="generateBtn" disabled>
+                                            <button class="btn btn-outline-secondary" type="button" id="generateBtn" disabled>
                                                 <i class="ti ti-refresh"></i> Generate
                                             </button>
                                         </div>
@@ -192,7 +191,7 @@
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                                 <i class="ti ti-x me-2"></i> Cancel
                             </button>
-                            <button type="button" class="btn btn-success" onclick="submitChange()" id="submitBtn" disabled>
+                            <button type="button" class="btn btn-success" id="submitBtn" disabled>
                                 <i class="ti ti-check me-2"></i> Confirm Change
                             </button>
                         </div>
@@ -300,7 +299,7 @@
             <h6 class="mb-0">
                 <i class="ti ti-credit-card me-2"></i> Payment Summary & Student Payment Plans
             </h6>
-            <button type="button" class="btn btn-light btn-sm" onclick="refreshPaymentPlanFrame()">
+            <button type="button" class="btn btn-light btn-sm" id="refreshPaymentPlanBtn">
                 <i class="ti ti-refresh me-1"></i> Refresh
             </button>
         </div>
@@ -341,7 +340,7 @@
 @endsection
 
 @section('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
 // Global variables
 let selectedRegistration = null;
 let currentIntakeId = null;
@@ -749,8 +748,11 @@ async function searchStudent(nic) {
                     const statusText = isAllowed ? 'Change Allowed' : 'Restricted';
                     
                     const actionButton = isAllowed 
-                        ? `<button class="btn btn-warning btn-sm" 
-                                  onclick="showChangeModal(${reg.id}, ${reg.course_id}, ${reg.intake_id}, '${reg.course_start_date}')">
+                        ? `<button class="btn btn-warning btn-sm btn-change-modal" 
+                                  data-reg-id="${reg.id}" 
+                                  data-course-id="${reg.course_id}" 
+                                  data-intake-id="${reg.intake_id}" 
+                                  data-start-date="${reg.course_start_date}">
                               <i class="ti ti-refresh me-1"></i> Change
                            </button>`
                         : `<span class="text-muted">Not Allowed</span>`;
@@ -765,8 +767,8 @@ async function searchStudent(nic) {
                             <td>${reg.course_start_date}</td>
                             <td><span class="${statusClass}">${statusText}</span></td>
                             <td>
-                                <button class="btn btn-info btn-sm" 
-                                        onclick="checkPaymentStatus(${reg.id})">
+                                <button class="btn btn-info btn-sm btn-check-payment" 
+                                        data-reg-id="${reg.id}">
                                     <i class="ti ti-credit-card me-1"></i> Check
                                 </button>
                             </td>
@@ -975,28 +977,26 @@ async function loadCourses() {
         Object.keys(coursesByLocation).sort().forEach(location => {
             const color = stringToColor(location);
             
-            // Location header
-            courseSelect.innerHTML += `
-                <option disabled style="
-                    font-weight: bold;
-                    color: ${color};
-                    padding: 8px;
-                    border-top: 2px solid ${color};
-                    background: linear-gradient(to right, ${color}20, transparent);
-                    cursor: default;
-                ">
-                    📍 ${location.toUpperCase()}
-                </option>
-            `;
+            // Location header - create option element and set style via JavaScript
+            const headerOption = document.createElement('option');
+            headerOption.disabled = true;
+            headerOption.style.fontWeight = 'bold';
+            headerOption.style.color = color;
+            headerOption.style.padding = '8px';
+            headerOption.style.borderTop = `2px solid ${color}`;
+            headerOption.style.background = `linear-gradient(to right, ${color}20, transparent)`;
+            headerOption.style.cursor = 'default';
+            headerOption.textContent = `📍 ${location.toUpperCase()}`;
+            courseSelect.appendChild(headerOption);
             
             // Courses in this location
             coursesByLocation[location].forEach(course => {
                 const isCurrentCourse = course.course_id == currentCourseId;
-                courseSelect.innerHTML += `
-                    <option value="${course.course_id}" ${isCurrentCourse ? 'disabled' : ''}>
-                        ${isCurrentCourse ? '⮕ ' : ''}${course.course_type} - ${course.course_name}
-                    </option>
-                `;
+                const courseOption = document.createElement('option');
+                courseOption.value = course.course_id;
+                if (isCurrentCourse) courseOption.disabled = true;
+                courseOption.textContent = `${isCurrentCourse ? '⮕ ' : ''}${course.course_type} - ${course.course_name}`;
+                courseSelect.appendChild(courseOption);
             });
         });
         
@@ -1255,10 +1255,37 @@ document.addEventListener('DOMContentLoaded', function() {
     // Debug: Test routes
     console.log('Course change routes loaded');
     console.log('Check payment route:', "{{ route('course.change.check.payment') }}");
+    
+    // Add event listeners for buttons to avoid inline onclick (CSP compliance)
+    document.getElementById('logsBtn')?.addEventListener('click', showChangeLogs);
+    document.getElementById('remarksBtn')?.addEventListener('click', showCancelledPayments);
+    document.getElementById('generateBtn')?.addEventListener('click', generateNewId);
+    document.getElementById('submitBtn')?.addEventListener('click', submitChange);
+    document.getElementById('refreshPaymentPlanBtn')?.addEventListener('click', refreshPaymentPlanFrame);
+    
+    // Event delegation for dynamically created buttons
+    document.getElementById('reg_table')?.addEventListener('click', function(e) {
+        const changeBtn = e.target.closest('.btn-change-modal');
+        if (changeBtn) {
+            const regId = changeBtn.dataset.regId;
+            const courseId = changeBtn.dataset.courseId;
+            const intakeId = changeBtn.dataset.intakeId;
+            const startDate = changeBtn.dataset.startDate;
+            showChangeModal(regId, courseId, intakeId, startDate);
+            return;
+        }
+        
+        const checkPaymentBtn = e.target.closest('.btn-check-payment');
+        if (checkPaymentBtn) {
+            const regId = checkPaymentBtn.dataset.regId;
+            checkPaymentStatus(regId);
+            return;
+        }
+    });
 });
 </script>
 
-<style>
+<style nonce="{{ $cspNonce }}">
 .spinner {
     animation: spin 1s linear infinite;
 }

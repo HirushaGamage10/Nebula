@@ -107,7 +107,7 @@
     </div>
 </div>
 @endif
-<script>
+<script nonce="{{ $cspNonce }}">
 document.addEventListener('DOMContentLoaded', function() {
     // --- Toast auto-hide ---
     setTimeout(function() {
