@@ -148,7 +148,7 @@
     </div>
 </div>
 
-<style>
+<style nonce="{{ $cspNonce }}">
 .lds-ring { display: inline-block; position: relative; width: 80px; height: 80px; }
 .lds-ring div { box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; border: 8px solid #007bff; border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: #007bff transparent transparent transparent; }
 .lds-ring div:nth-child(1) { animation-delay: -0.45s; }
@@ -158,7 +158,7 @@
 #spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 9999; }
 </style>
 
-<script>
+<script nonce="{{ $cspNonce }}">
 function showToast(title, message, bgClass = 'bg-info') {
     const toastContainer = document.getElementById('toastContainer');
     const toastId = 'toast-' + Date.now();
