@@ -59,26 +59,7 @@ class IntakeCreationController extends Controller
     public function store(Request $request)
 {
     try {
-        $validatedData = $request->validate([
-            'location' => ['required', Rule::in(['Welisara', 'Moratuwa', 'Peradeniya'])],
-            'course_id' => 'required|exists:courses,course_id',
-            'batch' => 'required|string|max:255',
-            'batch_size' => 'required|integer|min:1',
-            'intake_mode' => ['required', Rule::in(['Physical', 'Online', 'Hybrid'])],
-            'intake_type' => ['required', Rule::in(['Fulltime', 'Parttime'])],
-            'registration_fee' => 'required|numeric|min:0',
-            'franchise_payment' => 'required|numeric|min:0',
-            'franchise_payment_currency' => 'required|string|in:LKR,USD,GBP,EUR',
-            'course_fee' => 'required|numeric|min:0',
-            'sscl_tax' => 'required|numeric|min:0|max:100',
-            'bank_charges' => 'nullable|numeric|min:0',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'enrollment_end_date' => 'nullable|date|before_or_equal:start_date',
-            'course_registration_id_pattern' => 'required|string|regex:/^.*\d+$/',
-        ]);
-
-        // 🧩 Automatically fetch the course name and store both
+        // Get course type to determine required fields
         $course = \App\Models\Course::find($request->course_id);
         if (!$course) {
             return response()->json([
@@ -86,15 +67,47 @@ class IntakeCreationController extends Controller
                 'message' => 'Course not found.',
             ], 404);
         }
+        
+        $courseType = $course->course_type;
+        $isCertificate = $courseType === 'certificate';
+        
+        $validatedData = $request->validate([
+            'location' => ['required', Rule::in(['Welisara', 'Moratuwa', 'Peradeniya'])],
+            'course_id' => 'required|exists:courses,course_id',
+            'course_type' => ['required', Rule::in(['degree', 'diploma', 'certificate'])],
+            'batch' => 'required|string|max:255',
+            'batch_size' => 'required|integer|min:1',
+            'intake_mode' => ['required', Rule::in(['Physical', 'Online', 'Hybrid'])],
+            'intake_type' => ['required', Rule::in(['Fulltime', 'Parttime'])],
+            'registration_fee' => 'required|numeric|min:0',
+            'franchise_payment' => $isCertificate ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
+            'franchise_payment_currency' => $isCertificate ? 'nullable|string|in:LKR,USD,GBP,EUR' : 'required|string|in:LKR,USD,GBP,EUR',
+            'course_fee' => 'required|numeric|min:0',
+            'sscl_tax' => $isCertificate ? 'nullable|numeric|min:0|max:100' : 'required|numeric|min:0|max:100',
+            'bank_charges' => 'nullable|numeric|min:0',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'enrollment_end_date' => 'nullable|date|before_or_equal:start_date',
+            'course_registration_id_pattern' => 'required|string|regex:/^.*\d+$/',
+        ]);
 
         //  If enrollment_end_date is empty, set it equal to start_date
         if (empty($validatedData['enrollment_end_date'])) {
             $validatedData['enrollment_end_date'] = $validatedData['start_date'];
         }
         
+        // Set course name
         $validatedData['course_name'] = $course->course_name;
+        
+        // Set defaults for certificate programs if not provided
+        if ($isCertificate) {
+            $validatedData['franchise_payment'] = $validatedData['franchise_payment'] ?? 0;
+            $validatedData['franchise_payment_currency'] = $validatedData['franchise_payment_currency'] ?? 'LKR';
+            $validatedData['sscl_tax'] = $validatedData['sscl_tax'] ?? 0;
+            $validatedData['bank_charges'] = $validatedData['bank_charges'] ?? 0;
+        }
 
-        // 🧩 Create the intake with both course_id and course_name
+        // Create the intake with both course_id and course_name
         $intake = Intake::create($validatedData);
 
         return response()->json([
@@ -153,6 +166,18 @@ class IntakeCreationController extends Controller
             
             $intake = Intake::findOrFail($id);
             
+            // Get course type to determine required fields
+            $course = \App\Models\Course::find($request->course_id);
+            if (!$course) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Course not found.',
+                ], 404);
+            }
+            
+            $courseType = $course->course_type;
+            $isCertificate = $courseType === 'certificate';
+            
             $validatedData = $request->validate([
                 'location' => ['required', Rule::in(['Welisara', 'Moratuwa', 'Peradeniya'])],
                 'course_id' => 'required|exists:courses,course_id',
@@ -161,10 +186,10 @@ class IntakeCreationController extends Controller
                 'intake_mode' => ['required', Rule::in(['Physical', 'Online', 'Hybrid'])],
                 'intake_type' => ['required', Rule::in(['Fulltime', 'Parttime'])],
                 'registration_fee' => 'required|numeric|min:0',
-                'franchise_payment' => 'required|numeric|min:0',
-                'franchise_payment_currency' => 'required|string|in:LKR,USD,GBP,EUR',
+                'franchise_payment' => $isCertificate ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
+                'franchise_payment_currency' => $isCertificate ? 'nullable|string|in:LKR,USD,GBP,EUR' : 'required|string|in:LKR,USD,GBP,EUR',
                 'course_fee' => 'required|numeric|min:0',
-                'sscl_tax' => 'required|numeric|min:0|max:100',
+                'sscl_tax' => $isCertificate ? 'nullable|numeric|min:0|max:100' : 'required|numeric|min:0|max:100',
                 'bank_charges' => 'nullable|numeric|min:0',
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after_or_equal:start_date',
@@ -222,6 +247,14 @@ class IntakeCreationController extends Controller
             }
 
             $validatedData['course_name'] = $course->course_name;
+            
+            // Set defaults for certificate programs if not provided
+            if ($isCertificate) {
+                $validatedData['franchise_payment'] = $validatedData['franchise_payment'] ?? 0;
+                $validatedData['franchise_payment_currency'] = $validatedData['franchise_payment_currency'] ?? 'LKR';
+                $validatedData['sscl_tax'] = $validatedData['sscl_tax'] ?? 0;
+                $validatedData['bank_charges'] = $validatedData['bank_charges'] ?? 0;
+            }
 
             // 🧩 Update intake with both course_id and course_name
             $intake->update($validatedData);
