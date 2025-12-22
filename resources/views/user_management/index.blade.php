@@ -3,7 +3,7 @@
 @section('title', 'NEBULA | User Management')
 
 @section('content')
-<style>
+<style nonce="{{ $cspNonce }}">
     .user-mgmt-card {
         max-width: 1100px;
         margin: 40px auto 0 auto;
@@ -86,9 +86,9 @@
                         <td>{{ $user['user_location'] }}</td>
                         <td>{{ $user['created_at'] }}</td>
                         <td>
-                            <button class="btn btn-sm btn-primary" onclick="editUser({{ $user['user_id'] }})">Edit</button>
-                            <button class="btn btn-sm btn-danger" style="margin-left:4px;" onclick="deleteUser({{ $user['user_id'] }}, '{{ $user['user_name'] }}')">Delete</button>
-                            <button class="btn btn-sm btn-warning" style="margin-left:4px;" onclick="showResetPasswordModal({{ $user['user_id'] }}, '{{ $user['user_name'] }}')">Reset Password</button>
+                            <button class="btn btn-sm btn-primary btn-edit-user" data-user-id="{{ $user['user_id'] }}">Edit</button>
+                            <button class="btn btn-sm btn-danger ms-1 btn-delete-user" data-user-id="{{ $user['user_id'] }}" data-user-name="{{ $user['user_name'] }}">Delete</button>
+                            <button class="btn btn-sm btn-warning ms-1 btn-reset-password" data-user-id="{{ $user['user_id'] }}" data-user-name="{{ $user['user_name'] }}">Reset Password</button>
                         </td>
                     </tr>
                     @endforeach
@@ -210,8 +210,24 @@
 <!-- Toast Container -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
 
-<script>
+<script nonce="{{ $cspNonce }}">
 document.addEventListener('DOMContentLoaded', function() {
+    // Event delegation for action buttons (CSP compliant)
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-edit-user')) {
+            const btn = e.target.closest('.btn-edit-user');
+            editUser(btn.dataset.userId);
+        }
+        if (e.target.closest('.btn-delete-user')) {
+            const btn = e.target.closest('.btn-delete-user');
+            deleteUser(btn.dataset.userId, btn.dataset.userName);
+        }
+        if (e.target.closest('.btn-reset-password')) {
+            const btn = e.target.closest('.btn-reset-password');
+            showResetPasswordModal(btn.dataset.userId, btn.dataset.userName);
+        }
+    });
+    
     // Initialize DataTable
     $('#usersTable').DataTable({
         responsive: true,

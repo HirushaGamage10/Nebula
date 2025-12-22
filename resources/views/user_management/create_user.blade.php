@@ -161,7 +161,7 @@
 </div>
 <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
 
-<script>
+<script nonce="{{ $cspNonce }}">
 document.addEventListener('DOMContentLoaded', function() {
   const form = document.getElementById('createUserForm');
   const createUserBtn = document.getElementById('createUserBtn');

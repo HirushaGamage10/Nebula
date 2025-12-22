@@ -134,10 +134,10 @@
           <!-- Phase Filter Buttons -->
           <div class="d-flex align-items-center">
             <div class="btn-group btn-group-sm me-3" role="group" aria-label="Phase filter">
-              <input type="radio" class="btn-check" name="phaseFilter" id="filterAll" checked onclick="filterPhases('all')">
-              <label class="btn btn-outline-primary" for="filterAll">All</label>
+              <input type="radio" class="btn-check" name="phaseFilter" id="filterAll" value="all" checked>
+              <label class="btn btn-outline-primary" for="filterAll">All Phases</label>
               @foreach($phases as $phase)
-                <input type="radio" class="btn-check" name="phaseFilter" id="filter{{ $phase->id }}" onclick="filterPhases('{{ $phase->id }}')">
+                <input type="radio" class="btn-check" name="phaseFilter" id="filter{{ $phase->id }}" value="{{ $phase->id }}">
                 <label class="btn btn-outline-primary" for="filter{{ $phase->id }}">{{ $phase->phase_name }}</label>
               @endforeach
             </div>
@@ -192,7 +192,7 @@
                       <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editPhaseModal_{{ $phase->id }}">
                         <i class="ti ti-edit"></i> Edit
                       </button>
-                      <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDelete('{{ route('phase.delete', $phase) }}', 'phase')">
+                      <button type="button" class="btn btn-sm btn-outline-danger btn-delete-phase" data-url="{{ route('phase.delete', $phase) }}" data-type="phase">
                         <i class="ti ti-trash"></i> Delete
                       </button>
                     </div>
@@ -264,7 +264,7 @@
                                             </button>
                                         </li>
                                         <li>
-                                            <button class="dropdown-item text-danger" onclick="confirmDelete('{{ route('team.delete', $team) }}', 'member')">
+                                            <button class="dropdown-item text-danger btn-delete-member" data-url="{{ route('team.delete', $team) }}" data-type="member">
                                                 <i class="ti ti-trash me-2"></i> Delete
                                             </button>
                                         </li>
@@ -274,7 +274,7 @@
                                             </button>
                                         </li>
                                         <li>
-                                            <button class="dropdown-item text-warning" onclick="confirmRemovePhase('{{ route('team.remove-phase', ['team' => $team, 'phase' => $phase]) }}')">
+                                            <button class="dropdown-item text-warning btn-remove-phase" data-url="{{ route('team.remove-phase', ['team' => $team, 'phase' => $phase]) }}">
                                                 <i class="ti ti-x me-2"></i> Remove from this Phase
                                             </button>
                                         </li>
@@ -480,8 +480,8 @@
                                 <small class="text-muted" style="font-size: 0.65rem;">{{ $supervisor['designation'] }}</small>
                               </div>
                               @if($isDeveloper)
-                              <button class="btn btn-sm btn-outline-secondary ms-1" 
-                                      onclick="removeSupervisor('{{ $phase->id }}', {{ $index }})"
+                              <button class="btn btn-sm btn-outline-secondary ms-1 btn-remove-supervisor" 
+                                      data-phase-id="{{ $phase->id }}" data-supervisor-index="{{ $index }}"
                                       style="padding: 0.1rem 0.2rem; font-size: 0.6rem;">
                                 <i class="ti ti-trash"></i>
                               </button>
@@ -548,8 +548,7 @@
                                            placeholder="Designation">
                                   </div>
                                   <div class="col-md-2">
-                                    <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor-btn" 
-                                            onclick="removeSupervisorRow(this)">
+                                    <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor-btn">
                                       <i class="ti ti-trash"></i>
                                     </button>
                                   </div>
@@ -564,16 +563,15 @@
                                     <input type="text" name="supervisors[0][designation]" class="form-control" placeholder="Designation">
                                   </div>
                                   <div class="col-md-2">
-                                    <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor-btn" 
-                                            onclick="removeSupervisorRow(this)">
+                                    <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor-btn">
                                       <i class="ti ti-trash"></i>
                                     </button>
                                   </div>
                                 </div>
                               @endif
                             </div>
-                            <button type="button" class="btn btn-outline-primary btn-sm mt-2" 
-                                    onclick="addSupervisorRow({{ $phase->id }})">
+                            <button type="button" class="btn btn-outline-primary btn-sm mt-2 btn-add-supervisor" 
+                                    data-phase-id="{{ $phase->id }}">
                               <i class="ti ti-plus"></i> Add Supervisor
                             </button>
                           </div>
@@ -644,7 +642,53 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ $cspNonce }}">
+// Event delegation for all dynamic buttons (CSP compliant)
+document.addEventListener('click', function(e) {
+    // Delete phase
+    if (e.target.closest('.btn-delete-phase')) {
+        const btn = e.target.closest('.btn-delete-phase');
+        confirmDelete(btn.dataset.url, btn.dataset.type);
+    }
+    
+    // Delete member
+    if (e.target.closest('.btn-delete-member')) {
+        const btn = e.target.closest('.btn-delete-member');
+        confirmDelete(btn.dataset.url, btn.dataset.type);
+    }
+    
+    // Remove from phase
+    if (e.target.closest('.btn-remove-phase')) {
+        const btn = e.target.closest('.btn-remove-phase');
+        confirmRemovePhase(btn.dataset.url);
+    }
+    
+    // Remove supervisor
+    if (e.target.closest('.btn-remove-supervisor')) {
+        const btn = e.target.closest('.btn-remove-supervisor');
+        removeSupervisor(btn.dataset.phaseId, btn.dataset.supervisorIndex);
+    }
+    
+    // Add supervisor row
+    if (e.target.closest('.btn-add-supervisor')) {
+        const btn = e.target.closest('.btn-add-supervisor');
+        addSupervisorRow(btn.dataset.phaseId);
+    }
+    
+    // Remove supervisor row (both classes)
+    if (e.target.closest('.remove-supervisor') || e.target.closest('.remove-supervisor-btn')) {
+        const btn = e.target.closest('.remove-supervisor, .remove-supervisor-btn');
+        removeSupervisorRow(btn);
+    }
+});
+
+// Phase filter radio buttons
+document.addEventListener('change', function(e) {
+    if (e.target.name === 'phaseFilter') {
+        filterPhases(e.target.value);
+    }
+});
+
 // Phase Filter Function
 function filterPhases(phaseId) {
     const allPhases = document.querySelectorAll('.phase-container');
@@ -680,7 +724,7 @@ document.getElementById('addSupervisorBtn')?.addEventListener('click', function(
             <input type="text" name="supervisors[${index}][designation]" class="form-control" placeholder="Designation">
         </div>
         <div class="col-md-1">
-            <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor" onclick="removeSupervisorRow(this)">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor">
                 <i class="ti ti-trash"></i>
             </button>
         </div>
@@ -703,7 +747,7 @@ function addSupervisorRow(phaseId) {
             <input type="text" name="supervisors[${index}][designation]" class="form-control" placeholder="Designation">
         </div>
         <div class="col-md-2">
-            <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor-btn" onclick="removeSupervisorRow(this)">
+            <button type="button" class="btn btn-outline-danger btn-sm remove-supervisor-btn">
                 <i class="ti ti-trash"></i>
             </button>
         </div>
@@ -830,7 +874,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<style>
+<style nonce="{{ $cspNonce }}">
 .team-member-card:hover {
     transform: translateY(-2px);
     transition: transform 0.2s;
