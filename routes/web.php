@@ -223,6 +223,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Student Counselor,Bursar,Marketing Manager,Developer'])->group(function () {
         Route::get('/course-registration', [CourseRegistraionController::class, 'showCourseRegistration'])->name('course.registration');
+        Route::get('/course-registration/get-courses-by-location/{location}', [CourseRegistraionController::class, 'getCoursesByLocation'])->name('course.registration.courses.by.location');
+        Route::get('/course-registration/get-intakes/{courseName}/{location}', [CourseRegistraionController::class, 'getIntakesForCourseAndLocation'])->name('course.registration.intakes.by.course.location');
         Route::post('/check-student-exists', [CourseRegistraionController::class, 'checkStudentExists'])->name('check.student.exists');
         Route::post('/store-course-registration', [CourseRegistraionController::class, 'storeCourseRegistration'])->name('store.course.registration');
         Route::post('/check-students', [CourseRegistraionController::class, 'checkStudents'])->name('check.students');

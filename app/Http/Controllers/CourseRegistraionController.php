@@ -459,6 +459,28 @@ class CourseRegistraionController extends Controller
         }
     }
 
+    // API method to get intakes by course and location
+    public function getIntakesForCourseAndLocation($courseName, $location)
+    {
+        try {
+            $intakes = Intake::where('course_name', $courseName)
+                ->where('location', $location)
+                ->orderBy('batch')
+                ->get(['intake_id', 'batch', 'start_date', 'registration_fee']);
+
+            return response()->json([
+                'success' => true,
+                'intakes' => $intakes
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting intakes by course and location: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'intakes' => []
+            ]);
+        }
+    }
+
     // Updated API method for course registration
     public function storeCourseRegistrationAPI(Request $request)
     {
