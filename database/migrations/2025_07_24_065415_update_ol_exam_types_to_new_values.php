@@ -27,8 +27,8 @@ return new class extends Migration
             $table->enum('ol_exam_type', ['Local', 'London Cambridge', 'London Edexcel', 'Other'])->nullable()->after('student_id');
         });
         
-        // Update the data back to the correct value
-        DB::statement("UPDATE student_exams SET ol_exam_type = 'London Cambridge' WHERE ol_exam_type = 'Local' AND student_id IN (SELECT student_id FROM student_exams WHERE ol_exam_type = 'Local')");
+        // Update the data back to the correct value (using a workaround for MySQL subquery limitation)
+        DB::statement("UPDATE student_exams SET ol_exam_type = 'London Cambridge' WHERE ol_exam_type = 'Local'");
     }
 
     /**
