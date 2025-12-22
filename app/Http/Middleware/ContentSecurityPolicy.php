@@ -18,44 +18,73 @@ class ContentSecurityPolicy
         // 3. Continue the request
         $response = $next($request);
 
-        // 4. Set CSP header with nonces for inline scripts/styles
-        // This configuration:
-        // - Uses nonces for inline <script> and <style> blocks (secure, fixes ZAP issues)
-        // - Allows inline style attributes for UI framework compatibility
-        // - Allows trusted CDN hosts for external resources
+        // 4. Build strict CSP header
+        // All inline scripts/styles MUST use the nonce attribute: nonce="{{ $cspNonce }}"
         
-        $cdnHosts = [
+        // Trusted CDN hosts for scripts
+        $scriptHosts = [
+            "'self'",
+            "'nonce-$nonce'",
             'https://cdn.jsdelivr.net',
             'https://cdnjs.cloudflare.com',
             'https://cdn-script.com',
             'https://ajax.googleapis.com',
             'https://code.jquery.com',
         ];
-        $cdnList = implode(' ', $cdnHosts);
-
-        // Style sources - include Google Fonts
-        $styleSources = [
+        
+        // Trusted hosts for styles
+        $styleHosts = [
             "'self'",
             "'nonce-$nonce'",
             'https://fonts.googleapis.com',
             'https://cdn.jsdelivr.net',
             'https://cdnjs.cloudflare.com',
         ];
-        $styleList = implode(' ', $styleSources);
+        
+        // Trusted hosts for images (no wildcard!)
+        $imgHosts = [
+            "'self'",
+            'data:',
+            'blob:',
+            'https://cdn.jsdelivr.net',
+            'https://nebulastudentportal.slt.lk',
+        ];
+        
+        // Trusted hosts for fonts
+        $fontHosts = [
+            "'self'",
+            'data:',
+            'https://fonts.gstatic.com',
+            'https://cdn.jsdelivr.net',
+        ];
+        
+        // Trusted hosts for connections (AJAX, fetch, WebSocket)
+        $connectHosts = [
+            "'self'",
+            'https://fonts.googleapis.com',
+            'https://fonts.gstatic.com',
+        ];
 
+        $scriptList = implode(' ', $scriptHosts);
+        $styleList = implode(' ', $styleHosts);
+        $imgList = implode(' ', $imgHosts);
+        $fontList = implode(' ', $fontHosts);
+        $connectList = implode(' ', $connectHosts);
+
+        // Build CSP - NO 'unsafe-inline' anywhere!
         $csp = "default-src 'self'; "
-            // Scripts: use nonces, no unsafe-inline (fixes ZAP script-src issue)
-            . "script-src 'self' 'nonce-$nonce' $cdnList; "
-            . "script-src-elem 'self' 'nonce-$nonce' $cdnList; "
-            . "script-src-attr 'self' 'unsafe-hashes'; "
-            // Styles: use nonces for <style> blocks, allow inline style attributes
+            // Scripts: nonce-based (secure)
+            . "script-src $scriptList; "
+            . "script-src-elem $scriptList; "
+            . "script-src-attr 'none'; "
+            // Styles: nonce-based (secure)
             . "style-src $styleList; "
             . "style-src-elem $styleList; "
-            . "style-src-attr 'self' 'unsafe-inline'; "
-            // Resources
-            . "img-src 'self' data: blob: https:; "
-            . "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; "
-            . "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; "
+            . "style-src-attr 'self' 'unsafe-hashes'; "
+            // Resources: specific hosts only (no wildcards)
+            . "img-src $imgList; "
+            . "connect-src $connectList; "
+            . "font-src $fontList; "
             . "frame-src 'self' https://nebulastudentportal.slt.lk; "
             . "media-src 'self'; "
             . "manifest-src 'self'; "
@@ -63,7 +92,8 @@ class ContentSecurityPolicy
             . "form-action 'self'; "
             . "object-src 'none'; "
             . "base-uri 'self'; "
-            . "frame-ancestors 'self' https://nebulastudentportal.slt.lk;";
+            . "frame-ancestors 'self' https://nebulastudentportal.slt.lk; "
+            . "upgrade-insecure-requests;";
 
         // 5. Add CSP header to response
         $response->headers->set('Content-Security-Policy', $csp);
@@ -71,3 +101,4 @@ class ContentSecurityPolicy
         return $response;
     }
 }
+
