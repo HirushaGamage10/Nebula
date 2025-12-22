@@ -3,7 +3,7 @@
 <?php $__env->startSection('title', 'NEBULA | Course Registration'); ?>
 
 <?php $__env->startSection('content'); ?>
-<style>
+<style nonce="<?php echo e($cspNonce); ?>">
     /* Existing styles copied from root course_registration view */
     .terminated-disabled { opacity: 0.6; filter: grayscale(100%); pointer-events: none; }
     .terminated-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; cursor: not-allowed; background: rgba(255,255,255,0); }
@@ -292,7 +292,7 @@
 </div>
 
 <?php $__env->startPush('scripts'); ?>
-<script>
+<script nonce="<?php echo e($cspNonce); ?>">
 document.addEventListener('DOMContentLoaded', function () {
     const searchBtn = document.getElementById('searchNicBtn');
     const nicInput = document.getElementById('studentNicSearch');

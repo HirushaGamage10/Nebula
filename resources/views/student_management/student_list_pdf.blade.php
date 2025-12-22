@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <title>Student Registration List</title>
-    <style>
+    <style nonce="{{ $cspNonce }}">
         body { font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: #333; margin: 0; padding: 20px; }
         .container-fluid { width: 100%; }
         .card { border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }

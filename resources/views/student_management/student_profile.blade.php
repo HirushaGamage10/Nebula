@@ -3,7 +3,7 @@
 @section('title', 'NEBULA | Student Profile')
 
 @section('content')
-<style>
+<style nonce="{{ $cspNonce }}">
 /* Validation Error Styles */
 .is-invalid {
     border-color: #dc3545 !important;
@@ -822,7 +822,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ $cspNonce }}">
 // ---------- Notifications ----------
 function showSuccessMessage(message){
   document.querySelectorAll('.success-message,.error-message').forEach(m=>m.remove());
