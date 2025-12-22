@@ -131,7 +131,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
 // Enhanced toast function for colorful messages
 function showToast(message, type = 'info') {
     // Remove existing toasts

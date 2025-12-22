@@ -209,7 +209,7 @@
     </div>
 
     @push('scripts')
-        <script>
+        <script nonce="{{ $cspNonce }}">
             document.addEventListener('DOMContentLoaded', function () {
                 const nicInput = document.getElementById('nic');
                 const courseSelect = document.getElementById('course');
