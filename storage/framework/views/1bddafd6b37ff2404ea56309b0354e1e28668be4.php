@@ -13,14 +13,14 @@
     <link rel="shortcut icon" type="image/png" href="<?php echo e(asset('images/logos/nebula.png')); ?>">
 
     <!-- CSS -->
-    <link href="<?php echo e(asset('css/styles.min.css')); ?>" rel="stylesheet">
-    <link href="<?php echo e(asset('css/login.css')); ?>" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link nonce="<?php echo e($cspNonce); ?>" href="<?php echo e(asset('css/styles.min.css')); ?>" rel="stylesheet">
+    <link nonce="<?php echo e($cspNonce); ?>" href="<?php echo e(asset('css/login.css')); ?>" rel="stylesheet">
+    <link nonce="<?php echo e($cspNonce); ?>" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
     <!-- JS -->
-    <script src="<?php echo e(asset('libs/jquery/dist/jquery.min.js')); ?>"></script>
-    <script src="<?php echo e(asset('libs/bootstrap/dist/js/bootstrap.bundle.min.js')); ?>"></script>
-    <script src="<?php echo e(asset('js/login.js')); ?>"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="<?php echo e(asset('libs/jquery/dist/jquery.min.js')); ?>"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="<?php echo e(asset('libs/bootstrap/dist/js/bootstrap.bundle.min.js')); ?>"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="<?php echo e(asset('js/login.js')); ?>"></script>
 </head>
 
 <body>

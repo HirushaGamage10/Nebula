@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Timetable Management')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Timetable Management'); ?>
+
+<?php $__env->startSection('content'); ?>
     <div class="container-fluid">
         <div class="card">
             <div class="card-body">
@@ -257,7 +257,7 @@
                             </div>
                         </div>
                     </div>
-                    {{-- <button type="button" class="btn btn-secondary" id="addSubjectBtn">Add Another Subject</button> --}}
+                    
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Close</button>
@@ -338,25 +338,25 @@
         </div>
 
     <!-- FullCalendar v5 (modern build) -->
-    <link nonce="{{ $cspNonce }}" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
+    <link nonce="<?php echo e($cspNonce); ?>" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
 
     <!-- jQuery (kept for other UI code) -->
-    <script nonce="{{ $cspNonce }}" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <!-- Moment.js (used in other parts of this page) -->
-    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
 
     <!-- FullCalendar v5 bundle -->
-    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
 
     <!-- jsPDF for PDF export -->
-    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
     <!-- html2canvas (needed to snapshot table) -->
-    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
-@push('scripts')
-    <script nonce="{{ $cspNonce }}">
+<?php $__env->startPush('scripts'); ?>
+    <script nonce="<?php echo e($cspNonce); ?>">
         $(document).ready(function () {
             var latestEventsRaw = []; // raw server rows
             var latestFcEvents = [];  // mapped fullcalendar events
@@ -1978,13 +1978,14 @@
 
         });
     </script>
-@endpush
+<?php $__env->stopPush(); ?>
 
-    <style nonce="{{ $cspNonce }}">
+    <style nonce="<?php echo e($cspNonce); ?>">
         /* Allow FullCalendar to handle positioning for agendaWeek/agendaDay.
            Do not override position/left/top; only adjust width if needed. */
         #calendar .fc-event {
             width: auto !important;
         }
     </style>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/courses_&_modules/timetable.blade.php ENDPATH**/ ?>

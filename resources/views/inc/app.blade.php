@@ -11,21 +11,21 @@
     <link rel="shortcut icon" type="image/png" href="{{ asset('images/logos/favicon.jpg') }}" />
 
     <!-- Tabler Icons CSS -->
-    <link rel="stylesheet" href="{{ asset('css/icons/tabler-icons/tabler-icons.css') }}">
+    <link nonce="{{ $cspNonce }}" rel="stylesheet" href="{{ asset('css/icons/tabler-icons/tabler-icons.css') }}">
     <!-- Bootstrap Icons (self-hosted) -->
-    <link href="{{ asset('libs/bootstrap-icons/bootstrap-icons.css') }}" rel="stylesheet">
+    <link nonce="{{ $cspNonce }}" href="{{ asset('libs/bootstrap-icons/bootstrap-icons.css') }}" rel="stylesheet">
 
     <!-- CSS -->
-    <link href="{{ asset('css/styles.min.css') }}" rel="stylesheet">
+    <link nonce="{{ $cspNonce }}" href="{{ asset('css/styles.min.css') }}" rel="stylesheet">
     
 
     <!-- JS -->
-    <script src="{{ asset('libs/jquery/dist/jquery.min.js') }}"></script>
-    <script src="{{ asset('libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{ asset('libs/simplebar/dist/simplebar.js') }}"></script>
+    <script nonce="{{ $cspNonce }}" src="{{ asset('libs/jquery/dist/jquery.min.js') }}"></script>
+    <script nonce="{{ $cspNonce }}" src="{{ asset('libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}"></script>
+    <script nonce="{{ $cspNonce }}" src="{{ asset('libs/simplebar/dist/simplebar.js') }}"></script>
     <!-- Sidebar + layout interactions (hamburger toggle, responsive sidebar) -->
-    <script src="{{ asset('js/app.min.js') }}"></script>
-    <script src="{{ asset('js/sidebarmenu.js') }}"></script>
+    <script nonce="{{ $cspNonce }}" src="{{ asset('js/app.min.js') }}"></script>
+    <script nonce="{{ $cspNonce }}" src="{{ asset('js/sidebarmenu.js') }}"></script>
     <style nonce="{{ $cspNonce }}">
         body {
             background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E') no-repeat center center fixed;

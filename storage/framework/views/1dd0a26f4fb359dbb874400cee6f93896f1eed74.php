@@ -11,21 +11,21 @@
     <link rel="shortcut icon" type="image/png" href="<?php echo e(asset('images/logos/favicon.jpg')); ?>" />
 
     <!-- Tabler Icons CSS -->
-    <link rel="stylesheet" href="<?php echo e(asset('css/icons/tabler-icons/tabler-icons.css')); ?>">
+    <link nonce="<?php echo e($cspNonce); ?>" rel="stylesheet" href="<?php echo e(asset('css/icons/tabler-icons/tabler-icons.css')); ?>">
     <!-- Bootstrap Icons (self-hosted) -->
-    <link href="<?php echo e(asset('libs/bootstrap-icons/bootstrap-icons.css')); ?>" rel="stylesheet">
+    <link nonce="<?php echo e($cspNonce); ?>" href="<?php echo e(asset('libs/bootstrap-icons/bootstrap-icons.css')); ?>" rel="stylesheet">
 
     <!-- CSS -->
-    <link href="<?php echo e(asset('css/styles.min.css')); ?>" rel="stylesheet">
+    <link nonce="<?php echo e($cspNonce); ?>" href="<?php echo e(asset('css/styles.min.css')); ?>" rel="stylesheet">
     
 
     <!-- JS -->
-    <script src="<?php echo e(asset('libs/jquery/dist/jquery.min.js')); ?>"></script>
-    <script src="<?php echo e(asset('libs/bootstrap/dist/js/bootstrap.bundle.min.js')); ?>"></script>
-    <script src="<?php echo e(asset('libs/simplebar/dist/simplebar.js')); ?>"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="<?php echo e(asset('libs/jquery/dist/jquery.min.js')); ?>"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="<?php echo e(asset('libs/bootstrap/dist/js/bootstrap.bundle.min.js')); ?>"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="<?php echo e(asset('libs/simplebar/dist/simplebar.js')); ?>"></script>
     <!-- Sidebar + layout interactions (hamburger toggle, responsive sidebar) -->
-    <script src="<?php echo e(asset('js/app.min.js')); ?>"></script>
-    <script src="<?php echo e(asset('js/sidebarmenu.js')); ?>"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="<?php echo e(asset('js/app.min.js')); ?>"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="<?php echo e(asset('js/sidebarmenu.js')); ?>"></script>
     <style nonce="<?php echo e($cspNonce); ?>">
         body {
             background: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3C/svg%3E') no-repeat center center fixed;

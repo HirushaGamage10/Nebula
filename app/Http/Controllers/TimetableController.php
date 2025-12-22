@@ -405,9 +405,17 @@ class TimetableController extends Controller
         }
 
         try {
-            $courses = Course::where('location', $location)
-                ->where('course_type', $courseType)
-                ->orderBy('course_name')
+            // For Degree tab, include both Degree and Diploma courses
+            // For Certificate tab, only Certificate courses
+            $query = Course::where('location', $location);
+            
+            if ($courseType === 'Degree') {
+                $query->whereIn('course_type', ['Degree', 'Diploma']);
+            } else {
+                $query->where('course_type', $courseType);
+            }
+            
+            $courses = $query->orderBy('course_name')
                 ->get(['course_id', 'course_name']);
 
             return response()->json([
