@@ -20,7 +20,7 @@
     
 
     <!-- JS -->
-    <script nonce="<?php echo e($cspNonce); ?>" src="<?php echo e(asset('libs/jquery/dist/jquery.min.js')); ?>"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-3fpdtzA5GqT1zvYxW3BXZ1KOB1p5MNpAuOf9m7z5b0k=" crossorigin="anonymous"></script>
     <script nonce="<?php echo e($cspNonce); ?>" src="<?php echo e(asset('libs/bootstrap/dist/js/bootstrap.bundle.min.js')); ?>"></script>
     <script nonce="<?php echo e($cspNonce); ?>" src="<?php echo e(asset('libs/simplebar/dist/simplebar.js')); ?>"></script>
     <!-- Sidebar + layout interactions (hamburger toggle, responsive sidebar) -->
