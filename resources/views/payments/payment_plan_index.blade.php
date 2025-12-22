@@ -22,10 +22,10 @@
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <h2 class="mb-0 fs-4 fs-md-3">Payment Plans</h2>
                 <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-success btn-sm" onclick="exportData('csv')">
+                    <button type="button" class="btn btn-success btn-sm btn-export-csv" data-format="csv">
                         <i class="bi bi-file-earmark-spreadsheet"></i> CSV
                     </button>
-                    <button type="button" class="btn btn-danger btn-sm" onclick="exportData('pdf')">
+                    <button type="button" class="btn btn-danger btn-sm btn-export-pdf" data-format="pdf">
                         <i class="bi bi-file-earmark-pdf"></i> PDF
                     </button>
                 </div>
@@ -65,7 +65,7 @@
                 </div>
                 <div class="col-12 col-sm-6 col-md-2">
                     <label class="form-label small">Sort By</label>
-                    <select name="sort" class="form-select form-select-sm form-select-md" onchange="this.form.submit()">
+                    <select name="sort" class="form-select form-select-sm form-select-md" id="sortSelect">
                         <option value="newest" @selected(request('sort', 'newest')==='newest')>Newest First</option>
                         <option value="oldest" @selected(request('sort')==='oldest')>Oldest First</option>
                         <option value="location_asc" @selected(request('sort')==='location_asc')>Location A-Z</option>
@@ -74,7 +74,7 @@
                 </div>
                 <div class="col-12 col-sm-6 col-md-1">
                     <label class="form-label small">Show</label>
-                    <select name="per_page" class="form-select form-select-sm form-select-md" onchange="this.form.submit()">
+                    <select name="per_page" class="form-select form-select-sm form-select-md" id="perPageSelect">
                         <option value="10" @selected(request('per_page', 10)==10)>10</option>
                         <option value="25" @selected(request('per_page', 10)==25)>25</option>
                         <option value="50" @selected(request('per_page', 10)==50)>50</option>
@@ -385,7 +385,7 @@
         {{ $plans->withQueryString()->links() }}
     </div>
 
-    <script>
+    <script nonce="{{ $cspNonce }}">
         window.addEventListener('load', () => {
             // Select all pagination icons and normalize their size
             document.querySelectorAll('#pagination-wrapper svg').forEach(svg => {
@@ -412,7 +412,23 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ $cspNonce }}">
+// Event delegation for export buttons
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.btn-export-csv') || e.target.closest('.btn-export-pdf')) {
+        const btn = e.target.closest('.btn-export-csv, .btn-export-pdf');
+        const format = btn.dataset.format;
+        exportData(format);
+    }
+});
+
+// Event delegation for select changes
+document.addEventListener('change', function(e) {
+    if (e.target.id === 'sortSelect' || e.target.id === 'perPageSelect') {
+        e.target.form.submit();
+    }
+});
+
 // CLIENT-SIDE EXPORT FUNCTIONS (Frontend Only)
 function exportData(format) {
     // Get current filter parameters

@@ -311,7 +311,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
+<script nonce="{{ $cspNonce }}">
 document.addEventListener("DOMContentLoaded", () => {
     const currentYearData = @json($currentYearData);
     const previousYearData = @json($previousYearData);
@@ -406,7 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 
-<style>
+<style nonce="{{ $cspNonce }}">
 .card {
     transition: all 0.3s ease;
 }

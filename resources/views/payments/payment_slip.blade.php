@@ -82,7 +82,7 @@
 <meta charset="utf-8">
 <title>Teleshop Payment Slip</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
+<style nonce="{{ $cspNonce }}">
     @page { 
         size: A4; 
         margin: 8mm 6mm; 

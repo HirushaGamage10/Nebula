@@ -21,14 +21,14 @@
     <div class="card-footer bg-light border-0 py-2">
         <div class="d-flex justify-content-between align-items-center small text-muted">
             <span id="lastUpdateTime">Last updated: Never</span>
-            <button class="btn btn-sm btn-outline-primary" onclick="refreshLiveData()">
+            <button class="btn btn-sm btn-outline-primary" id="refreshLiveDataBtn">
                 <i class="bi bi-arrow-clockwise"></i> Refresh
             </button>
         </div>
     </div>
 </div>
 
-<script>
+<script nonce="{{ $cspNonce }}">
 // Real-time Dashboard Update System
 let lastPaymentId = 0;
 let updateInterval;
@@ -36,6 +36,9 @@ let updateInterval;
 // Initialize real-time updates
 document.addEventListener('DOMContentLoaded', function() {
     startLiveUpdates();
+    
+    // Event delegation for refresh button
+    document.getElementById('refreshLiveDataBtn')?.addEventListener('click', refreshLiveData);
 });
 
 function startLiveUpdates() {
@@ -173,7 +176,7 @@ document.addEventListener('visibilitychange', function() {
 });
 </script>
 
-<style>
+<style nonce="{{ $cspNonce }}">
 .blink {
     animation: blink 2s infinite;
 }

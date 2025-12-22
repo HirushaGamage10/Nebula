@@ -94,7 +94,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ $cspNonce }}">
 let globalCurrency = 'USD'; // default (will update dynamically)
 
 // 🔍 Search Student

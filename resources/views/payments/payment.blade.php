@@ -4,7 +4,7 @@
 
 @section('content')
 
-<style>
+<style nonce="{{ $cspNonce }}">
 /* Toast Notification Styles */
 .toast-container {
     position: fixed;
@@ -322,9 +322,6 @@
 .math-formula .times {
   margin-left: 6px;
 }
-
-
-
 </style>
 
 
@@ -540,8 +537,7 @@
                                                         <h4>SLT Loan Formula</h4>
                                                         <div id="formulaExplanation"></div>
                                                         <div style="text-align:right; margin-top:15px;">
-                                                        <button type="button" class="btn btn-secondary" 
-                                                                onclick="document.getElementById('formulaModal').style.display='none'">
+                                                        <button type="button" class="btn btn-secondary btn-close-formula-modal">
                                                             Close
                                                         </button>
                                                         </div>
@@ -555,10 +551,10 @@
                                         
                                         <div class="row">
                                             <div class="col-12 text-center">
-                                                <button type="button" class="btn btn-primary" onclick="console.log('Submit button clicked'); createPaymentPlan();">
+                                                <button type="button" class="btn btn-primary btn-create-payment-plan">
                                                     <i class="ti ti-check me-2"></i>Submit
                                                 </button>
-                                                <button type="button" class="btn btn-secondary" onclick="resetPaymentPlanForm()">
+                                                <button type="button" class="btn btn-secondary btn-reset-payment-plan">
                                                     <i class="ti ti-refresh me-2"></i>Reset
                                                 </button>
                                             </div>
@@ -603,13 +599,13 @@
                             <div class="row mb-3 align-items-center">
                                 <label class="col-sm-2 col-form-label fw-bold">Student ID <span class="text-danger">*</span></label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" id="slip-student-id" placeholder="Enter Student ID / NIC" required onchange="checkStudentAndCourse()">
+                                    <input type="text" class="form-control" id="slip-student-id" placeholder="Enter Student ID / NIC" required>
                                 </div>
                             </div>
                             <div class="row mb-3 align-items-center">
                                 <label class="col-sm-2 col-form-label fw-bold">Course <span class="text-danger">*</span></label>
                                 <div class="col-sm-10">
-                                    <select class="form-select" id="slip-course" required onchange="loadIntakesForCourse()">
+                                    <select class="form-select" id="slip-course" required>
                                         <option value="" selected disabled>Select Course</option>
                                         @if(isset($courses))
                                             @foreach($courses as $course)
@@ -622,7 +618,7 @@
                             <div class="row mb-3 align-items-center">
                                 <label class="col-sm-2 col-form-label fw-bold">Payment Type <span class="text-danger">*</span></label>
                                 <div class="col-sm-10">
-                                    <select class="form-select" id="slip-payment-type" required onchange="loadPaymentDetails(); setTimeout(toggleLateFeeColumn, 300);" disabled>
+                                    <select class="form-select" id="slip-payment-type" required disabled>
     <option value="" selected disabled>Select Payment Type</option>
     <option value="course_fee">Course Fee</option>
     <option value="franchise_fee">Franchise Fee</option>
@@ -636,7 +632,7 @@
                                 <div class="col-sm-10">
                                     <div class="input-group">
                                         <span class="input-group-text">1</span>
-                                        <select class="form-select" id="currency-from" style="max-width: 80px;" onchange="updateConversionLabel()" disabled>
+                                        <select class="form-select" id="currency-from" style="max-width: 80px;" disabled>
                                            <!-- Removed the Dropdown by Savindu -->
                                         </select>
                                         <span class="input-group-text">=</span>
@@ -718,7 +714,7 @@
 
                             </div>
                             <div class="text-center mt-3">
-                                <button type="button" class="btn btn-primary" id="generateSlipBtn" onclick="generatePaymentSlip()" disabled>
+                                <button type="button" class="btn btn-primary" id="generateSlipBtn" disabled>
                                     <i class="ti ti-receipt me-2"></i>Generate Payment Slip
                                 </button>
                             </div>
@@ -756,10 +752,10 @@
                                         </div>
                                     </div>
                                     <div class="text-center mt-3">
-                                        <button type="button" class="btn btn-success me-2" onclick="printPaymentSlip()">
+                                        <button type="button" class="btn btn-success me-2" id="printPaymentSlipBtn">
                                             <i class="ti ti-printer me-2"></i>Print Slip
                                         </button>
-                                        <button type="button" class="btn btn-info me-2" onclick="downloadPaymentSlip()">
+                                        <button type="button" class="btn btn-info me-2" id="downloadPaymentSlipBtn">
                                             <i class="ti ti-download me-2"></i>Download PDF
                                         </button>
 
@@ -877,7 +873,7 @@
             <div class="row mb-3 align-items-center">
                 <label class="col-sm-2 col-form-label fw-bold">Student NIC <span class="text-danger">*</span></label>
                 <div class="col-sm-10">
-                    <input type="text" class="form-control" id="update-student-nic" placeholder="Enter Student NIC" required onchange="loadStudentCoursesForUpdate()">
+                    <input type="text" class="form-control" id="update-student-nic" placeholder="Enter Student NIC" required>
                 </div>
             </div>
             <div class="row mb-3 align-items-center">
@@ -890,7 +886,7 @@
             </div>
             <div class="row">
                 <div class="col-12 text-center">
-                    <button type="button" class="btn btn-primary" onclick="loadPaymentRecords()">
+                    <button type="button" class="btn btn-primary" id="loadPaymentRecordsBtn">
                         <i class="ti ti-search me-2"></i>Load Payment Records
                     </button>
                 </div>
@@ -970,7 +966,7 @@
 
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-success" onclick="submitPayment()">Confirm Payment</button>
+        <button type="button" class="btn btn-success" id="submitPaymentBtn">Confirm Payment</button>
       </div>
     </div>
   </div>
@@ -979,7 +975,7 @@
 
             </div>
             <div class="text-center mt-3" id="updateSaveBtnSection" style="display:none;">
-                <button type="button" class="btn btn-success" onclick="updatePaymentRecords()">
+                <button type="button" class="btn btn-success" id="updatePaymentRecordsBtn">
                     <i class="ti ti-device-floppy me-2"></i>Update Records
                 </button>
             </div>
@@ -996,7 +992,7 @@
                             <div class="row mb-3 align-items-center">
                                 <label class="col-sm-2 col-form-label fw-bold">Student NIC <span class="text-danger">*</span></label>
                                 <div class="col-sm-10">
-                                    <input type="text" class="form-control" id="summary-student-nic" placeholder="Enter Student NIC" required onchange="loadStudentCoursesForSummary()">
+                                    <input type="text" class="form-control" id="summary-student-nic" placeholder="Enter Student NIC" required>
                                 </div>
                             </div>
                             <div class="row mb-3 align-items-center">
@@ -1009,7 +1005,7 @@
                             </div>
                             <div class="row">
                                 <div class="col-12 text-center">
-                                    <button type="button" class="btn btn-primary" onclick="generatePaymentSummary()">
+                                    <button type="button" class="btn btn-primary" id="generatePaymentSummaryBtn">
                                         <i class="ti ti-chart-pie me-2"></i>Generate Summary
                                     </button>
                                 </div>
@@ -1252,10 +1248,100 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ $cspNonce }}">
 let paymentPlans = [];
 let paymentRecords = [];
 let paymentSummary = {};
+
+// Event delegation for payment buttons
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.btn-create-payment-plan')) {
+        console.log('Submit button clicked');
+        createPaymentPlan();
+    } else if (e.target.closest('.btn-reset-payment-plan')) {
+        resetPaymentPlanForm();
+    } else if (e.target.closest('.btn-close-formula-modal')) {
+        document.getElementById('formulaModal').style.display = 'none';
+    } else if (e.target.closest('#generateSlipBtn')) {
+        generatePaymentSlip();
+    } else if (e.target.closest('#printPaymentSlipBtn')) {
+        printPaymentSlip();
+    } else if (e.target.closest('#downloadPaymentSlipBtn')) {
+        downloadPaymentSlip();
+    } else if (e.target.closest('#loadPaymentRecordsBtn')) {
+        loadPaymentRecords();
+    } else if (e.target.closest('#submitPaymentBtn')) {
+        submitPayment();
+    } else if (e.target.closest('#updatePaymentRecordsBtn')) {
+        updatePaymentRecords();
+    } else if (e.target.closest('#generatePaymentSummaryBtn')) {
+        generatePaymentSummary();
+    } else if (e.target.closest('.toast-close')) {
+        const closeBtn = e.target.closest('.toast-close');
+        const toastId = closeBtn.dataset.toastId;
+        if (toastId) {
+            removeToast(toastId);
+        }
+    } else if (e.target.closest('.slt-formula')) {
+        const formula = e.target.closest('.slt-formula');
+        const Ai = formula.dataset.formulaAi;
+        const L = formula.dataset.formulaL;
+        const LminusS = formula.dataset.formulaLminusS;
+        showFormulaModal(Ai, L, LminusS);
+    } else if (e.target.closest('.btn-edit-payment-plan')) {
+        const btn = e.target.closest('.btn-edit-payment-plan');
+        const index = btn.dataset.planIndex;
+        editPaymentPlan(index);
+    } else if (e.target.closest('.btn-view-payment-history')) {
+        const btn = e.target.closest('.btn-view-payment-history');
+        const index = btn.dataset.planIndex;
+        viewPaymentHistory(index);
+    } else if (e.target.closest('.btn-open-pay-modal')) {
+        const btn = e.target.closest('.btn-open-pay-modal');
+        const paymentId = btn.dataset.paymentId;
+        const remainingAmount = btn.dataset.remainingAmount;
+        openPayModal(paymentId, remainingAmount);
+    } else if (e.target.closest('.btn-confirm-save-payment-record')) {
+        confirmSavePaymentRecord();
+    }
+});
+
+// Event delegation for payment plan select change
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('payment-plan-select')) {
+        const index = e.target.dataset.planIndex;
+        const value = e.target.value;
+        updatePaymentPlan(index, value);
+    } else if (e.target.classList.contains('payment-radio')) {
+        enableGenerateButton();
+    }
+});
+
+// Event delegation for slip inputs
+document.getElementById('slip-student-id')?.addEventListener('change', function() {
+    checkStudentAndCourse();
+});
+
+document.getElementById('slip-course')?.addEventListener('change', function() {
+    loadIntakesForCourse();
+});
+
+document.getElementById('slip-payment-type')?.addEventListener('change', function() {
+    loadPaymentDetails();
+    setTimeout(toggleLateFeeColumn, 300);
+});
+
+document.getElementById('currency-from')?.addEventListener('change', function() {
+    updateConversionLabel();
+});
+
+document.getElementById('update-student-nic')?.addEventListener('change', function() {
+    loadStudentCoursesForUpdate();
+});
+
+document.getElementById('summary-student-nic')?.addEventListener('change', function() {
+    loadStudentCoursesForSummary();
+});
 
 // Toast Notification Functions
 function showSuccessMessage(message) {
@@ -1297,7 +1383,7 @@ function showToast(title, message, type = 'info') {
             <div class="toast-title">${title}</div>
             <div class="toast-message">${message}</div>
         </div>
-        <button class="toast-close" onclick="removeToast('${toastId}')">
+        <button class="toast-close" data-toast-id="${toastId}">
             ×
         </button>
     `;
@@ -1600,7 +1686,7 @@ function displayInstallments(installments) {
 
   // 👉 formula HTML builder
   const sltFormulaHTML = (Ai, L, LminusS) => `
-  <div class="slt-formula" onclick="showFormulaModal(${Ai}, ${L}, ${LminusS})">
+  <div class="slt-formula" data-formula-ai="${Ai}" data-formula-l="${L}" data-formula-lminus-s="${LminusS}">
     <span class="fraction">
       <span class="top">${fmt0(Ai)}</span>
       <span class="bar"></span>
@@ -2425,7 +2511,7 @@ function createPaymentPlan() {
   showSpinner(true);
   
   // Disable submit button to prevent multiple clicks
-  const submitBtn = document.querySelector('button[onclick="createPaymentPlan()"]');
+  const submitBtn = document.querySelector('.btn-create-payment-plan');
   if (submitBtn) {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="ti ti-loader ti-spin me-2"></i>Creating...';
@@ -2645,7 +2731,7 @@ function renderPaymentPlans() {
             <td>Rs. ${plan.paid_amount.toLocaleString()}</td>
             <td>Rs. ${plan.outstanding_amount.toLocaleString()}</td>
             <td>
-                <select class="form-select" onchange="updatePaymentPlan(${index}, this.value)">
+                <select class="form-select payment-plan-select" data-plan-index="${index}">
                     <option value="Monthly" ${plan.payment_plan === 'Monthly' ? 'selected' : ''}>Monthly</option>
                     <option value="Quarterly" ${plan.payment_plan === 'Quarterly' ? 'selected' : ''}>Quarterly</option>
                     <option value="Semester" ${plan.payment_plan === 'Semester' ? 'selected' : ''}>Semester</option>
@@ -2653,10 +2739,10 @@ function renderPaymentPlans() {
                 </select>
             </td>
             <td>
-                <button type="button" class="btn btn-sm btn-primary" onclick="editPaymentPlan(${index})">
+                <button type="button" class="btn btn-sm btn-primary btn-edit-payment-plan" data-plan-index="${index}">
                     <i class="ti ti-edit"></i>
                 </button>
-                <button type="button" class="btn btn-sm btn-info" onclick="viewPaymentHistory(${index})">
+                <button type="button" class="btn btn-sm btn-info btn-view-payment-history" data-plan-index="${index}">
                     <i class="ti ti-history"></i>
                 </button>
             </td>
@@ -3121,8 +3207,9 @@ function renderPaymentRecords() {
         <td>${r.receipt_no}</td>
         <td>${r.status}</td>
         <td>
-          <button class="btn btn-sm btn-success" 
-onclick="openPayModal(${r.payment_id}, ${r.remaining_amount ?? 0})"
+          <button class="btn btn-sm btn-success btn-open-pay-modal" 
+                  data-payment-id="${r.payment_id}" 
+                  data-remaining-amount="${r.remaining_amount ?? 0}">
             <i class="ti ti-cash me-1"></i>Pay
           </button>
           <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#${modalId}">
@@ -3932,7 +4019,7 @@ function displayPaymentDetails(paymentDetails) {
         const row = `
             <tr>
                 <td>
-                    <input type="radio" name="selectedPayment" value="${index}" onchange="enableGenerateButton()">
+                    <input type="radio" name="selectedPayment" value="${index}" class="payment-radio">
                 </td>
                 <td>${payment.installment_number || '-'}</td>
                 <td>${payment.due_date ? new Date(payment.due_date).toLocaleDateString() : '-'}</td>
@@ -4095,7 +4182,7 @@ function showPaymentDetailsModal() {
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                             <i class="ti ti-x me-2"></i>Cancel
                         </button>
-                        <button type="button" class="btn btn-success" onclick="confirmSavePaymentRecord()">
+                        <button type="button" class="btn btn-success btn-confirm-save-payment-record">
                             <i class="ti ti-device-floppy me-2"></i>Save Payment Record
                         </button>
                     </div>
@@ -4214,7 +4301,8 @@ function savePaymentRecordFromUpdate() {
     .finally(() => showSpinner(false));
 }
 </script>
-<script>
+
+<script nonce="{{ $cspNonce }}">
 // ---------- helpers ----------
 const money = (n) =>
   (Number(n || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });

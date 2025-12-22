@@ -17,7 +17,7 @@
             <a href="{{ route('payment.comparison') }}" class="btn btn-outline-info">
                 <i class="bi bi-bar-chart"></i> Comparison
             </a>
-            <button class="btn btn-success" onclick="exportData()">
+            <button class="btn btn-success btn-export-data">
                 <i class="bi bi-download"></i> Export
             </button>
         </div>
@@ -66,10 +66,10 @@
                 </div>
             </div>
             <div class="mt-3 text-end">
-                <button class="btn btn-sm btn-primary" onclick="applyFilters()">
+                <button class="btn btn-sm btn-primary btn-apply-filters">
                     <i class="bi bi-funnel"></i> Apply Filters
                 </button>
-                <button class="btn btn-sm btn-outline-secondary" onclick="resetFilters()">
+                <button class="btn btn-sm btn-outline-secondary btn-reset-filters">
                     <i class="bi bi-x-circle"></i> Reset
                 </button>
             </div>
@@ -376,7 +376,18 @@
 {{-- Chart.js --}}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<script>
+<script nonce="{{ $cspNonce }}">
+// Event delegation for buttons
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.btn-export-data')) {
+        exportData();
+    } else if (e.target.closest('.btn-apply-filters')) {
+        applyFilters();
+    } else if (e.target.closest('.btn-reset-filters')) {
+        resetFilters();
+    }
+});
+
 // ========== FILTER FUNCTIONS (FIXED) ==========
 function applyFilters() {
     const range = document.getElementById('rangeFilter').value;
@@ -672,7 +683,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 
-<style>
+<style nonce="{{ $cspNonce }}">
 .payment-summary-reset{} /* anchor for quick search */
 /* ---- Page background: force clean white and remove any image for this page only ---- */
 /* body, .app-content, .content, .content-wrapper, main, #payment-summary {
