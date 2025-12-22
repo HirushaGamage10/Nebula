@@ -10,7 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         // Get current ENUM values
-        $currentEnum = DB::select(DB::raw("SHOW COLUMNS FROM course_registration WHERE Field = 'status'"))[0]->Type;
+        $currentEnum = DB::select("SHOW COLUMNS FROM course_registration WHERE Field = 'status'")[0]->Type;
 
         // Extract ENUM values
         preg_match('/enum\((.*)\)/', $currentEnum, $matches);
@@ -30,12 +30,12 @@ return new class extends Migration
     public function down(): void
     {
         // Rollback - remove 'completed' if needed
-        $currentEnum = DB::select(DB::raw("SHOW COLUMNS FROM course_registration WHERE Field = 'status'"))[0]->Type;
+        $currentEnum = DB::select("SHOW COLUMNS FROM course_registration WHERE Field = 'status'")[0]->Type;
         preg_match('/enum\((.*)\)/', $currentEnum, $matches);
         $values = str_getcsv($matches[1], ',', "'");
 
         // Remove the 'completed' value
-        $values = array_filter($values, fn($v) => $v !== 'Completed');
+        $values = array_filter($values, fn($v) => $v !== 'completed');
         $enumList = "'" . implode("','", $values) . "'";
 
         DB::statement("ALTER TABLE course_registration MODIFY status ENUM($enumList) NOT NULL");
