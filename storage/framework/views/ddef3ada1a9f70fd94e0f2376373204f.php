@@ -1,9 +1,9 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Marketing Manager Dashboard')
 
-@section('content')
-    <link rel="stylesheet" href="{{ asset('css/styles.min.css') }}">
+<?php $__env->startSection('title', 'NEBULA | Marketing Manager Dashboard'); ?>
+
+<?php $__env->startSection('content'); ?>
+    <link rel="stylesheet" href="<?php echo e(asset('css/styles.min.css')); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -1071,4 +1071,5 @@
             showToast('Contact feature coming soon!', 'info');
         }
     </script>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/dashboards/marketing_manager.blade.php ENDPATH**/ ?>

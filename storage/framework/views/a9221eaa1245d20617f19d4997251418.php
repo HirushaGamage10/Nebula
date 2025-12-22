@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Hostel Manager Dashboard')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Hostel Manager Dashboard'); ?>
+
+<?php $__env->startSection('content'); ?>
 
     <style>
         .stat-card {
@@ -108,12 +108,13 @@
                         <h3 class="fw-bold text-dark m-0">Hostel Manager Dashboard</h3>
                         <div class="text-muted mt-1">
                             <i class="bi bi-calendar"></i>
-                            <span id="currentDate">{{ now()->format('Y-m-d') }}</span> |
-                            <span id="currentTime">{{ now()->format('H:i:s') }}</span>
+                            <span id="currentDate"><?php echo e(now()->format('Y-m-d')); ?></span> |
+                            <span id="currentTime"><?php echo e(now()->format('H:i:s')); ?></span>
                         </div>
                     </div>
                     <div class="date-display">
-                        <i class="bi bi-clock-history"></i> Last Updated: {{ now()->format('Y-m-d H:i') }}
+                        <i class="bi bi-clock-history"></i> Last Updated: <?php echo e(now()->format('Y-m-d H:i')); ?>
+
                     </div>
                 </div>
             </div>
@@ -183,19 +184,20 @@
                     <div class="col-md-3">
                         <label>Year</label>
                         <select id="overviewYear" class="form-select">
-                            @for($y = 2020; $y <= now()->year; $y++)
-                                <option value="{{ $y }}" {{ $y == now()->year ? 'selected' : '' }}>{{ $y }}</option>
-                            @endfor
+                            <?php for($y = 2020; $y <= now()->year; $y++): ?>
+                                <option value="<?php echo e($y); ?>" <?php echo e($y == now()->year ? 'selected' : ''); ?>><?php echo e($y); ?></option>
+                            <?php endfor; ?>
                         </select>
                     </div>
                     <div class="col-md-3">
                         <label>Month</label>
                         <select id="overviewMonth" class="form-select">
-                            @foreach(range(1, 12) as $m)
-                                <option value="{{ $m }}" {{ $m == now()->month ? 'selected' : '' }}>
-                                    {{ date('F', mktime(0, 0, 0, $m, 1)) }}
+                            <?php $__currentLoopData = range(1, 12); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $m): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($m); ?>" <?php echo e($m == now()->month ? 'selected' : ''); ?>>
+                                    <?php echo e(date('F', mktime(0, 0, 0, $m, 1))); ?>
+
                                 </option>
-                            @endforeach
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -217,11 +219,11 @@
                     <div class="col-md-3">
                         <label>Start Date</label>
                         <input type="date" id="startDate" class="form-control"
-                            value="{{ now()->subDays(30)->format('Y-m-d') }}">
+                            value="<?php echo e(now()->subDays(30)->format('Y-m-d')); ?>">
                     </div>
                     <div class="col-md-3">
                         <label>End Date</label>
-                        <input type="date" id="endDate" class="form-control" value="{{ now()->format('Y-m-d') }}">
+                        <input type="date" id="endDate" class="form-control" value="<?php echo e(now()->format('Y-m-d')); ?>">
                     </div>
                 </div>
             </div>
@@ -336,18 +338,18 @@
                         <label>Course</label>
                         <select id="filterCourse" class="form-select">
                             <option value="">All Courses</option>
-                            @foreach($courses ?? [] as $course)
-                                <option value="{{ $course->id }}">{{ $course->course_name }}</option>
-                            @endforeach
+                            <?php $__currentLoopData = $courses ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($course->id); ?>"><?php echo e($course->course_name); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>
                     </div>
                     <div class="col-md-3">
                         <label>Intake</label>
                         <select id="filterIntake" class="form-select">
                             <option value="">All Intakes</option>
-                            @foreach($intakes ?? [] as $intake)
-                                <option value="{{ $intake->id }}">{{ $intake->intake_name }}</option>
-                            @endforeach
+                            <?php $__currentLoopData = $intakes ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $intake): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($intake->id); ?>"><?php echo e($intake->intake_name); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -605,9 +607,9 @@
         </div>
     </div>
 
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('scripts')
+<?php $__env->startSection('scripts'); ?>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         let requestTrendsChart, statusDistributionChart;
@@ -826,7 +828,7 @@
             let startDate = $("#startDate").val();
             let endDate = $("#endDate").val();
 
-            $.get("{{ route('api.hostel.manager.overview') }}", {
+            $.get("<?php echo e(route('api.hostel.manager.overview')); ?>", {
                 year, month, range, startDate, endDate
             }, function (data) {
                 $("#pendingCount").text(data.totalPending);
@@ -847,7 +849,7 @@
             let year = $("#overviewYear").val();
             let month = $("#overviewMonth").val();
 
-            $.get("{{ route('api.hostel.manager.analytics') }}", { year, month }, function (data) {
+            $.get("<?php echo e(route('api.hostel.manager.analytics')); ?>", { year, month }, function (data) {
                 $("#avgProcessingTime").text(data.avg_processing_time + "h");
                 $("#clearanceRate").text(data.clearance_rate + "%");
                 $("#activeRequests").text(data.active_requests);
@@ -886,7 +888,7 @@
 
             $("#loadingRow").show();
 
-            $.get("{{ route('api.hostel.manager.action.list') }}", params, function (response) {
+            $.get("<?php echo e(route('api.hostel.manager.action.list')); ?>", params, function (response) {
                 renderActionList(response.data);
                 currentPage = response.current_page;
                 totalPages = response.last_page;
@@ -1063,7 +1065,7 @@
         }
 
         function loadRecent() {
-            $.get("{{ route('api.hostel.manager.recent.clearances') }}", function (data) {
+            $.get("<?php echo e(route('api.hostel.manager.recent.clearances')); ?>", function (data) {
                 let rows = "";
 
                 data.forEach(r => {
@@ -1135,13 +1137,13 @@
 
         function updateRequestStatus(requestId, status, remarks = '') {
             $.ajax({
-                url: "{{ route('api.hostel.manager.update.status') }}",
+                url: "<?php echo e(route('api.hostel.manager.update.status')); ?>",
                 method: 'POST',
                 data: {
                     request_id: requestId,
                     status: status,
                     remarks: remarks,
-                    _token: "{{ csrf_token() }}"
+                    _token: "<?php echo e(csrf_token()); ?>"
                 },
                 success: function (response) {
                     $("#singleActionModal").modal("hide");
@@ -1173,13 +1175,13 @@
             const requestIdsArray = Array.from(requestIds);
 
             $.ajax({
-                url: "{{ route('api.hostel.manager.bulk.update') }}",
+                url: "<?php echo e(route('api.hostel.manager.bulk.update')); ?>",
                 method: 'POST',
                 data: {
                     request_ids: requestIdsArray,
                     status: action,
                     remarks: remarks,
-                    _token: "{{ csrf_token() }}"
+                    _token: "<?php echo e(csrf_token()); ?>"
                 },
                 success: function (response) {
                     $("#bulkConfirmModal").modal("hide");
@@ -1208,13 +1210,13 @@
                 status: $('#filterStatus').val(),
                 date_range: $('#dateRange').val(),
                 search: $('#searchInput').val(),
-                _token: "{{ csrf_token() }}"
+                _token: "<?php echo e(csrf_token()); ?>"
             };
 
             // Create form and submit
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = "{{ route('api.hostel.manager.export') }}";
+            form.action = "<?php echo e(route('api.hostel.manager.export')); ?>";
 
             Object.keys(params).forEach(key => {
                 const input = document.createElement('input');
@@ -1251,7 +1253,7 @@
         }
 
         function loadStatusList(status, append = false) {
-            let url = nextPageUrl || "{{ route('api.hostel.manager.list.by.status') }}?status=" + status;
+            let url = nextPageUrl || "<?php echo e(route('api.hostel.manager.list.by.status')); ?>?status=" + status;
 
             $.get(url, function (res) {
                 let html = "";
@@ -1284,4 +1286,5 @@
             loadStatusList(currentStatus, true);
         });
     </script>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/dashboards/hostel_manager.blade.php ENDPATH**/ ?>
