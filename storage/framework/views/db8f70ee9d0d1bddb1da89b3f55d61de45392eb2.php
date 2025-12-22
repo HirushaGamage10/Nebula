@@ -118,7 +118,7 @@
 
                 <!-- 🔹 Home Phone -->
                 <div class="row mb-3">
-                    <label for="homePhone" class="col-sm-2 col-form-label">Home Phone No</label>
+                    <label for="homePhone" class="col-sm-2 col-form-label">Home Phone No<span class="text-danger">*</span></label>
                     <div class="col-sm-10">
                         <div class="input-group">
                             <select class="form-select country-code-select" name="homeCountryCode" style="max-width: 180px;">
