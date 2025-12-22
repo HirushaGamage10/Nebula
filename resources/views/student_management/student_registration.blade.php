@@ -539,9 +539,7 @@
                                 <div class="row mb-3">
     <label for="marketing_survey" class="col-sm-2 col-form-label">How did you hear about us?</label>
     <div class="col-sm-10">
-        <select class="form-select" id="marketing_survey" name="marketing_survey"
-            onchange="document.getElementById('marketing_survey_other').style.display = (this.value === 'Other' ? 'block' : 'none');
-                      document.getElementById('marketing_survey_other').required = (this.value === 'Other');">
+        <select class="form-select" id="marketing_survey" name="marketing_survey">
             <option selected disabled>Select an option</option>
             <option value="LinkedIn">LinkedIn</option>
             <option value="Facebook">Facebook</option>
@@ -567,7 +565,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
 
 
 function showToast(message, type) {
@@ -600,6 +598,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     btecCompletedRadio.addEventListener('change', toggleBtecCourse);
     btecNotCompletedRadio.addEventListener('change', toggleBtecCourse);
+
+    // Marketing Survey - Handle "Other" option visibility
+    const marketingSurveySelect = document.getElementById('marketing_survey');
+    const marketingSurveyOther = document.getElementById('marketing_survey_other');
+    
+    marketingSurveySelect.addEventListener('change', function() {
+        if (this.value === 'Other') {
+            marketingSurveyOther.style.display = 'block';
+            marketingSurveyOther.required = true;
+        } else {
+            marketingSurveyOther.style.display = 'none';
+            marketingSurveyOther.required = false;
+        }
+    });
 
 
     // O/L & A/L sections toggle

@@ -115,7 +115,7 @@
     </div>
   </div>
 </div>
-<style>
+<style nonce="{{ $cspNonce }}">
   .error-message {
     position: fixed;
     top: 20px;
@@ -143,7 +143,7 @@
     font-size: 18px;
 }
 </style>
-<script>
+<script nonce="{{ $cspNonce }}">
   // ---------- Notifications ----------
 function showSuccessMessage(message){
   document.querySelectorAll('.success-message,.error-message').forEach(m=>m.remove());
@@ -269,20 +269,20 @@ function renderResults(items) {
       if (status === 'Completed') {
         if (badgeCode) {
           action = `
-            <button class="btn btn-info btn-sm me-2" onclick="viewCertificate('${badgeCode}')">
+            <button class="btn btn-info btn-sm me-2 btn-view-cert" data-code="${badgeCode}">
               <i class='ti ti-eye'></i> View
             </button>
-            <button class="btn btn-danger btn-sm" onclick="cancelBadge(${badgeId}, ${r.id}, this)">
+            <button class="btn btn-danger btn-sm btn-cancel-badge" data-badge-id="${badgeId}" data-reg-id="${r.id}">
               <i class='ti ti-trash'></i> Cancel
             </button>`;
         } else {
           action = `
             <button class="btn btn-secondary btn-sm me-2" disabled><i class='ti ti-badge'></i> Badge Missing</button>
-            <button class="btn btn-danger btn-sm" onclick="cancelBadge(null, ${r.id}, this)"><i class='ti ti-trash'></i> Cancel</button>`;
+            <button class="btn btn-danger btn-sm btn-cancel-badge" data-reg-id="${r.id}"><i class='ti ti-trash'></i> Cancel</button>`;
         }
       } else {
         action = `
-          <button class="btn btn-success btn-sm" onclick="markComplete(${r.id}, this)">
+          <button class="btn btn-success btn-sm btn-mark-complete" data-reg-id="${r.id}">
             <i class='ti ti-badge'></i> Mark Completed & Generate Badge
           </button>`;
       }
@@ -327,10 +327,10 @@ async function markComplete(id, btn) {
     const rowAction = document.getElementById(`action-${id}`);
     rowStatus.innerHTML = `<span class="text-success fw-bold">Completed</span>`;
     rowAction.innerHTML = `
-      <button class="btn btn-info btn-sm me-2" onclick="viewCertificate('${data.verification_url.split('/').pop()}')">
+      <button class="btn btn-info btn-sm me-2 btn-view-cert" data-code="${data.verification_url.split('/').pop()}">
         <i class='ti ti-eye'></i> View
       </button>
-      <button class="btn btn-danger btn-sm" onclick="cancelBadge(null, ${id}, this)">
+      <button class="btn btn-danger btn-sm btn-cancel-badge" data-reg-id="${id}">
         <i class='ti ti-trash'></i> Cancel
       </button>`;
 
@@ -339,7 +339,7 @@ async function markComplete(id, btn) {
     tr.classList.add('table-success');
     setTimeout(() => tr.classList.remove('table-success'), 1200);
   } else {
-    alert(data.message);
+    showErrorMessage(data.message);
   }
 
   btn.disabled = false;
@@ -364,11 +364,11 @@ async function cancelBadge(badgeId, registrationId, btn) {
   if (data.success) {
     document.getElementById(`status-${registrationId}`).innerHTML = `<span class="text-warning fw-bold">Pending</span>`;
     document.getElementById(`action-${registrationId}`).innerHTML = `
-      <button class="btn btn-success btn-sm" onclick="markComplete(${registrationId}, this)">
+      <button class="btn btn-success btn-sm btn-mark-complete" data-reg-id="${registrationId}">
         <i class='ti ti-badge'></i> Mark Completed & Generate Badge
       </button>`;
   } else {
-    alert(data.message);
+    showErrorMessage(data.message);
   }
 }
 
@@ -385,5 +385,32 @@ async function viewCertificate(code) {
   link.href = `/verify-badge/${code}`;
   new bootstrap.Modal(document.getElementById('viewCertModal')).show();
 }
+
+/* -------------------------------
+   🔹 Event Delegation for Dynamic Buttons (CSP Compliant)
+--------------------------------*/
+document.addEventListener('click', e => {
+  // View Certificate
+  if (e.target.closest('.btn-view-cert')) {
+    const btn = e.target.closest('.btn-view-cert');
+    const code = btn.dataset.code;
+    viewCertificate(code);
+  }
+  
+  // Cancel Badge
+  if (e.target.closest('.btn-cancel-badge')) {
+    const btn = e.target.closest('.btn-cancel-badge');
+    const badgeId = btn.dataset.badgeId || null;
+    const regId = btn.dataset.regId;
+    cancelBadge(badgeId, regId, btn);
+  }
+  
+  // Mark Complete
+  if (e.target.closest('.btn-mark-complete')) {
+    const btn = e.target.closest('.btn-mark-complete');
+    const regId = btn.dataset.regId;
+    markComplete(regId, btn);
+  }
+});
 </script>
 @endsection

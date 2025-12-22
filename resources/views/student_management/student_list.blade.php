@@ -115,7 +115,7 @@
 </div>
 
 @push('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
 document.addEventListener('DOMContentLoaded', () => {
   const locationSelect = document.getElementById('location');
   const courseSelect   = document.getElementById('course');
@@ -330,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-<style>
+<style nonce="{{ $cspNonce }}">
   .lds-ring { display:inline-block; position:relative; width:80px; height:80px; }
   .lds-ring div { box-sizing:border-box; display:block; position:absolute; width:64px; height:64px; margin:8px;
     border:8px solid #fff; border-radius:50%; animation:lds-ring 1.2s cubic-bezier(0.5,0,0.5,1) infinite;
