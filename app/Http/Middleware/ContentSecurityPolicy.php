@@ -40,14 +40,13 @@ class ContentSecurityPolicy
         if (app()->environment('local') || config('app.debug')) {
             // Development: allow inline style attributes (style-src-attr) to avoid refactoring sidebar/button styles.
             // Allow CDNs via element-specific directives.
-            // Many legacy views still rely on inline event handlers; allow them in dev to avoid breakage while refactoring.
             $csp = "default-src 'self'; "
                 . "script-src 'self' 'nonce-$nonce' $cdnList; "
                 . "script-src-elem 'self' 'nonce-$nonce' $cdnList; "
-                . "script-src-attr 'self' 'unsafe-inline'; "
+                . "script-src-attr 'self'; "
                 . "style-src 'self' 'nonce-$nonce' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
                 . "style-src-elem 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
-                . "style-src-attr 'unsafe-inline'; "
+                . "style-src-attr 'self'; "
                 . "img-src 'self' data: blob:; "
                 . "connect-src 'self'; "
                 . "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; "
@@ -61,15 +60,13 @@ class ContentSecurityPolicy
                 . "frame-ancestors 'self';";
         } else {
             // Production: strict; allow self, trusted Google font origins, and required CDNs, rely on nonce for inline elements
-            // Note: style-src-attr 'unsafe-inline' is needed for inline style attributes used in the UI
-            // We also permit 'unsafe-inline' in script-src because legacy views still use inline event handlers.
             $csp = "default-src 'self'; "
                 . "script-src 'self' 'nonce-$nonce' $cdnList; "
                 . "script-src-elem 'self' 'nonce-$nonce' $cdnList; "
-                . "script-src-attr 'self' 'unsafe-inline'; "
+                . "script-src-attr 'self'; "
                 . "style-src 'self' 'nonce-$nonce' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
                 . "style-src-elem 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
-                . "style-src-attr 'unsafe-inline'; "
+                . "style-src-attr 'self'; "
                 . "img-src 'self' data: blob:; "
                 . "connect-src 'self'; "
                 . "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; "
