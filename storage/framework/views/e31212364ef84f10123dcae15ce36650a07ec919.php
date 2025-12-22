@@ -560,6 +560,167 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Handle SLT Employee radio buttons
+    const sltYesRadio = document.getElementById('sltYes');
+    const sltNoRadio = document.getElementById('sltNo');
+    const serviceNoField = document.getElementById('serviceNoField');
+    const externalCounselorFields = document.getElementById('externalCounselorFields');
+    const serviceNoInput = document.getElementById('serviceNo');
+    const counselorNameInput = document.getElementById('counselorName');
+    const counselorNicInput = document.getElementById('counselorNic');
+    const counselorPhoneInput = document.getElementById('counselorPhone');
+
+    function handleSltEmployeeChange() {
+        if (sltYesRadio && sltYesRadio.checked) {
+            if (serviceNoField) serviceNoField.style.display = 'block';
+            if (externalCounselorFields) externalCounselorFields.style.display = 'none';
+            if (serviceNoInput) serviceNoInput.required = true;
+            if (counselorNameInput) counselorNameInput.required = false;
+            if (counselorNicInput) counselorNicInput.required = false;
+            if (counselorPhoneInput) counselorPhoneInput.required = false;
+        } else if (sltNoRadio && sltNoRadio.checked) {
+            if (serviceNoField) serviceNoField.style.display = 'none';
+            if (externalCounselorFields) externalCounselorFields.style.display = 'block';
+            if (serviceNoInput) serviceNoInput.required = false;
+            if (counselorNameInput) counselorNameInput.required = true;
+            if (counselorNicInput) counselorNicInput.required = true;
+            if (counselorPhoneInput) counselorPhoneInput.required = true;
+        }
+    }
+
+    if (sltYesRadio) {
+        sltYesRadio.addEventListener('change', handleSltEmployeeChange);
+    }
+    if (sltNoRadio) {
+        sltNoRadio.addEventListener('change', handleSltEmployeeChange);
+    }
+
+    // Initialize on page load (default is No)
+    handleSltEmployeeChange();
+
+    // Handle "Other" checkbox for marketing survey
+    const checkboxOther = document.getElementById('checkboxOther');
+    const otherMarketingSurveyRow = document.getElementById('otherMarketingSurveyRow');
+
+    if (checkboxOther) {
+        checkboxOther.addEventListener('change', function() {
+            if (otherMarketingSurveyRow) {
+                otherMarketingSurveyRow.style.display = this.checked ? 'block' : 'none';
+            }
+        });
+    }
+
+    // Handle Pre Register button
+    const finalRegisterBtn = document.getElementById('finalRegister');
+    if (finalRegisterBtn) {
+        finalRegisterBtn.addEventListener('click', async function(e) {
+            e.preventDefault();
+            
+            // Validate required fields
+            const studentId = document.getElementById('studentId')?.value;
+            const location = document.getElementById('location')?.value;
+            const courseSelect = document.getElementById('courseSearch');
+            const courseName = courseSelect?.value;
+            const courseId = courseSelect?.options[courseSelect.selectedIndex]?.getAttribute('data-course-id');
+            const intakeId = document.getElementById('intakeId')?.value;
+            const registrationFee = document.getElementById('registrationFee')?.value;
+            const courseStartDate = document.getElementById('courseStartDate')?.value;
+            
+            if (!studentId) {
+                showMessage('warning', 'Please search for a student first.');
+                return;
+            }
+            
+            if (!location || !courseName || !intakeId || !registrationFee || !courseStartDate) {
+                showMessage('warning', 'Please fill in all required course fields.');
+                return;
+            }
+            
+            // Validate SLT Employee fields
+            const sltEmployee = document.querySelector('input[name="slt_employee"]:checked')?.value;
+            if (sltEmployee === 'yes') {
+                const serviceNo = document.getElementById('serviceNo')?.value;
+                if (!serviceNo) {
+                    showMessage('warning', 'Please enter the service number.');
+                    return;
+                }
+            } else if (sltEmployee === 'no') {
+                const counselorName = document.getElementById('counselorName')?.value;
+                const counselorNic = document.getElementById('counselorNic')?.value;
+                const counselorPhone = document.getElementById('counselorPhone')?.value;
+                
+                if (!counselorName || !counselorNic || !counselorPhone) {
+                    showMessage('warning', 'Please fill in all counselor details.');
+                    return;
+                }
+            }
+            
+            // Collect marketing survey options
+            const marketingOptions = [];
+            document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+                if (checkbox.value && checkbox.id.startsWith('checkbox')) {
+                    if (checkbox.id === 'checkboxOther') {
+                        const otherValue = document.getElementById('marketing_survey_other')?.value;
+                        if (otherValue) {
+                            marketingOptions.push(otherValue);
+                        }
+                    } else {
+                        marketingOptions.push(checkbox.value);
+                    }
+                }
+            });
+            
+            // Prepare form data
+            const formData = {
+                studentId: studentId,
+                course: courseId,
+                location: location,
+                sltEmployee: sltEmployee,
+                serviceNo: document.getElementById('serviceNo')?.value || '',
+                counselorName: document.getElementById('counselorName')?.value || '',
+                counselorNic: document.getElementById('counselorNic')?.value || '',
+                counselorPhone: document.getElementById('counselorPhone')?.value || '',
+                options: marketingOptions.join(', '),
+                surveyNo: marketingOptions.length,
+                registrationFee: registrationFee,
+                courseStartDate: courseStartDate,
+                intakeId: intakeId
+            };
+            
+            setLoading(true);
+            showMessage('info', 'Submitting registration...');
+            
+            try {
+                const response = await fetch('/store-course-registration', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('input[name="_token"]')?.value || ''
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('success', data.message || 'Registration completed successfully!');
+                    // Optionally redirect after success
+                    setTimeout(() => {
+                        window.location.href = '/course-registration';
+                    }, 2000);
+                } else {
+                    showMessage('danger', data.message || 'Registration failed. Please try again.');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showMessage('danger', 'An error occurred while submitting the registration.');
+            } finally {
+                setLoading(false);
+            }
+        });
+    }
+
     window.redirectToEligibility = function () {
         const nic = nicInput ? nicInput.value.trim() : '';
         const courseId = courseSelect && courseSelect.value ? courseSelect.value : '';
