@@ -40,9 +40,10 @@ class ContentSecurityPolicy
         if (app()->environment('local') || config('app.debug')) {
             // Development: allow inline style attributes (style-src-attr) to avoid refactoring sidebar/button styles.
             // Allow CDNs via element-specific directives.
+            // Many legacy views still rely on inline event handlers; allow them in dev to avoid breakage while refactoring.
             $csp = "default-src 'self' https:; "
-                . "script-src 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
-                . "script-src-elem 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
+                . "script-src 'self' 'nonce-$nonce' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
+                . "script-src-elem 'self' 'nonce-$nonce' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
                 . "style-src 'self' 'nonce-$nonce' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
                 . "style-src-elem 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
                 . "style-src-attr 'unsafe-inline'; "
@@ -55,9 +56,10 @@ class ContentSecurityPolicy
         } else {
             // Production: strict; allow self, trusted Google font origins, and required CDNs, rely on nonce for inline elements
             // Note: style-src-attr 'unsafe-inline' is needed for inline style attributes used in the UI
+            // We also permit 'unsafe-inline' in script-src because legacy views still use inline event handlers.
             $csp = "default-src 'self'; "
-                . "script-src 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
-                . "script-src-elem 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
+                . "script-src 'self' 'nonce-$nonce' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
+                . "script-src-elem 'self' 'nonce-$nonce' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
                 . "style-src 'self' 'nonce-$nonce' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
                 . "style-src-elem 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
                 . "style-src-attr 'unsafe-inline'; "

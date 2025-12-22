@@ -4,7 +4,7 @@
 
 <?php $__env->startSection('content'); ?>
 
-    <style>
+    <style nonce="<?php echo e($cspNonce); ?>">
         .stat-card {
             transition: 0.3s;
             cursor: pointer;
@@ -610,8 +610,8 @@
 <?php $__env->stopSection(); ?>
 
 <?php $__env->startSection('scripts'); ?>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script nonce="<?php echo e($cspNonce); ?>">
         let requestTrendsChart, statusDistributionChart;
         let currentPage = 1;
         let totalPages = 1;
@@ -1287,4 +1287,5 @@
         });
     </script>
 <?php $__env->stopSection(); ?>
+
 <?php echo $__env->make('inc.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/dashboards/hostel_manager.blade.php ENDPATH**/ ?>
