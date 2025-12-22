@@ -3,7 +3,7 @@
 <?php $__env->startSection('title', 'NEBULA | User Management'); ?>
 
 <?php $__env->startSection('content'); ?>
-<style>
+<style nonce="<?php echo e($cspNonce); ?>">
     .user-mgmt-card {
         max-width: 1100px;
         margin: 40px auto 0 auto;
@@ -49,6 +49,29 @@
     .dataTables_length, .dataTables_filter {
         margin-bottom: 1rem;
     }
+    .dataTables_length {
+        float: left;
+    }
+    .dataTables_filter {
+        float: right;
+        text-align: right;
+    }
+    .dataTables_length label,
+    .dataTables_filter label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0;
+    }
+    .dataTables_length select {
+        width: auto;
+        display: inline-block;
+    }
+    .dataTables_filter input {
+        width: auto;
+        display: inline-block;
+        margin-left: 0.5rem;
+    }
     @media (max-width: 991px) {
         .user-mgmt-card { padding: 1.2rem 0.5rem; }
         .user-mgmt-title { font-size: 1.4rem; }
@@ -86,9 +109,9 @@
                         <td><?php echo e($user['user_location']); ?></td>
                         <td><?php echo e($user['created_at']); ?></td>
                         <td>
-                            <button class="btn btn-sm btn-primary" onclick="editUser(<?php echo e($user['user_id']); ?>)">Edit</button>
-                            <button class="btn btn-sm btn-danger" style="margin-left:4px;" onclick="deleteUser(<?php echo e($user['user_id']); ?>, '<?php echo e($user['user_name']); ?>')">Delete</button>
-                            <button class="btn btn-sm btn-warning" style="margin-left:4px;" onclick="showResetPasswordModal(<?php echo e($user['user_id']); ?>, '<?php echo e($user['user_name']); ?>')">Reset Password</button>
+                            <button class="btn btn-sm btn-primary btn-edit-user" data-user-id="<?php echo e($user['user_id']); ?>">Edit</button>
+                            <button class="btn btn-sm btn-danger ms-1 btn-delete-user" data-user-id="<?php echo e($user['user_id']); ?>" data-user-name="<?php echo e($user['user_name']); ?>">Delete</button>
+                            <button class="btn btn-sm btn-warning ms-1 btn-reset-password" data-user-id="<?php echo e($user['user_id']); ?>" data-user-name="<?php echo e($user['user_name']); ?>">Reset Password</button>
                         </td>
                     </tr>
                     <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -210,8 +233,29 @@
 <!-- Toast Container -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
 
-<script>
+<!-- Include DataTables CSS and JS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
+<script nonce="<?php echo e($cspNonce); ?>" type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script nonce="<?php echo e($cspNonce); ?>" type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+
+<script nonce="<?php echo e($cspNonce); ?>">
 document.addEventListener('DOMContentLoaded', function() {
+    // Event delegation for action buttons (CSP compliant)
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-edit-user')) {
+            const btn = e.target.closest('.btn-edit-user');
+            editUser(btn.dataset.userId);
+        }
+        if (e.target.closest('.btn-delete-user')) {
+            const btn = e.target.closest('.btn-delete-user');
+            deleteUser(btn.dataset.userId, btn.dataset.userName);
+        }
+        if (e.target.closest('.btn-reset-password')) {
+            const btn = e.target.closest('.btn-reset-password');
+            showResetPasswordModal(btn.dataset.userId, btn.dataset.userName);
+        }
+    });
+    
     // Initialize DataTable
     $('#usersTable').DataTable({
         responsive: true,
@@ -363,11 +407,6 @@ function showToast(message, type) {
     return toast;
 }
 </script>
-
-<!-- Include DataTables CSS and JS -->
-<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
-<script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
 
 <?php $__env->stopSection(); ?>
 
