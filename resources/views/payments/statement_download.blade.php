@@ -34,7 +34,7 @@
                 <input type="hidden" name="action" id="download-action">
 
                 <div class="d-flex gap-3">
-                    <button type="submit" class="btn btn-lg btn-danger px-4" onclick="setAction('download')">
+                    <button type="submit" class="btn btn-lg btn-danger px-4" data-action="download">
                         <i class="ti ti-download me-1"></i> Download PDF
                     </button>
                 </div>
@@ -45,7 +45,7 @@
 @endsection
 
 @section('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
     // Load courses when NIC is entered
     document.getElementById('statement-nic').addEventListener('change', function() {
         const studentNic = this.value;
@@ -82,6 +82,7 @@
     document.getElementById('statementDownloadForm').addEventListener('submit', function(e) {
         const nic = document.getElementById('statement-nic').value;
         const courseId = document.getElementById('statement-course').value;
+        const submitBtn = e.submitter;
 
         if (!nic || !courseId) {
             e.preventDefault();
@@ -91,11 +92,11 @@
 
         document.getElementById('download-student-nic').value = nic;
         document.getElementById('download-course-id').value = courseId;
+        
+        // Set action from button data attribute
+        if (submitBtn && submitBtn.dataset.action) {
+            document.getElementById('download-action').value = submitBtn.dataset.action;
+        }
     });
-
-    // Set action before submitting
-    function setAction(action) {
-        document.getElementById('download-action').value = action;
-    }
 </script>
 @endsection

@@ -212,7 +212,7 @@
 @endsection
 
 @section('scripts')
-<script>
+<script nonce="{{ $cspNonce }}">
 // Global variables
 let currentStudentData = null;
 let currentPaymentPlan = null;
@@ -527,12 +527,17 @@ function showToast(title, message, type = 'info') {
             <div class="toast-title">${title}</div>
             <div class="toast-message">${message}</div>
         </div>
-        <button class="toast-close" onclick="this.parentElement.remove()">
+        <button class="toast-close">
             <i class="ti ti-x"></i>
         </button>
     `;
     
     toastContainer.appendChild(toast);
+    
+    // Event delegation for toast close button
+    toast.querySelector('.toast-close')?.addEventListener('click', function() {
+        this.closest('.toast').remove();
+    });
     
     // Auto remove after 5 seconds
     setTimeout(() => {

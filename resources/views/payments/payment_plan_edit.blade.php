@@ -146,8 +146,8 @@
                     </table>
 
                     <div class="d-flex justify-content-between">
-                        <button type="button" class="btn btn-sm btn-primary" onclick="addInstallmentRow()">+ Add Row</button>
-                        <button type="button" class="btn btn-sm btn-danger" onclick="removeLastRow()">Remove Last</button>
+                        <button type="button" class="btn btn-sm btn-primary btn-add-installment-row">+ Add Row</button>
+                        <button type="button" class="btn btn-sm btn-danger btn-remove-last-row">Remove Last</button>
                     </div>
                 </div>
 
@@ -159,7 +159,16 @@
 </div>
 
 {{-- JS for dynamic rows --}}
-<script>
+<script nonce="{{ $cspNonce }}">
+// Event delegation for buttons
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.btn-add-installment-row')) {
+        addInstallmentRow();
+    } else if (e.target.closest('.btn-remove-last-row')) {
+        removeLastRow();
+    }
+});
+
 function addInstallmentRow() {
     let tbody = document.getElementById('installmentsTableBody');
     let index = tbody.rows.length;

@@ -38,8 +38,7 @@
                 <div class="mb-3 row mx-3">
                     <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
-    <select class="form-select" id="location" name="location" required
-        onchange="window.location='{{ route('payment.plan') }}?location=' + this.value">
+    <select class="form-select" id="location" name="location" required>
         <option disabled {{ !isset($selectedLocation) ? 'selected' : '' }} value="">
             Choose a location...
         </option>
@@ -163,11 +162,11 @@
                             <label class="col-sm-3 col-form-label">Apply Full Payment Discount<span class="text-danger">*</span></label>
                             <div class="col-sm-3 d-flex justify-content-between">
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="applyDiscountYes" name="applyDiscount" value="yes" onclick="toggleDiscountField()">
+                                    <input class="form-check-input" type="radio" id="applyDiscountYes" name="applyDiscount" value="yes">
                                     <label class="form-check-label cursor-pointer bg-white p-1 rounded" for="applyDiscountYes">Yes</label>
                                 </div>
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="applyDiscountNo" name="applyDiscount" value="no" onclick="toggleDiscountField()" checked>
+                                    <input class="form-check-input" type="radio" id="applyDiscountNo" name="applyDiscount" value="no" checked>
                                     <label class="form-check-label cursor-pointer bg-white p-1 rounded" for="applyDiscountNo">No</label>
                                 </div>
                             </div>
@@ -187,11 +186,11 @@
                             <label class="col-sm-3 col-form-label">Installment Plan<span class="text-danger"></span></label>
                             <div class="col-sm-3 d-flex justify-content-between">
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="franchisePaymentYes" name="franchisePayment" value="yes" onclick="toggleAmountField()">
+                                    <input class="form-check-input" type="radio" id="franchisePaymentYes" name="franchisePayment" value="yes">
                                     <label class="form-check-label cursor-pointer bg-white p-1 rounded" for="franchisePaymentYes">Yes</label>
                                 </div>
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="franchisePaymentNo" name="franchisePayment" value="no" onclick="toggleAmountField()" checked>
+                                    <input class="form-check-input" type="radio" id="franchisePaymentNo" name="franchisePayment" value="no" checked>
                                     <label class="form-check-label cursor-pointer bg-white p-1 rounded" for="franchisePaymentNo">No</label>
                                 </div>
                             </div>
@@ -202,7 +201,7 @@
                                 <div class="col-sm-8">
                                     <div class="input-group">
                                         <input type="number" class="form-control bg-white" id="installments" name="installments" placeholder="Enter number of installments">
-                                        <button type="button" class="btn btn-primary" onclick="addRows()">Add</button>
+                                        <button type="button" class="btn btn-primary" id="addRowsBtn">Add</button>
                                     </div>
                                 </div>
                             </div>
@@ -240,7 +239,7 @@
                                          </tr>
                                          <tr id="autoCompleteRow" style="display: none;">
                                              <td colspan="5" class="text-center">
-                                                 <button type="button" class="btn btn-sm btn-outline-primary" onclick="autoCompleteRemaining()">
+                                                 <button type="button" class="btn btn-sm btn-outline-primary" id="autoCompleteBtn">
                                                      <i class="fas fa-magic"></i> Auto-complete remaining amounts
                                                  </button>
                                              </td>
@@ -258,7 +257,26 @@
         </div>
     </div>
 </div>
-<script>
+<script nonce="{{ $cspNonce }}">
+// Event delegation
+document.addEventListener('change', function(e) {
+    if (e.target.id === 'location') {
+        window.location = '{{ route('payment.plan') }}?location=' + e.target.value;
+    } else if (e.target.name === 'applyDiscount') {
+        toggleDiscountField();
+    } else if (e.target.name === 'franchisePayment') {
+        toggleAmountField();
+    }
+});
+
+document.addEventListener('click', function(e) {
+    if (e.target.id === 'addRowsBtn' || e.target.closest('#addRowsBtn')) {
+        addRows();
+    } else if (e.target.id === 'autoCompleteBtn' || e.target.closest('#autoCompleteBtn')) {
+        autoCompleteRemaining();
+    }
+});
+
 function toggleAmountField() {
     var amountField = document.getElementById('amountField');
     var franchisePaymentYes = document.getElementById('franchisePaymentYes');

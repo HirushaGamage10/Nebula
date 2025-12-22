@@ -106,7 +106,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ $cspNonce }}">
 // ========================= SEARCH STUDENT =========================
 document.getElementById('searchForm').addEventListener('submit', async e => {
     e.preventDefault();

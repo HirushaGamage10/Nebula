@@ -4,7 +4,7 @@
 
 @section('content')
 
-<style>
+<style nonce="{{ $cspNonce }}">
 /* Toast Notification Styles */
 .toast-container {
     position: fixed;
@@ -289,7 +289,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ $cspNonce }}">
 $(document).ready(function() {
     // Auto-calculate when both fields are filled
     $('#sltLoanAmount, #sltInstallments').on('input change', function() {
@@ -798,7 +798,7 @@ $(document).ready(function() {
                 <div class="toast-title">${title}</div>
                 <div class="toast-message">${message}</div>
             </div>
-            <button class="toast-close" onclick="removeToast('${toastId}')">
+            <button class="toast-close" data-toast-id="${toastId}">
                 ×
             </button>
         `;
@@ -817,6 +817,17 @@ $(document).ready(function() {
     }
 
     // Make removeToast globally accessible
+    // Event delegation for toast close buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.toast-close')) {
+            const closeBtn = e.target.closest('.toast-close');
+            const toastId = closeBtn.dataset.toastId;
+            if (toastId) {
+                removeToast(toastId);
+            }
+        }
+    });
+
     window.removeToast = function(toastId) {
         const toast = document.getElementById(toastId);
         if (toast) {

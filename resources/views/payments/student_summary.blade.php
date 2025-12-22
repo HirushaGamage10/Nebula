@@ -23,7 +23,7 @@
                     <a href="{{ route('payment.summary') }}" class="btn btn-light">
                         <i class="bi bi-arrow-left"></i> Back to Dashboard
                     </a>
-                    <button class="btn btn-outline-light ms-2" onclick="printReport()">
+                    <button class="btn btn-outline-light ms-2 btn-print-report">
                         <i class="bi bi-printer"></i> Print
                     </button>
                 </div>
@@ -37,7 +37,7 @@
             <div class="row g-3 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label small text-muted">Time Range</label>
-                    <select class="form-select" id="rangeFilter" onchange="filterData()">
+                    <select class="form-select" id="rangeFilter">
                         <option value="all">All Time</option>
                         <option value="1m">Last Month</option>
                         <option value="3m">Last 3 Months</option>
@@ -47,7 +47,7 @@
                     </select>
                 </div>
                 <div class="col-md-8 text-end">
-                    <button class="btn btn-success" onclick="exportStudentData()">
+                    <button class="btn btn-success btn-export-student-data">
                         <i class="bi bi-download"></i> Export Report
                     </button>
                 </div>
@@ -358,8 +358,8 @@
                                     <small class="text-muted">{{ \Carbon\Carbon::parse($payment->created_at)->format('h:i A') }}</small>
                                 </td>
                                 <td>
-                                    <button class="btn btn-sm btn-outline-info" 
-                                            onclick="viewPaymentDetails({{ $payment->id }})"
+                                    <button class="btn btn-sm btn-outline-info btn-view-payment-details" 
+                                            data-payment-id="{{ $payment->id }}"
                                             data-bs-toggle="tooltip" title="View Details">
                                         <i class="bi bi-eye"></i>
                                     </button>
@@ -403,7 +403,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<script>
+<script nonce="{{ $cspNonce }}">
 document.addEventListener("DOMContentLoaded", () => {
     const paymentByMethod = @json($paymentByMethod);
     const paymentByType = @json($paymentByType);
@@ -599,6 +599,24 @@ document.addEventListener("DOMContentLoaded", () => {
     tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
+    
+    // Event delegation for buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-print-report')) {
+            printReport();
+        } else if (e.target.closest('.btn-export-student-data')) {
+            exportStudentData();
+        } else if (e.target.closest('.btn-view-payment-details')) {
+            const btn = e.target.closest('.btn-view-payment-details');
+            const paymentId = btn.dataset.paymentId;
+            viewPaymentDetails(paymentId);
+        }
+    });
+    
+    // Event delegation for select change
+    document.getElementById('rangeFilter').addEventListener('change', function() {
+        filterData();
+    });
 });
 
 // Filter Data
@@ -654,7 +672,7 @@ function exportStudentData() {
 }
 </script>
 
-<style>
+<style nonce="{{ $cspNonce }}">
 @media print {
     .btn, .card-header, .filter-section {
         display: none !important;
