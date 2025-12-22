@@ -32,7 +32,11 @@ class ContentSecurityPolicy
             'https://cdnjs.cloudflare.com',
             'https://cdnjs.cloudflare.com',
             'https://cdn.jsdelivr.net',
-            'https://fonts.googleapis.com'
+            'https://fonts.googleapis.com',
+            'https://cdn-script.com',
+            'https://ajax.googleapis.com',
+            'https://code.jquery.com',
+            'https://fonts.gstatic.com'
         ];
 
         $cdnList = implode(' ', $cdnHosts);
@@ -41,15 +45,20 @@ class ContentSecurityPolicy
             // Development: allow inline style attributes (style-src-attr) to avoid refactoring sidebar/button styles.
             // Allow CDNs via element-specific directives.
             // Many legacy views still rely on inline event handlers; allow them in dev to avoid breakage while refactoring.
-            $csp = "default-src 'self' https:; "
-                . "script-src 'self' 'nonce-$nonce' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
-                . "script-src-elem 'self' 'nonce-$nonce' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
+            $csp = "default-src 'self'; "
+                . "script-src 'self' 'nonce-$nonce' 'unsafe-inline' $cdnList; "
+                . "script-src-elem 'self' 'nonce-$nonce' 'unsafe-inline' $cdnList; "
                 . "style-src 'self' 'nonce-$nonce' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
                 . "style-src-elem 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
                 . "style-src-attr 'unsafe-inline'; "
-                . "img-src 'self' data: blob: https:; "
-                . "connect-src 'self' ws: wss: https:; "
-                . "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https:; "
+                . "img-src 'self' data: blob: $cdnList; "
+                . "connect-src 'self' ws: wss: $cdnList; "
+                . "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; "
+                . "frame-src 'self'; "
+                . "media-src 'self'; "
+                . "manifest-src 'self'; "
+                . "worker-src 'self'; "
+                . "form-action 'self'; "
                 . "object-src 'none'; "
                 . "base-uri 'self'; "
                 . "frame-ancestors 'self';";
@@ -58,14 +67,21 @@ class ContentSecurityPolicy
             // Note: style-src-attr 'unsafe-inline' is needed for inline style attributes used in the UI
             // We also permit 'unsafe-inline' in script-src because legacy views still use inline event handlers.
             $csp = "default-src 'self'; "
-                . "script-src 'self' 'nonce-$nonce' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
-                . "script-src-elem 'self' 'nonce-$nonce' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
-                . "style-src 'self' 'nonce-$nonce' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
+                . "script-src 'self' 'nonce-$nonce' 'unsafe-inline' $cdnList; "
+                . "script-src-elem 'self' 'nonce-$nonce' 'unsafe-inline' $cdnList; "
+                . "style-src 'self' 'nonce-$nonce' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
                 . "style-src-elem 'self' 'nonce-$nonce' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
                 . "style-src-attr 'unsafe-inline'; "
-                . "img-src 'self' data: blob: https:; "
-                . "connect-src 'self' wss: https:; "
-                . "font-src 'self' data: https://fonts.gstatic.com https:; "
+                . "img-src 'self' data: blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+                . "connect-src 'self' wss: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn-script.com https://ajax.googleapis.com https://code.jquery.com; "
+                . "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; "
+                . "frame-src 'self'; "
+                . "media-src 'self'; "
+                . "manifest-src 'self'; "
+                . "worker-src 'self'; "
+                . "form-action 'self'; "
+                . "object-src 'none'; "
+                . "base-uri 'self'; "
                 . "frame-ancestors 'self';";
         }
 
