@@ -1,9 +1,9 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Course Registration')
 
-@section('content')
-<style nonce="{{ $cspNonce }}">
+<?php $__env->startSection('title', 'NEBULA | Course Registration'); ?>
+
+<?php $__env->startSection('content'); ?>
+<style nonce="<?php echo e($cspNonce); ?>">
     /* Existing styles copied from root course_registration view */
     .terminated-disabled { opacity: 0.6; filter: grayscale(100%); pointer-events: none; }
     .terminated-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; cursor: not-allowed; background: rgba(255,255,255,0); }
@@ -38,7 +38,7 @@
                 <div class="accordion-item">
                     <div class="accordion-body">
                         <form id="searchForm">
-                            @csrf
+                            <?php echo csrf_field(); ?>
                             <div class="mb-3 row mx-3">
                                 <label for="studentNicSearch" class="col-sm-2 col-form-label">Student NIC<span class="text-danger">*</span></label>
                                 <div class="col-sm-8">
@@ -70,9 +70,9 @@
                         </div>
                     </div>
                 </div>
-                @if(isset($resultsPending) && $resultsPending)
+                <?php if(isset($resultsPending) && $resultsPending): ?>
                     <div class="alert alert-warning mt-4"><strong>Pending Results:</strong> Some or all of the student's exam results are still pending.</div>
-                @else
+                <?php else: ?>
                     <div class="mb-3 mt-4">
                         <h5 class="bg-danger p-2 text-white"><strong>O/L Exam Details</strong></h5>
                         <div class="row mt-4 mb-4 mx-3">
@@ -95,12 +95,12 @@
                                     </tr>
                                 </thead>
                                 <tbody id="olExamSubjectsAndGradesTableBody">
-                                    @foreach($olSubjects as $subject)
+                                    <?php $__currentLoopData = $olSubjects; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $subject): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                         <tr>
-                                            <td>{{ $subject['subject'] ?? 'N/A' }}</td>
-                                            <td>{{ $subject['result'] ?? 'N/A' }}</td>
+                                            <td><?php echo e($subject['subject'] ?? 'N/A'); ?></td>
+                                            <td><?php echo e($subject['result'] ?? 'N/A'); ?></td>
                                         </tr>
-                                    @endforeach
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                 </tbody>
                             </table>
                         </div>
@@ -132,16 +132,16 @@
                                 </tr>
                             </thead>
                             <tbody id="alExamSubjectsAndGradesTableBody">
-                                @foreach($alSubjects as $subject)
+                                <?php $__currentLoopData = $alSubjects; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $subject): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                     <tr>
-                                        <td>{{ $subject['subject'] ?? 'N/A' }}</td>
-                                        <td>{{ $subject['result'] ?? 'N/A' }}</td>
+                                        <td><?php echo e($subject['subject'] ?? 'N/A'); ?></td>
+                                        <td><?php echo e($subject['result'] ?? 'N/A'); ?></td>
                                     </tr>
-                                @endforeach
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </tbody>
                         </table>
                     </div>
-                @endif
+                <?php endif; ?>
                 <hr>
                 <input type="hidden" id="studentId" name="studentId">
                 <input type="hidden" id="studentRegistrationId" name="studentRegistrationId">
@@ -291,8 +291,8 @@
     </div>
 </div>
 
-@push('scripts')
-<script nonce="{{ $cspNonce }}">
+<?php $__env->startPush('scripts'); ?>
+<script nonce="<?php echo e($cspNonce); ?>">
 document.addEventListener('DOMContentLoaded', function () {
     const searchBtn = document.getElementById('searchNicBtn');
     const nicInput = document.getElementById('studentNicSearch');
@@ -301,7 +301,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const spinnerOverlay = document.getElementById('spinner-overlay');
     const olTableBody = document.getElementById('olExamSubjectsAndGradesTableBody');
     const alTableBody = document.getElementById('alExamSubjectsAndGradesTableBody');
-    const baseUrl = "{{ url('/api/course-registration/student-by-nic') }}";
+    const baseUrl = "<?php echo e(url('/api/course-registration/student-by-nic')); ?>";
 
     function setLoading(isLoading) {
         if (spinnerOverlay) {
@@ -579,6 +579,8 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/registration/course_registration.blade.php ENDPATH**/ ?>
