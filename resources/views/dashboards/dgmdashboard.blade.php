@@ -3,12 +3,12 @@
 @section('title', 'NEBULA | Dashboard')
 
 @section('content')
-    <link rel="stylesheet" href="{{ asset('css/styles.min.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn-script.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="{{ asset('js/tailwindcss.js') }}"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <link nonce="{{ $cspNonce }}" rel="stylesheet" href="{{ asset('css/styles.min.css') }}">
+    <link nonce="{{ $cspNonce }}" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script nonce="{{ $cspNonce }}" src="https://cdn-script.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script nonce="{{ $cspNonce }}" src="{{ asset('js/tailwindcss.js') }}"></script>
+    <script nonce="{{ $cspNonce }}" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script nonce="{{ $cspNonce }}" src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <div id="pageContent" class="bg-gray-50">
 
         <!-- Navigation Tabs -->
@@ -563,7 +563,7 @@
         </div>
     </div>
 
-    <style>
+    <style nonce="{{ $cspNonce }}">
         .tab-active {
             background-color: #2563eb !important;
             color: white !important;
@@ -649,8 +649,8 @@
         }
     </style>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
+    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script nonce="{{ $cspNonce }}">
         let currentCharts = {};
         const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 

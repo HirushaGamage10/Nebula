@@ -3,11 +3,11 @@
 @section('title', 'NEBULA | Program Administrator Dashboard')
 
 @section('content')
-<link rel="stylesheet" href="{{ asset('css/styles.min.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link nonce="{{ $cspNonce }}" rel="stylesheet" href="{{ asset('css/styles.min.css') }}">
+<link nonce="{{ $cspNonce }}" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<style>
+<style nonce="{{ $cspNonce }}">
     .card-hover {
         transition: all 0.3s ease;
     }
@@ -473,7 +473,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ $cspNonce }}">
 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 let currentPeriod = 'month';
 let chartInstances = {};

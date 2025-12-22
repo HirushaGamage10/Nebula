@@ -4,7 +4,7 @@
 
 @section('content')
 
-    <style>
+    <style nonce="{{ $cspNonce }}">
         .stat-card {
             transition: 0.3s;
             cursor: pointer;
@@ -608,8 +608,8 @@
 @endsection
 
 @section('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
+    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script nonce="{{ $cspNonce }}">
         let requestTrendsChart, statusDistributionChart;
         let currentPage = 1;
         let totalPages = 1;

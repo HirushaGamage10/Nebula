@@ -4,9 +4,9 @@
 
 <?php $__env->startSection('content'); ?>
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link nonce="<?php echo e($cspNonce); ?>" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-<style>
+<style nonce="<?php echo e($cspNonce); ?>">
     .tab-btn {
         padding: 10px 18px;
         border-radius: 8px;
@@ -215,7 +215,7 @@
 
 </div>
 
-<script>
+<script nonce="<?php echo e($cspNonce); ?>">
 // Dashboard routes mapping
 const dashboardRoutes = {
     'dgm': '<?php echo e(route('dgmdashboard')); ?>',
@@ -400,4 +400,5 @@ function changeMultiFrame(selectObj) {
 </script>
 
 <?php $__env->stopSection(); ?>
+
 <?php echo $__env->make('inc.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/dashboards/developer_dashboard.blade.php ENDPATH**/ ?>

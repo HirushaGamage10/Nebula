@@ -3,12 +3,12 @@
 <?php $__env->startSection('title', 'NEBULA | Student Counselor Dashboard'); ?>
 
 <?php $__env->startSection('content'); ?>
-    <link rel="stylesheet" href="<?php echo e(asset('css/styles.min.css')); ?>">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <link nonce="<?php echo e($cspNonce); ?>" rel="stylesheet" href="<?php echo e(asset('css/styles.min.css')); ?>">
+    <link nonce="<?php echo e($cspNonce); ?>" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script nonce="<?php echo e($cspNonce); ?>" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 
-    <style>
+    <style nonce="<?php echo e($cspNonce); ?>">
         .card-hover {
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
@@ -447,7 +447,7 @@
         
     </div>
 
-    <script>
+    <script nonce="<?php echo e($cspNonce); ?>">
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         let currentPage = 1;
         let totalPages = 1;
@@ -1069,4 +1069,5 @@
         }
     </script>
 <?php $__env->stopSection(); ?>
+
 <?php echo $__env->make('inc.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/dashboards/student_counselor.blade.php ENDPATH**/ ?>

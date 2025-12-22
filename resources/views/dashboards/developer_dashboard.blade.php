@@ -4,9 +4,9 @@
 
 @section('content')
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link nonce="{{ $cspNonce }}" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-<style>
+<style nonce="{{ $cspNonce }}">
     .tab-btn {
         padding: 10px 18px;
         border-radius: 8px;
@@ -215,7 +215,7 @@
 
 </div>
 
-<script>
+<script nonce="{{ $cspNonce }}">
 // Dashboard routes mapping
 const dashboardRoutes = {
     'dgm': '{{ route('dgmdashboard') }}',

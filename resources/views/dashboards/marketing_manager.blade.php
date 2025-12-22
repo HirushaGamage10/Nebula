@@ -3,12 +3,12 @@
 @section('title', 'NEBULA | Marketing Manager Dashboard')
 
 @section('content')
-    <link rel="stylesheet" href="{{ asset('css/styles.min.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <link nonce="{{ $cspNonce }}" rel="stylesheet" href="{{ asset('css/styles.min.css') }}">
+    <link nonce="{{ $cspNonce }}" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 
-    <style>
+    <style nonce="{{ $cspNonce }}">
         .gradient-border {
             border-image: linear-gradient(90deg, #667eea 0%, #764ba2 100%) 1;
         }
@@ -469,7 +469,7 @@
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ $cspNonce }}">
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         let currentPage = 1;
         let totalPages = 1;
