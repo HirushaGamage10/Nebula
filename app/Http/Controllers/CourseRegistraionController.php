@@ -270,14 +270,17 @@ class CourseRegistraionController extends Controller
                 $validatedData = $request->validate([
                     'studentId' => 'required|exists:students,student_id',
                     'course' => 'required|exists:courses,course_id',
-                    'location' => 'required|in:Nebula Institute of Technology - Welisara,Moratuwa,Peradeniya',
+                    'location' => 'required|string',
                     'sltEmployee' => 'required|string|in:yes,no',
                     'serviceNo' => 'nullable|string|max:255',
+                    'counselorName' => 'nullable|string|max:255',
+                    'counselorNic' => 'nullable|string|max:255',
+                    'counselorPhone' => 'nullable|string|max:255',
                     'options' => 'required|string',
                     'surveyNo' => 'required|numeric',
                     'registrationFee' => 'required|numeric',
                     'courseStartDate' => 'required|date',
-                    'intakeId' => 'nullable|exists:intakes,intake_id', // Add intake validation
+                    'intakeId' => 'required|exists:intakes,intake_id', // Add intake validation
                 ]);
 
                 // Check if the student is already registered for the course.
@@ -303,14 +306,7 @@ class CourseRegistraionController extends Controller
                 }
 
                 // Get the default intake for the course if not provided
-                $intakeId = $validatedData['intakeId'] ?? null;
-                if (!$intakeId) {
-                    $defaultIntake = \App\Models\Intake::where('course_id', $validatedData['course'])
-                        ->where('location', $validatedData['location'])
-                        ->orderBy('created_at', 'desc')
-                        ->first();
-                    $intakeId = $defaultIntake ? $defaultIntake->intake_id : null;
-                }
+                $intakeId = $validatedData['intakeId'];
 
                 // Create a new CourseRegistration instance
                 $courseRegistration = new CourseRegistration();
@@ -326,6 +322,9 @@ class CourseRegistraionController extends Controller
                 $courseRegistration->location = $validatedData['location'];
                 $courseRegistration->slt_employee = ($validatedData['sltEmployee'] === 'yes') ? 1 : 0;
                 $courseRegistration->employee_service_number = $validatedData['serviceNo'];
+                $courseRegistration->counselor_name = $validatedData['counselorName'] ?? null;
+                $courseRegistration->counselor_nic = $validatedData['counselorNic'] ?? null;
+                $courseRegistration->counselor_phone = $validatedData['counselorPhone'] ?? null;
                 $courseRegistration->course_start_date = $validatedData['courseStartDate'];
                 $courseRegistration->remarks = 'Pre-registration via web form';
 
