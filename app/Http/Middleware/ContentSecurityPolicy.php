@@ -18,8 +18,9 @@ class ContentSecurityPolicy
         // 3. Continue the request
         $response = $next($request);
 
-        // 4. Build strict CSP header
-        // All inline scripts/styles MUST use the nonce attribute: nonce="{{ $cspNonce }}"
+        // 4. Build CSP header
+        // Uses nonces for inline <script> and <style> blocks
+        // Allows inline attributes for UI framework compatibility
         
         // Trusted CDN hosts for scripts
         $scriptHosts = [
@@ -41,7 +42,7 @@ class ContentSecurityPolicy
             'https://cdnjs.cloudflare.com',
         ];
         
-        // Trusted hosts for images (no wildcard!)
+        // Trusted hosts for images
         $imgHosts = [
             "'self'",
             'data:',
@@ -61,6 +62,7 @@ class ContentSecurityPolicy
         // Trusted hosts for connections (AJAX, fetch, WebSocket)
         $connectHosts = [
             "'self'",
+            'https://nebulastudentportal.slt.lk',
             'https://fonts.googleapis.com',
             'https://fonts.gstatic.com',
         ];
@@ -71,17 +73,19 @@ class ContentSecurityPolicy
         $fontList = implode(' ', $fontHosts);
         $connectList = implode(' ', $connectHosts);
 
-        // Build CSP - NO 'unsafe-inline' anywhere!
+        // Build CSP
+        // Note: 'unsafe-inline' in script-src-attr and style-src-attr is required 
+        // for Bootstrap and other UI frameworks that use inline event handlers and styles
         $csp = "default-src 'self'; "
-            // Scripts: nonce-based (secure)
+            // Scripts: nonce-based for <script> blocks, allow inline event handlers
             . "script-src $scriptList; "
             . "script-src-elem $scriptList; "
-            . "script-src-attr 'none'; "
-            // Styles: nonce-based (secure)
+            . "script-src-attr 'unsafe-inline'; "
+            // Styles: nonce-based for <style> blocks, allow inline style attributes
             . "style-src $styleList; "
             . "style-src-elem $styleList; "
-            . "style-src-attr 'self' 'unsafe-hashes'; "
-            // Resources: specific hosts only (no wildcards)
+            . "style-src-attr 'unsafe-inline'; "
+            // Resources
             . "img-src $imgList; "
             . "connect-src $connectList; "
             . "font-src $fontList; "
@@ -92,8 +96,7 @@ class ContentSecurityPolicy
             . "form-action 'self'; "
             . "object-src 'none'; "
             . "base-uri 'self'; "
-            . "frame-ancestors 'self' https://nebulastudentportal.slt.lk; "
-            . "upgrade-insecure-requests;";
+            . "frame-ancestors 'self' https://nebulastudentportal.slt.lk;";
 
         // 5. Add CSP header to response
         $response->headers->set('Content-Security-Policy', $csp);
@@ -101,4 +104,3 @@ class ContentSecurityPolicy
         return $response;
     }
 }
-
