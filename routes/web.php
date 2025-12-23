@@ -736,7 +736,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     
     // Main Payment Routes
-    Route::middleware(['auth', 'role:Bursar,Developer'])->group(function () {
+    Route::middleware(['auth', 'role:Bursar,Developer,Student Counselor'])->group(function () {
         Route::get('/payment', [PaymentController::class, 'index'])->name('payment.index');
         Route::post('/payment/get-plans', [PaymentController::class, 'getPaymentPlans'])->name('payment.get.plans');
         Route::post('/payment/get-student-courses', [PaymentController::class, 'getStudentCourses'])->name('payment.get.student.courses');
@@ -763,7 +763,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     });
 
     // Payment Statement Download
-    Route::middleware(['auth', 'role:Bursar,Developer'])->group(function () {
+    Route::middleware(['auth', 'role:Bursar,Developer,Student Counselor'])->group(function () {
         Route::get('/payment/statement-download', [PaymentController::class, 'showDownloadPage'])->name('payment.showDownloadPage');
         Route::post('/payment/download-statement', [PaymentController::class, 'downloadPaymentStatement'])->name('payment.downloadStatement');
     });
