@@ -14,7 +14,7 @@ class RepeatStudentPaymentController extends Controller
 {
     public function index()
     {
-        return view('repeat_students.payment_plan');
+        return view('payments.repeat_payment_plan');
     }
 
     /**
