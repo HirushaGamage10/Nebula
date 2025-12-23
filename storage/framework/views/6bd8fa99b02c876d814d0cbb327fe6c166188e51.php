@@ -1,14 +1,14 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Student Counselor Dashboard')
 
-@section('content')
-    <link nonce="{{ $cspNonce }}" rel="stylesheet" href="{{ asset('css/styles.min.css') }}">
-    <link nonce="{{ $cspNonce }}" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<?php $__env->startSection('title', 'NEBULA | Student Counselor Dashboard'); ?>
 
-    <style nonce="{{ $cspNonce }}">
+<?php $__env->startSection('content'); ?>
+    <link nonce="<?php echo e($cspNonce); ?>" rel="stylesheet" href="<?php echo e(asset('css/styles.min.css')); ?>">
+    <link nonce="<?php echo e($cspNonce); ?>" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script nonce="<?php echo e($cspNonce); ?>" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script nonce="<?php echo e($cspNonce); ?>" src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+    <style nonce="<?php echo e($cspNonce); ?>">
         .card-hover {
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
@@ -447,7 +447,7 @@
         
     </div>
 
-    <script nonce="{{ $cspNonce }}">
+    <script nonce="<?php echo e($cspNonce); ?>">
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         let currentPage = 1;
         let totalPages = 1;
@@ -1088,4 +1088,6 @@
             // Implement contact functionality
         }
     </script>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/dashboards/student_counselor.blade.php ENDPATH**/ ?>

@@ -1198,4 +1198,214 @@ class DGMDashboardController extends Controller
             'Content-Type' => 'text/csv',
         ]);
     }
+
+    /**
+     * Get future projections based on historical data
+     */
+    public function getFutureProjections()
+    {
+        try {
+            // Calculate projection based on recent 3 years average growth
+            $currentYear = (int) date('Y');
+            $years = [$currentYear - 2, $currentYear - 1, $currentYear];
+            
+            $yearlyRevenue = [];
+            foreach ($years as $year) {
+                // Get bulk revenue
+                $bulkRev = DB::table('bulk_revenue_uploads')
+                    ->where('year', $year)
+                    ->sum('revenue');
+                
+                // Get partial payments revenue
+                $partialRev = 0;
+                $payments = PaymentDetail::whereYear('created_at', $year)->get();
+                
+                foreach ($payments as $payment) {
+                    if (!empty($payment->partial_payments) && is_array($payment->partial_payments)) {
+                        foreach ($payment->partial_payments as $partial) {
+                            $partialRev += floatval($partial['amount'] ?? 0);
+                        }
+                    }
+                }
+                
+                $yearlyRevenue[$year] = $bulkRev + $partialRev;
+            }
+            
+            // Calculate average growth rate
+            $growthRates = [];
+            for ($i = 1; $i < count($years); $i++) {
+                $prevYear = $years[$i - 1];
+                $currYear = $years[$i];
+                if ($yearlyRevenue[$prevYear] > 0) {
+                    $growth = (($yearlyRevenue[$currYear] - $yearlyRevenue[$prevYear]) / $yearlyRevenue[$prevYear]);
+                    $growthRates[] = $growth;
+                }
+            }
+            
+            $avgGrowthRate = !empty($growthRates) ? array_sum($growthRates) / count($growthRates) : 0.05; // default 5%
+            
+            // Project next 3 years
+            $projections = [];
+            $baseRevenue = $yearlyRevenue[$currentYear] ?? 0;
+            
+            for ($i = 1; $i <= 3; $i++) {
+                $projectedYear = $currentYear + $i;
+                $projectedRevenue = $baseRevenue * pow(1 + $avgGrowthRate, $i);
+                
+                $projections[] = [
+                    'year' => $projectedYear,
+                    'projected_revenue' => round($projectedRevenue, 2),
+                    'growth_rate' => round($avgGrowthRate * 100, 2)
+                ];
+            }
+            
+            return response()->json([
+                'success' => true,
+                'historical_data' => $yearlyRevenue,
+                'projections' => $projections,
+                'avg_growth_rate' => round($avgGrowthRate * 100, 2) . '%'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('getFutureProjections error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate projections',
+                'projections' => []
+            ], 500);
+        }
+    }
+
+    /**
+     * Get revenue data (simplified wrapper)
+     */
+    public function getRevenueData(Request $request)
+    {
+        return $this->getRevenueByYearCourse($request);
+    }
+
+    /**
+     * Get revenue by location
+     */
+    public function getRevenueByLocation(Request $request)
+    {
+        $year = $request->input('year', date('Y'));
+        $locations = ['Welisara', 'Moratuwa', 'Peradeniya'];
+        
+        $data = [];
+        foreach ($locations as $location) {
+            // Bulk revenue
+            $bulkRevenue = DB::table('bulk_revenue_uploads')
+                ->where('year', $year)
+                ->where('location', $location)
+                ->sum('revenue');
+            
+            // Partial payments
+            $partialRevenue = 0;
+            $payments = PaymentDetail::whereHas('student', function ($q) use ($location) {
+                $q->where('institute_location', $location);
+            })
+            ->whereYear('created_at', $year)
+            ->get();
+            
+            foreach ($payments as $payment) {
+                if (!empty($payment->partial_payments) && is_array($payment->partial_payments)) {
+                    foreach ($payment->partial_payments as $partial) {
+                        $paymentDate = Carbon::parse($partial['date'] ?? $partial['payment_date'] ?? $payment->created_at);
+                        if ($paymentDate->year == $year) {
+                            $partialRevenue += floatval($partial['amount'] ?? 0);
+                        }
+                    }
+                }
+            }
+            
+            $data[] = [
+                'location' => $location,
+                'revenue' => round($bulkRevenue + $partialRevenue, 2)
+            ];
+        }
+        
+        return response()->json($data);
+    }
+
+    /**
+     * Get payment status breakdown
+     */
+    public function getPaymentStatus(Request $request)
+    {
+        $year = $request->input('year', date('Y'));
+        
+        // Get total expected revenue
+        $totalPlans = PaymentPlan::whereYear('created_at', $year)->get();
+        $totalExpected = 0;
+        $totalPaid = 0;
+        $totalOutstanding = 0;
+        
+        foreach ($totalPlans as $plan) {
+            if (is_array($plan->installments)) {
+                foreach ($plan->installments as $inst) {
+                    $amount = $inst['local_amount'] ?? 0;
+                    $totalExpected += $amount;
+                    
+                    $dueDate = Carbon::parse($inst['due_date']);
+                    if ($dueDate->isPast()) {
+                        if (isset($inst['paid']) && $inst['paid']) {
+                            $totalPaid += $amount;
+                        } else {
+                            $totalOutstanding += $amount;
+                        }
+                    }
+                }
+            }
+        }
+        
+        return response()->json([
+            'total_expected' => round($totalExpected, 2),
+            'total_paid' => round($totalPaid, 2),
+            'total_outstanding' => round($totalOutstanding, 2),
+            'payment_rate' => $totalExpected > 0 ? round(($totalPaid / $totalExpected) * 100, 2) : 0
+        ]);
+    }
+
+    /**
+     * Get monthly revenue trend
+     */
+    public function getMonthlyRevenueTrend(Request $request)
+    {
+        $year = $request->input('year', date('Y'));
+        $months = [];
+        
+        for ($month = 1; $month <= 12; $month++) {
+            // Bulk revenue for month
+            $bulkRevenue = DB::table('bulk_revenue_uploads')
+                ->where('year', $year)
+                ->where('month', $month)
+                ->sum('revenue');
+            
+            // Partial payments for month
+            $partialRevenue = 0;
+            $payments = PaymentDetail::whereYear('created_at', $year)
+                ->whereMonth('created_at', $month)
+                ->get();
+            
+            foreach ($payments as $payment) {
+                if (!empty($payment->partial_payments) && is_array($payment->partial_payments)) {
+                    foreach ($payment->partial_payments as $partial) {
+                        $paymentDate = Carbon::parse($partial['date'] ?? $partial['payment_date'] ?? $payment->created_at);
+                        if ($paymentDate->year == $year && $paymentDate->month == $month) {
+                            $partialRevenue += floatval($partial['amount'] ?? 0);
+                        }
+                    }
+                }
+            }
+            
+            $months[] = [
+                'month' => $month,
+                'month_name' => Carbon::create($year, $month, 1)->format('M'),
+                'revenue' => round($bulkRevenue + $partialRevenue, 2)
+            ];
+        }
+        
+        return response()->json($months);
+    }
 }
