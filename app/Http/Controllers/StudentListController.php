@@ -196,4 +196,27 @@ class StudentListController extends Controller
             $filename
         );
     }
+
+    /**
+     * Get intakes for a course and location
+     */
+    public function getIntakesForCourseAndLocation($courseId, $location)
+    {
+        try {
+            $course = Course::find($courseId);
+            if (!$course) {
+                return response()->json(['intakes' => []]);
+            }
+
+            $intakes = Intake::where('course_name', $course->course_name)
+                ->where('location', $location)
+                ->orderBy('batch')
+                ->get(['intake_id', 'batch']);
+
+            return response()->json(['intakes' => $intakes]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching intakes in StudentListController: ' . $e->getMessage());
+            return response()->json(['intakes' => []], 500);
+        }
+    }
 }
