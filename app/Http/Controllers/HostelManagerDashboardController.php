@@ -80,7 +80,12 @@ class HostelManagerDashboardController extends Controller
 
         return response()->json([
             'totalPending' => $totalPending, // Keep for compatibility
-            'filtered' => [ // New key for filtered data
+            'monthly' => [ // Frontend expects 'monthly' key
+                'pending' => $filteredPending,
+                'approved' => $filteredApproved,
+                'rejected' => $filteredRejected
+            ],
+            'filtered' => [ // Also provide filtered for compatibility
                 'pending' => $filteredPending,
                 'approved' => $filteredApproved,
                 'rejected' => $filteredRejected

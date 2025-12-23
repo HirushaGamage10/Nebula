@@ -173,4 +173,30 @@ class StudentCounselorDashboardController extends Controller
             'without_foundation' => $withoutFoundation
         ]);
     }
+
+    // Get counselor performance data
+    public function getCounselorPerformanceData(Request $request)
+    {
+        $period = $request->input('period', 'week');
+        
+        // Define date range based on period
+        $startDate = match($period) {
+            'today' => Carbon::today(),
+            'week' => Carbon::now()->subWeek(),
+            'month' => Carbon::now()->subMonth(),
+            'year' => Carbon::now()->subYear(),
+            default => Carbon::now()->subWeek(),
+        };
+
+        $performanceData = CourseRegistration::select('counselor_name', DB::raw('COUNT(*) as student_count'))
+            ->whereNotNull('counselor_name')
+            ->where('counselor_name', '!=', '')
+            ->where('registration_date', '>=', $startDate)
+            ->groupBy('counselor_name')
+            ->orderBy('student_count', 'desc')
+            ->limit(10)
+            ->get();
+
+        return response()->json($performanceData);
+    }
 }

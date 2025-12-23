@@ -57,6 +57,7 @@ class ContentSecurityPolicy
             'data:',
             'https://fonts.gstatic.com',
             'https://cdn.jsdelivr.net',
+            'https://cdnjs.cloudflare.com',
         ];
         
         // Trusted hosts for connections (AJAX, fetch, WebSocket)
@@ -65,6 +66,7 @@ class ContentSecurityPolicy
             'https://nebulastudentportal.slt.lk',
             'https://fonts.googleapis.com',
             'https://fonts.gstatic.com',
+            'https://cdn.tailwindcss.com',
         ];
 
         $scriptList = implode(' ', $scriptHosts);
