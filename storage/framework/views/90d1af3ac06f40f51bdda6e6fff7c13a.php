@@ -1,20 +1,20 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Semester Creation')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Semester Creation'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="mb-0">Create Semester</h2>
-                <a href="{{ route('semesters.index') }}" class="btn btn-secondary">
+                <a href="<?php echo e(route('semesters.index')); ?>" class="btn btn-secondary">
                     <i class="fas fa-arrow-left"></i> Back to Semesters
                 </a>
             </div>
             <hr>
-            <form action="{{ route('semesters.store') }}" method="POST">
-                @csrf
+            <form action="<?php echo e(route('semesters.store')); ?>" method="POST">
+                <?php echo csrf_field(); ?>
                 <div class="mb-3 row mx-3">
                     <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
@@ -135,10 +135,10 @@
         </div>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('scripts')
-<script nonce="{{ $cspNonce }}">
+<?php $__env->startSection('scripts'); ?>
+<script nonce="<?php echo e($cspNonce); ?>">
 let courseSpecializations = [];
 document.addEventListener('DOMContentLoaded', function() {
     const locationSelect = document.getElementById('location');
@@ -315,10 +315,10 @@ document.addEventListener('DOMContentLoaded', function() {
     intakeSelect.addEventListener('change', function() {
         resetAndDisable(semesterSelect, 'Select Semester');
         resetAndDisable(moduleSelect, 'Select a module...');
-        if (courseSelect.value && intakeSelect.value) {
+        if (courseSelect.value) {
             semesterSelect.innerHTML = '<option value="" selected disabled>Loading semesters...</option>';
             semesterSelect.disabled = true;
-            fetch(`/semester-registration/get-all-semesters-for-course?course_id=${encodeURIComponent(courseSelect.value)}&intake_id=${encodeURIComponent(intakeSelect.value)}`)
+            fetch(`/semester-registration/get-all-semesters-for-course?course_id=${encodeURIComponent(courseSelect.value)}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.semesters && data.semesters.length > 0) {
@@ -352,7 +352,7 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             fetch('/semester/get-filtered-modules', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+                headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
                 body: JSON.stringify(data)
             })
             .then(response => response.json())
@@ -492,7 +492,7 @@ window.showToast = function(message, type = 'success') {
 };
 
 // AJAX form submission for semester creation
-const semesterForm = document.querySelector('form[action="{{ route('semesters.store') }}"]');
+const semesterForm = document.querySelector('form[action="<?php echo e(route('semesters.store')); ?>"]');
 semesterForm.addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -522,7 +522,7 @@ semesterForm.addEventListener('submit', function(e) {
         start_date: document.getElementById('start_date').value,
         end_date: document.getElementById('end_date').value,
         status: document.getElementById('status').value,
-        _token: '{{ csrf_token() }}'
+        _token: '<?php echo e(csrf_token()); ?>'
     };
     
     // Validate CSRF token
@@ -569,7 +569,7 @@ semesterForm.addEventListener('submit', function(e) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
             'Accept': 'application/json'
         },
         body: JSON.stringify(formData)
@@ -606,7 +606,7 @@ semesterForm.addEventListener('submit', function(e) {
             if (data.success) {
                 showToast(data.message || 'Semester created successfully!', 'success');
                 setTimeout(() => {
-                    window.location.href = '{{ route("semesters.index") }}';
+                    window.location.href = '<?php echo e(route("semesters.index")); ?>';
                 }, 1500);
             } else {
                 showToast(data.message || 'Failed to create semester.', 'danger');
@@ -625,9 +625,9 @@ semesterForm.addEventListener('submit', function(e) {
 });
 
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
 
-<style nonce="{{ $cspNonce }}">
+<style nonce="<?php echo e($cspNonce); ?>">
     select:disabled {
         background-color: #f5f5f5 !important;
         border-color: #ddd !important;
@@ -638,3 +638,5 @@ semesterForm.addEventListener('submit', function(e) {
         box-shadow: 0 0 0 0.1rem #6c8cff33;
     }
 </style>
+
+<?php echo $__env->make('inc.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH D:\SLT\Welisara\Nebula\resources\views/courses_&_modules/semester_creation.blade.php ENDPATH**/ ?>
