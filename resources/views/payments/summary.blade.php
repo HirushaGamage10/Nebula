@@ -374,7 +374,7 @@
 </div>
 
 {{-- Chart.js --}}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script nonce="{{ $cspNonce }}">
 // Event delegation for buttons

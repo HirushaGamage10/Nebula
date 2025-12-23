@@ -264,7 +264,7 @@
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script nonce="{{ $cspNonce }}">
 document.addEventListener("DOMContentLoaded", () => {
     const revenueByDay = @json($revenueByDay);
