@@ -664,7 +664,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     // PAYMENT PLAN
     // ========================================================================
-    Route::middleware(['auth', 'role:Bursar,Marketing Manager,Developer,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
+    Route::middleware(['auth', 'role:Bursar,Marketing Manager,Developer,Program Administrator (level 01),Program Administrator (level 02),Student Counselor,Student Counselor Trainee'])->group(function () {
         Route::get('/payment-plans', [PaymentPlanController::class, 'index'])->name('payment.plan.index');
         Route::get('/payment-plan', [PaymentPlanController::class, 'create'])->name('payment.plan');
         Route::get('/payment-plan/create', [PaymentPlanController::class, 'create'])->name('payment.plan.create');
@@ -736,7 +736,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     
     // Main Payment Routes
-    Route::middleware(['auth', 'role:Bursar,Developer'])->group(function () {
+    Route::middleware(['auth', 'role:Bursar,Developer,Student Counselor,Student Counselor Trainee'])->group(function () {
         Route::get('/payment', [PaymentController::class, 'index'])->name('payment.index');
         Route::post('/payment/get-plans', [PaymentController::class, 'getPaymentPlans'])->name('payment.get.plans');
         Route::post('/payment/get-student-courses', [PaymentController::class, 'getStudentCourses'])->name('payment.get.student.courses');
@@ -763,7 +763,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     });
 
     // Payment Statement Download
-    Route::middleware(['auth', 'role:Bursar,Developer'])->group(function () {
+    Route::middleware(['auth', 'role:Bursar,Developer,Student Counselor,Student Counselor Trainee'])->group(function () {
         Route::get('/payment/statement-download', [PaymentController::class, 'showDownloadPage'])->name('payment.showDownloadPage');
         Route::post('/payment/download-statement', [PaymentController::class, 'downloadPaymentStatement'])->name('payment.downloadStatement');
     });
