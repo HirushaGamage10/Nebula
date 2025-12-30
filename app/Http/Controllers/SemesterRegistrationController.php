@@ -324,16 +324,28 @@ class SemesterRegistrationController extends Controller
     public function getAllSemestersForCourse(Request $request)
     {
         $courseId = $request->input('course_id');
+        $intakeId = $request->input('intake_id');
         $course = Course::find($courseId);
         if (!$course || !$course->no_of_semesters) {
             return response()->json(['success' => false, 'semesters' => [], 'message' => 'Course not found or no semesters defined.']);
         }
 
-        $createdSemesterNames = Semester::where('course_id', $courseId)->pluck('name')->toArray();
+        $semesterQuery = Semester::where('course_id', $courseId);
+        if ($intakeId) {
+            $semesterQuery->where('intake_id', $intakeId);
+        }
+
+        // Cast to string so numeric names (e.g., "1") compare consistently against the loop counter
+        $createdSemesterNames = $semesterQuery
+            ->pluck('name')
+            ->map(function ($name) {
+                return (string) $name;
+            })
+            ->toArray();
 
         $allPossibleSemesters = [];
         for ($i = 1; $i <= $course->no_of_semesters; $i++) {
-            if (!in_array($i, $createdSemesterNames)) {
+            if (!in_array((string) $i, $createdSemesterNames, true)) {
                 $allPossibleSemesters[] = [
                     'semester_id'   => $i,
                     'semester_name' => 'Semester ' . $i
