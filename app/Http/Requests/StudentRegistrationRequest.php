@@ -121,13 +121,13 @@ class StudentRegistrationRequest extends FormRequest
             // File Uploads
             'userPhoto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'ol_certificate' => [
-                Rule::requiredIf($this->input('pending_result') === 'no'),
+                'nullable',
                 'file',
                 'mimes:pdf,jpg,jpeg,png',
                 'max:5120'
             ],
             'al_certificate' => [
-                Rule::requiredIf($this->input('al_pending_result') === 'no'),
+                'nullable',
                 'file',
                 'mimes:pdf,jpg,jpeg,png',
                 'max:5120'

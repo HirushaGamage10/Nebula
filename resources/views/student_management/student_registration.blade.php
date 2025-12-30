@@ -236,7 +236,7 @@
                                         </div>
                                     </div>
                                     <div class="row mb-3">
-                                        <label for="ol_certificate" class="col-sm-2 col-form-label">O/L Certificate<span class="text-danger">*</span></label>
+                                        <label for="ol_certificate" class="col-sm-2 col-form-label">O/L Certificate</label>
                                         <div class="col-sm-10">
                                             <input type="file" class="form-control" id="ol_certificate" name="ol_certificate">
                                         </div>
@@ -349,7 +349,7 @@
                                         </div>
                                     </div>
                                     <div class="row mb-3">
-                                        <label for="al_certificate" class="col-sm-2 col-form-label">A/L Certificate<span class="text-danger">*</span></label>
+                                        <label for="al_certificate" class="col-sm-2 col-form-label">A/L Certificate</label>
                                         <div class="col-sm-10">
                                             <input type="file" class="form-control" id="al_certificate" name="al_certificate">
                                         </div>
@@ -625,28 +625,20 @@ document.addEventListener('DOMContentLoaded', function() {
         if (this.value === 'no') {
             olDetailsContainer.style.display = 'block';
             alPendingContainer.style.display = 'flex'; // it's a row, so flex for alignment
-            // When O/L results are not pending, make O/L certificate required
-            try { const olCert = document.getElementById('ol_certificate'); if (olCert) olCert.required = true; } catch(_){}
         } else { // 'yes'
             olDetailsContainer.style.display = 'none';
             alPendingContainer.style.display = 'none';
             alDetailsContainer.style.display = 'none';
             // Also reset the A/L pending dropdown
             alPendingSelect.value = '';
-            // O/L results pending -> not required
-            try { const olCert = document.getElementById('ol_certificate'); if (olCert) { olCert.required = false; olCert.classList.remove('is-invalid'); const fb = olCert.parentNode && olCert.parentNode.querySelector('.invalid-feedback.dynamic'); if (fb) fb.remove(); } } catch(_){}
         }
     });
 
     alPendingSelect.addEventListener('change', function() {
         if (this.value === 'no') {
             alDetailsContainer.style.display = 'block';
-            // When A/L results are not pending, make A/L certificate required
-            try { const alCert = document.getElementById('al_certificate'); if (alCert) alCert.required = true; } catch(_){}
         } else { // 'yes'
             alDetailsContainer.style.display = 'none';
-            // A/L results pending -> not required
-            try { const alCert = document.getElementById('al_certificate'); if (alCert) { alCert.required = false; alCert.classList.remove('is-invalid'); const fb = alCert.parentNode && alCert.parentNode.querySelector('.invalid-feedback.dynamic'); if (fb) fb.remove(); } } catch(_){}
         }
     });
 
@@ -1228,41 +1220,7 @@ setupPhoneValidator('emergencyContactNo', 'emergencyContactNoError');
             return; // stop submission
         }
 
-        // Require certificate files when results are NOT pending
-        const certificateErrors = [];
-        try {
-            const olPending = (document.getElementById('pending_result') || {}).value || '';
-            if (olPending === 'no') {
-                const olFile = document.getElementById('ol_certificate');
-                if (!olFile || !olFile.files || olFile.files.length === 0) {
-                    certificateErrors.push('O/L Certificate is required when O/L results are not marked as pending. Please attach the O/L certificate file.');
-                    if (olFile) {
-                        olFile.classList.add('is-invalid');
-                        const fb = document.createElement('div'); fb.className = 'invalid-feedback dynamic'; fb.textContent = 'Please attach the student\'s O/L certificate file.'; if (olFile.parentNode) olFile.parentNode.appendChild(fb);
-                    }
-                }
-            }
-        } catch (e) { /* ignore DOM errors */ }
-
-        try {
-            const alPending = (document.getElementById('al_pending_result') || {}).value || '';
-            if (alPending === 'no') {
-                const alFile = document.getElementById('al_certificate');
-                if (!alFile || !alFile.files || alFile.files.length === 0) {
-                    certificateErrors.push('A/L Certificate is required when A/L results are not marked as pending. Please attach the A/L certificate file.');
-                    if (alFile) {
-                        alFile.classList.add('is-invalid');
-                        const fb = document.createElement('div'); fb.className = 'invalid-feedback dynamic'; fb.textContent = 'Please attach the student\'s A/L certificate file.'; if (alFile.parentNode) alFile.parentNode.appendChild(fb);
-                    }
-                }
-            }
-        } catch (e) { /* ignore DOM errors */ }
-
-        if (certificateErrors.length) {
-            const list = document.createElement('ul'); list.className = 'mb-0 ps-3'; certificateErrors.forEach(m=>{ const li=document.createElement('li'); li.textContent = m; list.appendChild(li); });
-            summary.appendChild(list); summary.classList.remove('d-none'); summary.scrollIntoView({ behavior:'smooth', block:'start' });
-            return; // block submit until files attached
-        }
+        // Certificate files are now optional
 
         var formData = new FormData(form);
         
