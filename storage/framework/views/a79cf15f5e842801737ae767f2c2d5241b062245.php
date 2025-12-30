@@ -3,34 +3,62 @@
 <?php $__env->startSection('title', 'NEBULA | Dashboard'); ?>
 
 <?php $__env->startSection('content'); ?>
-    <link nonce="<?php echo e($cspNonce); ?>" rel="stylesheet" href="<?php echo e(asset('css/styles.min.css')); ?>">
-    <link nonce="<?php echo e($cspNonce); ?>" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script nonce="<?php echo e($cspNonce); ?>" src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
-    <script nonce="<?php echo e($cspNonce); ?>" src="https://cdn.tailwindcss.com"></script>
-    <script nonce="<?php echo e($cspNonce); ?>" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="<?php echo e(asset('css/styles.min.css')); ?>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script nonce="<?php echo e($cspNonce); ?>">
+        // Intercept style element creation to add nonce for Tailwind CSS
+        (function() {
+            const nonce = '<?php echo e($cspNonce); ?>';
+            if (nonce) {
+                const originalCreateElement = document.createElement;
+                document.createElement = function(tagName) {
+                    const element = originalCreateElement.call(document, tagName);
+                    if (tagName.toLowerCase() === 'style') {
+                        element.setAttribute('nonce', nonce);
+                    }
+                    return element;
+                };
+                
+                // Also observe for any style elements added after Tailwind loads
+                const observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        mutation.addedNodes.forEach(function(node) {
+                            if (node.nodeType === 1 && node.tagName === 'STYLE' && !node.getAttribute('nonce')) {
+                                node.setAttribute('nonce', nonce);
+                            }
+                        });
+                    });
+                });
+                observer.observe(document.head, { childList: true, subtree: true });
+            }
+        })();
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="<?php echo e(asset('js/tailwindcss.js')); ?>"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <div id="pageContent" class="bg-gray-50">
 
         <!-- Navigation Tabs -->
         <nav class="bg-white shadow-sm">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex space-x-1 py-3">
-                    <button onclick="showTab('overview')" id="tab-overview"
+                    <button data-tab="overview" id="tab-overview"
                         class="px-4 py-2 rounded-lg text-sm font-medium tab-active">
                         <i class="fas fa-chart-line mr-2"></i>Overview
                     </button>
-                    <button onclick="showTab('students')" id="tab-students"
+                    <button data-tab="students" id="tab-students"
                         class="px-4 py-2 rounded-lg text-sm font-medium tab-inactive">
                         <i class="fas fa-users mr-2"></i>Students
                     </button>
-                    <button onclick="showTab('revenues')" id="tab-revenues"
+                    <button data-tab="revenues" id="tab-revenues"
                         class="px-4 py-2 rounded-lg text-sm font-medium tab-inactive">
                         <i class="fas fa-dollar-sign mr-2"></i>Revenues
                     </button>
-                    <button onclick="showTab('outstanding')" id="tab-outstanding"
+                    <button data-tab="outstanding" id="tab-outstanding"
                         class="px-4 py-2 rounded-lg text-sm font-medium tab-inactive">
                         <i class="fas fa-exclamation-circle mr-2"></i>Outstanding
                     </button>
-                    <button onclick="showTab('marketing')" id="tab-marketing"
+                    <button data-tab="marketing" id="tab-marketing"
                         class="px-4 py-2 rounded-lg text-sm font-medium tab-inactive">
                         <i class="fas fa-share-alt mr-2"></i>Marketing
                     </button>
@@ -652,7 +680,6 @@
         }
     </style>
 
-    <script nonce="<?php echo e($cspNonce); ?>" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script nonce="<?php echo e($cspNonce); ?>">
         let currentCharts = {};
         const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
@@ -841,7 +868,6 @@
                     });
                 }
 
-                // loadMonthlyTrend(); // Removed - function doesn't exist
                 loadLocationBreakdown();
             } catch (error) {
                 console.error('Error loading overview data:', error);
@@ -865,7 +891,7 @@
                     // Always show all locations, even if count is zero
                     const allLocations = ['Welisara', 'Moratuwa', 'Peradeniya'];
                     const chartData = allLocations.map(loc => {
-                        const found = studentsData.find(d => d.institute_location === loc);
+                        const found = data.find(d => d.institute_location === loc);
                         return found ? found.count : 0;
                     });
                     currentCharts.studentsLocation = new Chart(ctx, {
@@ -1533,6 +1559,14 @@
 
 
         document.addEventListener('DOMContentLoaded', function () {
+            // Attach event listeners to tab buttons
+            document.querySelectorAll('[data-tab]').forEach(button => {
+                button.addEventListener('click', function() {
+                    const tabName = this.getAttribute('data-tab');
+                    showTab(tabName);
+                });
+            });
+
             const compareToggle = document.getElementById('compareToggle');
             const rangeToggle = document.getElementById('rangeSelectorToggle');
             const yearSelect = document.getElementById('yearSelect');
@@ -1819,5 +1853,4 @@
         });
     </script>
 <?php $__env->stopSection(); ?>
-
 <?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/dashboards/dgmdashboard.blade.php ENDPATH**/ ?>
