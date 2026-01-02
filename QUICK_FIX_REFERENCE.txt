@@ -1,0 +1,230 @@
+╔═══════════════════════════════════════════════════════════════════╗
+║                    🔧 QUICK FIX REFERENCE CARD                    ║
+╚═══════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 🚨 USER REPORTS: "It doesn't work!"                            │
+└─────────────────────────────────────────────────────────────────┘
+
+STEP 1: Ask user to do this FIRST:
+   • Hard refresh: Ctrl+Shift+R (or Cmd+Shift+R on Mac)
+   • Try Incognito mode
+   • This fixes 80% of issues!
+
+STEP 2: Get diagnostics:
+   • Ask: "Press F12, what errors do you see?"
+   • Ask: "What browser and version?"
+   • Ask: "Screenshot the red errors"
+
+STEP 3: Check your diagnostics page:
+   • Login as Admin
+   • Visit: /diagnostics
+   • Check for warnings
+   • Run the tests
+
+┌─────────────────────────────────────────────────────────────────┐
+│ ⚡ QUICK FIXES (Try These First)                                │
+└─────────────────────────────────────────────────────────────────┘
+
+FIX #1: Clear ALL caches
+   php artisan cache:clear
+   php artisan config:clear
+   php artisan route:clear
+   php artisan view:clear
+
+FIX #2: Check .env settings
+   APP_DEBUG=false          ← MUST be false in production!
+   SESSION_LIFETIME=480     ← Should be 480 (8 hours)
+
+FIX #3: Check logs
+   tail -f storage/logs/laravel.log
+   Look for JavaScript errors (now logged automatically!)
+
+FIX #4: Test AJAX
+   Visit /diagnostics → Click "Test AJAX Connection"
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 🔍 COMMON ISSUES & SOLUTIONS                                    │
+└─────────────────────────────────────────────────────────────────┘
+
+Issue: "419 Page Expired" on form submit
+   → FIXED: CSRF token now auto-refreshes every hour
+   → Increase SESSION_LIFETIME in .env if needed
+
+Issue: JavaScript not working
+   → Check console (F12) for CSP errors
+   → FIXED: CSP nonce is now session-based
+   → Clear browser cache
+
+Issue: AJAX calls fail randomly
+   → FIXED: Better error handling added
+   → Check /diagnostics for connection issues
+   → Check Network tab in F12
+
+Issue: Works in dev, not for users
+   → Check APP_DEBUG=false in production
+   → Check browser cache
+   → Check /diagnostics page
+
+Issue: Session expires too quickly
+   → Increase SESSION_LIFETIME in .env
+   → Default changed from 120 to 480 minutes
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 🛠️ NEW TOOLS ADDED                                             │
+└─────────────────────────────────────────────────────────────────┘
+
+1. System Diagnostics Page
+   URL: /diagnostics (Admin/Developer only)
+   Features:
+   • Shows environment info
+   • Tests AJAX connection
+   • Tests CSRF refresh
+   • Shows recent errors
+   • One-click cache clearing
+
+2. Global Error Handling
+   File: public/js/global-utilities.js
+   Features:
+   • Auto CSRF refresh
+   • JavaScript error logging
+   • Session expiry handling
+   • Better error messages
+
+3. Debug Console Commands
+   In browser console, type:
+   • debugUtils.info()        → Show system info
+   • debugUtils.testAjax()    → Test AJAX
+   • debugUtils.getCsrfToken() → Get current token
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 📋 PRODUCTION DEPLOYMENT CHECKLIST                              │
+└─────────────────────────────────────────────────────────────────┘
+
+Before deploying:
+   [ ] Set APP_ENV=production
+   [ ] Set APP_DEBUG=false
+   [ ] Set SESSION_LIFETIME=480
+   [ ] Run: php artisan config:cache
+   [ ] Run: php artisan route:cache
+   [ ] Run: php artisan view:cache
+   [ ] Test /diagnostics page
+   [ ] Clear browser cache
+   [ ] Test in incognito mode
+   [ ] Check error logs
+
+After deploying:
+   [ ] Visit /diagnostics
+   [ ] Run all tests
+   [ ] Check for warnings
+   [ ] Monitor logs for 1 hour
+   [ ] Test form submissions
+   [ ] Test AJAX calls
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 🆘 EMERGENCY: Everything is Broken!                             │
+└─────────────────────────────────────────────────────────────────┘
+
+STEP 1: Put in maintenance mode
+   php artisan down
+
+STEP 2: Clear everything
+   php artisan cache:clear
+   php artisan config:clear
+   php artisan route:clear
+   php artisan view:clear
+
+STEP 3: Check .env
+   APP_DEBUG=false
+   APP_ENV=production
+
+STEP 4: Rebuild caches
+   php artisan config:cache
+   php artisan route:cache
+
+STEP 5: Bring back online
+   php artisan up
+
+STEP 6: Test /diagnostics
+
+If still broken:
+   • Check storage/logs/laravel.log
+   • Temporarily set APP_DEBUG=true to see errors
+   • Comment out CSP middleware as last resort
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 📞 USER SUPPORT SCRIPT                                          │
+└─────────────────────────────────────────────────────────────────┘
+
+When user reports an issue:
+
+YOU: "Let's try a few quick fixes first:"
+
+1. "Please hard-refresh the page: Press Ctrl+Shift+R"
+   → Wait for response
+
+2. "Please clear your browser cache:
+    • Press Ctrl+Shift+Delete
+    • Check 'Cached images and files'
+    • Click 'Clear data'"
+   → Wait for response
+
+3. "Please try opening the page in Incognito/Private mode"
+   → If it works in incognito = cache issue
+
+4. "Please press F12, click the Console tab,
+    and tell me if you see any red error messages"
+   → Screenshot these!
+
+5. "What browser and version are you using?"
+   → Chrome 120? Firefox 115? etc.
+
+Then escalate with:
+   • Screenshots of console errors
+   • Browser and version
+   • Exact steps to reproduce
+   • User role
+   • Time of occurrence
+
+┌─────────────────────────────────────────────────────────────────┐
+│ 📚 FILES MODIFIED/CREATED                                       │
+└─────────────────────────────────────────────────────────────────┘
+
+Modified:
+   • app/Http/Middleware/ContentSecurityPolicy.php
+   • resources/views/inc/app.blade.php
+   • routes/web.php
+
+Created:
+   • public/js/global-utilities.js
+   • resources/views/diagnostics.blade.php
+   • app/Http/Controllers/DiagnosticsController.php
+   • TROUBLESHOOTING_GUIDE.md
+   • FIXES_APPLIED.md
+   • QUICK_FIX_REFERENCE.txt (this file)
+
+All changes are backward-compatible and non-breaking!
+
+┌─────────────────────────────────────────────────────────────────┐
+│ ✅ VERIFICATION COMMANDS                                        │
+└─────────────────────────────────────────────────────────────────┘
+
+# Check routes exist
+php artisan route:list | grep -E "diagnostics|refresh-csrf"
+
+# Check files exist
+ls public/js/global-utilities.js
+ls app/Http/Controllers/DiagnosticsController.php
+
+# Test the system
+curl http://localhost/refresh-csrf  (should return JSON)
+
+# Check logs
+tail -f storage/logs/laravel.log
+
+═════════════════════════════════════════════════════════════════
+
+Keep this file handy for quick reference!
+Print it out and put it on your desk!
+
+Last Updated: January 2, 2026

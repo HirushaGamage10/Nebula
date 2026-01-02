@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Debug: Log the request
         console.log('Fetching intakes for:', { courseId, location });
         
-        fetch(`/get-intakes/${courseId}/${location}`)
+        fetch(`/attendance/get-intakes/${courseId}/${location}`)
             .then(response => {
                 console.log('Response status:', response.status);
                 return response.json();
@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function fetchCoursesByLocation(location, courseType) {
         console.log('fetchCoursesByLocation called with:', { location, courseType });
         showSpinner(true);
-        const url = `/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=${encodeURIComponent(courseType)}`;
+        const url = `/attendance/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=${encodeURIComponent(courseType)}`;
         console.log('Fetching from URL:', url);
         fetch(url)
             .then(response => response.json())

@@ -9,8 +9,12 @@ class ContentSecurityPolicy
 {
     public function handle($request, Closure $next)
     {
-        // 1. Generate a random nonce
-        $nonce = base64_encode(random_bytes(16));
+        // 1. Use session-based nonce for consistency across requests
+        // This prevents CSP violations when pages are cached
+        if (!session()->has('csp_nonce')) {
+            session(['csp_nonce' => base64_encode(random_bytes(16))]);
+        }
+        $nonce = session('csp_nonce');
 
         // 2. Share it with all Blade views
         View::share('cspNonce', $nonce);

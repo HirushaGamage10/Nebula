@@ -278,17 +278,25 @@ class ExamResultController extends Controller
     public function getCoursesByLocation(Request $request)
     {
         $location = $request->query('location');
+        $courseType = $request->query('course_type');
+        
         if (!$location) {
             return response()->json(['success' => false, 'message' => 'Location is required.']);
         }
+        
         try {
-            $courses = Course::select('course_id', 'course_name')
-                ->where('location', $location)
-                ->orderBy('course_name', 'asc')
-                ->get();
+            $query = Course::select('course_id', 'course_name')
+                ->where('location', $location);
+            
+            // Filter by course type if provided
+            if ($courseType) {
+                $query->where('course_type', $courseType);
+            }
+            
+            $courses = $query->orderBy('course_name', 'asc')->get();
 
             if ($courses->isEmpty()) {
-                return response()->json(['success' => false, 'message' => 'No courses found for this location.']);
+                return response()->json(['success' => false, 'message' => 'No courses found for this location and type.']);
             }
 
             return response()->json(['success' => true, 'courses' => $courses]);

@@ -38,12 +38,11 @@ class StudentProfileController extends Controller
         if ($studentId == 0) {
             return view('student_management.student_profile');
         }
-        $student = Student::with('parentGuardian')->find($studentId);
+        $student = Student::with(['parentGuardian', 'exams', 'otherInformation'])->find($studentId);
         if (!$student) {
             return redirect()->back()->with('error', 'Student not found.');
         }
-        $student->parent = $student->parentGuardian;
-        $student->other_information = StudentOtherInformation::where('student_id', $studentId)->first();
+        
         Log::info('Student profile parent (Blade):', ['parent' => $student->parent]);
         return view('student_management.student_profile', compact('student'));
     }
@@ -552,13 +551,11 @@ class StudentProfileController extends Controller
         if (!$nic) {
             return response()->json(['success' => false, 'message' => 'NIC is required.'], 400);
         }
-        $student = \App\Models\Student::with(['parentGuardian', 'otherInformation'])->where('id_value', $nic)->first();
+        $student = \App\Models\Student::with(['parentGuardian', 'otherInformation', 'exams'])->where('id_value', $nic)->first();
         if (!$student) {
             return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
         }
-        $student->parent = $student->parentGuardian;
-        $student->other_information = $student->otherInformation; // <-- Ensure this is set
-        $student->exams = \App\Models\StudentExam::where('student_id', $student->student_id)->get();
+        
         return response()->json(['success' => true, 'student' => $student]);
     }
     // Other methods (academic details, attendance, clearance, certificates, etc.) remain unchanged

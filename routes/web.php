@@ -397,8 +397,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Bursar,Project Tutor,Marketing Manager,Developer'])->group(function () {
         Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance');
-        Route::get('/get-courses-by-location', [AttendanceController::class, 'getCoursesByLocation'])->name('get.courses.by.location');
-        Route::get('/get-intakes/{courseId}/{location}', [AttendanceController::class, 'getIntakesForCourseAndLocation'])->name('get.intakes.for.course.location');
+        Route::get('/attendance/get-courses-by-location', [AttendanceController::class, 'getCoursesByLocation'])->name('attendance.courses.by.location');
+        Route::get('/attendance/get-intakes/{courseId}/{location}', [AttendanceController::class, 'getIntakesForCourseAndLocation'])->name('get.intakes.for.course.location');
         Route::get('/attendance/get-semesters', [AttendanceController::class, 'getSemesters'])->name('attendance.get.semesters');
         Route::post('/get-filtered-modules', [AttendanceController::class, 'getFilteredModules'])->name('get.filtered.modules');
         Route::post('/get-students-for-attendance', [AttendanceController::class, 'getStudentsForAttendance'])->name('get.students.for.attendance');
@@ -528,13 +528,14 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Bursar,Marketing Manager,Developer'])->group(function () {
         Route::get('/student-exam-result-management', [ExamResultController::class, 'showStudentExamResultManagement'])->name('student.exam.result.management');
         Route::get('/exam-results-view-edit', [ExamResultController::class, 'showExamResultsViewEdit'])->name('exam.results.view.edit');
+        Route::get('/exam-results/get-courses-by-location', [ExamResultController::class, 'getCoursesByLocation'])->name('exam.results.courses.by.location');
         Route::get('/get-course-data/{courseID}', [ExamResultController::class, 'getCourseData']);
         Route::post('/store/result', [ExamResultController::class, 'storeResult'])->name('store.result');
         Route::post('/update/result', [ExamResultController::class, 'updateResult'])->name('update.result');
         Route::post('/get-student-name', [ExamResultController::class, 'getStudentName'])->name('get.student.name');
-        Route::get('/get-intakes/{courseID}/{location}', [ExamResultController::class, 'getIntakesForCourseAndLocation'])->name('get.intakes.for.course.location');
+        Route::get('/exam-results/get-intakes/{courseID}/{location}', [ExamResultController::class, 'getIntakesForCourseAndLocation'])->name('get.intakes.for.course.location');
         Route::post('/exam-results/get-modules', [ExamResultController::class, 'getFilteredModules'])->name('exam.results.get.filtered.modules');
-        Route::get('/get-semesters', [ExamResultController::class, 'getSemesters'])->name('get.semesters');
+        Route::get('/exam-results/get-semesters', [ExamResultController::class, 'getSemesters'])->name('get.semesters');
         Route::post('/get-students-for-exam-result', [ExamResultController::class, 'getStudentsForExamResult'])->name('get.students.for.exam.result');
         Route::post('/get-existing-exam-results', [ExamResultController::class, 'getExistingExamResults'])->name('get.existing.exam.results');
         Route::post('/auto-calculate-grades', [ExamResultController::class, 'autoCalculateGrades'])->name('auto.calculate.grades');
@@ -941,4 +942,41 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/developer-dashboard', [DeveloperDashboardController::class, 'index'])->name('developer.dashboard');
     });
 
+    // System Diagnostics (Admin & Developer only)
+    Route::middleware(['role:Admin,Developer'])->group(function () {
+        Route::get('/diagnostics', [App\Http\Controllers\DiagnosticsController::class, 'index'])->name('diagnostics.index');
+        Route::post('/diagnostics/clear-cache', [App\Http\Controllers\DiagnosticsController::class, 'clearCache'])->name('diagnostics.clear-cache');
+    });
+
+    // Permission Checker (Admin, Program Administrators & Developer)
+    Route::middleware(['role:Program Administrator (level 01),Program Administrator (level 02),Developer,Admin'])->group(function () {
+        Route::get('/permission-checker', function() {
+            return view('permission_checker');
+        })->name('permission.checker');
+    });
+
 }); // End of main authenticated routes group
+
+// Utility routes for session management
+Route::middleware('web')->group(function () {
+    // Refresh CSRF token without full page reload
+    Route::get('/refresh-csrf', function () {
+        return response()->json([
+            'token' => csrf_token(),
+            'success' => true
+        ]);
+    })->name('refresh.csrf');
+
+    // JavaScript error logging endpoint
+    Route::post('/log-js-error', function (Request $request) {
+        \Log::error('JavaScript Error', [
+            'message' => $request->input('message'),
+            'file' => $request->input('file'),
+            'line' => $request->input('line'),
+            'url' => $request->input('url'),
+            'user_agent' => $request->userAgent(),
+            'user_id' => auth()->id(),
+        ]);
+        return response()->json(['success' => true]);
+    })->name('log.js.error');
+});

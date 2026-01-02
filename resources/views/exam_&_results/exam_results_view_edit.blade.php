@@ -689,7 +689,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         showSpinner(true);
-        fetch(`/get-intakes/${courseId}/${location}`)
+        fetch(`/exam-results/get-intakes/${courseId}/${location}`)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
@@ -710,7 +710,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function fetchSemesters(courseId, intakeId) {
         console.log('fetchSemesters called with courseId:', courseId, 'intakeId:', intakeId);
         showSpinner(true);
-        fetch(`/get-semesters?course_id=${encodeURIComponent(courseId)}&intake_id=${encodeURIComponent(intakeId)}`)
+        fetch(`/exam-results/get-semesters?course_id=${encodeURIComponent(courseId)}&intake_id=${encodeURIComponent(intakeId)}`)
             .then(response => {
                 console.log('API response status:', response.status);
                 return response.json();
@@ -822,7 +822,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function fetchCoursesByLocation(location, courseType) {
         console.log('fetchCoursesByLocation called with:', { location, courseType });
         showSpinner(true);
-        const url = `/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=${encodeURIComponent(courseType)}`;
+        const url = `/exam-results/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=${encodeURIComponent(courseType)}`;
         console.log('Fetching from URL:', url);
         fetch(url)
             .then(response => response.json())

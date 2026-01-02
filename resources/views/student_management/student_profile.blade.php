@@ -260,7 +260,7 @@
         </div>
       </div>
             <div class="mb-3 row align-items-center mx-3">
-                <label for="parentProfession" class="col-sm-3 col-form-label fw-bold">Profession <span class="text-danger">*</span></label>
+                <label for="parentProfession" class="col-sm-3 col-form-label fw-bold">Profession</label>
         <div class="col-sm-9">
           <input type="text" class="form-control" id="parentProfession" value="{{ $student->parent->guardian_profession ?? '' }}" readonly>
           <div class="invalid-feedback" id="parentProfessionFeedback" style="display:none;"></div>
@@ -274,7 +274,7 @@
         </div>
             </div>
             <div class="mb-3 row align-items-center mx-3">
-                <label for="parentEmail" class="col-sm-3 col-form-label fw-bold">Email <span class="text-danger">*</span></label>
+                <label for="parentEmail" class="col-sm-3 col-form-label fw-bold">Email</label>
         <div class="col-sm-9">
           <input type="email" class="form-control" id="parentEmail" value="{{ $student->parent->guardian_email ?? '' }}" readonly>
           <div class="invalid-feedback" id="parentEmailFeedback" style="display:none;"></div>
@@ -863,7 +863,7 @@ $('#updateParentInfoBtn').on('click', function() {
   $('.is-invalid').removeClass('is-invalid');
   $('.invalid-feedback').text('').hide();
 
-    // Validate all required fields
+    // Get field values (allow empty for optional fields)
     const fields = {
         'guardian_name': $('#parentName').val().trim(),
         'guardian_profession': $('#parentProfession').val().trim(),
@@ -876,20 +876,27 @@ $('#updateParentInfoBtn').on('click', function() {
     let hasError = false;
     const errors = [];
 
-  // Check empty fields and show inline messages
-  Object.entries(fields).forEach(([key, value]) => {
-    const idKey = key.split('_')[1];
-    const $field = $(`#parent${idKey.charAt(0).toUpperCase() + idKey.slice(1)}`);
-    const feedbackSelector = `#${$field.attr('id')}Feedback`;
-    if (!value) {
+  // Validate ONLY required fields (name, contact, address, emergency contact)
+  const requiredFields = {
+    'guardian_name': 'Guardian Name',
+    'guardian_contact_number': 'Contact Number',
+    'guardian_address': 'Address',
+    'emergency_contact_number': 'Emergency Contact Number'
+  };
+
+  Object.entries(requiredFields).forEach(([key, label]) => {
+    if (!fields[key]) {
+      const idKey = key.split('_').slice(1).map((word, i) => i === 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word.charAt(0).toUpperCase() + word.slice(1)).join('');
+      const $field = $(`#parent${idKey}`);
+      const feedbackSelector = `#${$field.attr('id')}Feedback`;
       $field.addClass('is-invalid');
       $(feedbackSelector).text('This field is required.').show();
       hasError = true;
-      errors.push(`${key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}`);
+      errors.push(label);
     }
   });
 
-    // Validate phone numbers
+    // Validate phone numbers (only if provided)
   if (fields.guardian_contact_number && !isValidPhone(fields.guardian_contact_number)) {
     $('#parentContactNo').addClass('is-invalid');
     $('#parentContactNoFeedback').text('Invalid contact number format.').show();
@@ -903,9 +910,10 @@ $('#updateParentInfoBtn').on('click', function() {
     errors.push('Invalid Emergency Contact Number format');
   }
 
-    // Validate email
+    // Validate email (only if provided and not empty)
     if (fields.guardian_email && !isValidEmail(fields.guardian_email)) {
         $('#parentEmail').addClass('is-invalid');
+        $('#parentEmailFeedback').text('Invalid email format.').show();
         hasError = true;
         errors.push('Invalid Email format');
     }
@@ -932,8 +940,8 @@ $('#updateParentInfoBtn').on('click', function() {
             
       // Update the display values
       Object.entries(fields).forEach(([key, value]) => {
-        const idKey = key.split('_')[1];
-        const $field = $(`#parent${idKey.charAt(0).toUpperCase() + idKey.slice(1)}`);
+        const idKey = key.split('_').slice(1).map((word, i) => i === 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word.charAt(0).toUpperCase() + word.slice(1)).join('');
+        const $field = $(`#parent${idKey}`);
         $field.val(value);
       });
     } else {
@@ -1256,6 +1264,9 @@ $(function(){
   });
   $('#cancelEditParentBtn').on('click', function(){
     $('#parentName,#parentProfession,#parentContactNo,#parentEmail,#parentAddress,#parentEmergencyContact').prop('readonly',true);
+    // Clear validation error classes
+    $('.is-invalid').removeClass('is-invalid');
+    $('.invalid-feedback').text('').hide();
     $('#showEditParentInfoBtn').show(); $('#updateParentInfoBtn,#cancelEditParentBtn').hide();
   });
 
