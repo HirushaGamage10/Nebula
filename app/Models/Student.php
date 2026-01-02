@@ -80,6 +80,8 @@ class Student extends Model
         'academic_status_changed_at' => 'datetime',
     ];
 
+    protected $appends = ['parent'];
+
     /* =======================
      * Relationships
      * ======================= */
@@ -91,6 +93,12 @@ class Student extends Model
     public function parentGuardian()
     {
         return $this->hasOne(ParentGuardian::class, 'student_id', 'student_id');
+    }
+
+    // Accessor to make parent available as 'parent' attribute
+    public function getParentAttribute()
+    {
+        return $this->parentGuardian;
     }
 
     public function courseRegistrations()

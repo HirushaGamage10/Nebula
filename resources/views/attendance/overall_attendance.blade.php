@@ -269,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function fetchCoursesByLocation(location, courseType) {
         console.log('fetchCoursesByLocation called with:', { location, courseType });
-        const url = `/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=${encodeURIComponent(courseType)}`;
+        const url = `/attendance/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=${encodeURIComponent(courseType)}`;
         console.log('Fetching from URL:', url);
         fetch(url)
             .then(response => response.json())
@@ -289,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // Fetch intakes for a course and location
     function fetchIntakes(courseId, location) {
-        fetch(`/get-intakes/${courseId}/${location}`)
+        fetch(`/attendance/get-intakes/${courseId}/${location}`)
             .then(response => response.json())
             .then(data => {
                 if (data.intakes && data.intakes.length > 0) {

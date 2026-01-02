@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Exam Results')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Exam Results'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -183,7 +183,7 @@
     </div>
 </div>
 
-<script nonce="{{ $cspNonce }}">
+<script nonce="<?php echo e($cspNonce); ?>">
 document.addEventListener('DOMContentLoaded', function() {
     let results = [];
     const courseSelect = document.getElementById('course');
@@ -625,12 +625,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         showSpinner(true);
-        const url = '{{ route('exam.results.get.filtered.modules') }}';
+        const url = '<?php echo e(route('exam.results.get.filtered.modules')); ?>';
         console.log('DEBUG: Calling modules API with URL:', url);
         console.log('DEBUG: Request data:', data);
         fetch(url, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -712,9 +712,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         showSpinner(true);
-        fetch('{{ route("get.student.name") }}', {
+        fetch('<?php echo e(route("get.student.name")); ?>', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify({ student_id: studentId })
         })
         .then(response => response.json())
@@ -764,9 +764,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const payload = { ...filterData, results: filteredResults };
         
         showSpinner(true);
-        fetch('{{ route("store.result") }}', {
+        fetch('<?php echo e(route("store.result")); ?>', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(payload)
         })
         .then(response => {
@@ -923,7 +923,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showSpinner(true);
         fetch('/get-students-for-exam-result', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -1083,11 +1083,11 @@ document.addEventListener('DOMContentLoaded', function() {
         showSpinner(true);
         
         // Call the backend to download template with actual student data
-        fetch('{{ route("download.exam.results.template") }}', {
+        fetch('<?php echo e(route("download.exam.results.template")); ?>', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
             },
             body: JSON.stringify(filterData)
         })
@@ -1152,7 +1152,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch('/data-import/exam-results', {
             method: 'POST',
             headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
             },
             body: formData
         })
@@ -1189,7 +1189,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<style nonce="{{ $cspNonce }}">
+<style nonce="<?php echo e($cspNonce); ?>">
     .lds-ring { display: inline-block; position: relative; width: 80px; height: 80px; }
     .lds-ring div { box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; border: 8px solid #fff; border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: #fff transparent transparent transparent; }
     .lds-ring div:nth-child(1) { animation-delay: -0.45s; }
@@ -1222,4 +1222,5 @@ document.addEventListener('DOMContentLoaded', function() {
         box-shadow: 0 0 0 2px #e0e7ff;
     }
 </style>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/exam_&_results/exam_results.blade.php ENDPATH**/ ?>
