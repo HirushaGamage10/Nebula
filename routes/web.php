@@ -581,7 +581,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     // TIMETABLE MANAGEMENT
     // ========================================================================
-    Route::middleware(['auth', 'role:Program Administrator (level 02),Developer'])->group(function () {
+    Route::middleware(['auth', 'role:Program Administrator (level 01),Program Administrator (level 02),Developer'])->group(function () {
         Route::get('/timetable', [TimetableController::class, 'showTimetable'])->name('timetable.show');
         Route::post('/timetable', [TimetableController::class, 'store'])->name('timetable.store');
         Route::get('/get-intakes/{courseId}/{location}', [TimetableController::class, 'getIntakesForCourseAndLocation']);
