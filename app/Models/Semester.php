@@ -35,6 +35,11 @@ class Semester extends Model
         return $this->belongsTo(Intake::class, 'intake_id', 'intake_id');
     }
 
+    public function semesterRegistrations()
+    {
+        return $this->hasMany(SemesterRegistration::class, 'semester_id', 'id');
+    }
+
     public function modules()
     {
         return $this->belongsToMany(Module::class, 'semester_module', 'semester_id', 'module_id')

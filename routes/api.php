@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CourseRegistraionController;
 use App\Http\Controllers\CourseManagementController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\ProgramAdminL2DashboardController;
 use App\Models\Intake;
 
 /*
