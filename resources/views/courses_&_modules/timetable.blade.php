@@ -734,22 +734,7 @@
                 }
             });
 
-            // Certificate: autofill start/end and show download buttons when semester chosen
-            $(document).on('change', '#certificate_semester', function () {
-                var selected = $(this).find('option:selected');
-                var start = selected.data('start') || '';
-                var end = selected.data('end') || '';
-                if (start && moment(start).isValid()) start = moment(start).format('YYYY-MM-DD');
-                if (end && moment(end).isValid()) end = moment(end).format('YYYY-MM-DD');
-                $('#certificate_start_date').val(start);
-                $('#certificate_end_date').val(end);
-                // show certificate download buttons now that semester is selected
-                if ($(this).val()) {
-                    $('#certificate_download_buttons').show();
-                } else {
-                    $('#certificate_download_buttons').hide();
-                }
-            });
+
 
             // Fetch available subjects based on semester
             $('#degree_semester').change(function () {
@@ -780,24 +765,6 @@
                         error: function (xhr, status, error) {
                             console.error('Error fetching subjects:', error);
                         }
-                    });
-                }
-            });
-
-            // Certificate: when certificate semester selected, fetch modules into certificate subject selects if needed
-            $('#certificate_semester').change(function () {
-                var semesterId = $(this).val();
-                var courseId = $('#certificate_course').val();
-                if (semesterId && courseId) {
-                    $.ajax({
-                        url: '/get-modules-by-semester',
-                        type: 'GET',
-                        data: { semester_id: semesterId, course_id: courseId },
-                        success: function (data) {
-                            // if you have certificate-specific subject selects, populate them here
-                            console.log('Certificate modules fetched', data);
-                        },
-                        error: function () { console.error('Error fetching certificate modules'); }
                     });
                 }
             });
@@ -1854,7 +1821,7 @@
                     location: $('#certificate_location').val(),
                     course_id: $('#certificate_course').val(),
                     intake_id: $('#certificate_intake').val(),
-                    semester: $('#certificate_semester').val(),
+                    semester: '', // Certificate courses don't use semesters
                     start_date: $('#certificate_start_date').val(),
                     end_date: $('#certificate_end_date').val()
                 };
@@ -1926,7 +1893,7 @@
                         } catch (ex) { console.warn('Failed to add certificate events', ex); }
 
                         // show download buttons if semester selected
-                        if ($('#certificate_semester').val()) $('#certificate_download_buttons').show();
+                        if ($('#certificate_intake').val()) $('#certificate_download_buttons').show();
                     },
                     error: function () {
                         alert('Error occurred while fetching certificate timetable.');
