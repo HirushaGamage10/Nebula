@@ -56,6 +56,11 @@ class Intake extends Model
         return $this->hasMany(CourseRegistration::class, 'intake_id', 'intake_id');
     }
 
+    public function courseRegistrations()
+    {
+        return $this->hasMany(CourseRegistration::class, 'intake_id', 'intake_id');
+    }
+
     public function attendance()
     {
         return $this->hasMany(Attendance::class, 'intake_id', 'intake_id');
