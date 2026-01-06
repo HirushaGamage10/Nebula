@@ -190,6 +190,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::post('/student/profile/update-personal', [StudentProfileController::class, 'updatePersonalInfoAjax'])->name('student_management.update.personal.info');
         Route::post('/student/profile/update-parent', [StudentProfileController::class, 'updateParentInfoAjax'])->name('student_management.update.parent.info');
         Route::post('/student/profile/update-photo/{studentId}', [StudentProfileController::class, 'updateStudentProfilePicture'])->name('student.updateProfilePicture');
+        Route::post('/student/profile/{studentId}/update-ol-results', [StudentProfileController::class, 'updateOLResults'])->name('student.updateOLResults');
+        Route::post('/student/profile/{studentId}/update-al-results', [StudentProfileController::class, 'updateALResults'])->name('student.updateALResults');
         Route::post('/student/terminate', [StudentProfileController::class, 'terminate'])->name('student_management.terminate');
         Route::post('/student/reinstate', [StudentProfileController::class, 'reinstate'])->name('student_management.reinstate');
         Route::get('/api/student/{studentId}/history', [StudentProfileController::class, 'getCourseRegistrationHistory']);
@@ -202,6 +204,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/api/student/{studentId}/clearances', [StudentProfileController::class, 'getStudentClearances']);
         Route::get('/api/student/{studentId}/status-history', [StudentProfileController::class, 'getStudentStatusHistory']);
         Route::get('/student/{studentId}/certificates', [StudentProfileController::class, 'getStudentCertificates']);
+        Route::post('/student/{studentId}/upload-ol-certificate', [StudentProfileController::class, 'uploadOLCertificate'])->name('student.uploadOLCertificate');
+        Route::post('/student/{studentId}/upload-al-certificate', [StudentProfileController::class, 'uploadALCertificate'])->name('student.uploadALCertificate');
         Route::get('/api/course/{courseId}/specializations', [StudentProfileController::class, 'getCourseSpecializations']);
         Route::post('/api/course-registration/{id}/update-grade', [StudentProfileController::class, 'updateCourseRegistrationGrade']);
         Route::get('/api/student/{studentId}/course/{courseId}/intakes', [StudentProfileController::class, 'getIntakesForCourse'])->name('student.intakes.for.course');

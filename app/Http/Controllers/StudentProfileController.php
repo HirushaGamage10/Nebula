@@ -873,6 +873,128 @@ class StudentProfileController extends Controller
         ]);
     }
 
+    /**
+     * Upload OL certificate for a student
+     */
+    public function uploadOLCertificate(Request $request, $studentId)
+    {
+        $request->validate([
+            'ol_certificate' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        ]);
+
+        $student = Student::find($studentId);
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+        }
+
+        try {
+            // Store file in storage/app/public/certificates/ol
+            $path = $request->file('ol_certificate')->store('certificates/ol', 'public');
+
+            // Find or create StudentExam record for this student
+            $studentExam = \App\Models\StudentExam::where('student_id', $studentId)->first();
+            
+            if (!$studentExam) {
+                $studentExam = new \App\Models\StudentExam();
+                $studentExam->student_id = $studentId;
+            }
+
+            // Delete previous OL certificate if it exists
+            if (!empty($studentExam->ol_certificate) && Storage::disk('public')->exists($studentExam->ol_certificate)) {
+                try {
+                    Storage::disk('public')->delete($studentExam->ol_certificate);
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to delete old OL certificate', [
+                        'student_id' => $studentId,
+                        'old_path' => $studentExam->ol_certificate,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            // Save new path
+            $studentExam->ol_certificate = $path;
+            $studentExam->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'OL certificate uploaded successfully.',
+                'url' => asset('storage/' . $path),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to upload OL certificate', [
+                'student_id' => $studentId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to upload OL certificate. Please try again.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Upload AL certificate for a student
+     */
+    public function uploadALCertificate(Request $request, $studentId)
+    {
+        $request->validate([
+            'al_certificate' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        ]);
+
+        $student = Student::find($studentId);
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+        }
+
+        try {
+            // Store file in storage/app/public/certificates/al
+            $path = $request->file('al_certificate')->store('certificates/al', 'public');
+
+            // Find or create StudentExam record for this student
+            $studentExam = \App\Models\StudentExam::where('student_id', $studentId)->first();
+            
+            if (!$studentExam) {
+                $studentExam = new \App\Models\StudentExam();
+                $studentExam->student_id = $studentId;
+            }
+
+            // Delete previous AL certificate if it exists
+            if (!empty($studentExam->al_certificate) && Storage::disk('public')->exists($studentExam->al_certificate)) {
+                try {
+                    Storage::disk('public')->delete($studentExam->al_certificate);
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to delete old AL certificate', [
+                        'student_id' => $studentId,
+                        'old_path' => $studentExam->al_certificate,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            // Save new path
+            $studentExam->al_certificate = $path;
+            $studentExam->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'AL certificate uploaded successfully.',
+                'url' => asset('storage/' . $path),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to upload AL certificate', [
+                'student_id' => $studentId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to upload AL certificate. Please try again.',
+            ], 500);
+        }
+    }
+
     // API: Get student status history (terminate / reinstate logs)
     public function getStudentStatusHistory($studentId)
     {
@@ -1005,6 +1127,116 @@ class StudentProfileController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update profile picture. Please try again.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Update O/L exam results for a student
+     */
+    public function updateOLResults(Request $request, $studentId)
+    {
+        $request->validate([
+            'ol_index_no' => 'nullable|string|max:255',
+            'ol_exam_type' => 'required|string|max:255',
+            'ol_exam_year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
+            'ol_exam_subjects' => 'required|array|min:1',
+            'ol_exam_subjects.*.subject' => 'required|string|max:255',
+            'ol_exam_subjects.*.result' => 'required|string|max:10',
+        ]);
+
+        $student = Student::find($studentId);
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+        }
+
+        try {
+            // Find or create StudentExam record for this student
+            $studentExam = \App\Models\StudentExam::where('student_id', $studentId)->first();
+            
+            if (!$studentExam) {
+                $studentExam = new \App\Models\StudentExam();
+                $studentExam->student_id = $studentId;
+            }
+
+            // Update O/L exam fields
+            $studentExam->ol_index_no = $request->input('ol_index_no');
+            $studentExam->ol_exam_type = $request->input('ol_exam_type');
+            $studentExam->ol_exam_year = $request->input('ol_exam_year');
+            $studentExam->ol_exam_subjects = json_encode($request->input('ol_exam_subjects'));
+            
+            $studentExam->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'O/L exam results updated successfully!',
+                'exam' => $studentExam
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to update O/L exam results', [
+                'student_id' => $studentId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update O/L exam results. Please try again.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Update A/L exam results for a student
+     */
+    public function updateALResults(Request $request, $studentId)
+    {
+        $request->validate([
+            'al_index_no' => 'nullable|string|max:255',
+            'al_exam_type' => 'required|string|max:255',
+            'al_exam_year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
+            'al_stream' => 'required|string|max:255',
+            'al_exam_subjects' => 'required|array|min:1',
+            'al_exam_subjects.*.subject' => 'required|string|max:255',
+            'al_exam_subjects.*.result' => 'required|string|max:10',
+        ]);
+
+        $student = Student::find($studentId);
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+        }
+
+        try {
+            // Find or create StudentExam record for this student
+            $studentExam = \App\Models\StudentExam::where('student_id', $studentId)->first();
+            
+            if (!$studentExam) {
+                $studentExam = new \App\Models\StudentExam();
+                $studentExam->student_id = $studentId;
+            }
+
+            // Update A/L exam fields
+            $studentExam->al_index_no = $request->input('al_index_no');
+            $studentExam->al_exam_type = $request->input('al_exam_type');
+            $studentExam->al_exam_year = $request->input('al_exam_year');
+            $studentExam->al_stream = $request->input('al_stream');
+            $studentExam->al_exam_subjects = json_encode($request->input('al_exam_subjects'));
+            
+            $studentExam->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'A/L exam results updated successfully!',
+                'exam' => $studentExam
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to update A/L exam results', [
+                'student_id' => $studentId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update A/L exam results. Please try again.',
             ], 500);
         }
     }

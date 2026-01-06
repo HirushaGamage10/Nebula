@@ -170,7 +170,7 @@
                             <div id="collapseOL" class="accordion-collapse collapse show" aria-labelledby="olHeading" data-bs-parent="#olAccordion">
                                 <div class="accordion-body">
                                     <div class="row mb-3">
-                                        <label for="ol_index_no" class="col-sm-2 col-form-label">Index No.<span class="text-danger">*</span></label>
+                                        <label for="ol_index_no" class="col-sm-2 col-form-label">Index No.</label>
                                         <div class="col-sm-10">
                                             <input type="text" class="form-control" id="ol_index_no" name="ol_index_no" placeholder="XXXXXXXXXX">
                                         </div>
@@ -269,7 +269,7 @@
                             <div id="collapseAL" class="accordion-collapse collapse show" aria-labelledby="alHeading" data-bs-parent="#alAccordion">
                                 <div class="accordion-body">
                                      <div class="row mb-3">
-                                        <label for="al_index_no" class="col-sm-2 col-form-label">Index No.<span class="text-danger">*</span></label>
+                                        <label for="al_index_no" class="col-sm-2 col-form-label">Index No.</label>
                                         <div class="col-sm-10">
                                             <input type="text" class="form-control" id="al_index_no" name="al_index_no" placeholder="XXXXXXXXXX">
                                         </div>
@@ -900,14 +900,6 @@ function setupExamSubjects(config) {
 
     addBtn.addEventListener('click', function () {
         let hasError = false;
-
-        // ✅ Validate index no
-        if (!indexNoInput.value.trim()) {
-            showError(indexNoInput, "Please enter the index number.");
-            hasError = true;
-        } else {
-            hideError(indexNoInput);
-        }
 
         // ✅ Validate exam type
         if (!examTypeSelect.value || examTypeSelect.value === 'Select an Exam Type') {
