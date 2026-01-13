@@ -76,6 +76,12 @@ class Intake extends Model
         return $this->hasManyThrough(Student::class, CourseRegistration::class, 'intake_id', 'student_id', 'intake_id', 'student_id');
     }
 
+    public function modules()
+    {
+        return $this->belongsToMany(Module::class, 'intake_modules', 'intake_id', 'module_id')
+                    ->withTimestamps();
+    }
+
     // Scopes
     public function scopeByLocation($query, $location)
     {

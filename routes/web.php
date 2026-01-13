@@ -793,8 +793,11 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     // TEAM PHASE MANAGEMENT
     // ========================================================================
+    // Team Nebula IT Page - Accessible to all authenticated users
+    Route::get('/team-phase', [TeamPhaseController::class, 'index'])->name('team.phase.index');
+    
+    // Team Phase Management Routes - Developer only
     Route::middleware(['auth', 'role:Developer'])->group(function () {
-        Route::get('/team-phase', [TeamPhaseController::class, 'index'])->name('team.phase.index');
         Route::post('/phase/create', [TeamPhaseController::class, 'createPhase'])->name('phase.create');
         Route::put('/phase/{phase}/update', [TeamPhaseController::class, 'updatePhase'])->name('phase.update');
         Route::delete('/phase/{phase}/delete', [TeamPhaseController::class, 'deletePhase'])->name('phase.delete');
