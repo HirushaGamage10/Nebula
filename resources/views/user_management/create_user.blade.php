@@ -101,7 +101,7 @@
       </div>
       
       <div class="mb-3 row align-items-center mx-3">
-        <label for="user_location" class="col-sm-2 col-form-label fw-bold">Location <span class="required">*</span></label>
+        <label for="user_location" class="col-sm-2 col-form-label fw-bold">Location <span style="color: red;">*</span></label>
         <div class="col-sm-10">
           <select class="form-control @error('user_location') is-invalid @enderror" 
                   id="user_location" 

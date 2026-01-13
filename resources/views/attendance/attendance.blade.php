@@ -89,6 +89,57 @@
                             </div>
                         </div>
                     </div>
+
+                    <hr class="my-4">
+
+                    <!-- Degree Bulk Import Section -->
+                    <div id="degreeBulkImportSection" class="mb-4 px-3" style="display:none;">
+                        <h5>Bulk Import</h5>
+                        <p class="text-muted">Download a pre-populated template with student details, mark attendance, then upload it back.</p>
+                        <div class="alert alert-info py-2 mb-3">
+                            <strong>📝 How to fill the template:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>The template will be pre-filled with student registration numbers and names</li>
+                                <li>In the <strong>"attendance"</strong> column, select from dropdown: <span class="badge bg-success">Present</span> or <span class="badge bg-danger">Absent</span></li>
+                                <li>You must use exactly these words (not case-sensitive)</li>
+                            </ul>
+                        </div>
+                        <div class="row g-2 align-items-center">
+                            <div class="col-auto">
+                                <a id="degreeDownloadTemplateBtn" href="#" class="btn btn-outline-primary">📥 Download Template (XLSX)</a>
+                            </div>
+                            <div class="col-auto">
+                                <input type="file" id="degreeAttendanceFileInput" accept=".csv, .xlsx, .xls" class="form-control">
+                            </div>
+                            <div class="col-auto">
+                                <button id="degreeUploadAttendanceFileBtn" class="btn btn-primary">📤 Upload File</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Degree Attendance Table -->
+                    <div class="mt-4" id="degreeAttendanceTableSection" style="display:none;">
+                        <h4 id="degreeAttendanceTableHeader" class="text-center mb-3" style="display: none;"></h4>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Registration Number</th>
+                                        <th>Student Name</th>
+                                        <th>Present</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="degreeAttendanceTableBody">
+                                    <!-- Rows will be added here dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Degree Submit Button -->
+                    <div class="text-center mt-4" id="degreeSaveAttendanceBtnSection" style="display:none;">
+                        <button type="button" id="degreeSaveAttendanceBtn" class="btn btn-primary w-100 py-2">Save Attendance</button>
+                    </div>
                 </div>
 
                 <!-- Certificate Tab -->
@@ -130,53 +181,58 @@
                             </div>
                         </div>
                     </div>
+
+                    <hr class="my-4">
+
+                    <!-- Certificate Bulk Import Section -->
+                    <div id="certBulkImportSection" class="mb-4 px-3" style="display:none;">
+                        <h5>Bulk Import</h5>
+                        <p class="text-muted">Download a pre-populated template with student details, mark attendance, then upload it back.</p>
+                        <div class="alert alert-info py-2 mb-3">
+                            <strong>📝 How to fill the template:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>The template will be pre-filled with student registration numbers and names</li>
+                                <li>In the <strong>"attendance"</strong> column, select from dropdown: <span class="badge bg-success">Present</span> or <span class="badge bg-danger">Absent</span></li>
+                                <li>You must use exactly these words (not case-sensitive)</li>
+                            </ul>
+                        </div>
+                        <div class="row g-2 align-items-center">
+                            <div class="col-auto">
+                                <a id="certDownloadTemplateBtn" href="#" class="btn btn-outline-primary">📥 Download Template (XLSX)</a>
+                            </div>
+                            <div class="col-auto">
+                                <input type="file" id="certAttendanceFileInput" accept=".csv, .xlsx, .xls" class="form-control">
+                            </div>
+                            <div class="col-auto">
+                                <button id="certUploadAttendanceFileBtn" class="btn btn-primary">📤 Upload File</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Certificate Attendance Table -->
+                    <div class="mt-4" id="certAttendanceTableSection" style="display:none;">
+                        <h4 id="certAttendanceTableHeader" class="text-center mb-3" style="display: none;"></h4>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Registration Number</th>
+                                        <th>Student Name</th>
+                                        <th>Present</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="certAttendanceTableBody">
+                                    <!-- Rows will be added here dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Certificate Submit Button -->
+                    <div class="text-center mt-4" id="certSaveAttendanceBtnSection" style="display:none;">
+                        <button type="button" id="certSaveAttendanceBtn" class="btn btn-primary w-100 py-2">Save Attendance</button>
+                    </div>
                 </div>
-            </div>
-
-            <hr class="my-4">
-
-            <!-- Bulk Import Section (hidden until date selected) -->
-            <div id="bulkImportSection" class="mb-4 px-3" style="display:none;">
-                <h5>Bulk Import</h5>
-                <p class="text-muted">Download a template (XLSX) with student names and a dropdown for Present/Absent, fill it, then upload it here.</p>
-                <div class="row g-2 align-items-center">
-                    <div class="col-auto">
-                        <a id="downloadTemplateBtn" href="#" class="btn btn-outline-primary">Download Template (XLSX)</a>
-                    </div>
-                    <div class="col-auto">
-                        <input type="file" id="attendanceFileInput" accept=".csv, .xlsx, .xls" class="form-control">
-                    </div>
-                    <div class="col-auto">
-                        <button id="uploadAttendanceFileBtn" class="btn btn-primary">Upload File</button>
-                    </div>
-                    <div class="col-12 mt-2">
-                        <small class="text-muted">Template columns: registration_number, name_with_initials, attendance (values: Present or Absent). You can upload CSV or Excel.</small>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Attendance Table -->
-            <div class="mt-4" id="attendanceTableSection" style="display:none;">
-                <h4 id="attendanceTableHeader" class="text-center mb-3" style="display: none;"></h4>
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Registration Number</th>
-                                <th>Student Name</th>
-                                <th>Present</th>
-                            </tr>
-                        </thead>
-                        <tbody id="attendanceTableBody">
-                            <!-- Rows will be added here dynamically -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Submit Button -->
-            <div class="text-center mt-4" id="saveAttendanceBtnSection" style="display:none;">
-                <button type="button" id="saveAttendanceBtn" class="btn btn-primary w-100 py-2">Save Attendance</button>
             </div>
         </div>
     </div>
@@ -202,10 +258,39 @@ document.addEventListener('DOMContentLoaded', function() {
     const certIntake = document.getElementById('cert_intake');
     const certDate = document.getElementById('cert_date');
     
-    // Shared Elements
-    const attendanceTableBody = document.getElementById('attendanceTableBody');
-    const saveAttendanceBtn = document.getElementById('saveAttendanceBtn');
-    const attendanceTableHeader = document.getElementById('attendanceTableHeader');
+    // Degree-specific elements
+    const degreeAttendanceTableBody = document.getElementById('degreeAttendanceTableBody');
+    const degreeSaveAttendanceBtn = document.getElementById('degreeSaveAttendanceBtn');
+    const degreeAttendanceTableHeader = document.getElementById('degreeAttendanceTableHeader');
+    const degreeDownloadTemplateBtn = document.getElementById('degreeDownloadTemplateBtn');
+    const degreeAttendanceFileInput = document.getElementById('degreeAttendanceFileInput');
+    const degreeUploadAttendanceFileBtn = document.getElementById('degreeUploadAttendanceFileBtn');
+    
+    // Certificate-specific elements
+    const certAttendanceTableBody = document.getElementById('certAttendanceTableBody');
+    const certSaveAttendanceBtn = document.getElementById('certSaveAttendanceBtn');
+    const certAttendanceTableHeader = document.getElementById('certAttendanceTableHeader');
+    const certDownloadTemplateBtn = document.getElementById('certDownloadTemplateBtn');
+    const certAttendanceFileInput = document.getElementById('certAttendanceFileInput');
+    const certUploadAttendanceFileBtn = document.getElementById('certUploadAttendanceFileBtn');
+    
+    // Tab change event listeners to ensure proper section visibility
+    const degreeTabBtn = document.getElementById('degree-tab');
+    const certTabBtn = document.getElementById('certificate-tab');
+    
+    degreeTabBtn.addEventListener('shown.bs.tab', function() {
+        // When switching to degree tab, hide cert sections if they're visible
+        document.getElementById('certAttendanceTableSection').style.display = 'none';
+        document.getElementById('certSaveAttendanceBtnSection').style.display = 'none';
+        document.getElementById('certBulkImportSection').style.display = 'none';
+    });
+    
+    certTabBtn.addEventListener('shown.bs.tab', function() {
+        // When switching to cert tab, hide degree sections if they're visible
+        document.getElementById('degreeAttendanceTableSection').style.display = 'none';
+        document.getElementById('degreeSaveAttendanceBtnSection').style.display = 'none';
+        document.getElementById('degreeBulkImportSection').style.display = 'none';
+    });
     
     // Helper functions
     function getActiveTab() {
@@ -472,18 +557,18 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success && data.students && data.students.length > 0) {
                 degreeStudents = data.students.map(s => ({ ...s, status: true }));
                 renderAttendanceTable();
-                document.getElementById('attendanceTableSection').style.display = '';
-                document.getElementById('saveAttendanceBtnSection').style.display = '';
+                document.getElementById('degreeAttendanceTableSection').style.display = '';
+                document.getElementById('degreeSaveAttendanceBtnSection').style.display = '';
             } else {
                 showToast('Error', data.message || 'No students found for these filters.', 'bg-danger');
-                document.getElementById('attendanceTableSection').style.display = 'none';
-                document.getElementById('saveAttendanceBtnSection').style.display = 'none';
+                document.getElementById('degreeAttendanceTableSection').style.display = 'none';
+                document.getElementById('degreeSaveAttendanceBtnSection').style.display = 'none';
             }
         })
         .catch(() => {
             showToast('Error', 'Failed to fetch students.', 'bg-danger');
-            document.getElementById('attendanceTableSection').style.display = 'none';
-            document.getElementById('saveAttendanceBtnSection').style.display = 'none';
+            document.getElementById('degreeAttendanceTableSection').style.display = 'none';
+            document.getElementById('degreeSaveAttendanceBtnSection').style.display = 'none';
         })
         .finally(() => showSpinner(false));
     }
@@ -508,38 +593,41 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success && data.students && data.students.length > 0) {
                 certStudents = data.students.map(s => ({ ...s, status: true }));
                 renderAttendanceTable();
-                document.getElementById('attendanceTableSection').style.display = '';
-                document.getElementById('saveAttendanceBtnSection').style.display = '';
+                document.getElementById('certAttendanceTableSection').style.display = '';
+                document.getElementById('certSaveAttendanceBtnSection').style.display = '';
             } else {
                 showToast('Error', data.message || 'No students found for these filters.', 'bg-danger');
-                document.getElementById('attendanceTableSection').style.display = 'none';
-                document.getElementById('saveAttendanceBtnSection').style.display = 'none';
+                document.getElementById('certAttendanceTableSection').style.display = 'none';
+                document.getElementById('certSaveAttendanceBtnSection').style.display = 'none';
             }
         })
         .catch(() => {
             showToast('Error', 'Failed to fetch students.', 'bg-danger');
-            document.getElementById('attendanceTableSection').style.display = 'none';
-            document.getElementById('saveAttendanceBtnSection').style.display = 'none';
+            document.getElementById('certAttendanceTableSection').style.display = 'none';
+            document.getElementById('certSaveAttendanceBtnSection').style.display = 'none';
         })
         .finally(() => showSpinner(false));
     }
 
     function renderAttendanceTable() {
+        const activeTab = getActiveTab();
         const students = getCurrentStudents();
-        attendanceTableBody.innerHTML = '';
+        const tableBody = activeTab === 'degree' ? degreeAttendanceTableBody : certAttendanceTableBody;
+        
+        tableBody.innerHTML = '';
         students.forEach((student, index) => {
             const row = `<tr>
                 <td>${student.registration_number}</td>
                 <td>${student.name_with_initials}</td>
                 <td class="text-center">
-                    <input type="checkbox" ${student.status ? 'checked' : ''} data-student-index="${index}" class="attendance-checkbox">
+                    <input type="checkbox" ${student.status ? 'checked' : ''} data-student-index="${index}" class="attendance-checkbox-${activeTab}">
                 </td>
             </tr>`;
-            attendanceTableBody.insertAdjacentHTML('beforeend', row);
+            tableBody.insertAdjacentHTML('beforeend', row);
         });
         
         // Add event listeners to checkboxes
-        document.querySelectorAll('.attendance-checkbox').forEach(checkbox => {
+        document.querySelectorAll(`.attendance-checkbox-${activeTab}`).forEach(checkbox => {
             checkbox.addEventListener('change', function() {
                 const students = getCurrentStudents();
                 const index = parseInt(this.getAttribute('data-student-index'));
@@ -550,7 +638,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateBulkImportSection() {
         const activeTab = getActiveTab();
-        const bulkSection = document.getElementById('bulkImportSection');
         
         let hasDate = false;
         let params = new URLSearchParams();
@@ -563,49 +650,45 @@ document.addEventListener('DOMContentLoaded', function() {
             params.append('semester', degreeSemester.value || '');
             params.append('module_id', degreeModule.value || '');
             params.append('date', degreeDate.value || '');
-        } else if (activeTab === 'certificate' && certDate.value) {
+            
+            document.getElementById('degreeBulkImportSection').style.display = '';
+            degreeDownloadTemplateBtn.href = '/attendance/download-template?' + params.toString();
+        } else {
+            document.getElementById('degreeBulkImportSection').style.display = 'none';
+        }
+        
+        if (activeTab === 'certificate' && certDate.value) {
             hasDate = true;
+            params = new URLSearchParams();
             params.append('location', certLocation.value || '');
             params.append('course_id', certCourse.value || '');
             params.append('intake_id', certIntake.value || '');
             params.append('semester', '');
             params.append('module_id', '');
             params.append('date', certDate.value || '');
-        }
-        
-        if (hasDate) {
-            bulkSection.style.display = '';
-            document.getElementById('downloadTemplateBtn').href = '/attendance/download-template?' + params.toString();
+            
+            document.getElementById('certBulkImportSection').style.display = '';
+            certDownloadTemplateBtn.href = '/attendance/download-template?' + params.toString();
         } else {
-            bulkSection.style.display = 'none';
+            document.getElementById('certBulkImportSection').style.display = 'none';
         }
     }
 
-    saveAttendanceBtn.addEventListener('click', function() {
-        const activeTab = getActiveTab();
-        const students = getCurrentStudents();
+    // Degree save attendance button
+    degreeSaveAttendanceBtn.addEventListener('click', function() {
+        const students = degreeStudents;
         
         let data = {
             attendance_data: students.map(s => ({ student_id: s.student_id, status: s.status }))
         };
         
-        if (activeTab === 'degree') {
-            data.location = degreeLocation.value;
-            data.course_type = degreeCourseType.value;
-            data.course_id = degreeCourse.value;
-            data.intake_id = degreeIntake.value;
-            data.semester = degreeSemester.value;
-            data.module_id = degreeModule.value;
-            data.date = degreeDate.value;
-        } else {
-            data.location = certLocation.value;
-            data.course_type = 'certificate';
-            data.course_id = certCourse.value;
-            data.intake_id = certIntake.value;
-            data.semester = null;
-            data.module_id = null;
-            data.date = certDate.value;
-        }
+        data.location = degreeLocation.value;
+        data.course_type = degreeCourseType.value;
+        data.course_id = degreeCourse.value;
+        data.intake_id = degreeIntake.value;
+        data.semester = degreeSemester.value;
+        data.module_id = degreeModule.value;
+        data.date = degreeDate.value;
         
         if (Object.values(data).filter(v => v !== null).some(v => !v) || !data.attendance_data.length) {
             showToast('Warning', 'Please select all filters and mark attendance for at least one student.', 'bg-warning');
@@ -622,8 +705,51 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 showToast('Success', 'Attendance saved successfully!', 'bg-success');
-                document.getElementById('attendanceTableSection').style.display = 'none';
-                document.getElementById('saveAttendanceBtnSection').style.display = 'none';
+                document.getElementById('degreeAttendanceTableSection').style.display = 'none';
+                document.getElementById('degreeSaveAttendanceBtnSection').style.display = 'none';
+            } else {
+                showToast('Error', data.message || 'Failed to save attendance.', 'bg-danger');
+            }
+        })
+        .catch(() => {
+            showToast('Error', 'Failed to save attendance.', 'bg-danger');
+        })
+        .finally(() => showSpinner(false));
+    });
+
+    // Certificate save attendance button
+    certSaveAttendanceBtn.addEventListener('click', function() {
+        const students = certStudents;
+        
+        let data = {
+            attendance_data: students.map(s => ({ student_id: s.student_id, status: s.status }))
+        };
+        
+        data.location = certLocation.value;
+        data.course_type = 'certificate';
+        data.course_id = certCourse.value;
+        data.intake_id = certIntake.value;
+        data.semester = null;
+        data.module_id = null;
+        data.date = certDate.value;
+        
+        if (Object.values(data).filter(v => v !== null).some(v => !v) || !data.attendance_data.length) {
+            showToast('Warning', 'Please select all filters and mark attendance for at least one student.', 'bg-warning');
+            return;
+        }
+        
+        showSpinner(true);
+        fetch('/store-attendance', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Success', 'Attendance saved successfully!', 'bg-success');
+                document.getElementById('certAttendanceTableSection').style.display = 'none';
+                document.getElementById('certSaveAttendanceBtnSection').style.display = 'none';
             } else {
                 showToast('Error', data.message || 'Failed to save attendance.', 'bg-danger');
             }
@@ -652,37 +778,22 @@ document.addEventListener('DOMContentLoaded', function() {
         toast.addEventListener('hidden.bs.toast', () => toast.remove());
     }
 
-    // Bulk import upload handler
-    const attendanceFileInput = document.getElementById('attendanceFileInput');
-    const uploadAttendanceFileBtn = document.getElementById('uploadAttendanceFileBtn');
-
-    uploadAttendanceFileBtn.addEventListener('click', function() {
-        const file = attendanceFileInput.files[0];
+    // Degree bulk import upload handler
+    degreeUploadAttendanceFileBtn.addEventListener('click', function() {
+        const file = degreeAttendanceFileInput.files[0];
         if (!file) {
             showToast('Warning', 'Please choose a file to upload.', 'bg-warning');
             return;
         }
 
-        const activeTab = getActiveTab();
         const payload = new FormData();
         payload.append('attendance_file', file);
-        
-        if (activeTab === 'degree') {
-            payload.append('location', degreeLocation.value || '');
-            payload.append('course_id', degreeCourse.value || '');
-            payload.append('intake_id', degreeIntake.value || '');
-            payload.append('semester', degreeSemester.value || '');
-            payload.append('module_id', degreeModule.value || '');
-            payload.append('date', degreeDate.value || '');
-        } else {
-            payload.append('location', certLocation.value || '');
-            payload.append('course_id', certCourse.value || '');
-            payload.append('intake_id', certIntake.value || '');
-            payload.append('semester', '');
-            payload.append('module_id', '');
-            payload.append('date', certDate.value || '');
-        }
-        
+        payload.append('location', degreeLocation.value || '');
+        payload.append('course_id', degreeCourse.value || '');
+        payload.append('intake_id', degreeIntake.value || '');
+        payload.append('semester', degreeSemester.value || '');
+        payload.append('module_id', degreeModule.value || '');
+        payload.append('date', degreeDate.value || '');
         payload.append('_token', '{{ csrf_token() }}');
 
         showSpinner(true);
@@ -694,12 +805,46 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 showToast('Success', data.message || 'Import successful', 'bg-success');
-                // Refresh the attendance list
-                if (activeTab === 'degree') {
-                    fetchDegreeStudentsForAttendance();
-                } else {
-                    fetchCertStudentsForAttendance();
-                }
+                fetchDegreeStudentsForAttendance();
+            } else {
+                showToast('Error', data.message || 'Import failed', 'bg-danger');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showToast('Error', 'Upload failed. Check console for details.', 'bg-danger');
+        })
+        .finally(() => showSpinner(false));
+    });
+
+    // Certificate bulk import upload handler
+    certUploadAttendanceFileBtn.addEventListener('click', function() {
+        const file = certAttendanceFileInput.files[0];
+        if (!file) {
+            showToast('Warning', 'Please choose a file to upload.', 'bg-warning');
+            return;
+        }
+
+        const payload = new FormData();
+        payload.append('attendance_file', file);
+        payload.append('location', certLocation.value || '');
+        payload.append('course_id', certCourse.value || '');
+        payload.append('intake_id', certIntake.value || '');
+        payload.append('semester', '');
+        payload.append('module_id', '');
+        payload.append('date', certDate.value || '');
+        payload.append('_token', '{{ csrf_token() }}');
+
+        showSpinner(true);
+        fetch('/attendance/import', {
+            method: 'POST',
+            body: payload
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Success', data.message || 'Import successful', 'bg-success');
+                fetchCertStudentsForAttendance();
             } else {
                 showToast('Error', data.message || 'Import failed', 'bg-danger');
             }

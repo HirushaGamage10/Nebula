@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | View & Edit Exam Results')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | View & Edit Exam Results'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -82,85 +82,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <hr class="my-4">
-
-                    <!-- Degree Results Table -->
-                    <div class="mt-4" id="degreeResultsTableSection" style="display:none;">
-                        <h4 id="degreeResultsTableHeader" class="text-center mb-3" style="display: none;"></h4>
-                        
-                        <!-- Results Status Alert -->
-                        <div id="degreeResultsStatusAlert" class="alert alert-info mb-3" style="display: none;">
-                            <i class="ti ti-info-circle"></i>
-                            <strong>Exam Results Status:</strong> 
-                            <span id="degreeResultsStatusText"></span>
-                        </div>
-
-                        <!-- Statistics Cards -->
-                        <div class="row mb-4" id="degreeStatisticsCards" style="display: none;">
-                            <div class="col-md-3">
-                                <div class="card bg-primary text-white">
-                                    <div class="card-body text-center">
-                                        <h5 class="card-title">Total Students</h5>
-                                        <h3 id="degreeTotalStudents">0</h3>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card bg-success text-white">
-                                    <div class="card-body text-center">
-                                        <h5 class="card-title">Average Marks</h5>
-                                        <h3 id="degreeAverageMarks">0</h3>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card bg-info text-white">
-                                    <div class="card-body text-center">
-                                        <h5 class="card-title">Pass Rate</h5>
-                                        <h3 id="degreePassRate">0%</h3>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card bg-warning text-white">
-                                    <div class="card-body text-center">
-                                        <h5 class="card-title">Last Updated</h5>
-                                        <h6 id="degreeLastUpdated">-</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="degreeResultsTable">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Registration Number</th>
-                                        <th>Student Name</th>
-                                        <th>Marks</th>
-                                        <th>Grade</th>
-                                        <th>Remarks</th>
-                                        <th>Last Updated</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="degreeResultsTableBody">
-                                    <!-- Rows will be added here dynamically -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Degree Update Button -->
-                    <div class="text-center mt-4" id="degreeUpdateAllBtnSection" style="display:none;">
-                        <div class="row">
-                            <div class="col-md-6">
-                            </div>
-                            <div class="col-md-6">
-                                <button type="button" id="degreeUpdateAllBtn" class="btn btn-primary w-100 py-2 mb-2">Update All Results</button>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Certificate Tab -->
@@ -195,84 +116,84 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <hr class="my-4">
+            <hr class="my-4">
 
-                    <!-- Certificate Results Table -->
-                    <div class="mt-4" id="certResultsTableSection" style="display:none;">
-                        <h4 id="certResultsTableHeader" class="text-center mb-3" style="display: none;"></h4>
-                        
-                        <!-- Results Status Alert -->
-                        <div id="certResultsStatusAlert" class="alert alert-info mb-3" style="display: none;">
-                            <i class="ti ti-info-circle"></i>
-                            <strong>Exam Results Status:</strong> 
-                            <span id="certResultsStatusText"></span>
-                        </div>
+            <!-- Results Table -->
+            <div class="mt-4" id="resultsTableSection" style="display:none;">
+                <h4 id="resultsTableHeader" class="text-center mb-3" style="display: none;"></h4>
+                
+                <!-- Results Status Alert -->
+                <div id="resultsStatusAlert" class="alert alert-info mb-3" style="display: none;">
+                    <i class="ti ti-info-circle"></i>
+                    <strong>Exam Results Status:</strong> 
+                    <span id="resultsStatusText"></span>
+                </div>
 
-                        <!-- Statistics Cards -->
-                        <div class="row mb-4" id="certStatisticsCards" style="display: none;">
-                            <div class="col-md-3">
-                                <div class="card bg-primary text-white">
-                                    <div class="card-body text-center">
-                                        <h5 class="card-title">Total Students</h5>
-                                        <h3 id="certTotalStudents">0</h3>
-                                    </div>
-                                </div>
+                <!-- Statistics Cards -->
+                <div class="row mb-4" id="statisticsCards" style="display: none;">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Total Students</h5>
+                                <h3 id="totalStudents">0</h3>
                             </div>
-                            <div class="col-md-3">
-                                <div class="card bg-success text-white">
-                                    <div class="card-body text-center">
-                                        <h5 class="card-title">Average Marks</h5>
-                                        <h3 id="certAverageMarks">0</h3>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card bg-info text-white">
-                                    <div class="card-body text-center">
-                                        <h5 class="card-title">Pass Rate</h5>
-                                        <h3 id="certPassRate">0%</h3>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card bg-warning text-white">
-                                    <div class="card-body text-center">
-                                        <h5 class="card-title">Last Updated</h5>
-                                        <h6 id="certLastUpdated">-</h6>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="certResultsTable">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Registration Number</th>
-                                        <th>Student Name</th>
-                                        <th>Marks</th>
-                                        <th>Grade</th>
-                                        <th>Remarks</th>
-                                        <th>Last Updated</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="certResultsTableBody">
-                                    <!-- Rows will be added here dynamically -->
-                                </tbody>
-                            </table>
                         </div>
                     </div>
-
-                    <!-- Certificate Update Button -->
-                    <div class="text-center mt-4" id="certUpdateAllBtnSection" style="display:none;">
-                        <div class="row">
-                            <div class="col-md-6">
-                            </div>
-                            <div class="col-md-6">
-                                <button type="button" id="certUpdateAllBtn" class="btn btn-primary w-100 py-2 mb-2">Update All Results</button>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Average Marks</h5>
+                                <h3 id="averageMarks">0</h3>
                             </div>
                         </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Pass Rate</h5>
+                                <h3 id="passRate">0%</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Last Updated</h5>
+                                <h6 id="lastUpdated">-</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="resultsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Registration Number</th>
+                                <th>Student Name</th>
+                                <th>Marks</th>
+                                <th>Grade</th>
+                                <th>Remarks</th>
+                                <th>Last Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsTableBody">
+                            <!-- Rows will be added here dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="text-center mt-4" id="updateAllBtnSection" style="display:none;">
+                <div class="row">
+                    <div class="col-md-6">
+                    </div>
+                    <div class="col-md-6">
+                        <button type="button" id="updateAllBtn" class="btn btn-primary w-100 py-2 mb-2">Update All Results</button>
                     </div>
                 </div>
             </div>
@@ -280,7 +201,7 @@
     </div>
 </div>
 
-<script nonce="{{ $cspNonce }}">
+<script nonce="<?php echo e($cspNonce); ?>">
 document.addEventListener('DOMContentLoaded', function() {
     let degreeResults = [];
     let certResults = [];
@@ -300,33 +221,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const certIntake = document.getElementById('cert_intake');
     const certFieldsContainer = document.getElementById('cert-fields-container');
     
-    // Degree-specific elements
-    const degreeUpdateAllBtn = document.getElementById('degreeUpdateAllBtn');
-    const degreeResultsTableBody = document.getElementById('degreeResultsTableBody');
-    const degreeResultsTableHeader = document.getElementById('degreeResultsTableHeader');
-    const degreeStatisticsCards = document.getElementById('degreeStatisticsCards');
+    // Shared Elements
+    const updateAllBtn = document.getElementById('updateAllBtn');
+    const resultsTableBody = document.getElementById('resultsTableBody');
+    const resultsTableHeader = document.getElementById('resultsTableHeader');
+    const statisticsCards = document.getElementById('statisticsCards');
     
-    // Certificate-specific elements
-    const certUpdateAllBtn = document.getElementById('certUpdateAllBtn');
-    const certResultsTableBody = document.getElementById('certResultsTableBody');
-    const certResultsTableHeader = document.getElementById('certResultsTableHeader');
-    const certStatisticsCards = document.getElementById('certStatisticsCards');
-    
-    // Tab event listeners to ensure proper section visibility
-    const degreeTabBtn = document.getElementById('degree-tab');
-    const certTabBtn = document.getElementById('certificate-tab');
-    
-    degreeTabBtn.addEventListener('shown.bs.tab', function() {
-        // When switching to degree tab, hide cert sections if they're visible
-        document.getElementById('certResultsTableSection').style.display = 'none';
-        document.getElementById('certUpdateAllBtnSection').style.display = 'none';
-    });
-    
-    certTabBtn.addEventListener('shown.bs.tab', function() {
-        // When switching to cert tab, hide degree sections if they're visible
-        document.getElementById('degreeResultsTableSection').style.display = 'none';
-        document.getElementById('degreeUpdateAllBtnSection').style.display = 'none';
-    });
+    // Clear any existing data rows on page load to ensure clean state
+    resultsTableBody.innerHTML = '';
     
     // Helper functions
     function getActiveTab() {
@@ -462,12 +364,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    degreeUpdateAllBtn.addEventListener('click', handleUpdateAll);
-    certUpdateAllBtn.addEventListener('click', handleUpdateAll);
+    updateAllBtn.addEventListener('click', handleUpdateAll);
 
     function handleUpdateAll() {
-        const activeTab = getActiveTab();
-        const resultsTableBody = activeTab === 'degree' ? degreeResultsTableBody : certResultsTableBody;
         const filterData = getFilterData();
         if (!filterData || getCurrentResults().length === 0) {
             showToast('Warning', 'Please select all filters and ensure results are loaded.', 'bg-warning');
@@ -501,9 +400,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const payload = { ...filterData, results: updatedResults };
         
         showSpinner(true);
-        fetch('{{ route("update.result") }}', {
+        fetch('<?php echo e(route("update.result")); ?>', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(payload)
         })
         .then(response => response.json())
@@ -551,8 +450,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function renderTable() {
-        const activeTab = getActiveTab();
-        const resultsTableBody = activeTab === 'degree' ? degreeResultsTableBody : certResultsTableBody;
         const results = getCurrentResults();
         resultsTableBody.innerHTML = '';
         results.forEach((result, index) => {
@@ -575,15 +472,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 const courseName = degreeCourse.options[degreeCourse.selectedIndex].text;
                 const semesterName = degreeSemester.options[degreeSemester.selectedIndex].text;
                 const moduleName = degreeModule.options[degreeModule.selectedIndex].text;
-                degreeResultsTableHeader.innerHTML = `Exam Results for: ${courseName} - ${semesterName} (${moduleName})`;
-                degreeResultsTableHeader.style.display = 'block';
+                resultsTableHeader.innerHTML = `Exam Results for: ${courseName} - ${semesterName} (${moduleName})`;
+                resultsTableHeader.style.display = 'block';
             }
         } else {
             if (certCourse.value && certIntake.value) {
                 const courseName = certCourse.options[certCourse.selectedIndex].text;
                 const intakeName = certIntake.options[certIntake.selectedIndex].text;
-                certResultsTableHeader.innerHTML = `Exam Results for: ${courseName} - ${intakeName}`;
-                certResultsTableHeader.style.display = 'block';
+                resultsTableHeader.innerHTML = `Exam Results for: ${courseName} - ${intakeName}`;
+                resultsTableHeader.style.display = 'block';
             }
         }
     }
@@ -684,9 +581,9 @@ document.addEventListener('DOMContentLoaded', function() {
             semester: degreeSemester.value
         };
         showSpinner(true);
-        fetch('{{ route('exam.results.get.filtered.modules') }}', {
+        fetch('<?php echo e(route('exam.results.get.filtered.modules')); ?>', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -760,41 +657,41 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         showSpinner(true);
-        fetch('{{ route("get.existing.exam.results") }}', {
+        fetch('<?php echo e(route("get.existing.exam.results")); ?>', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
         .then(data => {
-            const activeTab = getActiveTab();
-            const statusAlert = document.getElementById(activeTab === 'degree' ? 'degreeResultsStatusAlert' : 'certResultsStatusAlert');
-            const statusText = document.getElementById(activeTab === 'degree' ? 'degreeResultsStatusText' : 'certResultsStatusText');
-            const statisticsCards = activeTab === 'degree' ? degreeStatisticsCards : certStatisticsCards;
-            const resultsTableBody = activeTab === 'degree' ? degreeResultsTableBody : certResultsTableBody;
-            const resultsTableSection = activeTab === 'degree' ? 'degreeResultsTableSection' : 'certResultsTableSection';
-            const updateAllBtnSection = activeTab === 'degree' ? 'degreeUpdateAllBtnSection' : 'certUpdateAllBtnSection';
-            
             if (data.success && data.results && data.results.length > 0) {
                 // Show results status
+                const statusAlert = document.getElementById('resultsStatusAlert');
+                const statusText = document.getElementById('resultsStatusText');
+                
                 statusText.textContent = `Found ${data.results.length} existing result(s)`;
                 statusAlert.style.display = 'block';
 
                 // Update statistics
-                const totalStudentsId = activeTab === 'degree' ? 'degreeTotalStudents' : 'certTotalStudents';
-                document.getElementById(totalStudentsId).textContent = data.results.length;
+                document.getElementById('totalStudents').textContent = data.results.length;
+                const passedCount = data.results.filter(r => r.grade && r.grade !== 'F').length;
+                const failedCount = data.results.filter(r => r.grade === 'F').length;
+                const pendingCount = data.results.filter(r => !r.grade).length;
                 
+                document.getElementById('passedStudents').textContent = passedCount;
+                document.getElementById('failedStudents').textContent = failedCount;
+                document.getElementById('pendingStudents').textContent = pendingCount;
                 statisticsCards.style.display = 'flex';
 
                 setCurrentResults(data.results);
                 renderTable();
-                document.getElementById(resultsTableSection).style.display = '';
-                document.getElementById(updateAllBtnSection).style.display = '';
+                document.getElementById('resultsTableSection').style.display = '';
+                document.getElementById('updateAllBtnSection').style.display = '';
                 updateResultsHeader();
             } else {
                 resultsTableBody.innerHTML = '<tr><td colspan="6" class="text-center">No existing results found for these filters.</td></tr>';
-                document.getElementById(resultsTableSection).style.display = '';
-                document.getElementById(updateAllBtnSection).style.display = 'none';
+                document.getElementById('resultsTableSection').style.display = '';
+                document.getElementById('updateAllBtnSection').style.display = 'none';
                 statisticsCards.style.display = 'none';
             }
         })
@@ -804,7 +701,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<style nonce="{{ $cspNonce }}">
+<style nonce="<?php echo e($cspNonce); ?>">
     .lds-ring { display: inline-block; position: relative; width: 80px; height: 80px; }
     .lds-ring div { box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; border: 8px solid #fff; border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: #fff transparent transparent transparent; }
     .lds-ring div:nth-child(1) { animation-delay: -0.45s; }
@@ -848,4 +745,5 @@ document.addEventListener('DOMContentLoaded', function() {
         box-shadow: 0 0 0 2px #e0e7ff;
     }
 </style>
-@endsection 
+<?php $__env->stopSection(); ?> 
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/exam_&_results/exam_results_view_edit.blade.php ENDPATH**/ ?>
