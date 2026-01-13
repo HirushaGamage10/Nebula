@@ -41,7 +41,8 @@ class RoleHelper
             'payment.dashboard',
             
             // FOOTER
-            'user.profile'
+            'user.profile',
+            'team.phase.index'
         ],
 
         'Program Administrator (level 01)' => [
@@ -94,7 +95,8 @@ class RoleHelper
             'payment.dashboard',
 
             // FOOTER
-            'user.profile'
+            'user.profile',
+            'team.phase.index'
         ],
 
         'Program Administrator (level 02)' => [
@@ -137,7 +139,8 @@ class RoleHelper
             'all.clearance.management',
 
             // FOOTER
-            'user.profile'
+            'user.profile',
+            'team.phase.index'
         ],
 
         'Program Administrator (level 02) Trainee' => [
@@ -172,7 +175,8 @@ class RoleHelper
             'timetable',
 
             // FOOTER
-            'user.profile'
+            'user.profile',
+            'team.phase.index'
         ],
 
         'Student Counselor' => [
@@ -204,7 +208,8 @@ class RoleHelper
             'payment.discount.page',
 
             // FOOTER
-            'user.profile'            
+            'user.profile',
+            'team.phase.index'
         ],
 
         'Student Counselor Trainee' => [
@@ -236,7 +241,8 @@ class RoleHelper
             'payment.discount.page',
 
             // FOOTER
-            'user.profile'            
+            'user.profile',
+            'team.phase.index'
         ],
 
         'Marketing Manager' => [
@@ -258,7 +264,8 @@ class RoleHelper
             'payment.dashboard',
 
             // FOOTER
-            'user.profile'  
+            'user.profile',
+            'team.phase.index'
         ],
 
         'Librarian' => [
@@ -274,7 +281,8 @@ class RoleHelper
             'student.clearance.form.management',
 
             // FOOTER
-            'user.profile' 
+            'user.profile',
+            'team.phase.index'
         ],
 
         'Hostel Manager' => [
@@ -287,7 +295,8 @@ class RoleHelper
             'hostel.clearance',
 
             // FOOTER
-            'user.profile' 
+            'user.profile',
+            'team.phase.index'
         ],
 
         'Bursar' => [
@@ -314,7 +323,8 @@ class RoleHelper
             'payment.discount.page',
 
             // FOOTER
-            'user.profile', 
+            'user.profile',
+            'team.phase.index'
         ],
 
         'Project Tutor' => [
@@ -331,6 +341,7 @@ class RoleHelper
 
             // FOOTER
             'user.profile',
+            'team.phase.index'
         ],
 
         'Developer' => [
@@ -414,6 +425,7 @@ class RoleHelper
 
             // FOOTER
             'user.profile',
+            'team.phase.index'
 
         ],
     ];

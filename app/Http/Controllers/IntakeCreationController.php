@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Intake;
 use App\Models\Course;
+use App\Models\Module;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
@@ -48,7 +49,10 @@ class IntakeCreationController extends Controller
         ];
     });
 
-    return view('courses_&_modules.intake_creation', compact('courses', 'intakes', 'selectedLocation', 'allCoursesForJson'));
+    // Fetch all modules for certificate courses
+    $modules = Module::orderBy('module_name', 'asc')->get();
+
+    return view('courses_&_modules.intake_creation', compact('courses', 'intakes', 'selectedLocation', 'allCoursesForJson', 'modules'));
 }
 
 
@@ -89,6 +93,8 @@ class IntakeCreationController extends Controller
             'end_date' => 'required|date|after_or_equal:start_date',
             'enrollment_end_date' => 'nullable|date|before_or_equal:start_date',
             'course_registration_id_pattern' => 'required|string|regex:/^.*\d+$/',
+            'module_ids' => $isCertificate ? 'required|array|min:1' : 'nullable|array',
+            'module_ids.*' => $isCertificate ? 'required|exists:modules,module_id' : 'nullable|exists:modules,module_id',
         ]);
 
         //  If enrollment_end_date is empty, set it equal to start_date
@@ -109,6 +115,11 @@ class IntakeCreationController extends Controller
 
         // Create the intake with both course_id and course_name
         $intake = Intake::create($validatedData);
+        
+        // Attach modules if certificate course
+        if ($isCertificate && !empty($validatedData['module_ids'])) {
+            $intake->modules()->attach($validatedData['module_ids']);
+        }
 
         return response()->json([
             'success' => true,
@@ -140,7 +151,7 @@ class IntakeCreationController extends Controller
     {
         try {
             Log::info('Fetching intake for edit with ID: ' . $id);
-            $intake = Intake::with('course')->findOrFail($id);
+            $intake = Intake::with(['course', 'modules'])->findOrFail($id);
 
             return response()->json([
                 'success' => true,
@@ -195,6 +206,8 @@ class IntakeCreationController extends Controller
                 'end_date' => 'required|date|after_or_equal:start_date',
                 'enrollment_end_date' => 'nullable|date|before_or_equal:start_date',
                 'course_registration_id_pattern' => 'required|string|regex:/^.*\d+$/',
+                'module_ids' => $isCertificate ? 'required|array|min:1' : 'nullable|array',
+                'module_ids.*' => $isCertificate ? 'required|exists:modules,module_id' : 'nullable|exists:modules,module_id',
             ], [
                 'location.required' => 'Location is required.',
                 'location.in' => 'Please select a valid location.',
@@ -258,6 +271,13 @@ class IntakeCreationController extends Controller
 
             // 🧩 Update intake with both course_id and course_name
             $intake->update($validatedData);
+            
+            // Sync modules if certificate course
+            if ($isCertificate && isset($validatedData['module_ids'])) {
+                $intake->modules()->sync($validatedData['module_ids']);
+            } elseif ($isCertificate) {
+                $intake->modules()->detach();
+            }
 
             return response()->json([
                 'success' => true,
