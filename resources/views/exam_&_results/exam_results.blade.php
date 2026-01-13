@@ -13,61 +13,109 @@
             <div id="spinner-overlay" style="display:none;"><div class="lds-ring"><div></div><div></div><div></div><div></div></div></div>
             <div id="toastContainer" aria-live="polite" aria-atomic="true" style="position: fixed; top: 10px; right: 10px; z-index: 1000;"></div>
 
-            <!-- Filters -->
-            <div id="exam-filters-bootstrap" class="mb-4">
-                <div class="mb-3 row mx-3">
-                    <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
-                    <div class="col-sm-10">
-                        <select class="form-select filter-param" id="location" name="location" required>
-                            <option value="" selected disabled>Select a Location</option>
-                            <option value="Welisara">Nebula Institute of Technology - Welisara</option>
-                            <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
-                            <option value="Peradeniya">Nebula Institute of Technology - Peradeniya</option>
-                        </select>
+            <!-- Tabs -->
+            <ul class="nav nav-tabs mb-4" id="examResultsTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="degree-tab" data-bs-toggle="tab" data-bs-target="#degree-panel" type="button" role="tab">Degree & Diploma</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="certificate-tab" data-bs-toggle="tab" data-bs-target="#certificate-panel" type="button" role="tab">Certificate</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="examResultsTabContent">
+                <!-- Degree & Diploma Tab -->
+                <div class="tab-pane fade show active" id="degree-panel" role="tabpanel">
+                    <div id="exam-filters-bootstrap-degree" class="mb-4">
+                        <div class="mb-3 row mx-3">
+                            <label for="degree_location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
+                            <div class="col-sm-10">
+                                <select class="form-select degree-filter" id="degree_location" name="location" required>
+                                    <option value="" selected disabled>Select a Location</option>
+                                    <option value="Welisara">Nebula Institute of Technology - Welisara</option>
+                                    <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
+                                    <option value="Peradeniya">Nebula Institute of Technology - Peradeniya</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3 row mx-3">
+                            <label for="degree_course_type" class="col-sm-2 col-form-label">Course Type <span class="text-danger">*</span></label>
+                            <div class="col-sm-10">
+                                <select class="form-select degree-filter" id="degree_course_type" name="course_type" required>
+                                    <option value="" selected disabled>Select a Course Type</option>
+                                    <option value="degree">Degree Program</option>
+                                    <option value="diploma">Diploma Program</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="degree-fields-container">
+                            <div class="mb-3 row mx-3">
+                                <label for="degree_course" class="col-sm-2 col-form-label">Course <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select degree-filter" id="degree_course" name="course_id" required>
+                                        <option selected disabled value="">Select a Course</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3 row mx-3">
+                                <label for="degree_intake" class="col-sm-2 col-form-label">Intake <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select degree-filter" id="degree_intake" name="intake_id" required>
+                                        <option selected disabled value="">Select an Intake</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3 row mx-3">
+                                <label for="degree_semester" class="col-sm-2 col-form-label">Semester <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select degree-filter" id="degree_semester" name="semester" required>
+                                        <option selected disabled value="">Select a Semester</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3 row mx-3">
+                                <label for="degree_module" class="col-sm-2 col-form-label">Module <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select degree-filter" id="degree_module" name="module_id" required>
+                                        <option selected disabled value="">Select a Module</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="mb-3 row mx-3">
-                    <label for="course_type" class="col-sm-2 col-form-label">Course Type <span class="text-danger">*</span></label>
-                    <div class="col-sm-10">
-                        <select class="form-select filter-param" id="course_type" name="course_type" required>
-                            <option value="" selected disabled>Select a Course Type</option>
-                            <option value="degree">Degree Program</option>
-                            <option value="diploma">Diploma Program</option>
-                            <option value="certificate">Certificate Program</option>
-                        </select>
-                    </div>
-                </div>
-                <div id="fields-container" style="display: none;">
-                    <div class="mb-3 row mx-3">
-                        <label for="course" class="col-sm-2 col-form-label">Course <span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <select class="form-select filter-param" id="course" name="course_id" required>
-                                <option selected disabled value="">Select a Course</option>
-                            </select>
+
+                <!-- Certificate Tab -->
+                <div class="tab-pane fade" id="certificate-panel" role="tabpanel">
+                    <div id="exam-filters-bootstrap-cert" class="mb-4">
+                        <div class="mb-3 row mx-3">
+                            <label for="cert_location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
+                            <div class="col-sm-10">
+                                <select class="form-select cert-filter" id="cert_location" name="location" required>
+                                    <option value="" selected disabled>Select a Location</option>
+                                    <option value="Welisara">Nebula Institute of Technology - Welisara</option>
+                                    <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
+                                    <option value="Peradeniya">Nebula Institute of Technology - Peradeniya</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    <div class="mb-3 row mx-3">
-                        <label for="intake" class="col-sm-2 col-form-label">Intake <span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <select class="form-select filter-param" id="intake" name="intake_id" required>
-                                <option selected disabled value="">Select an Intake</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-3 row mx-3" id="semester-row">
-                        <label for="semester" class="col-sm-2 col-form-label">Semester <span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <select class="form-select filter-param" id="semester" name="semester" required>
-                                <option selected disabled value="">Select a Semester</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-3 row mx-3">
-                        <label for="module" class="col-sm-2 col-form-label">Module <span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <select class="form-select filter-param" id="module" name="module_id" required>
-                                <option selected disabled value="">Select a Module</option>
-                            </select>
+                        <div id="cert-fields-container">
+                            <div class="mb-3 row mx-3">
+                                <label for="cert_course" class="col-sm-2 col-form-label">Course <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select cert-filter" id="cert_course" name="course_id" required>
+                                        <option selected disabled value="">Select a Course</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3 row mx-3">
+                                <label for="cert_intake" class="col-sm-2 col-form-label">Intake <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select cert-filter" id="cert_intake" name="intake_id" required>
+                                        <option selected disabled value="">Select an Intake</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -185,19 +233,28 @@
 
 <script nonce="{{ $cspNonce }}">
 document.addEventListener('DOMContentLoaded', function() {
-    let results = [];
-    const courseSelect = document.getElementById('course');
-    const moduleSelect = document.getElementById('module');
-    const semesterSelect = document.getElementById('semester');
+    let degreeResults = [];
+    let certResults = [];
+    
+    // Degree Tab Elements
+    const degreeLocation = document.getElementById('degree_location');
+    const degreeCourseType = document.getElementById('degree_course_type');
+    const degreeCourse = document.getElementById('degree_course');
+    const degreeIntake = document.getElementById('degree_intake');
+    const degreeSemester = document.getElementById('degree_semester');
+    const degreeModule = document.getElementById('degree_module');
+    
+    // Certificate Tab Elements
+    const certLocation = document.getElementById('cert_location');
+    const certCourse = document.getElementById('cert_course');
+    const certIntake = document.getElementById('cert_intake');
+    
+    // Shared Elements
     const addStudentBtn = document.getElementById('addStudentBtn');
     const resultsTableBody = document.getElementById('resultsTableBody');
     const saveAllBtn = document.getElementById('saveAllBtn');
     const resultsTableHeader = document.getElementById('resultsTableHeader');
-    const locationSelect = document.getElementById('location');
-    const intakeSelect = document.getElementById('intake');
-    const courseTypeSelect = document.getElementById('course_type');
-    const fieldsContainer = document.getElementById('fields-container');
-    const semesterRow = document.getElementById('semester-row');
+    const saveAllBtnSection = document.getElementById('saveAllBtnSection');
     
     // Column management elements
     const addMarksColumnBtn = document.getElementById('addMarksColumnBtn');
@@ -206,6 +263,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const removeMarksColumnBtn = document.getElementById('removeMarksColumnBtn');
     const removeGradeColumnBtn = document.getElementById('removeGradeColumnBtn');
     const removeRemarksColumnBtn = document.getElementById('removeRemarksColumnBtn');
+    
+    // Helper functions
+    function getActiveTab() {
+        const degreePanel = document.getElementById('degree-panel');
+        return degreePanel.classList.contains('active') && degreePanel.classList.contains('show') ? 'degree' : 'certificate';
+    }
+    
+    function getCurrentResults() {
+        return getActiveTab() === 'degree' ? degreeResults : certResults;
+    }
+    
+    function setCurrentResults(results) {
+        if (getActiveTab() === 'degree') {
+            degreeResults = results;
+        } else {
+            certResults = results;
+        }
+    }
     
     // Clear any existing data rows on page load to ensure clean state
     resultsTableBody.innerHTML = '';
@@ -276,114 +351,241 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Helper to reset and disable dropdowns
     function resetAndDisable(select, placeholder) {
+        if (!select) return;
         select.innerHTML = `<option selected disabled value="">${placeholder}</option>`;
         select.disabled = true;
     }
 
-    // On load, reset and disable all except location
-    resetAndDisable(courseSelect, 'Select a Course');
-    resetAndDisable(intakeSelect, 'Select an Intake');
-    resetAndDisable(semesterSelect, 'Select a Semester');
-    resetAndDisable(moduleSelect, 'Select a Module');
+    // DEGREE TAB EVENT LISTENERS
+    degreeLocation.addEventListener('change', function() {
+        resetAndDisable(degreeCourse, 'Select a Course');
+        resetAndDisable(degreeIntake, 'Select an Intake');
+        resetAndDisable(degreeSemester, 'Select a Semester');
+        resetAndDisable(degreeModule, 'Select a Module');
+        if (degreeLocation.value && degreeCourseType.value) {
+            fetchDegreeCoursess(degreeLocation.value, degreeCourseType.value);
+        }
+    });
 
-    // Enable course if location and course type are pre-selected
-    if (locationSelect.value && courseTypeSelect.value) {
-        fetchCoursesByLocation(locationSelect.value, courseTypeSelect.value);
+    degreeCourseType.addEventListener('change', function() {
+        resetAndDisable(degreeCourse, 'Select a Course');
+        resetAndDisable(degreeIntake, 'Select an Intake');
+        resetAndDisable(degreeSemester, 'Select a Semester');
+        resetAndDisable(degreeModule, 'Select a Module');
+        if (degreeLocation.value && this.value) {
+            fetchDegreeCoursess(degreeLocation.value, this.value);
+        }
+    });
+
+    degreeCourse.addEventListener('change', function() {
+        resetAndDisable(degreeIntake, 'Select an Intake');
+        resetAndDisable(degreeSemester, 'Select a Semester');
+        resetAndDisable(degreeModule, 'Select a Module');
+        if (degreeCourse.value && degreeLocation.value) {
+            degreeIntake.disabled = false;
+            handleDegreeIntakeFetch();
+        }
+    });
+
+    degreeIntake.addEventListener('change', function() {
+        resetAndDisable(degreeSemester, 'Select a Semester');
+        resetAndDisable(degreeModule, 'Select a Module');
+        if (degreeIntake.value && degreeCourse.value) {
+            fetchDegreeSemesters(degreeCourse.value, degreeIntake.value);
+        }
+    });
+
+    degreeSemester.addEventListener('change', function() {
+        resetAndDisable(degreeModule, 'Select a Module');
+        if (degreeSemester.value && degreeIntake.value && degreeCourse.value && degreeLocation.value) {
+            degreeModule.disabled = false;
+            handleDegreeModuleFetch();
+        }
+    });
+
+    degreeModule.addEventListener('change', function() {
+        ensureTwoColumns();
+        if (saveAllBtnSection) saveAllBtnSection.style.display = 'none';
+        if (allDegreeFilled()) {
+            fetchDegreeStudentsForResultEntry();
+        }
+        updateDegreeResultsHeader();
+    });
+
+    // CERTIFICATE TAB EVENT LISTENERS
+    certLocation.addEventListener('change', function() {
+        resetAndDisable(certCourse, 'Select a Course');
+        resetAndDisable(certIntake, 'Select an Intake');
+        if (certLocation.value) {
+            fetchCertCourses(certLocation.value);
+        }
+    });
+
+    certCourse.addEventListener('change', function() {
+        resetAndDisable(certIntake, 'Select an Intake');
+        if (certCourse.value && certLocation.value) {
+            certIntake.disabled = false;
+            handleCertIntakeFetch();
+        }
+    });
+
+    certIntake.addEventListener('change', function() {
+        ensureTwoColumns();
+        if (saveAllBtnSection) saveAllBtnSection.style.display = 'none';
+        if (allCertFilled()) {
+            fetchCertStudentsForResultEntry();
+        }
+        updateCertResultsHeader();
+    });
+
+    // Validation functions
+    function allDegreeFilled() {
+        return degreeLocation.value && degreeCourseType.value && degreeCourse.value && 
+               degreeIntake.value && degreeSemester.value && degreeModule.value;
     }
 
-    // When location changes
-    locationSelect.addEventListener('change', function() {
-        resetAndDisable(courseSelect, 'Select a Course');
-        resetAndDisable(intakeSelect, 'Select an Intake');
-        resetAndDisable(semesterSelect, 'Select a Semester');
-        resetAndDisable(moduleSelect, 'Select a Module');
-        courseSelect.value = '';
-        intakeSelect.value = '';
-        semesterSelect.value = '';
-        moduleSelect.value = '';
-        // Only fetch courses if both location and course type are selected
-        if (locationSelect.value && courseTypeSelect.value) {
-            fetchCoursesByLocation(locationSelect.value, courseTypeSelect.value);
-        }
-    });
+    function allCertFilled() {
+        return certLocation.value && certCourse.value && certIntake.value;
+    }
 
-    // When course type changes
-    courseTypeSelect.addEventListener('change', function() {
-        if (this.value === 'degree' || this.value === 'diploma') {
-            fieldsContainer.style.display = 'block';
-            semesterRow.style.display = 'flex';
-        } else if (this.value === 'certificate') {
-            fieldsContainer.style.display = 'block';
-            semesterRow.style.display = 'none';
-        } else {
-            fieldsContainer.style.display = 'none';
-            semesterRow.style.display = 'none';
-        }
-        // Only fetch courses if both location and course type are selected
-        if (locationSelect.value && courseTypeSelect.value) {
-            fetchCoursesByLocation(locationSelect.value, this.value);
-        }
-    });
+    // Helper to populate dropdowns
+    function populateDropdown(select, items, valueKey, textKey, defaultText) {
+        if (!select) return;
+        select.innerHTML = `<option selected disabled value="">Select ${defaultText}</option>`;
+        (items || []).forEach(item => {
+            const value = item[valueKey];
+            let displayText = item[textKey];
+            if (displayText && value) {
+                select.add(new Option(displayText, value));
+            }
+        });
+    }
 
-    // When course changes
-    courseSelect.addEventListener('change', function() {
-        resetAndDisable(intakeSelect, 'Select an Intake');
-        resetAndDisable(semesterSelect, 'Select a Semester');
-        resetAndDisable(moduleSelect, 'Select a Module');
-        intakeSelect.value = '';
-        semesterSelect.value = '';
-        moduleSelect.value = '';
-        // Enable intake
-        if (courseSelect.value && locationSelect.value) {
-            intakeSelect.disabled = false;
-            handleIntakeFetch();
-        }
-        // Fetch semesters and modules for course
-        handleCourseChange();
-    });
+    // Fetch functions for Degree tab
+    function fetchDegreeCoursess(location, courseType) {
+        showSpinner(true);
+        fetch(`/exam-results/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=${encodeURIComponent(courseType)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.courses) {
+                    populateDropdown(degreeCourse, data.courses, 'course_id', 'course_name', 'Course');
+                    degreeCourse.disabled = false;
+                } else {
+                    resetAndDisable(degreeCourse, 'Select a Course');
+                }
+            })
+            .catch(() => resetAndDisable(degreeCourse, 'Select a Course'))
+            .finally(() => showSpinner(false));
+    }
 
-    // When intake changes
-    intakeSelect.addEventListener('change', function() {
-        console.log('Intake changed to:', this.value);
-        resetAndDisable(semesterSelect, 'Select a Semester');
-        resetAndDisable(moduleSelect, 'Select a Module');
-        semesterSelect.value = '';
-        moduleSelect.value = '';
-        // Enable and fetch semesters if both intake and course are selected
-        if (intakeSelect.value && courseSelect.value) {
-            console.log('Fetching semesters for course:', courseSelect.value, 'intake:', intakeSelect.value);
-            fetchSemesters(courseSelect.value, intakeSelect.value);
-        } else {
-            console.log('Not fetching semesters - missing course or intake');
-        }
-    });
+    function handleDegreeIntakeFetch() {
+        showSpinner(true);
+        fetch(`/exam-results/get-intakes/${degreeCourse.value}/${degreeLocation.value}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    resetAndDisable(degreeIntake, 'Select an Intake');
+                } else {
+                    populateDropdown(degreeIntake, data.intakes, 'intake_id', 'batch', 'Intake');
+                    degreeIntake.disabled = false;
+                }
+            })
+            .catch(() => resetAndDisable(degreeIntake, 'Select an Intake'))
+            .finally(() => showSpinner(false));
+    }
 
-    // When semester changes
-    semesterSelect.addEventListener('change', function() {
-        resetAndDisable(moduleSelect, 'Select a Module');
-        moduleSelect.value = '';
-        // Enable module
-        if (semesterSelect.value && intakeSelect.value && courseSelect.value && locationSelect.value) {
-            moduleSelect.disabled = false;
-            handleModuleFetch();
-        }
-    });
+    function fetchDegreeSemesters(courseId, intakeId) {
+        showSpinner(true);
+        fetch(`/exam-results/get-semesters?course_id=${encodeURIComponent(courseId)}&intake_id=${encodeURIComponent(intakeId)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.semesters && data.semesters.length > 0) {
+                    populateDropdown(degreeSemester, data.semesters, 'id', 'name', 'Semester');
+                    degreeSemester.disabled = false;
+                } else {
+                    resetAndDisable(degreeSemester, 'Select a Semester');
+                }
+            })
+            .catch(() => resetAndDisable(degreeSemester, 'Select a Semester'))
+            .finally(() => showSpinner(false));
+    }
 
-    // When module changes, fetch students if all filters are filled
-    moduleSelect.addEventListener('change', function() {
-        // Ensure clean two-column structure
-        ensureTwoColumns();
-        saveAllBtnSection.style.display = 'none';
-        
-        if (allFiltersFilled()) {
-            fetchStudentsForResultEntry();
-        }
-        updateResultsHeader();
-    });
+    function handleDegreeModuleFetch() {
+        const data = {
+            location: degreeLocation.value,
+            course_id: degreeCourse.value,
+            intake_id: degreeIntake.value,
+            semester: degreeSemester.value
+        };
+        showSpinner(true);
+        fetch('{{ route("exam.results.get.filtered.modules") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.modules) {
+                populateDropdown(degreeModule, data.modules, 'module_id', 'module_name', 'Module');
+                degreeModule.disabled = false;
+            } else {
+                resetAndDisable(degreeModule, 'Select a Module');
+            }
+        })
+        .catch(() => resetAndDisable(degreeModule, 'Select a Module'))
+        .finally(() => showSpinner(false));
+    }
 
-    // Hide fields initially
-    fieldsContainer.style.display = 'none';
-    semesterRow.style.display = 'none';
+    // Fetch functions for Certificate tab
+    function fetchCertCourses(location) {
+        showSpinner(true);
+        fetch(`/exam-results/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=certificate`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.courses) {
+                    populateDropdown(certCourse, data.courses, 'course_id', 'course_name', 'Course');
+                    certCourse.disabled = false;
+                } else {
+                    resetAndDisable(certCourse, 'Select a Course');
+                }
+            })
+            .catch(() => resetAndDisable(certCourse, 'Select a Course'))
+            .finally(() => showSpinner(false));
+    }
+
+    function handleCertIntakeFetch() {
+        showSpinner(true);
+        fetch(`/exam-results/get-intakes/${certCourse.value}/${certLocation.value}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    resetAndDisable(certIntake, 'Select an Intake');
+                } else {
+                    populateDropdown(certIntake, data.intakes, 'intake_id', 'batch', 'Intake');
+                    certIntake.disabled = false;
+                }
+            })
+            .catch(() => resetAndDisable(certIntake, 'Select an Intake'))
+            .finally(() => showSpinner(false));
+    }
+
+    // Result header functions
+    function updateDegreeResultsHeader() {
+        const courseName = degreeCourse.options[degreeCourse.selectedIndex].text;
+        const moduleName = degreeModule.options[degreeModule.selectedIndex].text;
+        const semesterName = degreeSemester.options[degreeSemester.selectedIndex].text;
+        resultsTableHeader.innerHTML = `Exam Results for: ${courseName} - ${semesterName} (${moduleName})`;
+        resultsTableHeader.style.display = 'block';
+    }
+
+    function updateCertResultsHeader() {
+        const courseName = certCourse.options[certCourse.selectedIndex].text;
+        const intakeName = certIntake.options[certIntake.selectedIndex].text;
+        resultsTableHeader.innerHTML = `Exam Results for: ${courseName} - ${intakeName}`;
+        resultsTableHeader.style.display = 'block';
+    }
+
+
     
     // Column management event listeners
     addMarksColumnBtn.addEventListener('click', function() {
@@ -534,171 +736,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Debug: If we have pre-selected values, test the semester fetching
-    if (courseSelect.value && intakeSelect.value) {
-        setTimeout(() => {
-            fetchSemesters(courseSelect.value, intakeSelect.value);
-        }, 1000);
-    }
 
-    // Fetch intakes
-    function handleIntakeFetch() {
-        const courseId = courseSelect.value;
-        const location = locationSelect.value;
-        if (!courseId || !location) {
-            resetAndDisable(intakeSelect, 'Select an Intake');
-            return;
-        }
-        showSpinner(true);
-        fetch(`/exam-results/get-intakes/${courseId}/${location}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    showToast('Error', data.error, 'bg-danger');
-                    resetAndDisable(intakeSelect, 'Select an Intake');
-                } else {
-                    populateDropdown(intakeSelect, data.intakes, 'intake_id', 'batch', 'Intake');
-                    intakeSelect.disabled = false;
-                }
-            })
-            .catch(() => {
-                showToast('Error', 'Failed to fetch intakes.', 'bg-danger');
-                resetAndDisable(intakeSelect, 'Select an Intake');
-            })
-            .finally(() => showSpinner(false));
-    }
 
-    function fetchSemesters(courseId, intakeId) {
-        console.log('fetchSemesters called with courseId:', courseId, 'intakeId:', intakeId);
-        showSpinner(true);
-        fetch(`/exam-results/get-semesters?course_id=${encodeURIComponent(courseId)}&intake_id=${encodeURIComponent(intakeId)}`)
-            .then(response => {
-                console.log('API response status:', response.status);
-                return response.json();
-            })
-            .then(data => {
-                console.log('API response data:', data);
-                console.log('Semesters array:', data.semesters);
-                
-                // Certificate courses don't use semesters
-                if (data.is_certificate) {
-                    console.log('Certificate course detected - skipping semester selection');
-                    resetAndDisable(semesterSelect, 'N/A for Certificate');
-                    // Enable module selection directly
-                    handleModuleFetch();
-                } else if (data.semesters && data.semesters.length > 0) {
-                    console.log('First semester object:', data.semesters[0]);
-                    console.log('Available keys in first semester:', Object.keys(data.semesters[0]));
-                    console.log('Populating semester dropdown with', data.semesters.length, 'semesters');
-                    // Use 'id' and 'name' since that's what the TimetableController returns
-                    populateDropdown(semesterSelect, data.semesters, 'id', 'name', 'Semester');
-                    semesterSelect.disabled = false;
-                } else {
-                    console.log('No semesters found in response');
-                    resetAndDisable(semesterSelect, 'Select a Semester');
-                    showToast('Error', 'No semesters found for this course and intake.', 'bg-danger');
-                }
-            })
-            .catch((error) => {
-                console.error('Error fetching semesters:', error);
-                resetAndDisable(semesterSelect, 'Select a Semester');
-                showToast('Error', 'Failed to fetch semesters.', 'bg-danger');
-            })
-            .finally(() => showSpinner(false));
-    }
 
-    // Fetch course data (semesters, modules)
-    function handleCourseChange() {
-        const courseId = courseSelect.value;
-        if (!courseId) {
-            resetAndDisable(semesterSelect, 'Select a Semester');
-            resetAndDisable(moduleSelect, 'Select a Module');
-            return;
-        }
-        // No longer fetch semesters here; only fetch modules if needed
-        // Optionally, you can fetch modules here if you want
-    }
 
-    // Fetch modules for all filters
-    function handleModuleFetch() {
-        const courseTypeSelect = document.getElementById('course_type');
-        const isCertificate = courseTypeSelect && courseTypeSelect.value === 'certificate';
-        
-        const data = {
-            location: locationSelect.value,
-            course_id: courseSelect.value,
-            intake_id: intakeSelect.value,
-            semester: isCertificate ? null : semesterSelect.value
-        };
-        
-        // For certificate courses, don't require semester
-        const requiredFields = isCertificate 
-            ? [data.location, data.course_id, data.intake_id]
-            : Object.values(data);
-            
-        if (requiredFields.some(v => !v)) {
-            resetAndDisable(moduleSelect, 'Select a Module');
-            return;
-        }
-        
-        showSpinner(true);
-        const url = '{{ route('exam.results.get.filtered.modules') }}';
-        console.log('DEBUG: Calling modules API with URL:', url);
-        console.log('DEBUG: Request data:', data);
-        fetch(url, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
-            body: JSON.stringify(data)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                showToast('Error', data.error, 'bg-danger');
-                resetAndDisable(moduleSelect, 'Select a Module');
-            } else {
-                populateDropdown(moduleSelect, data.modules, 'module_id', 'module_name', 'Module');
-                moduleSelect.disabled = false;
-            }
-        })
-        .catch((error) => {
-            console.error('DEBUG: Modules API error:', error);
-            showToast('Error', 'Failed to fetch modules.', 'bg-danger');
-            resetAndDisable(moduleSelect, 'Select a Module');
-        })
-        .finally(() => showSpinner(false));
-    }
 
-    // Helper to populate dropdown
-    function populateDropdown(select, items, valueKey, textKey, defaultText) {
-        console.log('populateDropdown called with:', { select, items, valueKey, textKey, defaultText });
-        select.innerHTML = `<option selected disabled value="">Select ${defaultText}</option>`;
-        (items || []).forEach(item => {
-            let displayText = item[textKey];
-            let value = item[valueKey];
-            
-            // Handle different property name formats
-            if (defaultText === 'Semester') {
-                // Try semester_id/semester_name first, then fall back to id/name
-                if (displayText === undefined && item.semester_name !== undefined) {
-                    displayText = item.semester_name;
-                }
-                if (value === undefined && item.semester_id !== undefined) {
-                    value = item.semester_id;
-                }
-                
-                // Format semester names for display
-                if (displayText && !displayText.toLowerCase().includes('semester')) {
-                    displayText = `Semester ${displayText}`;
-                }
-            }
-            
-            console.log('Adding option:', displayText, 'with value:', value);
-            if (displayText && value) {
-                select.add(new Option(displayText, value));
-            }
-        });
-        console.log('Dropdown populated with', items.length, 'options');
-    }
 
     // Event listeners
     addStudentBtn.addEventListener('click', handleAddStudent);
@@ -716,6 +758,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleAddStudent() {
         const studentId = document.getElementById('new_student_id').value.trim();
+        const results = getCurrentResults();
         
         // Validate required fields
         if (!studentId) {
@@ -737,8 +780,10 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                const results = getCurrentResults();
                 const studentData = { student_id: studentId, name: data.name };
                 results.push(studentData);
+                setCurrentResults(results);
                 renderTable();
                 clearInputFields();
                 // Update the student name field
@@ -753,6 +798,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleSaveAll() {
         const filterData = getFilterData();
+        const results = getCurrentResults();
         if (!filterData || results.length === 0) {
             showToast('Warning', 'Please select all filters and add at least one student result.', 'bg-warning');
             return;
@@ -804,15 +850,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 setTimeout(function() {
                     location.reload();
                 }, 1500);
-                results = [];
+                setCurrentResults([]);
                 renderTable();
                 // Clear the form fields manually since the element doesn't exist
                 document.getElementById('new_student_id').value = '';
                 document.getElementById('new_student_name').value = '';
-                resetAndDisable(courseSelect, 'Select a Course');
-                resetAndDisable(intakeSelect, 'Select an Intake');
-                resetAndDisable(semesterSelect, 'Select a Semester');
-                resetAndDisable(moduleSelect, 'Select a Module');
                 updateResultsHeader();
             } else {
                 let errorMsg = data.message || 'An error occurred.';
@@ -831,17 +873,32 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function getFilterData() {
-        const data = {
-            location: document.getElementById('location').value,
-            course_id: courseSelect.value,
-            intake_id: document.getElementById('intake').value,
-            semester: semesterSelect.value,
-            module_id: moduleSelect.value,
-        };
-        return Object.values(data).some(v => !v) ? null : data;
+        const activeTab = getActiveTab();
+        if (activeTab === 'degree') {
+            const data = {
+                location: degreeLocation.value,
+                course_type: degreeCourseType.value,
+                course_id: degreeCourse.value,
+                intake_id: degreeIntake.value,
+                semester: degreeSemester.value,
+                module_id: degreeModule.value
+            };
+            return Object.values(data).some(v => !v) ? null : data;
+        } else {
+            const data = {
+                location: certLocation.value,
+                course_type: 'certificate',
+                course_id: certCourse.value,
+                intake_id: certIntake.value,
+                semester: null,
+                module_id: null
+            };
+            return Object.values(data).filter(v => v !== null).some(v => !v) ? null : data;
+        }
     }
     
     function renderTable() {
+        const results = getCurrentResults();
         resultsTableBody.innerHTML = '';
         results.forEach((result, index) => {
             const marksVisible = document.getElementById('marksColumnHeader') !== null;
@@ -876,17 +933,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateResultsHeader() {
-        const data = getFilterData();
-        if(data) {
-            const courseName = courseSelect.options[courseSelect.selectedIndex].text;
-            const moduleName = moduleSelect.options[moduleSelect.selectedIndex].text;
-            resultsTableHeader.innerHTML = `Results for: ${courseName} - Semester ${data.semester} (${moduleName})`;
-            resultsTableHeader.style.display = 'block';
+        const activeTab = getActiveTab();
+        if (activeTab === 'degree') {
+            updateDegreeResultsHeader();
         } else {
-            resultsTableHeader.style.display = 'none';
+            updateCertResultsHeader();
         }
-        results = [];
-        renderTable();
     }
 
     function showSpinner(show) {
@@ -907,35 +959,16 @@ document.addEventListener('DOMContentLoaded', function() {
         toast.addEventListener('hidden.bs.toast', () => toast.remove());
     }
 
-    // Helper to check if all filters are filled
-    function allFiltersFilled() {
-        if (courseTypeSelect.value === 'degree' || courseTypeSelect.value === 'diploma') {
-            return locationSelect.value && courseTypeSelect.value && courseSelect.value && intakeSelect.value && semesterSelect.value && moduleSelect.value;
-        } else if (courseTypeSelect.value === 'certificate') {
-            return locationSelect.value && courseTypeSelect.value && courseSelect.value && intakeSelect.value && moduleSelect.value;
-        }
-        return false;
-    }
 
-    // Fetch and display students when all filters are filled
-    document.querySelectorAll('.filter-param').forEach(el => el.addEventListener('change', function() {
-        if (allFiltersFilled()) {
-            fetchStudentsForResultEntry();
-        } else {
-            document.getElementById('resultsTableSection').style.display = 'none';
-            document.getElementById('saveAllBtnSection').style.display = 'none';
-            bulkUploadSection.style.display = 'none';
-        }
-    }));
 
-    function fetchStudentsForResultEntry() {
+    function fetchDegreeStudentsForResultEntry() {
         const data = {
-            location: locationSelect.value,
-            course_type: courseTypeSelect.value,
-            course_id: courseSelect.value,
-            intake_id: intakeSelect.value,
-            semester: (courseTypeSelect.value === 'degree' || courseTypeSelect.value === 'diploma') ? semesterSelect.value : null,
-            module_id: moduleSelect.value
+            location: degreeLocation.value,
+            course_type: degreeCourseType.value,
+            course_id: degreeCourse.value,
+            intake_id: degreeIntake.value,
+            semester: degreeSemester.value,
+            module_id: degreeModule.value
         };
         showSpinner(true);
         fetch('/get-students-for-exam-result', {
@@ -949,43 +982,7 @@ document.addEventListener('DOMContentLoaded', function() {
             bulkUploadSection.style.display = 'block';
             
             if (data.success && data.students && data.students.length > 0) {
-                // Show results status
-                const statusAlert = document.getElementById('resultsStatusAlert');
-                const statusText = document.getElementById('resultsStatusText');
-                const addStudentSection = document.querySelector('.card.mb-3'); // The Add New Student card
-                
-                if (data.results_exist) {
-                    statusAlert.className = 'alert alert-warning mb-3';
-                    statusText.innerHTML = 'Exam results for this module have already been entered. You can view and edit existing results.';
-                    statusAlert.style.display = 'block';
-                    
-                    // Hide the Add New Student section when results exist
-                    if (addStudentSection) {
-                        addStudentSection.style.display = 'none';
-                    }
-                    
-                    // Hide the column management buttons when results exist
-                    document.getElementById('addMarksColumnBtn').style.display = 'none';
-                    document.getElementById('addGradeColumnBtn').style.display = 'none';
-                    document.getElementById('removeMarksColumnBtn').style.display = 'none';
-                    document.getElementById('removeGradeColumnBtn').style.display = 'none';
-                } else {
-                    statusAlert.className = 'alert alert-info mb-3';
-                    statusText.innerHTML = 'No exam results have been entered for this module yet. You can add new results.';
-                    statusAlert.style.display = 'block';
-                    
-                    // Show the Add New Student section when no results exist
-                    if (addStudentSection) {
-                        addStudentSection.style.display = 'block';
-                    }
-                    
-                                            // Show column management buttons when no results exist (let users choose which columns they want)
-                    document.getElementById('addMarksColumnBtn').style.display = 'inline-block';
-                    document.getElementById('addGradeColumnBtn').style.display = 'inline-block';
-                    document.getElementById('removeMarksColumnBtn').style.display = 'none';
-                    document.getElementById('removeGradeColumnBtn').style.display = 'none';
-                }
-                
+                degreeResults = data.students;
                 renderEditableResultsTable(data.students);
                 document.getElementById('resultsTableSection').style.display = '';
                 document.getElementById('saveAllBtnSection').style.display = '';
@@ -993,39 +990,59 @@ document.addEventListener('DOMContentLoaded', function() {
                 resultsTableBody.innerHTML = '<tr><td colspan="2" class="text-center">No students found for these filters.</td></tr>';
                 document.getElementById('resultsTableSection').style.display = '';
                 document.getElementById('saveAllBtnSection').style.display = 'none';
-                
-                // Hide status alert and show Add New Student section
-                document.getElementById('resultsStatusAlert').style.display = 'none';
-                const addStudentSection = document.querySelector('.card.mb-3');
-                if (addStudentSection) {
-                    addStudentSection.style.display = 'block';
-                }
-                
-                // Show column management buttons when no students found (let users choose which columns they want)
-                document.getElementById('addMarksColumnBtn').style.display = 'inline-block';
-                document.getElementById('addGradeColumnBtn').style.display = 'inline-block';
-                document.getElementById('removeMarksColumnBtn').style.display = 'none';
-                document.getElementById('removeGradeColumnBtn').style.display = 'none';
             }
         })
-        .catch(() => {
-            showToast('Error', 'Failed to fetch students.', 'bg-danger');
-            document.getElementById('resultsTableSection').style.display = 'none';
-            document.getElementById('saveAllBtnSection').style.display = 'none';
-            bulkUploadSection.style.display = 'none';
-        })
+        .catch(() => showToast('Error', 'Failed to fetch students.', 'bg-danger'))
         .finally(() => showSpinner(false));
     }
 
+    function fetchCertStudentsForResultEntry() {
+        const data = {
+            location: certLocation.value,
+            course_type: 'certificate',
+            course_id: certCourse.value,
+            intake_id: certIntake.value,
+            semester: null,
+            module_id: null
+        };
+        showSpinner(true);
+        fetch('/get-students-for-exam-result', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Show bulk upload section when all filters are filled
+            bulkUploadSection.style.display = 'block';
+            
+            if (data.success && data.students && data.students.length > 0) {
+                certResults = data.students;
+                renderEditableResultsTable(data.students);
+                document.getElementById('resultsTableSection').style.display = '';
+                document.getElementById('saveAllBtnSection').style.display = '';
+            } else {
+                resultsTableBody.innerHTML = '<tr><td colspan="2" class="text-center">No students found for these filters.</td></tr>';
+                document.getElementById('resultsTableSection').style.display = '';
+                document.getElementById('saveAllBtnSection').style.display = 'none';
+            }
+        })
+        .catch(() => showToast('Error', 'Failed to fetch students.', 'bg-danger'))
+        .finally(() => showSpinner(false));
+    }
+
+
+
     // Render table with only two columns
     function renderEditableResultsTable(students) {
-        results = students.map(s => ({ 
+        const results = students.map(s => ({ 
             registration_id: s.registration_id, 
             student_id: s.student_id, 
             name: s.name, 
             marks: s.marks || '', 
             grade: s.grade || '' 
         }));
+        setCurrentResults(results);
         resultsTableBody.innerHTML = '';
         results.forEach((result, index) => {
             const row = `<tr>
@@ -1045,49 +1062,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     window.updateResultMark = function(index, value) {
+        const results = getCurrentResults();
         if (results[index]) {
             results[index].marks = value;
         }
     }
     
     window.updateResultGrade = function(index, value) {
+        const results = getCurrentResults();
         if (results[index]) {
             results[index].grade = value;
         }
     }
     
     window.updateResultRemarks = function(index, value) {
+        const results = getCurrentResults();
         if (results[index]) {
             results[index].remarks = value;
         }
     }
 
-    // Update fetchCoursesByLocation to accept both params
-    function fetchCoursesByLocation(location, courseType) {
-        console.log('fetchCoursesByLocation called with:', { location, courseType });
-        showSpinner(true);
-        const url = `/exam-results/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=${encodeURIComponent(courseType)}`;
-        console.log('Fetching from URL:', url);
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                console.log('Response data:', data);
-                if (data.success && data.courses && data.courses.length > 0) {
-                    console.log('Courses received:', data.courses);
-                    populateDropdown(courseSelect, data.courses, 'course_id', 'course_name', 'Course');
-                    courseSelect.disabled = false;
-                } else {
-                    resetAndDisable(courseSelect, 'Select a Course');
-                    showToast('Error', data.message || 'No courses found for this location and type.', 'bg-danger');
-                }
-            })
-            .catch((error) => {
-                console.error('Error fetching courses:', error);
-                resetAndDisable(courseSelect, 'Select a Course');
-                showToast('Error', 'Failed to fetch courses for this location and type.', 'bg-danger');
-            })
-            .finally(() => showSpinner(false));
-    }
+
 
     // Bulk upload functions
     function handleDownloadTemplate() {
@@ -1116,9 +1111,18 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(blob => {
             // Get the selected values for the filename
-            const courseName = courseSelect.options[courseSelect.selectedIndex].text;
-            const moduleName = moduleSelect.options[moduleSelect.selectedIndex].text;
-            const intakeName = intakeSelect.options[intakeSelect.selectedIndex].text;
+            const activeTab = getActiveTab();
+            let courseName, moduleName, intakeName;
+            
+            if (activeTab === 'degree') {
+                courseName = degreeCourse.options[degreeCourse.selectedIndex].text;
+                moduleName = degreeModule.options[degreeModule.selectedIndex].text;
+                intakeName = degreeIntake.options[degreeIntake.selectedIndex].text;
+            } else {
+                courseName = certCourse.options[certCourse.selectedIndex].text;
+                moduleName = 'Certificate';
+                intakeName = certIntake.options[certIntake.selectedIndex].text;
+            }
             
             // Create and download file
             const url = window.URL.createObjectURL(blob);

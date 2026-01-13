@@ -1,0 +1,492 @@
+=== EXAM RESULTS TAB-AWARE JAVASCRIPT UPDATE ===
+
+This file contains the key changes needed to make exam_results.blade.php work with tabs.
+
+STEP 1: Update variable declarations at the top of DOMContentLoaded (around line 244)
+
+REPLACE:
+    let results = [];
+    const courseSelect = document.getElementById('course');
+    const moduleSelect = document.getElementById('module');
+    const semesterSelect = document.getElementById('semester');
+    const addStudentBtn = document.getElementById('addStudentBtn');
+    const resultsTableBody = document.getElementById('resultsTableBody');
+    const saveAllBtn = document.getElementById('saveAllBtn');
+    const resultsTableHeader = document.getElementById('resultsTableHeader');
+    const locationSelect = document.getElementById('location');
+    const intakeSelect = document.getElementById('intake');
+    const courseTypeSelect = document.getElementById('course_type');
+    const fieldsContainer = document.getElementById('fields-container');
+    const semesterRow = document.getElementById('semester-row');
+
+WITH:
+    let degreeResults = [];
+    let certResults = [];
+    
+    // Degree Tab Elements
+    const degreeLocation = document.getElementById('degree_location');
+    const degreeCourseType = document.getElementById('degree_course_type');
+    const degreeCourse = document.getElementById('degree_course');
+    const degreeIntake = document.getElementById('degree_intake');
+    const degreeSemester = document.getElementById('degree_semester');
+    const degreeModule = document.getElementById('degree_module');
+    const degreeFieldsContainer = document.getElementById('degree-fields-container');
+    
+    // Certificate Tab Elements
+    const certLocation = document.getElementById('cert_location');
+    const certCourse = document.getElementById('cert_course');
+    const certIntake = document.getElementById('cert_intake');
+    const certModule = document.getElementById('cert_module');
+    const certFieldsContainer = document.getElementById('cert-fields-container');
+    
+    // Shared Elements
+    const addStudentBtn = document.getElementById('addStudentBtn');
+    const resultsTableBody = document.getElementById('resultsTableBody');
+    const saveAllBtn = document.getElementById('saveAllBtn');
+    const resultsTableHeader = document.getElementById('resultsTableHeader');
+
+STEP 2: Add helper function to get active tab (add after variable declarations)
+
+ADD THIS FUNCTION:
+    function getActiveTab() {
+        const degreePanel = document.getElementById('degree-panel');
+        return degreePanel.classList.contains('active') && degreePanel.classList.contains('show') ? 'degree' : 'certificate';
+    }
+    
+    function getCurrentElements() {
+        const activeTab = getActiveTab();
+        if (activeTab === 'degree') {
+            return {
+                location: degreeLocation,
+                courseType: degreeCourseType,
+                course: degreeCourse,
+                intake: degreeIntake,
+                semester: degreeSemester,
+                module: degreeModule,
+                fieldsContainer: degreeFieldsContainer,
+                results: degreeResults
+            };
+        } else {
+            return {
+                location: certLocation,
+                courseType: null,
+                course: certCourse,
+                intake: certIntake,
+                semester: null,
+                module: certModule,
+                fieldsContainer: certFieldsContainer,
+                results: certResults
+            };
+        }
+    }
+
+STEP 3: Replace all event listeners (around line 350-430)
+
+REPLACE ALL EXISTING EVENT LISTENERS WITH TAB-SPECIFIC ONES:
+
+// DEGREE TAB EVENT LISTENERS
+degreeLocation.addEventListener('change', function() {
+    resetAndDisable(degreeCourse, 'Select a Course');
+    resetAndDisable(degreeIntake, 'Select an Intake');
+    resetAndDisable(degreeSemester, 'Select a Semester');
+    resetAndDisable(degreeModule, 'Select a Module');
+    if (degreeLocation.value && degreeCourseType.value) {
+        fetchDegreeCoursess(degreeLocation.value, degreeCourseType.value);
+    }
+});
+
+degreeCourseType.addEventListener('change', function() {
+    resetAndDisable(degreeCourse, 'Select a Course');
+    resetAndDisable(degreeIntake, 'Select an Intake');
+    resetAndDisable(degreeSemester, 'Select a Semester');
+    resetAndDisable(degreeModule, 'Select a Module');
+    if (degreeLocation.value && this.value) {
+        degreeFieldsContainer.style.display = 'block';
+        fetchDegreeCoursess(degreeLocation.value, this.value);
+    }
+});
+
+degreeCourse.addEventListener('change', function() {
+    resetAndDisable(degreeIntake, 'Select an Intake');
+    resetAndDisable(degreeSemester, 'Select a Semester');
+    resetAndDisable(degreeModule, 'Select a Module');
+    if (degreeCourse.value && degreeLocation.value) {
+        degreeIntake.disabled = false;
+        handleDegreeIntakeFetch();
+    }
+});
+
+degreeIntake.addEventListener('change', function() {
+    resetAndDisable(degreeSemester, 'Select a Semester');
+    resetAndDisable(degreeModule, 'Select a Module');
+    if (degreeIntake.value && degreeCourse.value) {
+        fetchDegreeSemesters(degreeCourse.value, degreeIntake.value);
+    }
+});
+
+degreeSemester.addEventListener('change', function() {
+    resetAndDisable(degreeModule, 'Select a Module');
+    if (degreeSemester.value && degreeIntake.value && degreeCourse.value && degreeLocation.value) {
+        degreeModule.disabled = false;
+        handleDegreeModuleFetch();
+    }
+});
+
+degreeModule.addEventListener('change', function() {
+    ensureTwoColumns();
+    saveAllBtnSection.style.display = 'none';
+    if (allDegreeFilled()) {
+        fetchDegreeStudentsForResultEntry();
+    }
+    updateDegreeResultsHeader();
+});
+
+// CERTIFICATE TAB EVENT LISTENERS
+certLocation.addEventListener('change', function() {
+    resetAndDisable(certCourse, 'Select a Course');
+    resetAndDisable(certIntake, 'Select an Intake');
+    resetAndDisable(certModule, 'Select a Module');
+    if (certLocation.value) {
+        certFieldsContainer.style.display = 'block';
+        fetchCertCourses(certLocation.value);
+    }
+});
+
+certCourse.addEventListener('change', function() {
+    resetAndDisable(certIntake, 'Select an Intake');
+    resetAndDisable(certModule, 'Select a Module');
+    if (certCourse.value && certLocation.value) {
+        certIntake.disabled = false;
+        handleCertIntakeFetch();
+    }
+});
+
+certIntake.addEventListener('change', function() {
+    resetAndDisable(certModule, 'Select a Module');
+    if (certIntake.value && certCourse.value && certLocation.value) {
+        certModule.disabled = false;
+        handleCertModuleFetch();
+    }
+});
+
+certModule.addEventListener('change', function() {
+    ensureTwoColumns();
+    saveAllBtnSection.style.display = 'none';
+    if (allCertFilled()) {
+        fetchCertStudentsForResultEntry();
+    }
+    updateCertResultsHeader();
+});
+
+STEP 4: Create tab-specific validation functions
+
+ADD THESE FUNCTIONS:
+function allDegreeFilled() {
+    return degreeLocation.value && degreeCourseType.value && degreeCourse.value && 
+           degreeIntake.value && degreeSemester.value && degreeModule.value;
+}
+
+function allCertFilled() {
+    return certLocation.value && certCourse.value && certIntake.value && certModule.value;
+}
+
+STEP 5: Create tab-specific fetch functions
+
+These are the critical functions that need to be duplicated for each tab:
+
+function fetchDegreeCoursess(location, courseType) {
+    showSpinner(true);
+    fetch(`/exam-results/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=${encodeURIComponent(courseType)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.courses) {
+                populateDropdown(degreeCourse, data.courses, 'course_id', 'course_name', 'Course');
+                degreeCourse.disabled = false;
+            } else {
+                resetAndDisable(degreeCourse, 'Select a Course');
+            }
+        })
+        .catch(() => resetAndDisable(degreeCourse, 'Select a Course'))
+        .finally(() => showSpinner(false));
+}
+
+function fetchCertCourses(location) {
+    showSpinner(true);
+    fetch(`/exam-results/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=certificate`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.courses) {
+                populateDropdown(certCourse, data.courses, 'course_id', 'course_name', 'Course');
+                certCourse.disabled = false;
+            } else {
+                resetAndDisable(certCourse, 'Select a Course');
+            }
+        })
+        .catch(() => resetAndDisable(certCourse, 'Select a Course'))
+        .finally(() => showSpinner(false));
+}
+
+function handleDegreeIntakeFetch() {
+    showSpinner(true);
+    fetch(`/exam-results/get-intakes/${degreeCourse.value}/${degreeLocation.value}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                resetAndDisable(degreeIntake, 'Select an Intake');
+            } else {
+                populateDropdown(degreeIntake, data.intakes, 'intake_id', 'batch', 'Intake');
+                degreeIntake.disabled = false;
+            }
+        })
+        .catch(() => resetAndDisable(degreeIntake, 'Select an Intake'))
+        .finally(() => showSpinner(false));
+}
+
+function handleCertIntakeFetch() {
+    showSpinner(true);
+    fetch(`/exam-results/get-intakes/${certCourse.value}/${certLocation.value}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                resetAndDisable(certIntake, 'Select an Intake');
+            } else {
+                populateDropdown(certIntake, data.intakes, 'intake_id', 'batch', 'Intake');
+                certIntake.disabled = false;
+            }
+        })
+        .catch(() => resetAndDisable(certIntake, 'Select an Intake'))
+        .finally(() => showSpinner(false));
+}
+
+function fetchDegreeSemesters(courseId, intakeId) {
+    showSpinner(true);
+    fetch(`/exam-results/get-semesters?course_id=${encodeURIComponent(courseId)}&intake_id=${encodeURIComponent(intakeId)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.semesters && data.semesters.length > 0) {
+                populateDropdown(degreeSemester, data.semesters, 'id', 'name', 'Semester');
+                degreeSemester.disabled = false;
+            } else {
+                resetAndDisable(degreeSemester, 'Select a Semester');
+            }
+        })
+        .catch(() => resetAndDisable(degreeSemester, 'Select a Semester'))
+        .finally(() => showSpinner(false));
+}
+
+function handleDegreeModuleFetch() {
+    const data = {
+        location: degreeLocation.value,
+        course_id: degreeCourse.value,
+        intake_id: degreeIntake.value,
+        semester: degreeSemester.value
+    };
+    showSpinner(true);
+    fetch('{{ route("exam.results.get.filtered.modules") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.modules) {
+            populateDropdown(degreeModule, data.modules, 'module_id', 'module_name', 'Module');
+            degreeModule.disabled = false;
+        } else {
+            resetAndDisable(degreeModule, 'Select a Module');
+        }
+    })
+    .catch(() => resetAndDisable(degreeModule, 'Select a Module'))
+    .finally(() => showSpinner(false));
+}
+
+function handleCertModuleFetch() {
+    const data = {
+        location: certLocation.value,
+        course_id: certCourse.value,
+        intake_id: certIntake.value,
+        semester: null // Certificate - no semester
+    };
+    showSpinner(true);
+    fetch('{{ route("exam.results.get.filtered.modules") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.modules) {
+            populateDropdown(certModule, data.modules, 'module_id', 'module_name', 'Module');
+            certModule.disabled = false;
+        } else {
+            resetAndDisable(certModule, 'Select a Module');
+        }
+    })
+    .catch(() => resetAndDisable(certModule, 'Select a Module'))
+    .finally(() => showSpinner(false));
+}
+
+STEP 6: Update fetchStudentsForResultEntry to be tab-aware
+
+FIND the function fetchStudentsForResultEntry() (around line 987) and CREATE TWO VERSIONS:
+
+function fetchDegreeStudentsForResultEntry() {
+    const data = {
+        location: degreeLocation.value,
+        course_type: degreeCourseType.value,
+        course_id: degreeCourse.value,
+        intake_id: degreeIntake.value,
+        semester: degreeSemester.value,
+        module_id: degreeModule.value
+    };
+    showSpinner(true);
+    fetch('{{ route("get.students.for.result.entry") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.students) {
+            degreeResults = data.students.map(s => ({
+                registration_id: s.registration_id,
+                student_name: s.name_with_initials,
+                marks: '',
+                grade: '',
+                remarks: ''
+            }));
+            renderTable();
+            document.getElementById('resultsTableSection').style.display = '';
+            document.getElementById('bulkUploadSection').style.display = '';
+            document.getElementById('saveAllBtnSection').style.display = '';
+        }
+    })
+    .finally(() => showSpinner(false));
+}
+
+function fetchCertStudentsForResultEntry() {
+    const data = {
+        location: certLocation.value,
+        course_type: 'certificate',
+        course_id: certCourse.value,
+        intake_id: certIntake.value,
+        semester: null,
+        module_id: certModule.value
+    };
+    showSpinner(true);
+    fetch('{{ route("get.students.for.result.entry") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.students) {
+            certResults = data.students.map(s => ({
+                registration_id: s.registration_id,
+                student_name: s.name_with_initials,
+                marks: '',
+                grade: '',
+                remarks: ''
+            }));
+            renderTable();
+            document.getElementById('resultsTableSection').style.display = '';
+            document.getElementById('bulkUploadSection').style.display = '';
+            document.getElementById('saveAllBtnSection').style.display = '';
+        }
+    })
+    .finally(() => showSpinner(false));
+}
+
+STEP 7: Update renderTable() to use active tab results
+
+FIND renderTable() function and UPDATE it to use getCurrentElements():
+
+function renderTable() {
+    const activeTab = getActiveTab();
+    const results = activeTab === 'degree' ? degreeResults : certResults;
+    
+    resultsTableBody.innerHTML = '';
+    results.forEach((result, index) => {
+        let row = `<tr data-student-index="${index}">
+            <td>${result.registration_id}</td>
+            <td>${result.student_name}</td>`;
+        
+        // Add dynamic columns based on what's been added
+        if (document.getElementById('marksColumnHeader')) {
+            row += `<td><input type="number" class="form-control" value="${result.marks || ''}" onchange="updateStudentMark(${index}, this.value)" min="0" max="100"></td>`;
+        }
+        if (document.getElementById('gradeColumnHeader')) {
+            row += `<td><input type="text" class="form-control" value="${result.grade || ''}" onchange="updateStudentGrade(${index}, this.value)" maxlength="5"></td>`;
+        }
+        if (document.getElementById('remarksHeaderCell')) {
+            row += `<td><input type="text" class="form-control" value="${result.remarks || ''}" onchange="updateStudentRemarks(${index}, this.value)" placeholder="Enter remarks"></td>`;
+        }
+        
+        row += '</tr>';
+        resultsTableBody.insertAdjacentHTML('beforeend', row);
+    });
+}
+
+STEP 8: Update save function to be tab-aware
+
+FIND handleSaveAll() (around line 810) and UPDATE:
+
+function handleSaveAll() {
+    const activeTab = getActiveTab();
+    const current = getCurrentElements();
+    
+    const data = {
+        location: current.location.value,
+        course_type: activeTab === 'degree' ? current.courseType.value : 'certificate',
+        course_id: current.course.value,
+        intake_id: current.intake.value,
+        semester: current.semester ? current.semester.value : null,
+        module_id: current.module.value,
+        results: activeTab === 'degree' ? degreeResults : certResults
+    };
+    
+    showSpinner(true);
+    fetch('{{ route("save.result") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Success', data.message, '#ccffcc');
+            // Reset the active tab
+            if (activeTab === 'degree') {
+                degreeResults = [];
+            } else {
+                certResults = [];
+            }
+            renderTable();
+        } else {
+            showToast('Error', data.message, 'bg-danger');
+        }
+    })
+    .finally(() => showSpinner(false));
+}
+
+STEP 9: Update header functions
+
+function updateDegreeResultsHeader() {
+    const courseName = degreeCourse.options[degreeCourse.selectedIndex].text;
+    const moduleName = degreeModule.options[degreeModule.selectedIndex].text;
+    const semesterName = degreeSemester.options[degreeSemester.selectedIndex].text;
+    resultsTableHeader.innerHTML = `Exam Results for: ${courseName} - ${semesterName} (${moduleName})`;
+    resultsTableHeader.style.display = 'block';
+}
+
+function updateCertResultsHeader() {
+    const courseName = certCourse.options[certCourse.selectedIndex].text;
+    const moduleName = certModule.options[certModule.selectedIndex].text;
+    resultsTableHeader.innerHTML = `Exam Results for: ${courseName} - ${moduleName}`;
+    resultsTableHeader.style.display = 'block';
+}
+
+CRITICAL: After making all these changes, remove OLD functions that referenced the old variable names (location, course, courseType, etc.)
+
+This is a comprehensive update that creates parallel handling for both tabs while sharing common UI elements like the table and buttons.
