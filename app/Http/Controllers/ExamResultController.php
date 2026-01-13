@@ -93,18 +93,35 @@ class ExamResultController extends Controller
         try {
             \Log::info('storeResult called with data:', $request->all());
             
-            $validatedData = $request->validate([
-                'course_id' => 'required|exists:courses,course_id',
-                'intake_id' => 'required|exists:intakes,intake_id',
-                'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
-                'semester' => 'required',
-                'module_id' => 'required|exists:modules,module_id',
-                'results' => 'required|array|min:1',
-                'results.*.student_id' => 'required|exists:students,student_id',
-                'results.*.marks' => 'nullable|integer|min:0|max:100',
-                'results.*.grade' => 'nullable|string|max:5',
-                'results.*.remarks' => 'nullable|string|max:255',
-            ]);
+            // Check if this is a certificate course
+            $isCertificate = $request->course_type === 'certificate';
+            
+            if ($isCertificate) {
+                $validatedData = $request->validate([
+                    'course_id' => 'required|exists:courses,course_id',
+                    'intake_id' => 'required|exists:intakes,intake_id',
+                    'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
+                    'course_type' => 'required|string',
+                    'results' => 'required|array|min:1',
+                    'results.*.student_id' => 'required|exists:students,student_id',
+                    'results.*.marks' => 'nullable|integer|min:0|max:100',
+                    'results.*.grade' => 'nullable|string|max:5',
+                    'results.*.remarks' => 'nullable|string|max:255',
+                ]);
+            } else {
+                $validatedData = $request->validate([
+                    'course_id' => 'required|exists:courses,course_id',
+                    'intake_id' => 'required|exists:intakes,intake_id',
+                    'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
+                    'semester' => 'required',
+                    'module_id' => 'required|exists:modules,module_id',
+                    'results' => 'required|array|min:1',
+                    'results.*.student_id' => 'required|exists:students,student_id',
+                    'results.*.marks' => 'nullable|integer|min:0|max:100',
+                    'results.*.grade' => 'nullable|string|max:5',
+                    'results.*.remarks' => 'nullable|string|max:255',
+                ]);
+            }
             
             // Additional validation: ensure at least one of marks, grade, or remarks is provided for each result
             foreach ($validatedData['results'] as $index => $result) {
@@ -122,13 +139,17 @@ class ExamResultController extends Controller
             
             \Log::info('Validation passed, validated data:', $validatedData);
 
-            // Get the semester to convert ID to name
-            $semester = \App\Models\Semester::find($validatedData['semester']);
-            if (!$semester) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Semester not found.'
-                ], 404);
+            // Get the semester name (only for degree/diploma)
+            $semesterName = null;
+            if (!$isCertificate) {
+                $semester = \App\Models\Semester::find($validatedData['semester']);
+                if (!$semester) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Semester not found.'
+                    ], 404);
+                }
+                $semesterName = $semester->name;
             }
 
             DB::beginTransaction();
@@ -140,14 +161,20 @@ class ExamResultController extends Controller
             foreach ($validatedData['results'] as $index => $result) {
                 \Log::info("Processing result {$index}:", $result);
                 
-                // Check if result already exists
-                $existingResult = ExamResult::where('student_id', $result['student_id'])
+                // Build query for existing result
+                $existingQuery = ExamResult::where('student_id', $result['student_id'])
                     ->where('course_id', $validatedData['course_id'])
-                    ->where('module_id', $validatedData['module_id'])
                     ->where('intake_id', $validatedData['intake_id'])
-                    ->where('location', $validatedData['location'])
-                    ->where('semester', $semester->name)
-                    ->first();
+                    ->where('location', $validatedData['location']);
+                
+                if ($isCertificate) {
+                    $existingQuery->whereNull('semester')->whereNull('module_id');
+                } else {
+                    $existingQuery->where('semester', $semesterName)
+                                  ->where('module_id', $validatedData['module_id']);
+                }
+                
+                $existingResult = $existingQuery->first();
 
                 if ($existingResult) {
                     // Update existing result
@@ -161,17 +188,25 @@ class ExamResultController extends Controller
                 } else {
                     // Create new result
                     \Log::info("Creating new result for student {$result['student_id']}");
-                    ExamResult::create([
+                    $resultData = [
                         'student_id' => $result['student_id'],
                         'course_id' => $validatedData['course_id'],
-                        'module_id' => $validatedData['module_id'],
                         'intake_id' => $validatedData['intake_id'],
                         'location' => $validatedData['location'],
-                        'semester' => $semester->name,
                         'marks' => $result['marks'] ?? null,
                         'grade' => $result['grade'] ?? null,
                         'remarks' => $result['remarks'] ?? null,
-                    ]);
+                    ];
+                    
+                    if ($isCertificate) {
+                        $resultData['semester'] = null;
+                        $resultData['module_id'] = null;
+                    } else {
+                        $resultData['semester'] = $semesterName;
+                        $resultData['module_id'] = $validatedData['module_id'];
+                    }
+                    
+                    ExamResult::create($resultData);
                     $createdCount++;
                 }
             }
@@ -362,13 +397,25 @@ class ExamResultController extends Controller
 
     public function getStudentsForExamResult(Request $request)
     {
-        $request->validate([
-            'course_id' => 'required|integer|exists:courses,course_id',
-            'intake_id' => 'required|integer|exists:intakes,intake_id',
-            'location' => 'required|string',
-            'semester' => 'required',
-            'module_id' => 'required|integer|exists:modules,module_id',
-        ]);
+        // Check if this is a certificate course (no semester or module required)
+        $isCertificate = $request->course_type === 'certificate';
+
+        if ($isCertificate) {
+            $request->validate([
+                'course_id' => 'required|integer|exists:courses,course_id',
+                'intake_id' => 'required|integer|exists:intakes,intake_id',
+                'location' => 'required|string',
+                'course_type' => 'required|string',
+            ]);
+        } else {
+            $request->validate([
+                'course_id' => 'required|integer|exists:courses,course_id',
+                'intake_id' => 'required|integer|exists:intakes,intake_id',
+                'location' => 'required|string',
+                'semester' => 'required',
+                'module_id' => 'required|integer|exists:modules,module_id',
+            ]);
+        }
 
         $courseId = $request->course_id;
         $intakeId = $request->intake_id;
@@ -376,7 +423,63 @@ class ExamResultController extends Controller
         $semesterId = $request->semester;
         $moduleId = $request->module_id;
 
-        // Get the semester to determine if it's core or elective
+        // For certificate courses, get all enrolled students
+        if ($isCertificate) {
+            // Check if exam results already exist for this intake
+            $existingResults = ExamResult::where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->whereNull('semester')
+                ->whereNull('module_id')
+                ->exists();
+
+            // Get students enrolled in the certificate course
+            $students = \App\Models\CourseRegistration::where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('status', 'active')
+                ->with('student')
+                ->get()
+                ->map(function($reg) use ($request, $existingResults, $courseId, $intakeId, $location) {
+                    $studentData = [
+                        'registration_id' => $reg->student->registration_id ?? $reg->student->student_id,
+                        'student_id' => $reg->student->student_id,
+                        'name' => $reg->student->full_name,
+                    ];
+
+                    // If results exist, fetch the existing marks and grade
+                    if ($existingResults) {
+                        $existingResult = ExamResult::where('course_id', $courseId)
+                            ->where('intake_id', $intakeId)
+                            ->where('location', $location)
+                            ->whereNull('semester')
+                            ->whereNull('module_id')
+                            ->where('student_id', $reg->student->student_id)
+                            ->first();
+
+                        if ($existingResult) {
+                            $studentData['marks'] = $existingResult->marks;
+                            $studentData['grade'] = $existingResult->grade;
+                        } else {
+                            $studentData['marks'] = '';
+                            $studentData['grade'] = '';
+                        }
+                    } else {
+                        $studentData['marks'] = '';
+                        $studentData['grade'] = '';
+                    }
+
+                    return $studentData;
+                });
+
+            return response()->json([
+                'success' => true,
+                'students' => $students,
+                'results_exist' => $existingResults
+            ]);
+        }
+
+        // Get the semester to determine if it's core or elective (for degree/diploma)
         $semester = \App\Models\Semester::find($semesterId);
         if (!$semester) {
             return response()->json(['error' => 'Semester not found.'], 404);

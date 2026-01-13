@@ -13,64 +13,115 @@
             <div id="spinner-overlay" style="display:none;"><div class="lds-ring"><div></div><div></div><div></div><div></div></div></div>
             <div id="toastContainer" aria-live="polite" aria-atomic="true" style="position: fixed; top: 9px; right: 10px; z-index: 1000;"></div>
 
-            <!-- Filters -->
-            <div class="mb-3 row mx-3">
-                 <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
-                <div class="col-sm-10">
-                
-                    <select class="form-select filter-param" id="location" name="location" required>
-                            <option value="" selected disabled>Select a Location</option>
-                            <option value="Welisara">Nebula Institute of Technology - Welisara</option>
-                            <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
-                            <option value="Peradeniya">Nebula Institute of Technology - Peradeniya</option>
-                     </select>
+            <!-- Tabs -->
+            <ul class="nav nav-tabs mb-4" id="examResultsTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="degree-tab" data-bs-toggle="tab" data-bs-target="#degree-panel" type="button" role="tab">Degree & Diploma</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="certificate-tab" data-bs-toggle="tab" data-bs-target="#certificate-panel" type="button" role="tab">Certificate</button>
+                </li>
+            </ul>
 
+            <div class="tab-content" id="examResultsTabContent">
+                <!-- Degree & Diploma Tab -->
+                <div class="tab-pane fade show active" id="degree-panel" role="tabpanel">
+                    <!-- Filters -->
+                    <div class="mb-3 row mx-3">
+                        <label for="degree_location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
+                        <div class="col-sm-10">
+                            <select class="form-select degree-filter" id="degree_location" name="location" required>
+                                <option value="" selected disabled>Select a Location</option>
+                                <option value="Welisara">Nebula Institute of Technology - Welisara</option>
+                                <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
+                                <option value="Peradeniya">Nebula Institute of Technology - Peradeniya</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3 row mx-3">
+                        <label for="degree_course_type" class="col-sm-2 col-form-label">Course Type <span class="text-danger">*</span></label>
+                        <div class="col-sm-10">
+                            <select class="form-select degree-filter" id="degree_course_type" name="course_type" required>
+                                <option value="" selected disabled>Select a Course Type</option>
+                                <option value="degree">Degree</option>
+                                <option value="diploma">Diploma</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="degree-fields-container" style="display: none;">
+                        <div class="mb-3 row mx-3">
+                            <label for="degree_course" class="col-sm-2 col-form-label">Course <span class="text-danger">*</span></label>
+                            <div class="col-sm-10">
+                                <select class="form-select degree-filter" id="degree_course" name="course_id" required>
+                                    <option selected disabled value="">Select a Course</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3 row mx-3">
+                            <label for="degree_intake" class="col-sm-2 col-form-label">Intake <span class="text-danger">*</span></label>
+                            <div class="col-sm-10">
+                                <select class="form-select degree-filter" id="degree_intake" name="intake_id" required>
+                                    <option selected disabled value="">Select an Intake</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3 row mx-3">
+                            <label for="degree_semester" class="col-sm-2 col-form-label">Semester <span class="text-danger">*</span></label>
+                            <div class="col-sm-10">
+                                <select class="form-select degree-filter" id="degree_semester" name="semester" required>
+                                    <option selected disabled value="">Select a Semester</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3 row mx-3">
+                            <label for="degree_module" class="col-sm-2 col-form-label">Module <span class="text-danger">*</span></label>
+                            <div class="col-sm-10">
+                                <select class="form-select degree-filter" id="degree_module" name="module_id" required>
+                                    <option selected disabled value="">Select a Module</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        
-                <div class="mb-3 row mx-3">
-                    <label for="course_type" class="col-sm-2 col-form-label">Course Type <span class="text-danger">*</span></label>
-                    <div class="col-sm-10">
-                        <select class="form-select filter-param" id="course_type" name="course_type" required>
-                            <option value="" selected disabled>Select a Course Type</option>
-                            <option value="degree">Degree</option>
-                            <option value="diploma">Diploma</option>
-                            <option value="certificate">Certificate Program</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div id="fields-container" style="display: none;">
+
+                <!-- Certificate Tab -->
+                <div class="tab-pane fade" id="certificate-panel" role="tabpanel">
+                    <!-- Filters -->
                     <div class="mb-3 row mx-3">
-                        <label for="course" class="col-sm-2 col-form-label">Course <span class="text-danger">*</span></label>
+                        <label for="cert_location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
                         <div class="col-sm-10">
-                            <select class="form-select filter-param" id="course" name="course_id" required>
-                                <option selected disabled value="">Select a Course</option>
+                            <select class="form-select cert-filter" id="cert_location" name="location" required>
+                                <option value="" selected disabled>Select a Location</option>
+                                <option value="Welisara">Nebula Institute of Technology - Welisara</option>
+                                <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
+                                <option value="Peradeniya">Nebula Institute of Technology - Peradeniya</option>
                             </select>
                         </div>
                     </div>
-                    <div class="mb-3 row mx-3">
-                        <label for="intake" class="col-sm-2 col-form-label">Intake <span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <select class="form-select filter-param" id="intake" name="intake_id" required>
-                                <option selected disabled value="">Select an Intake</option>
-                            </select>
+                    <div id="cert-fields-container" style="display: none;">
+                        <div class="mb-3 row mx-3">
+                            <label for="cert_course" class="col-sm-2 col-form-label">Course <span class="text-danger">*</span></label>
+                            <div class="col-sm-10">
+                                <select class="form-select cert-filter" id="cert_course" name="course_id" required>
+                                    <option selected disabled value="">Select a Course</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    <div class="mb-3 row mx-3" id="semester-row">
-                        <label for="semester" class="col-sm-2 col-form-label">Semester <span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <select class="form-select filter-param" id="semester" name="semester" required>
-                                <option selected disabled value="">Select a Semester</option>
-                            </select>
+                        <div class="mb-3 row mx-3">
+                            <label for="cert_intake" class="col-sm-2 col-form-label">Intake <span class="text-danger">*</span></label>
+                            <div class="col-sm-10">
+                                <select class="form-select cert-filter" id="cert_intake" name="intake_id" required>
+                                    <option selected disabled value="">Select an Intake</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    <div class="mb-3 row mx-3">
-                        <label for="module" class="col-sm-2 col-form-label">Module <span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <select class="form-select filter-param" id="module" name="module_id" required>
-                                <option selected disabled value="">Select a Module</option>
-                            </select>
+                        <div class="mb-3 row mx-3">
+                            <label for="cert_module" class="col-sm-2 col-form-label">Module <span class="text-danger">*</span></label>
+                            <div class="col-sm-10">
+                                <select class="form-select cert-filter" id="cert_module" name="module_id" required>
+                                    <option selected disabled value="">Select a Module</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
