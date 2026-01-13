@@ -316,11 +316,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function fetchSemesters(courseId, intakeId) {
+        // Check if this is a certificate course
+        const courseTypeSelect = document.getElementById('course_type');
+        if (courseTypeSelect && courseTypeSelect.value === 'certificate') {
+            console.log('Certificate course detected - skipping semester fetch, enabling modules');
+            resetAndDisable(semesterSelect, 'N/A for Certificate');
+            // Enable module selection directly for certificate courses
+            handleModuleFetch();
+            return;
+        }
+        
         showSpinner(true);
         fetch(`/attendance/get-semesters?course_id=${encodeURIComponent(courseId)}&intake_id=${encodeURIComponent(intakeId)}`)
             .then(response => response.json())
             .then(data => {
-                if (data.semesters && data.semesters.length > 0) {
+                // Certificate courses don't use semesters
+                if (data.is_certificate) {
+                    console.log('Certificate course detected from API - skipping semester selection');
+                    resetAndDisable(semesterSelect, 'N/A for Certificate');
+                    handleModuleFetch();
+                } else if (data.semesters && data.semesters.length > 0) {
                     populateDropdown(semesterSelect, data.semesters, 'semester_id', 'semester_name', 'Semester');
                     semesterSelect.disabled = false;
                 } else {
@@ -336,16 +351,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleModuleFetch() {
+        const courseTypeSelect = document.getElementById('course_type');
+        const isCertificate = courseTypeSelect && courseTypeSelect.value === 'certificate';
+        
         const data = {
             location: locationSelect.value,
             course_id: courseSelect.value,
             intake_id: intakeSelect.value,
-            semester: semesterSelect.value
+            semester: isCertificate ? null : semesterSelect.value
         };
-        if (Object.values(data).some(v => !v)) {
+        
+        // For certificate courses, don't require semester
+        const requiredFields = isCertificate 
+            ? [data.location, data.course_id, data.intake_id]
+            : Object.values(data);
+            
+        if (requiredFields.some(v => !v)) {
             resetAndDisable(moduleSelect, 'Select a Module');
             return;
         }
+        
         showSpinner(true);
         fetch('/get-filtered-modules', {
             method: 'POST',
