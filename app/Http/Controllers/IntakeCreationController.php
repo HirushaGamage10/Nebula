@@ -49,8 +49,10 @@ class IntakeCreationController extends Controller
         ];
     });
 
-    // Fetch all modules for certificate courses
-    $modules = Module::orderBy('module_name', 'asc')->get();
+    // Fetch only certificate modules for certificate course intakes
+    $modules = Module::where('module_category', 'certificate')
+        ->orderBy('module_name', 'asc')
+        ->get();
 
     return view('courses_&_modules.intake_creation', compact('courses', 'intakes', 'selectedLocation', 'allCoursesForJson', 'modules'));
 }

@@ -18,12 +18,19 @@ class ModuleCreationController extends Controller
     public function store(Request $request)
     {
         try {
-            $validatedData = $request->validate([
+            $validationRules = [
                 'module_name' => 'required|string|max:255',
                 'module_code' => 'required|string|max:100|unique:modules,module_code',
-                'credits' => 'required|integer|min:0',
-                'module_type' => ['required', Rule::in(['core', 'elective', 'special_unit_compulsory'])],
-            ]);
+                'module_category' => ['required', Rule::in(['degree', 'certificate'])],
+            ];
+
+            // Only validate credits and module_type for degree modules
+            if ($request->input('module_category') === 'degree') {
+                $validationRules['credits'] = 'required|integer|min:0';
+                $validationRules['module_type'] = ['required', Rule::in(['core', 'elective', 'special_unit_compulsory'])];
+            }
+
+            $validatedData = $request->validate($validationRules);
 
             $validatedData['module_name'] = collect(explode(' ', $validatedData['module_name']))
                 ->map(function ($word) {
@@ -69,7 +76,7 @@ class ModuleCreationController extends Controller
             ], 404);
         }
 
-        $validatedData = $request->validate([
+        $validationRules = [
             'module_name' => 'sometimes|required|string|max:255',
             'module_code' => [
                 'sometimes',
@@ -79,9 +86,17 @@ class ModuleCreationController extends Controller
                 'unique:modules,module_code,' . $id . ',module_id',
                 'regex:/^[a-zA-Z0-9]+_[a-zA-Z0-9]+_[a-zA-Z0-9]+$/'
             ],
-            'credits' => 'sometimes|required|integer|min:0',
-            'module_type' => ['sometimes', 'required', Rule::in(['core', 'elective', 'special_unit_compulsory'])],
-        ], [
+            'module_category' => ['sometimes', 'required', Rule::in(['degree', 'certificate'])],
+        ];
+
+        // Only validate credits and module_type for degree modules
+        $moduleCategory = $request->input('module_category', $module->module_category);
+        if ($moduleCategory === 'degree') {
+            $validationRules['credits'] = 'sometimes|required|integer|min:0';
+            $validationRules['module_type'] = ['sometimes', 'required', Rule::in(['core', 'elective', 'special_unit_compulsory'])];
+        }
+
+        $validatedData = $request->validate($validationRules, [
             'module_code.regex' => 'Module code must follow the pattern: program_name_specification_unit_code (e.g., CS101_Programming_001)'
         ]);
 

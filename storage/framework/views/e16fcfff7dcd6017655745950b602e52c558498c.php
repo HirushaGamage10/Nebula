@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Module Creation')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Module Creation'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -28,7 +28,7 @@
                 <!-- Degree/Diploma Module Form -->
                 <div class="tab-pane fade show active" id="degree-module" role="tabpanel">
                     <form id="degreeModuleForm">
-                        @csrf
+                        <?php echo csrf_field(); ?>
                         <input type="hidden" id="degree_module_id" name="module_id">
                         <input type="hidden" name="module_category" value="degree">
                         <div class="mb-3 row mx-3">
@@ -80,7 +80,7 @@
                 <!-- Certificate Module Form -->
                 <div class="tab-pane fade" id="certificate-module" role="tabpanel">
                     <form id="certificateModuleForm">
-                        @csrf
+                        <?php echo csrf_field(); ?>
                         <input type="hidden" id="cert_module_id" name="module_id">
                         <input type="hidden" name="module_category" value="certificate">
                         <div class="mb-3 row mx-3">
@@ -207,31 +207,31 @@
                         </tr>
                     </thead>
                     <tbody id="module-table-body">
-                        @forelse($modules as $module)
-                        <tr id="module-row-{{$module->module_id}}" data-module-id="{{$module->module_id}}">
+                        <?php $__empty_1 = true; $__currentLoopData = $modules; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $module): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                        <tr id="module-row-<?php echo e($module->module_id); ?>" data-module-id="<?php echo e($module->module_id); ?>">
                             <td>
-                                <input type="checkbox" class="form-check-input module-checkbox" data-module-id="{{$module->module_id}}">
+                                <input type="checkbox" class="form-check-input module-checkbox" data-module-id="<?php echo e($module->module_id); ?>">
                             </td>
-                            <td class="module-name" style="text-transform:none !important;">{{ $module->module_name }}</td>
-                            <td class="module-code" style="text-transform:none !important;">{{ $module->module_code }}</td>
+                            <td class="module-name" style="text-transform:none !important;"><?php echo e($module->module_name); ?></td>
+                            <td class="module-code" style="text-transform:none !important;"><?php echo e($module->module_code); ?></td>
                             <td class="module-category">
-                                @if($module->module_category == 'certificate')
+                                <?php if($module->module_category == 'certificate'): ?>
                                     <span class="badge bg-success">Certificate</span>
-                                @else
+                                <?php else: ?>
                                     <span class="badge bg-secondary">Degree/Diploma</span>
-                                @endif
+                                <?php endif; ?>
                             </td>
-                            <td class="module-credits">{{ $module->credits ?? 'N/A' }}</td>
+                            <td class="module-credits"><?php echo e($module->credits ?? 'N/A'); ?></td>
                             <td class="module-type">
-                                @if($module->module_type == 'core')
+                                <?php if($module->module_type == 'core'): ?>
                                     <span class="badge bg-primary">Core</span>
-                                @elseif($module->module_type == 'elective')
+                                <?php elseif($module->module_type == 'elective'): ?>
                                     <span class="badge bg-info">Elective</span>
-                                @elseif($module->module_type == 'special_unit_compulsory')
+                                <?php elseif($module->module_type == 'special_unit_compulsory'): ?>
                                     <span class="badge bg-warning">S/U</span>
-                                @else
+                                <?php else: ?>
                                     <span class="text-muted">-</span>
-                                @endif
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm" role="group">
@@ -244,11 +244,11 @@
                                 </div>
                             </td>
                         </tr>
-                        @empty
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <tr id="no-modules-row">
                             <td colspan="7" class="text-center">No modules found.</td>
                         </tr>
-                        @endforelse
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -263,10 +263,10 @@
 </div>
 
 <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
-<script nonce="{{ $cspNonce }}">
+<?php $__env->startPush('scripts'); ?>
+<script nonce="<?php echo e($cspNonce); ?>">
 $(document).ready(function() {
     let degreeEditMode = false;
     let certEditMode = false;
@@ -538,7 +538,7 @@ $(document).ready(function() {
             $.ajax({
                 url: '/modules/' + id,
                 type: 'DELETE',
-                data: { _token: '{{ csrf_token() }}' },
+                data: { _token: '<?php echo e(csrf_token()); ?>' },
                 success: function(response) {
                     completed++;
                                             allModules = allModules.filter(m => m.module_id != id);
@@ -705,7 +705,7 @@ $(document).ready(function() {
             });
         } else {
             $.ajax({
-                url: '{{ route("module.store") }}',
+                url: '<?php echo e(route("module.store")); ?>',
                 type: 'POST',
                 data: formData,
                 success: function(response) {
@@ -781,7 +781,7 @@ $(document).ready(function() {
             });
         } else {
             $.ajax({
-                url: '{{ route("module.store") }}',
+                url: '<?php echo e(route("module.store")); ?>',
                 type: 'POST',
                 data: formData,
                 success: function(response) {
@@ -819,7 +819,7 @@ $(document).ready(function() {
         $.ajax({
             url: '/modules/' + moduleId,
             type: 'DELETE',
-            data: { _token: '{{ csrf_token() }}' },
+            data: { _token: '<?php echo e(csrf_token()); ?>' },
             success: function(response) {
                 if (response.success) {
                     showToast(response.message, 'success');
@@ -884,4 +884,5 @@ $(document).ready(function() {
     }
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/courses_&_modules/module_creation.blade.php ENDPATH**/ ?>
