@@ -13,68 +13,121 @@
             <div id="spinner-overlay" style="display:none;"><div class="lds-ring"><div></div><div></div><div></div><div></div></div></div>
             <div id="toastContainer" aria-live="polite" aria-atomic="true" style="position: fixed; top: 10px; right: 10px; z-index: 1000;"></div>
 
-            <!-- Filters -->
-            <div id="attendance-filters-bootstrap" class="mb-4">
-                <div class="mb-3 row mx-3">
-                    <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
-                    <div class="col-sm-10">
-                        <select class="form-select filter-param" id="location" name="location" required>
-                            <option value="" selected disabled>Select a Location</option>
-                            <option value="Welisara">Nebula Institute of Technology - Welisara</option>
-                            <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
-                            <option value="Peradeniya">Nebula Institute of Technology - Peradeniya</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="mb-3 row mx-3">
-                    <label for="course_type" class="col-sm-2 col-form-label">Course Type <span class="text-danger">*</span></label>
-                    <div class="col-sm-10">
-                        <select class="form-select filter-param" id="course_type" name="course_type" required>
-                            <option value="" selected disabled>Select a Course Type</option>
-                            <option value="degree">Degree Program</option>
-                            <option value="diploma">Diploma Program</option>
-                            <option value="certificate">Certificate Program</option>
-                        </select>
+            <!-- Tabs -->
+            <ul class="nav nav-tabs mb-4" id="attendanceTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="degree-tab" data-bs-toggle="tab" data-bs-target="#degree-panel" type="button" role="tab">Degree & Diploma</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="certificate-tab" data-bs-toggle="tab" data-bs-target="#certificate-panel" type="button" role="tab">Certificate</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="attendanceTabContent">
+                <!-- Degree & Diploma Tab -->
+                <div class="tab-pane fade show active" id="degree-panel" role="tabpanel">
+                    <div id="attendance-filters-degree" class="mb-4">
+                        <div class="mb-3 row mx-3">
+                            <label for="degree_location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
+                            <div class="col-sm-10">
+                                <select class="form-select degree-filter" id="degree_location" name="location" required>
+                                    <option value="" selected disabled>Select a Location</option>
+                                    <option value="Welisara">Nebula Institute of Technology - Welisara</option>
+                                    <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
+                                    <option value="Peradeniya">Nebula Institute of Technology - Peradeniya</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3 row mx-3">
+                            <label for="degree_course_type" class="col-sm-2 col-form-label">Course Type <span class="text-danger">*</span></label>
+                            <div class="col-sm-10">
+                                <select class="form-select degree-filter" id="degree_course_type" name="course_type" required>
+                                    <option value="" selected disabled>Select a Course Type</option>
+                                    <option value="degree">Degree Program</option>
+                                    <option value="diploma">Diploma Program</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="degree-fields-container">
+                            <div class="mb-3 row mx-3">
+                                <label for="degree_course" class="col-sm-2 col-form-label">Course <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select degree-filter" id="degree_course" name="course_id" required>
+                                        <option selected disabled value="">Select a Course</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3 row mx-3">
+                                <label for="degree_intake" class="col-sm-2 col-form-label">Intake <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select degree-filter" id="degree_intake" name="intake_id" required>
+                                        <option selected disabled value="">Select an Intake</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3 row mx-3">
+                                <label for="degree_semester" class="col-sm-2 col-form-label">Semester <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select degree-filter" id="degree_semester" name="semester" required>
+                                        <option selected disabled value="">Select a Semester</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3 row mx-3">
+                                <label for="degree_module" class="col-sm-2 col-form-label">Module <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select degree-filter" id="degree_module" name="module_id" required>
+                                        <option selected disabled value="">Select a Module</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3 row mx-3">
+                                <label for="degree_date" class="col-sm-2 col-form-label">Date <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <input type="date" class="form-control" id="degree_date" name="attendance_date" required>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div id="fields-container" style="display: none;">
-                    <div class="mb-3 row mx-3">
-                        <label for="course" class="col-sm-2 col-form-label">Course <span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <select class="form-select filter-param" id="course" name="course_id" required>
-                                <option selected disabled value="">Select a Course</option>
-                            </select>
+                <!-- Certificate Tab -->
+                <div class="tab-pane fade" id="certificate-panel" role="tabpanel">
+                    <div id="attendance-filters-cert" class="mb-4">
+                        <div class="mb-3 row mx-3">
+                            <label for="cert_location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
+                            <div class="col-sm-10">
+                                <select class="form-select cert-filter" id="cert_location" name="location" required>
+                                    <option value="" selected disabled>Select a Location</option>
+                                    <option value="Welisara">Nebula Institute of Technology - Welisara</option>
+                                    <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
+                                    <option value="Peradeniya">Nebula Institute of Technology - Peradeniya</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    <div class="mb-3 row mx-3">
-                        <label for="intake" class="col-sm-2 col-form-label">Intake <span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <select class="form-select filter-param" id="intake" name="intake_id" required>
-                                <option selected disabled value="">Select an Intake</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-3 row mx-3" id="semester-row">
-                        <label for="semester" class="col-sm-2 col-form-label">Semester <span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <select class="form-select filter-param" id="semester" name="semester" required>
-                                <option selected disabled value="">Select a Semester</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-3 row mx-3">
-                        <label for="module" class="col-sm-2 col-form-label">Module <span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <select class="form-select filter-param" id="module" name="module_id" required>
-                                <option selected disabled value="">Select a Module</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-3 row mx-3">
-                        <label for="attendance_date" class="col-sm-2 col-form-label">Date <span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <input type="date" class="form-control" id="attendance_date" name="attendance_date" required>
+                        <div id="cert-fields-container">
+                            <div class="mb-3 row mx-3">
+                                <label for="cert_course" class="col-sm-2 col-form-label">Course <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select cert-filter" id="cert_course" name="course_id" required>
+                                        <option selected disabled value="">Select a Course</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3 row mx-3">
+                                <label for="cert_intake" class="col-sm-2 col-form-label">Intake <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select cert-filter" id="cert_intake" name="intake_id" required>
+                                        <option selected disabled value="">Select an Intake</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3 row mx-3">
+                                <label for="cert_date" class="col-sm-2 col-form-label">Date <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <input type="date" class="form-control" id="cert_date" name="attendance_date" required>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -131,246 +184,222 @@
 
 <script nonce="{{ $cspNonce }}">
 document.addEventListener('DOMContentLoaded', function() {
-    let students = [];
-    const courseSelect = document.getElementById('course');
-    const courseTypeSelect = document.getElementById('course_type');
-    const fieldsContainer = document.getElementById('fields-container');
-    const semesterRow = document.getElementById('semester-row');
-    const semesterSelect = document.getElementById('semester');
-    const moduleSelect = document.getElementById('module');
+    let degreeStudents = [];
+    let certStudents = [];
+    
+    // Degree Tab Elements
+    const degreeLocation = document.getElementById('degree_location');
+    const degreeCourseType = document.getElementById('degree_course_type');
+    const degreeCourse = document.getElementById('degree_course');
+    const degreeIntake = document.getElementById('degree_intake');
+    const degreeSemester = document.getElementById('degree_semester');
+    const degreeModule = document.getElementById('degree_module');
+    const degreeDate = document.getElementById('degree_date');
+    
+    // Certificate Tab Elements
+    const certLocation = document.getElementById('cert_location');
+    const certCourse = document.getElementById('cert_course');
+    const certIntake = document.getElementById('cert_intake');
+    const certDate = document.getElementById('cert_date');
+    
+    // Shared Elements
     const attendanceTableBody = document.getElementById('attendanceTableBody');
     const saveAttendanceBtn = document.getElementById('saveAttendanceBtn');
     const attendanceTableHeader = document.getElementById('attendanceTableHeader');
-    const locationSelect = document.getElementById('location');
-    const intakeSelect = document.getElementById('intake');
-    const attendanceDateInput = document.getElementById('attendance_date');
+    
+    // Helper functions
+    function getActiveTab() {
+        const degreePanel = document.getElementById('degree-panel');
+        return degreePanel.classList.contains('active') && degreePanel.classList.contains('show') ? 'degree' : 'certificate';
+    }
+    
+    function getCurrentStudents() {
+        return getActiveTab() === 'degree' ? degreeStudents : certStudents;
+    }
+    
+    function setCurrentStudents(students) {
+        if (getActiveTab() === 'degree') {
+            degreeStudents = students;
+        } else {
+            certStudents = students;
+        }
+    }
 
     function resetAndDisable(select, placeholder) {
-        if (select) {
-            select.innerHTML = `<option selected disabled value="">${placeholder}</option>`;
-            select.disabled = true;
-        }
+        if (!select) return;
+        select.innerHTML = `<option selected disabled value="">${placeholder}</option>`;
+        select.disabled = true;
     }
 
-    resetAndDisable(courseSelect, 'Select a Course');
-    resetAndDisable(intakeSelect, 'Select an Intake');
-    resetAndDisable(semesterSelect, 'Select a Semester');
-    resetAndDisable(moduleSelect, 'Select a Module');
-    courseTypeSelect.disabled = true;
+    // DEGREE TAB EVENT LISTENERS
+    degreeLocation.addEventListener('change', function() {
+        resetAndDisable(degreeCourse, 'Select a Course');
+        resetAndDisable(degreeIntake, 'Select an Intake');
+        resetAndDisable(degreeSemester, 'Select a Semester');
+        resetAndDisable(degreeModule, 'Select a Module');
+        if (degreeLocation.value && degreeCourseType.value) {
+            fetchDegreeCourses(degreeLocation.value, degreeCourseType.value);
+        }
+    });
 
-    if (locationSelect.value) {
-        courseTypeSelect.disabled = false;
+    degreeCourseType.addEventListener('change', function() {
+        resetAndDisable(degreeCourse, 'Select a Course');
+        resetAndDisable(degreeIntake, 'Select an Intake');
+        resetAndDisable(degreeSemester, 'Select a Semester');
+        resetAndDisable(degreeModule, 'Select a Module');
+        if (degreeLocation.value && this.value) {
+            fetchDegreeCourses(degreeLocation.value, this.value);
+        }
+    });
+
+    degreeCourse.addEventListener('change', function() {
+        resetAndDisable(degreeIntake, 'Select an Intake');
+        resetAndDisable(degreeSemester, 'Select a Semester');
+        resetAndDisable(degreeModule, 'Select a Module');
+        if (degreeCourse.value && degreeLocation.value) {
+            degreeIntake.disabled = false;
+            handleDegreeIntakeFetch();
+        }
+    });
+
+    degreeIntake.addEventListener('change', function() {
+        resetAndDisable(degreeSemester, 'Select a Semester');
+        resetAndDisable(degreeModule, 'Select a Module');
+        if (degreeIntake.value && degreeCourse.value) {
+            fetchDegreeSemesters(degreeCourse.value, degreeIntake.value);
+        }
+    });
+
+    degreeSemester.addEventListener('change', function() {
+        resetAndDisable(degreeModule, 'Select a Module');
+        if (degreeSemester.value && degreeIntake.value && degreeCourse.value && degreeLocation.value) {
+            degreeModule.disabled = false;
+            handleDegreeModuleFetch();
+        }
+    });
+
+    degreeModule.addEventListener('change', function() {
+        if (allDegreeFilled()) {
+            fetchDegreeStudentsForAttendance();
+        }
+    });
+
+    degreeDate.addEventListener('change', function() {
+        if (allDegreeFilled()) {
+            fetchDegreeStudentsForAttendance();
+        }
+        updateBulkImportSection();
+    });
+
+    // CERTIFICATE TAB EVENT LISTENERS
+    certLocation.addEventListener('change', function() {
+        resetAndDisable(certCourse, 'Select a Course');
+        resetAndDisable(certIntake, 'Select an Intake');
+        if (certLocation.value) {
+            fetchCertCourses(certLocation.value);
+        }
+    });
+
+    certCourse.addEventListener('change', function() {
+        resetAndDisable(certIntake, 'Select an Intake');
+        if (certCourse.value && certLocation.value) {
+            certIntake.disabled = false;
+            handleCertIntakeFetch();
+        }
+    });
+
+    certIntake.addEventListener('change', function() {
+        if (allCertFilled()) {
+            fetchCertStudentsForAttendance();
+        }
+    });
+
+    certDate.addEventListener('change', function() {
+        if (allCertFilled()) {
+            fetchCertStudentsForAttendance();
+        }
+        updateBulkImportSection();
+    });
+
+    // Validation functions
+    function allDegreeFilled() {
+        return degreeLocation.value && degreeCourseType.value && degreeCourse.value && 
+               degreeIntake.value && degreeSemester.value && degreeModule.value && degreeDate.value;
     }
 
-    locationSelect.addEventListener('change', function() {
-        courseTypeSelect.value = '';
-        resetAndDisable(courseSelect, 'Select a Course');
-        resetAndDisable(intakeSelect, 'Select an Intake');
-        resetAndDisable(semesterSelect, 'Select a Semester');
-        resetAndDisable(moduleSelect, 'Select a Module');
-        courseSelect.value = '';
-        intakeSelect.value = '';
-        semesterSelect.value = '';
-        moduleSelect.value = '';
-        courseTypeSelect.disabled = !locationSelect.value;
-        fieldsContainer.style.display = 'none';
-        semesterRow.style.display = 'none';
-    });
+    function allCertFilled() {
+        return certLocation.value && certCourse.value && certIntake.value && certDate.value;
+    }
 
-    courseTypeSelect.addEventListener('change', function() {
-        if (this.value) {
-            fieldsContainer.style.display = 'block';
-            semesterRow.style.display = (this.value === 'degree' || this.value === 'diploma') ? 'flex' : 'none';
-            fetchCoursesByLocation(locationSelect.value, this.value);
-        } else {
-            fieldsContainer.style.display = 'none';
-        }
+    // Helper to populate dropdowns
+    function populateDropdown(select, items, valueKey, textKey, defaultText) {
+        if (!select) return;
+        select.innerHTML = `<option selected disabled value="">Select ${defaultText}</option>`;
+        (items || []).forEach(item => {
+            const value = item[valueKey];
+            let displayText = item[textKey];
+            if (displayText && value) {
+                select.add(new Option(displayText, value));
+            }
+        });
+    }
 
-        resetAndDisable(courseSelect, 'Select a Course');
-        resetAndDisable(intakeSelect, 'Select an Intake');
-        resetAndDisable(semesterSelect, 'Select a Semester');
-        resetAndDisable(moduleSelect, 'Select a Module');
-        courseSelect.value = '';
-        intakeSelect.value = '';
-        semesterSelect.value = '';
-        moduleSelect.value = '';
-    });
-
-    courseSelect.addEventListener('change', function() {
-        resetAndDisable(intakeSelect, 'Select an Intake');
-        resetAndDisable(semesterSelect, 'Select a Semester');
-        resetAndDisable(moduleSelect, 'Select a Module');
-        intakeSelect.value = '';
-        semesterSelect.value = '';
-        moduleSelect.value = '';
-        if (courseSelect.value && locationSelect.value) {
-            intakeSelect.disabled = false;
-            handleIntakeFetch();
-        }
-    });
-
-    intakeSelect.addEventListener('change', function() {
-        resetAndDisable(semesterSelect, 'Select a Semester');
-        resetAndDisable(moduleSelect, 'Select a Module');
-        semesterSelect.value = '';
-        moduleSelect.value = '';
-        if (intakeSelect.value && courseSelect.value) {
-            fetchSemesters(courseSelect.value, intakeSelect.value);
-        }
-    });
-
-    semesterSelect.addEventListener('change', function() {
-        resetAndDisable(moduleSelect, 'Select a Module');
-        moduleSelect.value = '';
-        if (semesterSelect.value && intakeSelect.value && courseSelect.value && locationSelect.value) {
-            moduleSelect.disabled = false;
-            handleModuleFetch();
-        }
-    });
-
-    moduleSelect.addEventListener('change', fetchStudentsForAttendance);
-    attendanceDateInput.addEventListener('change', fetchStudentsForAttendance);
-
-    // Show bulk import UI only after a date is selected
-    attendanceDateInput.addEventListener('change', function() {
-        const bulkSection = document.getElementById('bulkImportSection');
-        if (this.value) {
-            bulkSection.style.display = '';
-            // Setup download URL with current filters so template can be prefilled
-            const params = new URLSearchParams({
-                location: locationSelect.value || '',
-                course_id: courseSelect.value || '',
-                intake_id: intakeSelect.value || '',
-                semester: semesterSelect.value || '',
-                module_id: moduleSelect.value || '',
-                date: attendanceDateInput.value || ''
-            });
-            document.getElementById('downloadTemplateBtn').href = '/attendance/download-template?' + params.toString();
-        } else {
-            bulkSection.style.display = 'none';
-        }
-    });
-
-    function handleIntakeFetch() {
-        const courseId = courseSelect.value;
-        const location = locationSelect.value;
-        if (!courseId || !location) {
-            resetAndDisable(intakeSelect, 'Select an Intake');
-            return;
-        }
+    // Fetch functions for Degree tab
+    function fetchDegreeCourses(location, courseType) {
         showSpinner(true);
-        
-        // Debug: Log the request
-        console.log('Fetching intakes for:', { courseId, location });
-        
-        fetch(`/attendance/get-intakes/${courseId}/${location}`)
-            .then(response => {
-                console.log('Response status:', response.status);
-                return response.json();
-            })
-            .then(data => {
-                console.log('Response data:', data);
-                if (data.error) {
-                    showToast('Error', data.error, 'bg-danger');
-                    resetAndDisable(intakeSelect, 'Select an Intake');
-                } else if (data.intakes && data.intakes.length > 0) {
-                    populateDropdown(intakeSelect, data.intakes, 'intake_id', 'batch', 'Intake');
-                    intakeSelect.disabled = false;
-                } else {
-                    showToast('Error', 'No intakes found for the selected course and location', 'bg-danger');
-                    resetAndDisable(intakeSelect, 'Select an Intake');
-                }
-            })
-            .catch((error) => {
-                console.error('Fetch error:', error);
-                showToast('Error', 'Failed to fetch intakes. Check console for details.', 'bg-danger');
-                resetAndDisable(intakeSelect, 'Select an Intake');
-            })
-            .finally(() => showSpinner(false));
-    }
-
-    function fetchCoursesByLocation(location, courseType) {
-        console.log('fetchCoursesByLocation called with:', { location, courseType });
-        showSpinner(true);
-        const url = `/attendance/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=${encodeURIComponent(courseType)}`;
-        console.log('Fetching from URL:', url);
-        fetch(url)
+        fetch(`/attendance/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=${encodeURIComponent(courseType)}`)
             .then(response => response.json())
             .then(data => {
-                console.log('Response data:', data);
-                if (data.success && data.courses && data.courses.length > 0) {
-                    console.log('Courses received:', data.courses);
-                    populateDropdown(courseSelect, data.courses, 'course_id', 'course_name', 'Course');
-                    courseSelect.disabled = false;
+                if (data.success && data.courses) {
+                    populateDropdown(degreeCourse, data.courses, 'course_id', 'course_name', 'Course');
+                    degreeCourse.disabled = false;
                 } else {
-                    resetAndDisable(courseSelect, 'Select a Course');
-                    showToast('Error', data.message || 'No courses found for this location and type.', 'bg-danger');
+                    resetAndDisable(degreeCourse, 'Select a Course');
                 }
             })
-            .catch((error) => {
-                console.error('Error fetching courses:', error);
-                resetAndDisable(courseSelect, 'Select a Course');
-                showToast('Error', 'Failed to fetch courses for this location and type.', 'bg-danger');
-            })
+            .catch(() => resetAndDisable(degreeCourse, 'Select a Course'))
             .finally(() => showSpinner(false));
     }
 
-    function fetchSemesters(courseId, intakeId) {
-        // Check if this is a certificate course
-        const courseTypeSelect = document.getElementById('course_type');
-        if (courseTypeSelect && courseTypeSelect.value === 'certificate') {
-            console.log('Certificate course detected - skipping semester fetch, enabling modules');
-            resetAndDisable(semesterSelect, 'N/A for Certificate');
-            // Enable module selection directly for certificate courses
-            handleModuleFetch();
-            return;
-        }
-        
+    function handleDegreeIntakeFetch() {
+        showSpinner(true);
+        fetch(`/attendance/get-intakes/${degreeCourse.value}/${degreeLocation.value}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    resetAndDisable(degreeIntake, 'Select an Intake');
+                } else {
+                    populateDropdown(degreeIntake, data.intakes, 'intake_id', 'batch', 'Intake');
+                    degreeIntake.disabled = false;
+                }
+            })
+            .catch(() => resetAndDisable(degreeIntake, 'Select an Intake'))
+            .finally(() => showSpinner(false));
+    }
+
+    function fetchDegreeSemesters(courseId, intakeId) {
         showSpinner(true);
         fetch(`/attendance/get-semesters?course_id=${encodeURIComponent(courseId)}&intake_id=${encodeURIComponent(intakeId)}`)
             .then(response => response.json())
             .then(data => {
-                // Certificate courses don't use semesters
-                if (data.is_certificate) {
-                    console.log('Certificate course detected from API - skipping semester selection');
-                    resetAndDisable(semesterSelect, 'N/A for Certificate');
-                    handleModuleFetch();
-                } else if (data.semesters && data.semesters.length > 0) {
-                    populateDropdown(semesterSelect, data.semesters, 'semester_id', 'semester_name', 'Semester');
-                    semesterSelect.disabled = false;
+                if (data.semesters && data.semesters.length > 0) {
+                    populateDropdown(degreeSemester, data.semesters, 'semester_id', 'semester_name', 'Semester');
+                    degreeSemester.disabled = false;
                 } else {
-                    resetAndDisable(semesterSelect, 'Select a Semester');
-                    showToast('Error', 'No semesters found for this course and intake.', 'bg-danger');
+                    resetAndDisable(degreeSemester, 'Select a Semester');
                 }
             })
-            .catch(() => {
-                resetAndDisable(semesterSelect, 'Select a Semester');
-                showToast('Error', 'Failed to fetch semesters.', 'bg-danger');
-            })
+            .catch(() => resetAndDisable(degreeSemester, 'Select a Semester'))
             .finally(() => showSpinner(false));
     }
 
-    function handleModuleFetch() {
-        const courseTypeSelect = document.getElementById('course_type');
-        const isCertificate = courseTypeSelect && courseTypeSelect.value === 'certificate';
-        
+    function handleDegreeModuleFetch() {
         const data = {
-            location: locationSelect.value,
-            course_id: courseSelect.value,
-            intake_id: intakeSelect.value,
-            semester: isCertificate ? null : semesterSelect.value
+            location: degreeLocation.value,
+            course_id: degreeCourse.value,
+            intake_id: degreeIntake.value,
+            semester: degreeSemester.value
         };
-        
-        // For certificate courses, don't require semester
-        const requiredFields = isCertificate 
-            ? [data.location, data.course_id, data.intake_id]
-            : Object.values(data);
-            
-        if (requiredFields.some(v => !v)) {
-            resetAndDisable(moduleSelect, 'Select a Module');
-            return;
-        }
-        
         showSpinner(true);
         fetch('/get-filtered-modules', {
             method: 'POST',
@@ -379,35 +408,59 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
-            if (data.error) {
-                showToast('Error', data.error, 'bg-danger');
-                resetAndDisable(moduleSelect, 'Select a Module');
+            if (data.modules) {
+                populateDropdown(degreeModule, data.modules, 'module_id', 'module_name', 'Module');
+                degreeModule.disabled = false;
             } else {
-                populateDropdown(moduleSelect, data.modules, 'module_id', 'module_name', 'Module');
-                moduleSelect.disabled = false;
+                resetAndDisable(degreeModule, 'Select a Module');
             }
         })
-        .catch(() => {
-            showToast('Error', 'Failed to fetch modules.', 'bg-danger');
-            resetAndDisable(moduleSelect, 'Select a Module');
-        })
+        .catch(() => resetAndDisable(degreeModule, 'Select a Module'))
         .finally(() => showSpinner(false));
     }
 
-    function fetchStudentsForAttendance() {
+    // Fetch functions for Certificate tab
+    function fetchCertCourses(location) {
+        showSpinner(true);
+        fetch(`/attendance/get-courses-by-location?location=${encodeURIComponent(location)}&course_type=certificate`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.courses) {
+                    populateDropdown(certCourse, data.courses, 'course_id', 'course_name', 'Course');
+                    certCourse.disabled = false;
+                } else {
+                    resetAndDisable(certCourse, 'Select a Course');
+                }
+            })
+            .catch(() => resetAndDisable(certCourse, 'Select a Course'))
+            .finally(() => showSpinner(false));
+    }
+
+    function handleCertIntakeFetch() {
+        showSpinner(true);
+        fetch(`/attendance/get-intakes/${certCourse.value}/${certLocation.value}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    resetAndDisable(certIntake, 'Select an Intake');
+                } else {
+                    populateDropdown(certIntake, data.intakes, 'intake_id', 'batch', 'Intake');
+                    certIntake.disabled = false;
+                }
+            })
+            .catch(() => resetAndDisable(certIntake, 'Select an Intake'))
+            .finally(() => showSpinner(false));
+    }
+
+    function fetchDegreeStudentsForAttendance() {
         const data = {
-            location: locationSelect.value,
-            course_id: courseSelect.value,
-            intake_id: intakeSelect.value,
-            semester: semesterSelect.value,
-            module_id: moduleSelect.value
+            location: degreeLocation.value,
+            course_type: degreeCourseType.value,
+            course_id: degreeCourse.value,
+            intake_id: degreeIntake.value,
+            semester: degreeSemester.value,
+            module_id: degreeModule.value
         };
-        const date = attendanceDateInput.value;
-        if (Object.values(data).some(v => !v) || !date) {
-            document.getElementById('attendanceTableSection').style.display = 'none';
-            document.getElementById('saveAttendanceBtnSection').style.display = 'none';
-            return;
-        }
         showSpinner(true);
         fetch('/get-students-for-attendance', {
             method: 'POST',
@@ -417,7 +470,43 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success && data.students && data.students.length > 0) {
-                students = data.students.map(s => ({ ...s, status: true }));
+                degreeStudents = data.students.map(s => ({ ...s, status: true }));
+                renderAttendanceTable();
+                document.getElementById('attendanceTableSection').style.display = '';
+                document.getElementById('saveAttendanceBtnSection').style.display = '';
+            } else {
+                showToast('Error', data.message || 'No students found for these filters.', 'bg-danger');
+                document.getElementById('attendanceTableSection').style.display = 'none';
+                document.getElementById('saveAttendanceBtnSection').style.display = 'none';
+            }
+        })
+        .catch(() => {
+            showToast('Error', 'Failed to fetch students.', 'bg-danger');
+            document.getElementById('attendanceTableSection').style.display = 'none';
+            document.getElementById('saveAttendanceBtnSection').style.display = 'none';
+        })
+        .finally(() => showSpinner(false));
+    }
+
+    function fetchCertStudentsForAttendance() {
+        const data = {
+            location: certLocation.value,
+            course_type: 'certificate',
+            course_id: certCourse.value,
+            intake_id: certIntake.value,
+            semester: null,
+            module_id: null
+        };
+        showSpinner(true);
+        fetch('/get-students-for-attendance', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.students && data.students.length > 0) {
+                certStudents = data.students.map(s => ({ ...s, status: true }));
                 renderAttendanceTable();
                 document.getElementById('attendanceTableSection').style.display = '';
                 document.getElementById('saveAttendanceBtnSection').style.display = '';
@@ -436,6 +525,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function renderAttendanceTable() {
+        const students = getCurrentStudents();
         attendanceTableBody.innerHTML = '';
         students.forEach((student, index) => {
             const row = `<tr>
@@ -451,26 +541,77 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add event listeners to checkboxes
         document.querySelectorAll('.attendance-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', function() {
+                const students = getCurrentStudents();
                 const index = parseInt(this.getAttribute('data-student-index'));
                 students[index].status = this.checked;
             });
         });
     }
 
+    function updateBulkImportSection() {
+        const activeTab = getActiveTab();
+        const bulkSection = document.getElementById('bulkImportSection');
+        
+        let hasDate = false;
+        let params = new URLSearchParams();
+        
+        if (activeTab === 'degree' && degreeDate.value) {
+            hasDate = true;
+            params.append('location', degreeLocation.value || '');
+            params.append('course_id', degreeCourse.value || '');
+            params.append('intake_id', degreeIntake.value || '');
+            params.append('semester', degreeSemester.value || '');
+            params.append('module_id', degreeModule.value || '');
+            params.append('date', degreeDate.value || '');
+        } else if (activeTab === 'certificate' && certDate.value) {
+            hasDate = true;
+            params.append('location', certLocation.value || '');
+            params.append('course_id', certCourse.value || '');
+            params.append('intake_id', certIntake.value || '');
+            params.append('semester', '');
+            params.append('module_id', '');
+            params.append('date', certDate.value || '');
+        }
+        
+        if (hasDate) {
+            bulkSection.style.display = '';
+            document.getElementById('downloadTemplateBtn').href = '/attendance/download-template?' + params.toString();
+        } else {
+            bulkSection.style.display = 'none';
+        }
+    }
+
     saveAttendanceBtn.addEventListener('click', function() {
-        const data = {
-            location: locationSelect.value,
-            course_id: courseSelect.value,
-            intake_id: intakeSelect.value,
-            semester: semesterSelect.value,
-            module_id: moduleSelect.value,
-            date: attendanceDateInput.value,
+        const activeTab = getActiveTab();
+        const students = getCurrentStudents();
+        
+        let data = {
             attendance_data: students.map(s => ({ student_id: s.student_id, status: s.status }))
         };
-        if (Object.values(data).some(v => !v) || !data.attendance_data.length) {
+        
+        if (activeTab === 'degree') {
+            data.location = degreeLocation.value;
+            data.course_type = degreeCourseType.value;
+            data.course_id = degreeCourse.value;
+            data.intake_id = degreeIntake.value;
+            data.semester = degreeSemester.value;
+            data.module_id = degreeModule.value;
+            data.date = degreeDate.value;
+        } else {
+            data.location = certLocation.value;
+            data.course_type = 'certificate';
+            data.course_id = certCourse.value;
+            data.intake_id = certIntake.value;
+            data.semester = null;
+            data.module_id = null;
+            data.date = certDate.value;
+        }
+        
+        if (Object.values(data).filter(v => v !== null).some(v => !v) || !data.attendance_data.length) {
             showToast('Warning', 'Please select all filters and mark attendance for at least one student.', 'bg-warning');
             return;
         }
+        
         showSpinner(true);
         fetch('/store-attendance', {
             method: 'POST',
@@ -492,13 +633,6 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .finally(() => showSpinner(false));
     });
-
-    function populateDropdown(select, items, valueKey, textKey, defaultText) {
-        select.innerHTML = `<option selected disabled value="">Select ${defaultText}</option>`;
-        (items || []).forEach(item => {
-            select.add(new Option(item[textKey], item[valueKey]));
-        });
-    }
 
     function showSpinner(show) {
         document.getElementById('spinner-overlay').style.display = show ? 'flex' : 'none';
@@ -529,14 +663,26 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-    const payload = new FormData();
+        const activeTab = getActiveTab();
+        const payload = new FormData();
         payload.append('attendance_file', file);
-        payload.append('location', locationSelect.value || '');
-        payload.append('course_id', courseSelect.value || '');
-        payload.append('intake_id', intakeSelect.value || '');
-        payload.append('semester', semesterSelect.value || '');
-        payload.append('module_id', moduleSelect.value || '');
-    payload.append('date', attendanceDateInput.value || '');
+        
+        if (activeTab === 'degree') {
+            payload.append('location', degreeLocation.value || '');
+            payload.append('course_id', degreeCourse.value || '');
+            payload.append('intake_id', degreeIntake.value || '');
+            payload.append('semester', degreeSemester.value || '');
+            payload.append('module_id', degreeModule.value || '');
+            payload.append('date', degreeDate.value || '');
+        } else {
+            payload.append('location', certLocation.value || '');
+            payload.append('course_id', certCourse.value || '');
+            payload.append('intake_id', certIntake.value || '');
+            payload.append('semester', '');
+            payload.append('module_id', '');
+            payload.append('date', certDate.value || '');
+        }
+        
         payload.append('_token', '{{ csrf_token() }}');
 
         showSpinner(true);
@@ -548,8 +694,12 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 showToast('Success', data.message || 'Import successful', 'bg-success');
-                // Optionally refresh the attendance list
-                fetchStudentsForAttendance();
+                // Refresh the attendance list
+                if (activeTab === 'degree') {
+                    fetchDegreeStudentsForAttendance();
+                } else {
+                    fetchCertStudentsForAttendance();
+                }
             } else {
                 showToast('Error', data.message || 'Import failed', 'bg-danger');
             }
