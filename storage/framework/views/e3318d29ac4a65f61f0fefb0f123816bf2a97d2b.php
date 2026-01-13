@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Overall Attendance')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Overall Attendance'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -187,7 +187,7 @@
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.7.0/jspdf.plugin.autotable.min.js"></script>
-<script nonce="{{ $cspNonce }}">
+<script nonce="<?php echo e($cspNonce); ?>">
 document.addEventListener('DOMContentLoaded', function() {
     // Degree Tab Elements
     const degreeLocation = document.getElementById('degree_location');
@@ -351,7 +351,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('intake_id', degreeIntake.value);
         formData.append('semester', degreeSemester.value);
         formData.append('module_id', degreeModule.value);
-        formData.append('_token', '{{ csrf_token() }}');
+        formData.append('_token', '<?php echo e(csrf_token()); ?>');
         fetch('/download-attendance-excel', {
             method: 'POST',
             body: formData
@@ -421,7 +421,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('intake_id', certIntake.value);
         formData.append('semester', '');
         formData.append('module_id', '');
-        formData.append('_token', '{{ csrf_token() }}');
+        formData.append('_token', '<?php echo e(csrf_token()); ?>');
         fetch('/download-attendance-excel', {
             method: 'POST',
             body: formData
@@ -499,7 +499,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         fetch('/get-filtered-modules', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -529,7 +529,7 @@ document.addEventListener('DOMContentLoaded', function() {
         degreeSection.style.display = '';
         fetch('/get-overall-attendance', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -597,7 +597,7 @@ document.addEventListener('DOMContentLoaded', function() {
         certSection.style.display = '';
         fetch('/get-overall-attendance', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -629,4 +629,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-@endsection 
+<?php $__env->stopSection(); ?> 
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/attendance/overall_attendance.blade.php ENDPATH**/ ?>

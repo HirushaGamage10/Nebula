@@ -83,6 +83,110 @@
                             </div>
                         </div>
                     </div>
+
+                    <hr class="my-4">
+
+                    <!-- Degree Bulk Upload Section -->
+                    <div class="card mb-4" id="degreeBulkUploadSection" style="display:none;">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="ti ti-upload me-2"></i>Bulk Upload Exam Results
+                            </h6>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="degreeDownloadTemplateBtn">
+                                <i class="ti ti-download me-1"></i>Download Template
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <input type="file" class="form-control" id="degreeBulkUploadFile" accept=".csv,.xlsx,.xls">
+                                    <small class="text-muted">Select a CSV file with exam results data. Maximum file size: 10MB</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="button" class="btn btn-success w-100" id="degreeUploadResultsBtn">
+                                        <i class="ti ti-upload me-1"></i>Upload Results
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Degree Results Table -->
+                    <div class="mt-4" id="degreeResultsTableSection" style="display:none;">
+                        <h4 id="degreeResultsTableHeader" class="text-center mb-3" style="display: none;"></h4>
+                        
+                        <!-- Results Status Alert -->
+                        <div id="degreeResultsStatusAlert" class="alert alert-info mb-3" style="display: none;">
+                            <i class="ti ti-info-circle"></i>
+                            <strong>Exam Results Status:</strong> 
+                            <span id="degreeResultsStatusText"></span>
+                        </div>
+
+                        <!-- Add New Student Section -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0">Add New Student</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-4">
+                                        <label for="degree_new_student_id" class="form-label">Registration Number</label>
+                                        <input type="text" class="form-control" id="degree_new_student_id" placeholder="Enter Registration Number">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="degree_new_student_name" class="form-label">Student Name</label>
+                                        <input type="text" class="form-control" id="degree_new_student_name" placeholder="Student Name" readonly>
+                                    </div>
+                                    <div class="col-md-4 d-flex align-items-end">
+                                        <button type="button" class="btn btn-success" id="degreeAddStudentBtn">
+                                            <i class="ti ti-plus"></i> Add Student
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Column Management Buttons -->
+                        <div class="mb-3 d-flex gap-2 justify-content-center">
+                            <button type="button" class="btn btn-outline-primary" id="degreeAddMarksColumnBtn">
+                                <i class="ti ti-plus"></i> Add Marks Column
+                            </button>
+                            <button type="button" class="btn btn-outline-success" id="degreeAddGradeColumnBtn">
+                                <i class="ti ti-plus"></i> Add Grade Column
+                            </button>
+                            <button type="button" class="btn btn-outline-info" id="degreeAddRemarksColumnBtn">
+                                <i class="ti ti-plus"></i> Add Remarks Column
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" id="degreeRemoveMarksColumnBtn" style="display: none;">
+                                <i class="ti ti-minus"></i> Remove Marks Column
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" id="degreeRemoveGradeColumnBtn" style="display: none;">
+                                <i class="ti ti-minus"></i> Remove Grade Column
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" id="degreeRemoveRemarksColumnBtn" style="display: none;">
+                                <i class="ti ti-minus"></i> Remove Remarks Column
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="degreeResultsTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Registration Number</th>
+                                        <th>Student Name</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="degreeResultsTableBody">
+                                    <!-- Rows will be added here dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Degree Submit Button -->
+                    <div class="text-center mt-4" id="degreeSaveAllBtnSection" style="display:none;">
+                        <button type="button" id="degreeSaveAllBtn" class="btn btn-primary w-100 py-2">Save All Results</button>
+                    </div>
                 </div>
 
                 <!-- Certificate Tab -->
@@ -118,29 +222,27 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <hr class="my-4">
+                    <hr class="my-4">
 
-            <!-- Bulk Upload Section -->
-            <div class="card mb-4" id="bulkUploadSection" style="display:none;">
+                    <!-- Certificate Bulk Upload Section -->
+                    <div class="card mb-4" id="certBulkUploadSection" style="display:none;">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6 class="mb-0">
                         <i class="ti ti-upload me-2"></i>Bulk Upload Exam Results
                     </h6>
-                    <button type="button" class="btn btn-outline-primary btn-sm" id="downloadTemplateBtn">
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="certDownloadTemplateBtn">
                         <i class="ti ti-download me-1"></i>Download Template
                     </button>
                 </div>
                 <div class="card-body">
                     <div class="row align-items-center">
                         <div class="col-md-8">
-                            <input type="file" class="form-control" id="bulkUploadFile" accept=".csv,.xlsx,.xls">
+                            <input type="file" class="form-control" id="certBulkUploadFile" accept=".csv,.xlsx,.xls">
                             <small class="text-muted">Select a CSV file with exam results data. Maximum file size: 10MB</small>
                         </div>
                         <div class="col-md-4">
-                            <button type="button" class="btn btn-success w-100" id="uploadResultsBtn">
+                            <button type="button" class="btn btn-success w-100" id="certUploadResultsBtn">
                                 <i class="ti ti-upload me-1"></i>Upload Results
                             </button>
                         </div>
@@ -148,15 +250,15 @@
                 </div>
             </div>
 
-            <!-- Results Table -->
-            <div class="mt-4" id="resultsTableSection" style="display:none;">
-                <h4 id="resultsTableHeader" class="text-center mb-3" style="display: none;"></h4>
+            <!-- Certificate Results Table -->
+            <div class="mt-4" id="certResultsTableSection" style="display:none;">
+                <h4 id="certResultsTableHeader" class="text-center mb-3" style="display: none;"></h4>
                 
                 <!-- Results Status Alert -->
-                <div id="resultsStatusAlert" class="alert alert-info mb-3" style="display: none;">
+                <div id="certResultsStatusAlert" class="alert alert-info mb-3" style="display: none;">
                     <i class="ti ti-info-circle"></i>
                     <strong>Exam Results Status:</strong> 
-                    <span id="resultsStatusText"></span>
+                    <span id="certResultsStatusText"></span>
                 </div>
 
                 <!-- Add New Student Section -->
@@ -167,15 +269,15 @@
                     <div class="card-body">
                         <div class="row align-items-center">
                             <div class="col-md-4">
-                                <label for="new_student_id" class="form-label">Registration Number</label>
-                                <input type="text" class="form-control" id="new_student_id" placeholder="Enter Registration Number">
+                                <label for="cert_new_student_id" class="form-label">Registration Number</label>
+                                <input type="text" class="form-control" id="cert_new_student_id" placeholder="Enter Registration Number">
                             </div>
                             <div class="col-md-4">
-                                <label for="new_student_name" class="form-label">Student Name</label>
-                                <input type="text" class="form-control" id="new_student_name" placeholder="Student Name" readonly>
+                                <label for="cert_new_student_name" class="form-label">Student Name</label>
+                                <input type="text" class="form-control" id="cert_new_student_name" placeholder="Student Name" readonly>
                             </div>
                             <div class="col-md-4 d-flex align-items-end">
-                                <button type="button" class="btn btn-success" id="addStudentBtn">
+                                <button type="button" class="btn btn-success" id="certAddStudentBtn">
                                     <i class="ti ti-plus"></i> Add Student
                                 </button>
                             </div>
@@ -185,47 +287,46 @@
 
                 <!-- Column Management Buttons -->
                 <div class="mb-3 d-flex gap-2 justify-content-center">
-                    <button type="button" class="btn btn-outline-primary" id="addMarksColumnBtn">
+                    <button type="button" class="btn btn-outline-primary" id="certAddMarksColumnBtn">
                         <i class="ti ti-plus"></i> Add Marks Column
                     </button>
-                    <button type="button" class="btn btn-outline-success" id="addGradeColumnBtn">
+                    <button type="button" class="btn btn-outline-success" id="certAddGradeColumnBtn">
                         <i class="ti ti-plus"></i> Add Grade Column
                     </button>
-                    <button type="button" class="btn btn-outline-info" id="addRemarksColumnBtn">
+                    <button type="button" class="btn btn-outline-info" id="certAddRemarksColumnBtn">
                         <i class="ti ti-plus"></i> Add Remarks Column
                     </button>
-                    <button type="button" class="btn btn-outline-danger" id="removeMarksColumnBtn" style="display: none;">
+                    <button type="button" class="btn btn-outline-danger" id="certRemoveMarksColumnBtn" style="display: none;">
                         <i class="ti ti-minus"></i> Remove Marks Column
                     </button>
-                    <button type="button" class="btn btn-outline-danger" id="removeGradeColumnBtn" style="display: none;">
+                    <button type="button" class="btn btn-outline-danger" id="certRemoveGradeColumnBtn" style="display: none;">
                         <i class="ti ti-minus"></i> Remove Grade Column
                     </button>
-                    <button type="button" class="btn btn-outline-danger" id="removeRemarksColumnBtn" style="display: none;">
+                    <button type="button" class="btn btn-outline-danger" id="certRemoveRemarksColumnBtn" style="display: none;">
                         <i class="ti ti-minus"></i> Remove Remarks Column
                     </button>
                 </div>
                 
                 <div class="table-responsive">
-                    <table class="table table-bordered" id="resultsTable">
+                    <table class="table table-bordered" id="certResultsTable">
                         <thead class="table-light">
                             <tr>
                                 <th>Registration Number</th>
                                 <th>Student Name</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <!-- Student data rows will be added here dynamically -->
-                        </tbody>
-                        <tbody id="resultsTableBody">
+                        <tbody id="certResultsTableBody">
                             <!-- Rows will be added here dynamically -->
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- Submit Button -->
-            <div class="text-center mt-4" id="saveAllBtnSection" style="display:none;">
-                <button type="button" id="saveAllBtn" class="btn btn-primary w-100 py-2">Save All Results</button>
+            <!-- Certificate Submit Button -->
+            <div class="text-center mt-4" id="certSaveAllBtnSection" style="display:none;">
+                <button type="button" id="certSaveAllBtn" class="btn btn-primary w-100 py-2">Save All Results</button>
+            </div>
+                </div>
             </div>
         </div>
     </div>
@@ -249,20 +350,49 @@ document.addEventListener('DOMContentLoaded', function() {
     const certCourse = document.getElementById('cert_course');
     const certIntake = document.getElementById('cert_intake');
     
-    // Shared Elements
-    const addStudentBtn = document.getElementById('addStudentBtn');
-    const resultsTableBody = document.getElementById('resultsTableBody');
-    const saveAllBtn = document.getElementById('saveAllBtn');
-    const resultsTableHeader = document.getElementById('resultsTableHeader');
-    const saveAllBtnSection = document.getElementById('saveAllBtnSection');
+    // Degree-specific elements
+    const degreeAddStudentBtn = document.getElementById('degreeAddStudentBtn');
+    const degreeResultsTableBody = document.getElementById('degreeResultsTableBody');
+    const degreeSaveAllBtn = document.getElementById('degreeSaveAllBtn');
+    const degreeResultsTableHeader = document.getElementById('degreeResultsTableHeader');
+    const degreeSaveAllBtnSection = document.getElementById('degreeSaveAllBtnSection');
+    const degreeAddMarksColumnBtn = document.getElementById('degreeAddMarksColumnBtn');
+    const degreeAddGradeColumnBtn = document.getElementById('degreeAddGradeColumnBtn');
+    const degreeAddRemarksColumnBtn = document.getElementById('degreeAddRemarksColumnBtn');
+    const degreeRemoveMarksColumnBtn = document.getElementById('degreeRemoveMarksColumnBtn');
+    const degreeRemoveGradeColumnBtn = document.getElementById('degreeRemoveGradeColumnBtn');
+    const degreeRemoveRemarksColumnBtn = document.getElementById('degreeRemoveRemarksColumnBtn');
     
-    // Column management elements
-    const addMarksColumnBtn = document.getElementById('addMarksColumnBtn');
-    const addGradeColumnBtn = document.getElementById('addGradeColumnBtn');
-    const addRemarksColumnBtn = document.getElementById('addRemarksColumnBtn');
-    const removeMarksColumnBtn = document.getElementById('removeMarksColumnBtn');
-    const removeGradeColumnBtn = document.getElementById('removeGradeColumnBtn');
-    const removeRemarksColumnBtn = document.getElementById('removeRemarksColumnBtn');
+    // Certificate-specific elements
+    const certAddStudentBtn = document.getElementById('certAddStudentBtn');
+    const certResultsTableBody = document.getElementById('certResultsTableBody');
+    const certSaveAllBtn = document.getElementById('certSaveAllBtn');
+    const certResultsTableHeader = document.getElementById('certResultsTableHeader');
+    const certSaveAllBtnSection = document.getElementById('certSaveAllBtnSection');
+    const certAddMarksColumnBtn = document.getElementById('certAddMarksColumnBtn');
+    const certAddGradeColumnBtn = document.getElementById('certAddGradeColumnBtn');
+    const certAddRemarksColumnBtn = document.getElementById('certAddRemarksColumnBtn');
+    const certRemoveMarksColumnBtn = document.getElementById('certRemoveMarksColumnBtn');
+    const certRemoveGradeColumnBtn = document.getElementById('certRemoveGradeColumnBtn');
+    const certRemoveRemarksColumnBtn = document.getElementById('certRemoveRemarksColumnBtn');
+    
+    // Tab event listeners to ensure proper section visibility
+    const degreeTabBtn = document.getElementById('degree-tab');
+    const certTabBtn = document.getElementById('certificate-tab');
+    
+    degreeTabBtn.addEventListener('shown.bs.tab', function() {
+        // When switching to degree tab, hide cert sections if they're visible
+        document.getElementById('certBulkUploadSection').style.display = 'none';
+        document.getElementById('certResultsTableSection').style.display = 'none';
+        document.getElementById('certSaveAllBtnSection').style.display = 'none';
+    });
+    
+    certTabBtn.addEventListener('shown.bs.tab', function() {
+        // When switching to cert tab, hide degree sections if they're visible
+        document.getElementById('degreeBulkUploadSection').style.display = 'none';
+        document.getElementById('degreeResultsTableSection').style.display = 'none';
+        document.getElementById('degreeSaveAllBtnSection').style.display = 'none';
+    });
     
     // Helper functions
     function getActiveTab() {
@@ -282,11 +412,37 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Clear any existing data rows on page load to ensure clean state
-    resultsTableBody.innerHTML = '';
+    function getTabElements() {
+        const activeTab = getActiveTab();
+        if (activeTab === 'degree') {
+            return {
+                resultsTableBody: degreeResultsTableBody,
+                addMarksColumnBtn, addGradeColumnBtn,
+                addRemarksColumnBtn,
+                removeMarksColumnBtn,
+                removeGradeColumnBtn,
+                removeRemarksColumnBtn,
+                resultsTable: document.getElementById('degreeResultsTable')
+            };
+        } else {
+            return {
+                resultsTableBody: certResultsTableBody,
+                addMarksColumnBtn: certAddMarksColumnBtn,
+                addGradeColumnBtn: certAddGradeColumnBtn,
+                addRemarksColumnBtn: certAddRemarksColumnBtn,
+                removeMarksColumnBtn: certRemoveMarksColumnBtn,
+                removeGradeColumnBtn: certRemoveGradeColumnBtn,
+                removeRemarksColumnBtn: certRemoveRemarksColumnBtn,
+                resultsTable: document.getElementById('certResultsTable')
+            };
+        }
+    }
     
     // Function to reset table to base structure (only two columns)
     function resetTableStructure() {
+        const { resultsTableBody, addMarksColumnBtn, addGradeColumnBtn, addRemarksColumnBtn,
+                removeMarksColumnBtn, removeGradeColumnBtn, removeRemarksColumnBtn, resultsTable } = getTabElements();
+        
         // Clear existing data
         resultsTableBody.innerHTML = '';
         
@@ -979,17 +1135,17 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             // Show bulk upload section when all filters are filled
-            bulkUploadSection.style.display = 'block';
+            document.getElementById('degreeBulkUploadSection').style.display = 'block';
             
             if (data.success && data.students && data.students.length > 0) {
                 degreeResults = data.students;
                 renderEditableResultsTable(data.students);
-                document.getElementById('resultsTableSection').style.display = '';
-                document.getElementById('saveAllBtnSection').style.display = '';
+                document.getElementById('degreeResultsTableSection').style.display = '';
+                document.getElementById('degreeSaveAllBtnSection').style.display = '';
             } else {
-                resultsTableBody.innerHTML = '<tr><td colspan="2" class="text-center">No students found for these filters.</td></tr>';
-                document.getElementById('resultsTableSection').style.display = '';
-                document.getElementById('saveAllBtnSection').style.display = 'none';
+                degreeResultsTableBody.innerHTML = '<tr><td colspan="2" class="text-center">No students found for these filters.</td></tr>';
+                document.getElementById('degreeResultsTableSection').style.display = '';
+                document.getElementById('degreeSaveAllBtnSection').style.display = 'none';
             }
         })
         .catch(() => showToast('Error', 'Failed to fetch students.', 'bg-danger'))
@@ -1014,17 +1170,17 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             // Show bulk upload section when all filters are filled
-            bulkUploadSection.style.display = 'block';
+            document.getElementById('certBulkUploadSection').style.display = 'block';
             
             if (data.success && data.students && data.students.length > 0) {
                 certResults = data.students;
                 renderEditableResultsTable(data.students);
-                document.getElementById('resultsTableSection').style.display = '';
-                document.getElementById('saveAllBtnSection').style.display = '';
+                document.getElementById('certResultsTableSection').style.display = '';
+                document.getElementById('certSaveAllBtnSection').style.display = '';
             } else {
-                resultsTableBody.innerHTML = '<tr><td colspan="2" class="text-center">No students found for these filters.</td></tr>';
-                document.getElementById('resultsTableSection').style.display = '';
-                document.getElementById('saveAllBtnSection').style.display = 'none';
+                certResultsTableBody.innerHTML = '<tr><td colspan="2" class="text-center">No students found for these filters.</td></tr>';
+                document.getElementById('certResultsTableSection').style.display = '';
+                document.getElementById('certSaveAllBtnSection').style.display = 'none';
             }
         })
         .catch(() => showToast('Error', 'Failed to fetch students.', 'bg-danger'))
@@ -1035,6 +1191,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Render table with only two columns
     function renderEditableResultsTable(students) {
+        const activeTab = getActiveTab();
+        const resultsTableBody = activeTab === 'degree' ? degreeResultsTableBody : certResultsTableBody;
+        
         const results = students.map(s => ({ 
             registration_id: s.registration_id, 
             student_id: s.student_id, 

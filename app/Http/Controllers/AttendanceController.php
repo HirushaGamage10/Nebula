@@ -685,46 +685,78 @@ class AttendanceController extends Controller
         // Header
         $sheet->fromArray(['registration_number', 'name_with_initials', 'attendance'], null, 'A1');
 
-        // If filters provided and module + date present, attempt to prefill students
+        // If filters provided, attempt to prefill students
         $startRow = 2;
-        if ($courseId && $intakeId && $moduleId) {
-            // fetch students for the module using existing logic
+        $isCertificate = empty($semesterId) && empty($moduleId);
+        
+        if ($courseId && $intakeId) {
             try {
                 $students = collect();
-                $semester = null;
-                if ($semesterId) {
-                    $semester = \App\Models\Semester::find($semesterId);
-                }
-
-                // detect if core module
-                if ($semester) {
-                    $isCore = DB::table('semester_module')->where('semester_id', $semesterId)->where('module_id', $moduleId)->exists();
-                } else {
-                    $isCore = DB::table('semester_module')->where('module_id', $moduleId)->exists();
-                }
-
-                if ($isCore && $semester) {
-                    $regs = \App\Models\SemesterRegistration::where('semester_id', $semesterId)
-                        ->where('course_id', $courseId)
+                
+                if ($isCertificate) {
+                    // For certificate courses, get all active students in the intake
+                    $courseRegs = \App\Models\CourseRegistration::where('course_id', $courseId)
                         ->where('intake_id', $intakeId)
                         ->where('location', $location)
-                        ->where('status', 'registered')
+                        ->where('status', 'active')
                         ->with('student')
                         ->get();
-
-                    foreach ($regs as $r) {
-                        $students->push([$r->student->registration_id ?? $r->student->student_id, $r->student->name_with_initials]);
+                    
+                    foreach ($courseRegs as $reg) {
+                        if ($reg->student) {
+                            $students->push([
+                                $reg->student->registration_id ?? $reg->student->student_id, 
+                                $reg->student->name_with_initials
+                            ]);
+                        }
                     }
-                } else {
-                    $mods = \App\Models\ModuleManagement::where('module_id', $moduleId)
-                        ->where('course_id', $courseId)
-                        ->where('intake_id', $intakeId)
-                        ->where('location', $location)
-                        ->when($semester, function($q) use ($semester) { return $q->where('semester', $semester->name); })
-                        ->with('student')
-                        ->get();
-                    foreach ($mods as $m) {
-                        $students->push([$m->student->registration_id ?? $m->student->student_id, $m->student->name_with_initials]);
+                } else if ($moduleId) {
+                    // For degree/diploma courses, use the existing module-based logic
+                    $semester = null;
+                    if ($semesterId) {
+                        $semester = \App\Models\Semester::find($semesterId);
+                    }
+
+                    // detect if core module
+                    if ($semester) {
+                        $isCore = DB::table('semester_module')->where('semester_id', $semesterId)->where('module_id', $moduleId)->exists();
+                    } else {
+                        $isCore = DB::table('semester_module')->where('module_id', $moduleId)->exists();
+                    }
+
+                    if ($isCore && $semester) {
+                        $regs = \App\Models\SemesterRegistration::where('semester_id', $semesterId)
+                            ->where('course_id', $courseId)
+                            ->where('intake_id', $intakeId)
+                            ->where('location', $location)
+                            ->where('status', 'registered')
+                            ->with('student')
+                            ->get();
+
+                        foreach ($regs as $r) {
+                            if ($r->student) {
+                                $students->push([
+                                    $r->student->registration_id ?? $r->student->student_id, 
+                                    $r->student->name_with_initials
+                                ]);
+                            }
+                        }
+                    } else {
+                        $mods = \App\Models\ModuleManagement::where('module_id', $moduleId)
+                            ->where('course_id', $courseId)
+                            ->where('intake_id', $intakeId)
+                            ->where('location', $location)
+                            ->when($semester, function($q) use ($semester) { return $q->where('semester', $semester->name); })
+                            ->with('student')
+                            ->get();
+                        foreach ($mods as $m) {
+                            if ($m->student) {
+                                $students->push([
+                                    $m->student->registration_id ?? $m->student->student_id, 
+                                    $m->student->name_with_initials
+                                ]);
+                            }
+                        }
                     }
                 }
 
@@ -772,15 +804,24 @@ class AttendanceController extends Controller
      */
     public function importAttendance(Request $request)
     {
-        $request->validate([
+        // Detect if this is for certificate courses (semester and module_id may be empty/null)
+        $isCertificate = empty($request->semester) && empty($request->module_id);
+        
+        $rules = [
             'location' => 'required|string',
             'course_id' => 'required|integer',
             'intake_id' => 'required|integer',
-            'semester' => 'required',
-            'module_id' => 'required|integer',
             'date' => 'required|date',
             'attendance_file' => 'required|file'
-        ]);
+        ];
+        
+        // Only require semester and module_id for degree/diploma courses
+        if (!$isCertificate) {
+            $rules['semester'] = 'required';
+            $rules['module_id'] = 'required|integer';
+        }
+        
+        $request->validate($rules);
 
         $file = $request->file('attendance_file');
         $ext = strtolower($file->getClientOriginalExtension());
@@ -823,8 +864,16 @@ class AttendanceController extends Controller
         // Validate and build attendance records
         $attendanceRecords = [];
         $date = Carbon::parse($request->date);
-        $semesterModel = \App\Models\Semester::find($request->semester);
-        $semesterName = $semesterModel ? $semesterModel->name : $request->semester;
+        
+        // For certificates, semester and module_id are null
+        $semesterName = null;
+        $moduleId = null;
+        
+        if (!$isCertificate) {
+            $semesterModel = \App\Models\Semester::find($request->semester);
+            $semesterName = $semesterModel ? $semesterModel->name : $request->semester;
+            $moduleId = $request->module_id;
+        }
 
         foreach ($rows as $idx => $row) {
             $regNo = $row['registration_number'] ?? $row['registration_no'] ?? null;
@@ -869,7 +918,7 @@ class AttendanceController extends Controller
                 'course_id' => $request->course_id,
                 'intake_id' => $request->intake_id,
                 'semester' => $semesterName,
-                'module_id' => $request->module_id,
+                'module_id' => $moduleId,
                 'student_id' => $student->student_id,
                 'status' => (bool)$status,
                 'date' => $date->toDateString(),
@@ -885,13 +934,20 @@ class AttendanceController extends Controller
         try {
             DB::beginTransaction();
 
-            // Delete existing for that date/module
-            Attendance::where('date', $date->toDateString())
+            // Delete existing for that date/intake (and module if not certificate)
+            $deleteQuery = Attendance::where('date', $date->toDateString())
                 ->where('course_id', $request->course_id)
-                ->where('intake_id', $request->intake_id)
-                ->where('semester', $semesterName)
-                ->where('module_id', $request->module_id)
-                ->delete();
+                ->where('intake_id', $request->intake_id);
+            
+            if ($isCertificate) {
+                $deleteQuery->whereNull('semester')
+                    ->whereNull('module_id');
+            } else {
+                $deleteQuery->where('semester', $semesterName)
+                    ->where('module_id', $moduleId);
+            }
+            
+            $deleteQuery->delete();
 
             Attendance::insert($attendanceRecords);
 
