@@ -16,6 +16,7 @@ class Module extends Model
         'module_code',
         'module_name',
         'module_type',
+        'module_category',
         'module_cordinator',
         'credits',
     ];
