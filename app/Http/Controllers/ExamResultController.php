@@ -242,25 +242,42 @@ class ExamResultController extends Controller
         $request->validate([
             'course_id' => 'required|integer|exists:courses,course_id',
             'intake_id' => 'required|integer|exists:intakes,intake_id',
-            'semester' => 'required|string',
+            'semester' => 'nullable|string',
             'location' => 'required|string',
         ]);
 
         $courseId = $request->input('course_id');
+        $intakeId = $request->input('intake_id');
         $semesterId = $request->input('semester');
-
-        // Get the semester by ID
-        $semester = \App\Models\Semester::where('course_id', $courseId)
-            ->where('intake_id', $request->input('intake_id'))
-            ->where('id', $semesterId)
-            ->first();
+        
+        // Check if this is a certificate course
+        $course = \App\Models\Course::find($courseId);
+        if (!$course) {
+            return response()->json(['error' => 'Course not found.'], 404);
+        }
 
         \Log::info('getFilteredModules called with:', [
             'course_id' => $courseId,
-            'intake_id' => $request->input('intake_id'),
+            'intake_id' => $intakeId,
             'semester_id' => $semesterId,
-            'semester_found' => $semester ? 'yes' : 'no'
+            'course_type' => $course->course_type
         ]);
+        
+        // Certificate courses use intake modules, not semester modules
+        if ($course->course_type === 'certificate') {
+            $modules = \App\Models\Module::join('intake_modules', 'modules.module_id', '=', 'intake_modules.module_id')
+                ->where('intake_modules.intake_id', $intakeId)
+                ->select('modules.module_id', 'modules.module_name')
+                ->get();
+            \Log::info('Certificate course modules found:', ['count' => $modules->count()]);
+            return response()->json(['modules' => $modules]);
+        }
+
+        // For degree/diploma: Get the semester by ID
+        $semester = \App\Models\Semester::where('course_id', $courseId)
+            ->where('intake_id', $intakeId)
+            ->where('id', $semesterId)
+            ->first();
 
         if (!$semester) {
             return response()->json(['error' => 'Semester not found.'], 404);
@@ -320,6 +337,12 @@ class ExamResultController extends Controller
             return response()->json(['error' => 'Invalid course or intake.'], 404);
         }
 
+        // Certificate courses don't use semesters, return empty array
+        if ($course->course_type === 'certificate') {
+            \Log::info('ExamResultController getSemesters: Certificate course detected, returning empty semesters');
+            return response()->json(['semesters' => [], 'is_certificate' => true]);
+        }
+
         // Get semesters that have been created for this course and intake
         $semesters = \App\Models\Semester::where('course_id', $request->course_id)
             ->where('intake_id', $request->intake_id)
@@ -334,7 +357,7 @@ class ExamResultController extends Controller
             'semesters_data' => $semesters->toArray()
         ]);
         
-        return response()->json(['semesters' => $semesters]);
+        return response()->json(['semesters' => $semesters, 'is_certificate' => false]);
     }
 
     public function getStudentsForExamResult(Request $request)

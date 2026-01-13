@@ -110,12 +110,17 @@ class AttendanceController extends Controller
             return response()->json(['error' => 'Invalid course or intake.'], 404);
         }
 
+        // Certificate courses don't use semesters, return empty array
+        if ($course->course_type === 'certificate') {
+            return response()->json(['semesters' => [], 'is_certificate' => true]);
+        }
+
         $semesters = \App\Models\Semester::where('course_id', $request->course_id)
             ->where('intake_id', $request->intake_id)
             ->whereIn('status', ['active', 'upcoming'])
             ->get(['id as semester_id', 'name as semester_name']);
             
-        return response()->json(['semesters' => $semesters]);
+        return response()->json(['semesters' => $semesters, 'is_certificate' => false]);
     }
 
     public function getFilteredModules(Request $request)
@@ -123,16 +128,32 @@ class AttendanceController extends Controller
         $request->validate([
             'course_id' => 'required|integer|exists:courses,course_id',
             'intake_id' => 'required|integer|exists:intakes,intake_id',
-            'semester' => 'required|integer',
+            'semester' => 'nullable|integer',
             'location' => 'required|string',
         ]);
 
         $courseId = $request->input('course_id');
+        $intakeId = $request->input('intake_id');
         $semesterId = $request->input('semester');
+        
+        // Check if this is a certificate course
+        $course = Course::find($courseId);
+        if (!$course) {
+            return response()->json(['error' => 'Course not found.'], 404);
+        }
+        
+        // Certificate courses use intake modules, not semester modules
+        if ($course->course_type === 'certificate') {
+            $modules = \App\Models\Module::join('intake_modules', 'modules.module_id', '=', 'intake_modules.module_id')
+                ->where('intake_modules.intake_id', $intakeId)
+                ->select('modules.module_id', 'modules.module_name')
+                ->get();
+            return response()->json(['modules' => $modules]);
+        }
 
-        // Get the semester by ID
+        // For degree/diploma: Get the semester by ID
         $semester = \App\Models\Semester::where('course_id', $courseId)
-            ->where('intake_id', $request->input('intake_id'))
+            ->where('intake_id', $intakeId)
             ->where('id', $semesterId)
             ->first();
 
