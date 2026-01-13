@@ -172,17 +172,53 @@ class AttendanceController extends Controller
 
     public function getStudentsForAttendance(Request $request)
     {
-        $request->validate([
-            'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
-            'course_id' => 'required|exists:courses,course_id',
-            'intake_id' => 'required|exists:intakes,intake_id',
-            'semester' => 'required',
-            'module_id' => 'required|exists:modules,module_id',
-        ]);
+        // Check if this is a certificate course
+        $isCertificate = $request->course_type === 'certificate';
+        
+        // Validate based on course type
+        if ($isCertificate) {
+            $request->validate([
+                'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
+                'course_id' => 'required|exists:courses,course_id',
+                'intake_id' => 'required|exists:intakes,intake_id',
+            ]);
+        } else {
+            $request->validate([
+                'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
+                'course_id' => 'required|exists:courses,course_id',
+                'intake_id' => 'required|exists:intakes,intake_id',
+                'semester' => 'required',
+                'module_id' => 'required|exists:modules,module_id',
+            ]);
+        }
 
         $courseId = $request->course_id;
         $intakeId = $request->intake_id;
         $location = $request->location;
+        
+        // For certificate courses, fetch students directly from course_registration
+        if ($isCertificate) {
+            $students = CourseRegistration::where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('status', 'active')
+                ->with('student')
+                ->get()
+                ->map(function($reg) {
+                    return [
+                        'registration_number' => $reg->student->registration_id ?? $reg->student->student_id,
+                        'student_id' => $reg->student->student_id,
+                        'name_with_initials' => $reg->student->name_with_initials,
+                    ];
+                });
+            
+            return response()->json([
+                'success' => true,
+                'students' => $students
+            ]);
+        }
+
+        // For degree/diploma courses - original logic
         $semesterId = $request->semester;
         $moduleId = $request->module_id;
 
@@ -240,21 +276,84 @@ class AttendanceController extends Controller
 
     public function storeAttendance(Request $request)
     {
-        $request->validate([
-            'location' => 'required|string',
-            'course_id' => 'required|integer',
-            'intake_id' => 'required|integer',
-            'semester' => 'required',
-            'module_id' => 'required|integer',
-            'date' => 'required|date',
-            'attendance_data' => 'required|array|min:1'
-        ]);
+        // Check if this is a certificate course
+        $isCertificate = $request->course_type === 'certificate';
+        
+        // Validate based on course type
+        if ($isCertificate) {
+            $request->validate([
+                'location' => 'required|string',
+                'course_id' => 'required|integer',
+                'intake_id' => 'required|integer',
+                'date' => 'required|date',
+                'attendance_data' => 'required|array|min:1'
+            ]);
+        } else {
+            $request->validate([
+                'location' => 'required|string',
+                'course_id' => 'required|integer',
+                'intake_id' => 'required|integer',
+                'semester' => 'required',
+                'module_id' => 'required|integer',
+                'date' => 'required|date',
+                'attendance_data' => 'required|array|min:1'
+            ]);
+        }
 
         try {
             DB::beginTransaction();
 
             $date = Carbon::parse($request->date);
             
+            // For certificate courses, use null for semester and module_id
+            if ($isCertificate) {
+                // Delete existing attendance records for this date, course, intake (certificate)
+                Attendance::where('date', $date)
+                         ->where('course_id', $request->course_id)
+                         ->where('intake_id', $request->intake_id)
+                         ->whereNull('semester')
+                         ->whereNull('module_id')
+                         ->delete();
+
+                // Insert new attendance records
+                $attendanceRecords = [];
+                foreach ($request->attendance_data as $studentData) {
+                    if (!isset($studentData['student_id'])) {
+                        continue; // Skip invalid records
+                    }
+                    
+                    $attendanceRecords[] = [
+                        'location' => $request->location,
+                        'course_id' => $request->course_id,
+                        'intake_id' => $request->intake_id,
+                        'semester' => null,
+                        'module_id' => null,
+                        'date' => $date,
+                        'student_id' => $studentData['student_id'],
+                        'status' => $studentData['status'] ?? false,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
+                }
+
+                if (empty($attendanceRecords)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No valid attendance data provided.'
+                    ], 400);
+                }
+
+                Attendance::insert($attendanceRecords);
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Attendance saved successfully for ' . count($attendanceRecords) . ' students.'
+                ]);
+            }
+            
+            // For degree/diploma courses - original logic
             // Get the semester to convert ID to name
             $semester = \App\Models\Semester::find($request->semester);
             if (!$semester) {
