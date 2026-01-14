@@ -544,29 +544,43 @@ document.addEventListener('DOMContentLoaded', function() {
             course_id: degreeCourse.value,
             intake_id: degreeIntake.value,
             semester: degreeSemester.value,
-            module_id: degreeModule.value
+            module_id: degreeModule.value,
+            date: degreeDate.value
         };
+        console.log('Fetching degree students with data:', data);
         showSpinner(true);
         fetch('/get-students-for-attendance', {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('Backend response:', data);
             if (data.success && data.students && data.students.length > 0) {
                 degreeStudents = data.students.map(s => ({ ...s, status: true }));
                 renderAttendanceTable();
                 document.getElementById('degreeAttendanceTableSection').style.display = '';
                 document.getElementById('degreeSaveAttendanceBtnSection').style.display = '';
+                updateBulkImportSection();
+            } else if (data.success && data.students && data.students.length === 0) {
+                console.warn('No students found in the response');
+                showToast('Warning', 'No students found for these filters. Please verify the filters are correct.', 'bg-warning');
+                document.getElementById('degreeAttendanceTableSection').style.display = 'none';
+                document.getElementById('degreeSaveAttendanceBtnSection').style.display = 'none';
             } else {
-                showToast('Error', data.message || 'No students found for these filters.', 'bg-danger');
+                console.error('Error response:', data);
+                showToast('Error', data.message || 'Failed to fetch students.', 'bg-danger');
                 document.getElementById('degreeAttendanceTableSection').style.display = 'none';
                 document.getElementById('degreeSaveAttendanceBtnSection').style.display = 'none';
             }
         })
-        .catch(() => {
-            showToast('Error', 'Failed to fetch students.', 'bg-danger');
+        .catch(error => {
+            console.error('Fetch error:', error);
+            showToast('Error', 'Failed to fetch students. Check console for details.', 'bg-danger');
             document.getElementById('degreeAttendanceTableSection').style.display = 'none';
             document.getElementById('degreeSaveAttendanceBtnSection').style.display = 'none';
         })
@@ -580,29 +594,43 @@ document.addEventListener('DOMContentLoaded', function() {
             course_id: certCourse.value,
             intake_id: certIntake.value,
             semester: null,
-            module_id: null
+            module_id: null,
+            date: certDate.value
         };
+        console.log('Fetching certificate students with data:', data);
         showSpinner(true);
         fetch('/get-students-for-attendance', {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('Backend response:', data);
             if (data.success && data.students && data.students.length > 0) {
                 certStudents = data.students.map(s => ({ ...s, status: true }));
                 renderAttendanceTable();
                 document.getElementById('certAttendanceTableSection').style.display = '';
                 document.getElementById('certSaveAttendanceBtnSection').style.display = '';
+                updateBulkImportSection();
+            } else if (data.success && data.students && data.students.length === 0) {
+                console.warn('No students found in the response');
+                showToast('Warning', 'No students found for these filters. Please verify the filters are correct.', 'bg-warning');
+                document.getElementById('certAttendanceTableSection').style.display = 'none';
+                document.getElementById('certSaveAttendanceBtnSection').style.display = 'none';
             } else {
-                showToast('Error', data.message || 'No students found for these filters.', 'bg-danger');
+                console.error('Error response:', data);
+                showToast('Error', data.message || 'Failed to fetch students.', 'bg-danger');
                 document.getElementById('certAttendanceTableSection').style.display = 'none';
                 document.getElementById('certSaveAttendanceBtnSection').style.display = 'none';
             }
         })
-        .catch(() => {
-            showToast('Error', 'Failed to fetch students.', 'bg-danger');
+        .catch(error => {
+            console.error('Fetch error:', error);
+            showToast('Error', 'Failed to fetch students. Check console for details.', 'bg-danger');
             document.getElementById('certAttendanceTableSection').style.display = 'none';
             document.getElementById('certSaveAttendanceBtnSection').style.display = 'none';
         })
@@ -805,7 +833,15 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 showToast('Success', data.message || 'Import successful', 'bg-success');
-                fetchDegreeStudentsForAttendance();
+                // Use the returned student data with their attendance status
+                if (data.students && data.students.length > 0) {
+                    degreeStudents = data.students;
+                    renderAttendanceTable();
+                    document.getElementById('degreeAttendanceTableSection').style.display = '';
+                    document.getElementById('degreeSaveAttendanceBtnSection').style.display = '';
+                } else {
+                    fetchDegreeStudentsForAttendance();
+                }
             } else {
                 showToast('Error', data.message || 'Import failed', 'bg-danger');
             }
@@ -844,7 +880,15 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             if (data.success) {
                 showToast('Success', data.message || 'Import successful', 'bg-success');
-                fetchCertStudentsForAttendance();
+                // Use the returned student data with their attendance status
+                if (data.students && data.students.length > 0) {
+                    certStudents = data.students;
+                    renderAttendanceTable();
+                    document.getElementById('certAttendanceTableSection').style.display = '';
+                    document.getElementById('certSaveAttendanceBtnSection').style.display = '';
+                } else {
+                    fetchCertStudentsForAttendance();
+                }
             } else {
                 showToast('Error', data.message || 'Import failed', 'bg-danger');
             }

@@ -198,10 +198,24 @@ class AttendanceController extends Controller
         
         // For certificate courses, fetch students directly from course_registration
         if ($isCertificate) {
+            Log::info('Certificate course query params:', [
+                'course_id' => $courseId,
+                'intake_id' => $intakeId,
+                'location' => $location
+            ]);
+            
+            // First, check what statuses exist in the table
+            $allRegistrations = CourseRegistration::where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->get(['id', 'status']);
+            
+            Log::info('All registrations for this course/intake/location:', $allRegistrations->toArray());
+            
             $students = CourseRegistration::where('course_id', $courseId)
                 ->where('intake_id', $intakeId)
                 ->where('location', $location)
-                ->where('status', 'active')
+                ->where('status', 'Registered')
                 ->with('student')
                 ->get()
                 ->map(function($reg) {
@@ -212,6 +226,8 @@ class AttendanceController extends Controller
                     ];
                 });
             
+            Log::info('Students found with status=Registered:', $students->toArray());
+            
             return response()->json([
                 'success' => true,
                 'students' => $students
@@ -221,6 +237,14 @@ class AttendanceController extends Controller
         // For degree/diploma courses - original logic
         $semesterId = $request->semester;
         $moduleId = $request->module_id;
+        
+        Log::info('Degree/Diploma course query params:', [
+            'course_id' => $courseId,
+            'intake_id' => $intakeId,
+            'location' => $location,
+            'semester_id' => $semesterId,
+            'module_id' => $moduleId
+        ]);
 
         // Get the semester to determine if it's core or elective
         $semester = \App\Models\Semester::find($semesterId);
@@ -233,9 +257,22 @@ class AttendanceController extends Controller
             ->where('semester_id', $semesterId)
             ->where('module_id', $moduleId)
             ->exists();
+        
+        Log::info('Module type check:', ['is_core_module' => $isCoreModule]);
 
         if ($isCoreModule) {
             // For core modules: Get students registered for the semester
+            Log::info('Querying SemesterRegistration for core module');
+            
+            // Check all registrations first
+            $allSemRegs = \App\Models\SemesterRegistration::where('semester_id', $semesterId)
+                ->where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->get(['id', 'status']);
+            
+            Log::info('All semester registrations:', $allSemRegs->toArray());
+            
             $students = \App\Models\SemesterRegistration::where('semester_id', $semesterId)
                 ->where('course_id', $courseId)
                 ->where('intake_id', $intakeId)
@@ -250,8 +287,22 @@ class AttendanceController extends Controller
                         'name_with_initials' => $reg->student->name_with_initials,
                     ];
                 });
+            
+            Log::info('Students found for core module:', $students->toArray());
         } else {
             // For elective modules: Get students registered for the specific module
+            Log::info('Querying ModuleManagement for elective module');
+            
+            // Check all module registrations first
+            $allModRegs = \App\Models\ModuleManagement::where('module_id', $moduleId)
+                ->where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('semester', $semester->name)
+                ->get(['id', 'student_id']);
+            
+            Log::info('All module registrations:', $allModRegs->toArray());
+            
             $students = \App\Models\ModuleManagement::where('module_id', $moduleId)
                 ->where('course_id', $courseId)
                 ->where('intake_id', $intakeId)
@@ -266,7 +317,11 @@ class AttendanceController extends Controller
                         'name_with_initials' => $reg->student->name_with_initials,
                     ];
                 });
+            
+            Log::info('Students found for elective module:', $students->toArray());
         }
+        
+        Log::info('Final students count returned:', ['count' => $students->count()]);
 
         return response()->json([
             'success' => true,
@@ -694,11 +749,11 @@ class AttendanceController extends Controller
                 $students = collect();
                 
                 if ($isCertificate) {
-                    // For certificate courses, get all active students in the intake
+                    // For certificate courses, get all Registered students in the intake
                     $courseRegs = \App\Models\CourseRegistration::where('course_id', $courseId)
                         ->where('intake_id', $intakeId)
                         ->where('location', $location)
-                        ->where('status', 'active')
+                        ->where('status', 'Registered')
                         ->with('student')
                         ->get();
                     
@@ -952,7 +1007,26 @@ class AttendanceController extends Controller
             Attendance::insert($attendanceRecords);
 
             DB::commit();
-            return response()->json(['success' => true, 'message' => 'Imported attendance for ' . count($attendanceRecords) . ' students.']);
+            
+            // Return the parsed attendance records with student details for frontend display
+            $studentsForDisplay = [];
+            foreach ($attendanceRecords as $record) {
+                $student = \App\Models\Student::find($record['student_id']);
+                if ($student) {
+                    $studentsForDisplay[] = [
+                        'student_id' => $student->student_id,
+                        'registration_number' => $student->registration_id ?? $student->student_id,
+                        'name_with_initials' => $student->name_with_initials,
+                        'status' => $record['status']
+                    ];
+                }
+            }
+            
+            return response()->json([
+                'success' => true, 
+                'message' => 'Imported attendance for ' . count($attendanceRecords) . ' students.',
+                'students' => $studentsForDisplay
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Import attendance error: ' . $e->getMessage());
