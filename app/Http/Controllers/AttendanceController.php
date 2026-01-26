@@ -541,13 +541,22 @@ class AttendanceController extends Controller
 
     public function getOverallAttendance(Request $request)
     {
-        $request->validate([
+        // Check if this is a certificate course (semester and module_id will be null)
+        $isCertificate = empty($request->semester) && empty($request->module_id);
+        
+        $rules = [
             'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
             'course_id' => 'required|exists:courses,course_id',
             'intake_id' => 'required|exists:intakes,intake_id',
-            'semester' => 'required',
-            'module_id' => 'required|exists:modules,module_id',
-        ]);
+        ];
+        
+        // Only require semester and module_id for degree/diploma courses
+        if (!$isCertificate) {
+            $rules['semester'] = 'required';
+            $rules['module_id'] = 'required|exists:modules,module_id';
+        }
+        
+        $request->validate($rules);
 
         $courseId = $request->course_id;
         $intakeId = $request->intake_id;
@@ -555,6 +564,52 @@ class AttendanceController extends Controller
         $semesterId = $request->semester;
         $moduleId = $request->module_id;
 
+        if ($isCertificate) {
+            // For certificate courses: Get all attendance sessions (no semester/module filter)
+            $attendanceSessions = \App\Models\Attendance::where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->whereNull('semester')
+                ->whereNull('module_id')
+                ->select('date')
+                ->distinct()
+                ->get();
+            $totalSessions = $attendanceSessions->count();
+
+            // Get students registered for the certificate course
+            $registrations = \App\Models\CourseRegistration::where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('status', 'Registered')
+                ->with('student')
+                ->get();
+
+            $attendanceData = [];
+            foreach ($registrations as $reg) {
+                $attendedSessions = \App\Models\Attendance::where('course_id', $courseId)
+                    ->where('intake_id', $intakeId)
+                    ->where('location', $location)
+                    ->whereNull('semester')
+                    ->whereNull('module_id')
+                    ->where('student_id', $reg->student_id)
+                    ->where('status', true)
+                    ->count();
+                $attendanceData[] = [
+                    'registration_number' => $reg->student->registration_id ?? $reg->student->student_id,
+                    'name_with_initials' => $reg->student->name_with_initials,
+                    'total_sessions' => $totalSessions,
+                    'attended_sessions' => $attendedSessions,
+                    'percentage' => $totalSessions > 0 ? round(($attendedSessions / $totalSessions) * 100, 2) : 0
+                ];
+            }
+            
+            return response()->json([
+                'success' => true,
+                'attendance' => $attendanceData
+            ]);
+        }
+
+        // For degree/diploma courses: Original logic
         // Get the semester to determine if it's core or elective
         $semester = \App\Models\Semester::find($semesterId);
         if (!$semester) {
@@ -627,13 +682,22 @@ class AttendanceController extends Controller
      */
     public function downloadAttendanceExcel(Request $request)
     {
-        $request->validate([
+        // Check if this is a certificate course (semester and module_id will be empty)
+        $isCertificate = empty($request->semester) && empty($request->module_id);
+        
+        $rules = [
             'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
             'course_id' => 'required|exists:courses,course_id',
             'intake_id' => 'required|exists:intakes,intake_id',
-            'semester' => 'required',
-            'module_id' => 'required|exists:modules,module_id',
-        ]);
+        ];
+        
+        // Only require semester and module_id for degree/diploma courses
+        if (!$isCertificate) {
+            $rules['semester'] = 'required';
+            $rules['module_id'] = 'required|exists:modules,module_id';
+        }
+        
+        $request->validate($rules);
 
         $courseId = $request->course_id;
         $intakeId = $request->intake_id;
@@ -641,6 +705,61 @@ class AttendanceController extends Controller
         $semesterId = $request->semester;
         $moduleId = $request->module_id;
 
+        // Get course and intake details
+        $course = Course::find($courseId);
+        $intake = Intake::find($intakeId);
+
+        if ($isCertificate) {
+            // For certificate courses: Get all attendance sessions (no semester/module filter)
+            $attendanceSessions = \App\Models\Attendance::where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->whereNull('semester')
+                ->whereNull('module_id')
+                ->select('date')
+                ->distinct()
+                ->get();
+            $totalSessions = $attendanceSessions->count();
+
+            // Get students registered for the certificate course
+            $registrations = \App\Models\CourseRegistration::where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->where('status', 'Registered')
+                ->with('student')
+                ->get();
+
+            $excelData = [];
+            foreach ($registrations as $reg) {
+                $attendedSessions = \App\Models\Attendance::where('course_id', $courseId)
+                    ->where('intake_id', $intakeId)
+                    ->where('location', $location)
+                    ->whereNull('semester')
+                    ->whereNull('module_id')
+                    ->where('student_id', $reg->student_id)
+                    ->where('status', true)
+                    ->count();
+                
+                $excelData[] = [
+                    $reg->student->registration_id ?? $reg->student->student_id,
+                    $reg->student->name_with_initials,
+                    $totalSessions,
+                    $attendedSessions,
+                    $totalSessions > 0 ? round(($attendedSessions / $totalSessions) * 100, 2) . '%' : '0%'
+                ];
+            }
+
+            // Generate filename
+            $filename = 'attendance_report_' . date('Y-m-d_H-i-s') . '.xlsx';
+            
+            // Return Excel file as download
+            return Excel::download(
+                new AttendanceExport($excelData, $location, $course?->course_name ?? 'N/A', $intake?->batch ?? 'N/A', 'N/A', 'N/A'),
+                $filename
+            );
+        }
+
+        // For degree/diploma courses: Original logic
         // Get the semester to determine if it's core or elective
         $semester = \App\Models\Semester::find($semesterId);
         if (!$semester) {
@@ -704,9 +823,7 @@ class AttendanceController extends Controller
             ];
         }
 
-        // Get course, intake, and module details for filename
-        $course = Course::find($courseId);
-        $intake = Intake::find($intakeId);
+        // Get module details
         $module = Module::find($moduleId);
 
         // Generate filename
