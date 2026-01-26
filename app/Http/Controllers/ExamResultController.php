@@ -437,7 +437,7 @@ class ExamResultController extends Controller
             $students = \App\Models\CourseRegistration::where('course_id', $courseId)
                 ->where('intake_id', $intakeId)
                 ->where('location', $location)
-                ->where('status', 'active')
+                ->where('status', 'Registered')
                 ->with('student')
                 ->get()
                 ->map(function($reg) use ($request, $existingResults, $courseId, $intakeId, $location) {
