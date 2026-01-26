@@ -1,54 +1,56 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Payment Plan')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Payment Plan'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
-    @if(session('success'))
+    <?php if(session('success')): ?>
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
+            <?php echo e(session('success')); ?>
+
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-    @endif
+    <?php endif; ?>
     
-    @if(session('error'))
+    <?php if(session('error')): ?>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
+            <?php echo e(session('error')); ?>
+
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-    @endif
+    <?php endif; ?>
     
-    @if($errors->any())
+    <?php if($errors->any()): ?>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <ul class="mb-0">
-                @foreach($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
+                <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <li><?php echo e($error); ?></li>
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </ul>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-    @endif
+    <?php endif; ?>
     
     <div class="card">
         <div class="card-body">
             <h2 class="text-center mb-4">Intake Payment Plan</h2>
             <hr>
-            <form id="paymentPlanForm" method="POST" action="{{ route('payment.plan.store') }}">
-                @csrf
+            <form id="paymentPlanForm" method="POST" action="<?php echo e(route('payment.plan.store')); ?>">
+                <?php echo csrf_field(); ?>
                 <div class="mb-3 row mx-3">
                     <label for="location" class="col-sm-2 col-form-label">Location <span class="text-danger">*</span></label>
                     <div class="col-sm-10">
     <select class="form-select" id="location" name="location" required>
-        <option disabled {{ !isset($selectedLocation) ? 'selected' : '' }} value="">
+        <option disabled <?php echo e(!isset($selectedLocation) ? 'selected' : ''); ?> value="">
             Choose a location...
         </option>
-        <option value="Welisara" {{ (isset($selectedLocation) && $selectedLocation === 'Welisara') ? 'selected' : '' }}>
+        <option value="Welisara" <?php echo e((isset($selectedLocation) && $selectedLocation === 'Welisara') ? 'selected' : ''); ?>>
             Nebula Institute of Technology - Welisara
         </option>
-        <option value="Moratuwa" {{ (isset($selectedLocation) && $selectedLocation === 'Moratuwa') ? 'selected' : '' }}>
+        <option value="Moratuwa" <?php echo e((isset($selectedLocation) && $selectedLocation === 'Moratuwa') ? 'selected' : ''); ?>>
             Nebula Institute of Technology - Moratuwa
         </option>
-        <option value="Peradeniya" {{ (isset($selectedLocation) && $selectedLocation === 'Peradeniya') ? 'selected' : '' }}>
+        <option value="Peradeniya" <?php echo e((isset($selectedLocation) && $selectedLocation === 'Peradeniya') ? 'selected' : ''); ?>>
             Nebula Institute of Technology - Peradeniya
         </option>
     </select>
@@ -60,17 +62,18 @@
         Course <span class="text-danger">*</span>
     </label>
     <div class="col-sm-10">
-        <select class="form-select" id="course" name="course" required {{ empty($selectedLocation) ? 'disabled' : '' }}>
+        <select class="form-select" id="course" name="course" required <?php echo e(empty($selectedLocation) ? 'disabled' : ''); ?>>
             <option selected disabled value="">Select Course...</option>
-            @if(isset($courses) && $courses->count())
-                @foreach($courses as $course)
-                    <option value="{{ $course->course_id }}">
-                        {{ ucfirst($course->course_type) }} – {{ $course->course_name }}
+            <?php if(isset($courses) && $courses->count()): ?>
+                <?php $__currentLoopData = $courses; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $course): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <option value="<?php echo e($course->course_id); ?>">
+                        <?php echo e(ucfirst($course->course_type)); ?> – <?php echo e($course->course_name); ?>
+
                     </option>
-                @endforeach
-            @else
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+            <?php else: ?>
                 <option disabled>No courses available for this location</option>
-            @endif
+            <?php endif; ?>
         </select>
     </div>
 </div>
@@ -257,11 +260,11 @@
         </div>
     </div>
 </div>
-<script nonce="{{ $cspNonce }}">
+<script nonce="<?php echo e($cspNonce); ?>">
 // Event delegation
 document.addEventListener('change', function(e) {
     if (e.target.id === 'location') {
-        window.location = '{{ route('payment.plan') }}?location=' + e.target.value;
+        window.location = '<?php echo e(route('payment.plan')); ?>?location=' + e.target.value;
     } else if (e.target.name === 'applyDiscount') {
         toggleDiscountField();
     } else if (e.target.name === 'franchisePayment') {
@@ -553,12 +556,12 @@ $('#course, #location').on('change', function() {
     if($('#course').val() && $('#location').val()) {
         // AJAX to get intakes for course/location
         $.ajax({
-            url: '{{ route("intakes.byCourse") }}',
+            url: '<?php echo e(route("intakes.byCourse")); ?>',
             method: 'POST',
             data: {
                 course_id: $('#course').val(),
                 location: $('#location').val(),
-                _token: '{{ csrf_token() }}'
+                _token: '<?php echo e(csrf_token()); ?>'
             },
             success: function(response) {
                 if(response.success && response.data && response.data.length > 0) {
@@ -727,4 +730,5 @@ window.addEventListener('DOMContentLoaded', function () {
 
 
 </script>
-@endsection 
+<?php $__env->stopSection(); ?> 
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/payments/payment_plan.blade.php ENDPATH**/ ?>
