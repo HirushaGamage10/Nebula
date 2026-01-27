@@ -322,6 +322,11 @@ class PaymentController extends Controller
      */
     public function getPaymentPlanInstallments(Request $request)
     {
+        \Log::info('getPaymentPlanInstallments called', [
+            'student_nic' => $request->student_nic,
+            'course_id' => $request->course_id
+        ]);
+        
         try {
             $request->validate([
                 'student_nic' => 'required|string',
@@ -441,42 +446,42 @@ class PaymentController extends Controller
                     ->where('intake_id', $registration->intake_id)
                     ->first();
 
-                if (!$paymentPlan) {
-                    return response()->json(['success' => false, 'message' => 'No payment plan found for this course and intake. Please create a payment plan in the Payment Plan page first.'], Response::HTTP_NOT_FOUND);
-                }
-
-                // Use the original logic for template-based installments
+                // Initialize empty installments array
                 $installments = [];
                 $localFeeTotal = 0;
-                
-                $installmentsData = $paymentPlan->installments;
-                if (is_string($installmentsData)) {
-                    $installmentsData = json_decode($installmentsData, true);
-                }
-                
-                if ($installmentsData && is_array($installmentsData)) {
-                    foreach ($installmentsData as $index => $installment) {
-                        $localAmount = $installment['local_amount'] ?? 0;
-                        
-                        if ($localAmount > 0) {
-                            $localFeeTotal += $localAmount;
+
+                if ($paymentPlan) {
+                    // Use the original logic for template-based installments
+                    $installmentsData = $paymentPlan->installments;
+                    if (is_string($installmentsData)) {
+                        $installmentsData = json_decode($installmentsData, true);
+                    }
+                    
+                    if ($installmentsData && is_array($installmentsData)) {
+                        foreach ($installmentsData as $index => $installment) {
+                            $localAmount = $installment['local_amount'] ?? 0;
                             
-                            $installments[] = [
-                                'installment_number' => $installment['installment_number'] ?? ($index + 1),
-                                'due_date' => $installment['due_date'] ?? null,
-                                'amount' => $localAmount,
-                                'discount' => '-',
-                                'registration_fee_discount_applied' => 0,
-                                'registration_fee_discount_note' => '',
-                                'slt_loan' => '',
-                                'final_amount' => $localAmount,
-                                'status' => 'pending',
-                                'is_last_installment' => false,
-                                'local_fee_total' => $localFeeTotal
-                            ];
+                            if ($localAmount > 0) {
+                                $localFeeTotal += $localAmount;
+                                
+                                $installments[] = [
+                                    'installment_number' => $installment['installment_number'] ?? ($index + 1),
+                                    'due_date' => $installment['due_date'] ?? null,
+                                    'amount' => $localAmount,
+                                    'discount' => '-',
+                                    'registration_fee_discount_applied' => 0,
+                                    'registration_fee_discount_note' => '',
+                                    'slt_loan' => '',
+                                    'final_amount' => $localAmount,
+                                    'status' => 'pending',
+                                    'is_last_installment' => false,
+                                    'local_fee_total' => $localFeeTotal
+                                ];
+                            }
                         }
                     }
                 }
+                // If no payment plan exists, installments will be empty array (full payment option)
             }
 
             \Log::info('Final installments array:', [
@@ -613,7 +618,8 @@ class PaymentController extends Controller
 public function createPaymentPlan(Request $request)
 {
     try {
-        $request->validate([
+        // Base validation rules
+        $rules = [
             'student_id'        => 'required|exists:students,student_id',
             'course_id'         => 'required|exists:courses,course_id',
             'payment_plan_type' => 'required|in:installments,full',
@@ -630,13 +636,25 @@ public function createPaymentPlan(Request $request)
 
             'slt_loan_applied'  => 'nullable|in:yes,no',
             'slt_loan_amount'   => 'nullable|numeric|min:0',
+        ];
 
-            'installments'                          => 'required|array|min:1',
-            'installments.*.installment_number'     => 'required|integer|min:1',
-            'installments.*.due_date'               => 'required|date',
-            'installments.*.amount'                 => 'required|numeric|min:0',
-            'installments.*.status'                 => 'required|in:pending,paid,overdue',
-        ]);
+        // Installments are only required for 'installments' payment plan type
+        if ($request->payment_plan_type === 'installments') {
+            $rules['installments'] = 'required|array|min:1';
+            $rules['installments.*.installment_number'] = 'required|integer|min:1';
+            $rules['installments.*.due_date'] = 'required|date';
+            $rules['installments.*.amount'] = 'required|numeric|min:0';
+            $rules['installments.*.status'] = 'required|in:pending,paid,overdue';
+        } else {
+            // For full payment, installments are optional
+            $rules['installments'] = 'nullable|array';
+            $rules['installments.*.installment_number'] = 'nullable|integer|min:1';
+            $rules['installments.*.due_date'] = 'nullable|date';
+            $rules['installments.*.amount'] = 'nullable|numeric|min:0';
+            $rules['installments.*.status'] = 'nullable|in:pending,paid,overdue';
+        }
+
+        $request->validate($rules);
 
         // fetch course registration (eligibility checks)
         $registration = \App\Models\CourseRegistration::where('student_id', $request->student_id)
@@ -669,8 +687,19 @@ public function createPaymentPlan(Request $request)
             $localFee        = (float) $paymentPlan->local_fee;
             $totalFeeForDiscount = $localFee + $registrationFee; // ✅ correct base
 
-            // collect rows
-            $rows = collect($request->installments)->sortBy('installment_number')->values()->all();
+            // collect rows - for full payment, create a single installment
+            $rows = collect($request->installments ?? [])->sortBy('installment_number')->values()->all();
+            
+            // If full payment with no installments, create a single installment for the total amount
+            if ($request->payment_plan_type === 'full' && empty($rows)) {
+                $rows = [[
+                    'installment_number' => 1,
+                    'due_date' => now()->addDays(7)->format('Y-m-d'), // Default: 7 days from now
+                    'amount' => $totalFeeForDiscount,
+                    'status' => 'pending'
+                ]];
+            }
+            
             $lastIdx = count($rows) - 1;
 
             // ===== 2) Normal discounts =====

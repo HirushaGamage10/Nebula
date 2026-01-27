@@ -748,7 +748,13 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::post('/payment/get-student-courses', [PaymentController::class, 'getStudentCourses'])->name('payment.get.student.courses');
         Route::post('/payment/create-payment-plan', [PaymentController::class, 'createPaymentPlan'])->name('payment.create.payment.plan');
         Route::get('/payment/get-discounts', [PaymentController::class, 'getDiscounts'])->name('payment.get.discounts');
-        Route::post('/payment/get-installments', [PaymentController::class, 'getPaymentPlanInstallments'])->name('payment.get.installments');
+        
+        // TEST ROUTE - Adding logging
+        Route::post('/payment/get-installments', function(Request $request) {
+            \Log::info('TEST ROUTE HIT - /payment/get-installments');
+            return app(PaymentController::class)->getPaymentPlanInstallments($request);
+        })->name('payment.get.installments');
+        
         Route::post('/payment/get-payment-details', [PaymentController::class, 'getPaymentDetails'])->name('payment.get.payment.details');
         Route::post('/payment/save-plans', [PaymentController::class, 'savePaymentPlans'])->name('payment.save.plans');
         Route::delete('/payment/delete-plan/{id}', [PaymentController::class, 'deletePaymentPlan'])->name('payment.delete.plan');
