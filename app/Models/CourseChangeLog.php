@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
+use App\Traits\UserTracking;
 class CourseChangeLog extends Model
 {
+    use UserTracking;
+
     protected $table = 'course_change_logs';
     
     protected $primaryKey = 'id';

@@ -330,7 +330,7 @@
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
-            <h2 class="text-center mb-4">Payment Management</h2>
+            <h2 class="text-center mb-4">Student Payment Plan</h2>
             <hr>
 
             <!-- Spinner and Toast containers -->
@@ -2684,13 +2684,17 @@ if (registrationFeeDiscount && installments.length > 0) {
       course_id: parseInt(window.currentStudentData.course_id, 10),
       payment_plan_type: planType,
       discounts: selectedDiscounts,
-      registration_fee_discount: registrationFeeDiscount,
       slt_loan_applied: sltLoanApplied,
       slt_loan_amount: sltLoanApplied === 'yes' ? sltLoanAmount : 0,
       total_amount: totalAmount,
       final_amount: finalTotal, // top-level summary after discount + loan
       installments: installments
     };
+
+    // Only include registration_fee_discount if it exists
+    if (registrationFeeDiscount) {
+      payload.registration_fee_discount = registrationFeeDiscount;
+    }
 
     console.log('Payload being sent:', payload);
 

@@ -4,9 +4,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-
+use App\Traits\UserTracking;
 class SemesterModule extends Model
 {
+    use UserTracking;
+
     protected $table = 'semester_module';
     public $timestamps = false;
 

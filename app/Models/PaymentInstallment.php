@@ -4,11 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\UserTracking;
 // app/Models/PaymentInstallment.php
 class PaymentInstallment extends Model
 {
-    use HasFactory;
-
+    use HasFactory, UserTracking;
     protected $table = 'payment_installments';
 
    protected $fillable = [

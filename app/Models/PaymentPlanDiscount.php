@@ -4,11 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\UserTracking;
 
 class PaymentPlanDiscount extends Model
 {
-    use HasFactory;
-
+    use HasFactory, UserTracking;
     protected $table = 'payment_plan_discounts';
 
     protected $fillable = [

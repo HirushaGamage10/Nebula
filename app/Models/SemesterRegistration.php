@@ -4,11 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\UserTracking;
 
 class SemesterRegistration extends Model
 {
-    use HasFactory;
-
+    use HasFactory, UserTracking;
     protected $fillable = [
         'student_id',
         'semester_id',

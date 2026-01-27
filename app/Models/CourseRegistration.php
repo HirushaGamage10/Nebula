@@ -4,11 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\UserTracking;
 
 class CourseRegistration extends Model
 {
-    use HasFactory;
-
+    use HasFactory, UserTracking;
     protected $table = 'course_registration';
     protected $primaryKey = 'id';
 

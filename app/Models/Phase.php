@@ -5,11 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\AsArrayObject;
+use App\Traits\UserTracking;
 
 class Phase extends Model
 {
-    use HasFactory;
-
+    use HasFactory, UserTracking;
     protected $fillable = [
         'phase_id',
         'phase_name',

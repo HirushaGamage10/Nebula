@@ -4,11 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\UserTracking;
 
 class Module extends Model
 {
-    use HasFactory;
-
+    use HasFactory, UserTracking;
     protected $table = 'modules';
     protected $primaryKey = 'module_id';
 

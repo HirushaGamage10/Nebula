@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\UserTracking;
 use App\Models\StudentHostelClearance;
 use App\Models\StudentPaymentClearance;
 use App\Models\StudentLibraryClearance;
@@ -15,10 +16,9 @@ use App\Models\CourseRegistration;
 use App\Models\Attendance;
 use App\Models\ExamResult;
 use App\Models\PaymentDetail;
-
 class Student extends Model
 {
-    use HasFactory;
+    use HasFactory, UserTracking;
 
     protected $primaryKey = 'student_id';
     protected $table = 'students';

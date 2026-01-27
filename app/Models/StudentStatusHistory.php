@@ -4,11 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\UserTracking;
 
 class StudentStatusHistory extends Model
 {
-    use HasFactory;
-
+    use HasFactory, UserTracking;
     // Default table name will be "student_status_histories" (correct)
     protected $fillable = [
         'student_id',
