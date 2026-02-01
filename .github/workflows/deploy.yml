@@ -1,0 +1,23 @@
+name: Nebula Production Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 124.43.163.148
+          username: cpo_admin
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /var/www/html/nebula
+            ./deploy.sh
