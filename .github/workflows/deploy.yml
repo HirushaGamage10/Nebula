@@ -17,6 +17,7 @@ jobs:
         with:
           host: 124.43.163.148
           username: cpo_admin
+          port: 2002
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd /var/www/html/nebula
