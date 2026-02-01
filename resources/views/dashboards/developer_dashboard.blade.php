@@ -146,7 +146,7 @@
 <div class="container-fluid">
 
     <div class="card shadow-sm p-4 mb-4 bg-white">
-        <h3 class="fw-bold m-0">Dashboard Developer</h3>
+        <h3 class="fw-bold m-0">Dashboard epaaaaaaaaaaaa</h3>
         <small class="text-muted">Access all role dashboards from a single interface</small>
     </div>
 
