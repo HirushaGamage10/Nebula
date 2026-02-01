@@ -18,7 +18,7 @@ jobs:
           host: 124.43.163.148
           username: cpo_admin
           port: 2002
-          key: ${{ secrets.SSH_KEY }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /var/www/html/nebula
-            ./deploy.sh
+            sudo ./deploy.sh
