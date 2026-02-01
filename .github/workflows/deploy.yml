@@ -21,4 +21,4 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /var/www/html/nebula
-            sudo ./deploy.sh
+            ./deploy.sh
