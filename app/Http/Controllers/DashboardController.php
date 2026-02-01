@@ -49,8 +49,16 @@ class DashboardController extends Controller
             return redirect()->route('program.admin.l2.dashboard');
         }
 
+        if ($userRole === 'Program Administrator (level 02) Trainee') {
+            return redirect()->route('program.admin.l2.trainee.dashboard');
+        }
+
         if ($userRole === 'Student Counselor') {
             return redirect()->route('student.counselor.dashboard');
+        }
+
+        if ($userRole === 'Student Counselor Trainee') {
+            return redirect()->route('student.counselor.trainee.dashboard');
         }
 
         if ($userRole === 'Project Tutor') {
@@ -87,7 +95,9 @@ class DashboardController extends Controller
             'DGM' => 'Welcome Deputy General Manager! You have access to special approval features.',
             'Program Administrator (level 01)' => 'Welcome Program Administrator (level 01)! You can manage users, modules, courses, attendance, and clearances.',
             'Program Administrator (level 02)' => 'Welcome Program Administrator (level 02)! You can manage intakes, attendance, timetables, semesters, and exam results.',
+            'Program Administrator (level 02) Trainee' => 'Welcome Program Administrator (level 02) Trainee! You can manage intakes, attendance, timetables, semesters, and exam results.',
             'Student Counselor' => 'Welcome Student Counselor! Monitor student intake activity and marketing channel effectiveness.',
+            'Student Counselor Trainee' => 'Welcome Student Counselor Trainee! Monitor student intake activity and marketing channel effectiveness.',
             'Librarian' => 'Welcome Librarian! You can manage library clearance processes.',
             'Hostel Manager' => 'Welcome Hostel Manager! You can manage hostel clearance processes.',
             'Bursar' => 'Welcome Bursar! You can manage financial and student records.',

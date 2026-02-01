@@ -49,9 +49,11 @@ use App\Http\Controllers\{
     CourseChangeController,
     MarketingManagerDashboardController,
     StudentCounselorDashboardController,
+    StudentCounselorTraineeDashboardController,
     HostelManagerDashboardController,
     AdminL1DashboardController,
     ProgramAdminL2DashboardController,
+    ProgramAdminL2TraineeDashboardController,
     ProjectTutorDashboardController,
     BursarDashboardController,
     LibrarianDashboardController,
@@ -858,7 +860,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     });
 
     // Student Counselor Dashboard
-    Route::middleware(['role:Student Counselor,Developer'])->group(function () {
+    Route::middleware(['role:Student Counselor,Student Counselor Trainee,Developer'])->group(function () {
         Route::get('/student-counselor-dashboard', [StudentCounselorDashboardController::class, 'showDashboard'])->name('student.counselor.dashboard');
         Route::get('/api/student-counselor/overview', [StudentCounselorDashboardController::class, 'getOverviewMetrics'])->name('api.student.counselor.overview');
         Route::get('/api/student-counselor/recent-registrations', [StudentCounselorDashboardController::class, 'getRecentRegistrations'])->name('api.student.counselor.recent.registrations');
@@ -917,7 +919,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     });
 
     // Admin L2 Dashboard
-    Route::middleware(['role:Program Administrator (level 02),Developer'])->group(function () {
+    Route::middleware(['role:Program Administrator (level 02),Program Administrator (level 02) Trainee,Developer'])->group(function () {
         Route::get('/program-admin-l2-dashboard', [ProgramAdminL2DashboardController::class, 'showDashboard'])->name('program.admin.l2.dashboard');
         Route::get('/api/program-admin-l2/overview', [ProgramAdminL2DashboardController::class, 'getOverviewMetrics'])->name('api.program.admin.l2.overview');
         Route::get('/api/program-admin-l2/pending-approvals', [ProgramAdminL2DashboardController::class, 'getPendingApprovals'])->name('api.program.admin.l2.pending.approvals');
@@ -928,6 +930,27 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/api/program-admin-l2/payment-overview', [ProgramAdminL2DashboardController::class, 'getPaymentOverview'])->name('api.program.admin.l2.payment.overview');
         Route::post('/api/program-admin-l2/approve-registration/{id}', [ProgramAdminL2DashboardController::class, 'approveRegistration'])->name('api.program.admin.l2.approve.registration');
         Route::post('/api/program-admin-l2/reject-registration/{id}', [ProgramAdminL2DashboardController::class, 'rejectRegistration'])->name('api.program.admin.l2.reject.registration');
+    });
+
+    // Admin L2 Trainee Dashboard
+    Route::middleware(['role:Program Administrator (level 02) Trainee,Developer'])->group(function () {
+        Route::get('/program-admin-l2-trainee-dashboard', [ProgramAdminL2TraineeDashboardController::class, 'showDashboard'])->name('program.admin.l2.trainee.dashboard');
+        Route::get('/api/program-admin-l2-trainee/overview', [ProgramAdminL2TraineeDashboardController::class, 'getOverviewMetrics'])->name('api.program.admin.l2.trainee.overview');
+        Route::get('/api/program-admin-l2-trainee/active-semesters', [ProgramAdminL2TraineeDashboardController::class, 'getActiveSemesters'])->name('api.program.admin.l2.trainee.active.semesters');
+        Route::get('/api/program-admin-l2-trainee/attendance-overview', [ProgramAdminL2TraineeDashboardController::class, 'getAttendanceOverview'])->name('api.program.admin.l2.trainee.attendance.overview');
+        Route::get('/api/program-admin-l2-trainee/academic-performance', [ProgramAdminL2TraineeDashboardController::class, 'getAcademicPerformance'])->name('api.program.admin.l2.trainee.academic.performance');
+        Route::get('/api/program-admin-l2-trainee/recent-activities', [ProgramAdminL2TraineeDashboardController::class, 'getRecentActivities'])->name('api.program.admin.l2.trainee.recent.activities');
+    });
+
+    // Student Counselor Trainee Dashboard
+    Route::middleware(['role:Student Counselor Trainee,Developer'])->group(function () {
+        Route::get('/student-counselor-trainee-dashboard', [StudentCounselorTraineeDashboardController::class, 'showDashboard'])->name('student.counselor.trainee.dashboard');
+        Route::get('/api/student-counselor-trainee/overview', [StudentCounselorTraineeDashboardController::class, 'getOverviewMetrics'])->name('api.student.counselor.trainee.overview');
+        Route::get('/api/student-counselor-trainee/recent-registrations', [StudentCounselorTraineeDashboardController::class, 'getRecentRegistrations'])->name('api.student.counselor.trainee.recent.registrations');
+        Route::get('/api/student-counselor-trainee/marketing-survey', [StudentCounselorTraineeDashboardController::class, 'getMarketingSurveyData'])->name('api.student.counselor.trainee.marketing.survey');
+        Route::get('/api/student-counselor-trainee/daily-trend', [StudentCounselorTraineeDashboardController::class, 'getDailyRegistrationTrend'])->name('api.student.counselor.trainee.daily.trend');
+        Route::get('/api/student-counselor-trainee/location-data', [StudentCounselorTraineeDashboardController::class, 'getRegistrationsByLocation'])->name('api.student.counselor.trainee.location.data');
+        Route::get('/api/student-counselor-trainee/course-data', [StudentCounselorTraineeDashboardController::class, 'getRegistrationsByCourse'])->name('api.student.counselor.trainee.course.data');
     });
 
     // Project Tutor Dashboard
