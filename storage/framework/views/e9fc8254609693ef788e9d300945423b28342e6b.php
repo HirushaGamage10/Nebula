@@ -1,10 +1,10 @@
-@extends('inc.app')
 
-@section('title', 'Student Payment Summary - ' . $studentId)
 
-@section('content')
+<?php $__env->startSection('title', 'Student Payment Summary - ' . $studentId); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid mt-4 mb-5">
-    {{-- Header Section --}}
+    
     <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
         <div class="card-body text-white py-4">
             <div class="d-flex justify-content-between align-items-center">
@@ -13,14 +13,15 @@
                         <i class="bi bi-person-circle"></i> Student Payment Dashboard
                     </h3>
                     <p class="mb-0 opacity-75">
-                        Student ID: <strong class="fs-5">{{ $studentId }}</strong>
-                        @if($student)
-                            - {{ $student->first_name }} {{ $student->last_name }}
-                        @endif
+                        Student ID: <strong class="fs-5"><?php echo e($studentId); ?></strong>
+                        <?php if($student): ?>
+                            - <?php echo e($student->first_name); ?> <?php echo e($student->last_name); ?>
+
+                        <?php endif; ?>
                     </p>
                 </div>
                 <div class="text-end">
-                    <a href="{{ route('payment.summary') }}" class="btn btn-light">
+                    <a href="<?php echo e(route('payment.summary')); ?>" class="btn btn-light">
                         <i class="bi bi-arrow-left"></i> Back to Dashboard
                     </a>
                     <button class="btn btn-outline-light ms-2 btn-print-report">
@@ -31,7 +32,7 @@
         </div>
     </div>
 
-    {{-- Filter Bar --}}
+    
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
             <div class="row g-3 align-items-end">
@@ -55,7 +56,7 @@
         </div>
     </div>
 
-    {{-- KPI Cards --}}
+    
     <div class="row g-3 mb-4">
         <div class="col-lg-3 col-md-6">
             <div class="card border-0 shadow-sm h-100">
@@ -64,7 +65,8 @@
                         <div>
                             <p class="text-muted mb-1 small">Total Collected</p>
                             <h4 class="fw-bold text-success mb-0">
-                                LKR {{ number_format($totalCollected, 2) }}
+                                LKR <?php echo e(number_format($totalCollected, 2)); ?>
+
                             </h4>
                         </div>
                         <div class="bg-success bg-opacity-10 p-3 rounded">
@@ -82,7 +84,8 @@
                         <div>
                             <p class="text-muted mb-1 small">Pending Amount</p>
                             <h4 class="fw-bold text-warning mb-0">
-                                LKR {{ number_format($totalPending, 2) }}
+                                LKR <?php echo e(number_format($totalPending, 2)); ?>
+
                             </h4>
                         </div>
                         <div class="bg-warning bg-opacity-10 p-3 rounded">
@@ -100,7 +103,8 @@
                         <div>
                             <p class="text-muted mb-1 small">Late Fees</p>
                             <h4 class="fw-bold text-danger mb-0">
-                                LKR {{ number_format($totalLateFee, 2) }}
+                                LKR <?php echo e(number_format($totalLateFee, 2)); ?>
+
                             </h4>
                         </div>
                         <div class="bg-danger bg-opacity-10 p-3 rounded">
@@ -118,7 +122,8 @@
                         <div>
                             <p class="text-muted mb-1 small">Discounts Received</p>
                             <h4 class="fw-bold text-info mb-0">
-                                LKR {{ number_format($totalDiscount, 2) }}
+                                LKR <?php echo e(number_format($totalDiscount, 2)); ?>
+
                             </h4>
                         </div>
                         <div class="bg-info bg-opacity-10 p-3 rounded">
@@ -130,14 +135,14 @@
         </div>
     </div>
 
-    {{-- Additional Metrics --}}
+    
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="card border-0 shadow-sm text-center">
                 <div class="card-body">
                     <i class="bi bi-check-circle text-primary fs-3 mb-2"></i>
                     <h6 class="text-muted mb-1">Approved Late Fees</h6>
-                    <h5 class="fw-bold">LKR {{ number_format($approvedLateFees ?? 0, 2) }}</h5>
+                    <h5 class="fw-bold">LKR <?php echo e(number_format($approvedLateFees ?? 0, 2)); ?></h5>
                 </div>
             </div>
         </div>
@@ -146,7 +151,7 @@
                 <div class="card-body">
                     <i class="bi bi-currency-exchange text-success fs-3 mb-2"></i>
                     <h6 class="text-muted mb-1">Foreign Currency</h6>
-                    <h5 class="fw-bold">{{ number_format($foreignCurrencyTotal ?? 0, 2) }}</h5>
+                    <h5 class="fw-bold"><?php echo e(number_format($foreignCurrencyTotal ?? 0, 2)); ?></h5>
                 </div>
             </div>
         </div>
@@ -155,7 +160,7 @@
                 <div class="card-body">
                     <i class="bi bi-percent text-info fs-3 mb-2"></i>
                     <h6 class="text-muted mb-1">SSCL Tax</h6>
-                    <h5 class="fw-bold">LKR {{ number_format($ssclTaxTotal ?? 0, 2) }}</h5>
+                    <h5 class="fw-bold">LKR <?php echo e(number_format($ssclTaxTotal ?? 0, 2)); ?></h5>
                 </div>
             </div>
         </div>
@@ -164,13 +169,13 @@
                 <div class="card-body">
                     <i class="bi bi-bank text-warning fs-3 mb-2"></i>
                     <h6 class="text-muted mb-1">Bank Charges</h6>
-                    <h5 class="fw-bold">LKR {{ number_format($bankChargesTotal ?? 0, 2) }}</h5>
+                    <h5 class="fw-bold">LKR <?php echo e(number_format($bankChargesTotal ?? 0, 2)); ?></h5>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Charts Section --}}
+    
     <div class="row g-4 mb-4">
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm">
@@ -191,12 +196,12 @@
                 <div class="card-body">
                     <canvas id="methodChart" height="200"></canvas>
                     <div class="mt-3">
-                        @foreach($paymentByMethod as $method)
+                        <?php $__currentLoopData = $paymentByMethod; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $method): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted">{{ ucfirst($method->payment_method ?? 'Unknown') }}</span>
-                                <span class="fw-bold">{{ $method->count }} txns</span>
+                                <span class="text-muted"><?php echo e(ucfirst($method->payment_method ?? 'Unknown')); ?></span>
+                                <span class="fw-bold"><?php echo e($method->count); ?> txns</span>
                             </div>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </div>
                 </div>
             </div>
@@ -223,26 +228,27 @@
                 <div class="card-body">
                     <canvas id="statusChart" height="200"></canvas>
                     <div class="mt-3">
-                        @foreach($paymentByStatus as $status)
+                        <?php $__currentLoopData = $paymentByStatus; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $status): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <div>
-                                    <span class="badge bg-{{ ($status->status ?? 'unknown') == 'paid' ? 'success' : (($status->status ?? 'unknown') == 'pending' ? 'warning' : 'danger') }}">
-                                        {{ ucfirst($status->status ?? 'unknown') }}
+                                    <span class="badge bg-<?php echo e(($status->status ?? 'unknown') == 'paid' ? 'success' : (($status->status ?? 'unknown') == 'pending' ? 'warning' : 'danger')); ?>">
+                                        <?php echo e(ucfirst($status->status ?? 'unknown')); ?>
+
                                     </span>
                                 </div>
                                 <div class="text-end">
-                                    <div class="fw-bold">LKR {{ number_format($status->total, 2) }}</div>
-                                    <small class="text-muted">{{ $status->count }} payments</small>
+                                    <div class="fw-bold">LKR <?php echo e(number_format($status->total, 2)); ?></div>
+                                    <small class="text-muted"><?php echo e($status->count); ?> payments</small>
                                 </div>
                             </div>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Payment Method Comparison --}}
+    
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white border-0 py-3">
             <h6 class="fw-bold mb-0">💰 Payment Method Analysis</h6>
@@ -259,28 +265,29 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($methodComparison ?? [] as $method)
+                        <?php $__empty_1 = true; $__currentLoopData = $methodComparison ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $method): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                             <tr>
                                 <td>
-                                    <i class="bi bi-{{ $method->payment_method == 'cash' ? 'cash' : ($method->payment_method == 'card' ? 'credit-card' : 'bank') }} me-2"></i>
-                                    {{ ucfirst($method->payment_method ?? 'Unknown') }}
+                                    <i class="bi bi-<?php echo e($method->payment_method == 'cash' ? 'cash' : ($method->payment_method == 'card' ? 'credit-card' : 'bank')); ?> me-2"></i>
+                                    <?php echo e(ucfirst($method->payment_method ?? 'Unknown')); ?>
+
                                 </td>
-                                <td class="text-end">LKR {{ number_format($method->avg_amount, 2) }}</td>
-                                <td class="text-end">LKR {{ number_format($method->max_amount, 2) }}</td>
-                                <td class="text-end">LKR {{ number_format($method->min_amount, 2) }}</td>
+                                <td class="text-end">LKR <?php echo e(number_format($method->avg_amount, 2)); ?></td>
+                                <td class="text-end">LKR <?php echo e(number_format($method->max_amount, 2)); ?></td>
+                                <td class="text-end">LKR <?php echo e(number_format($method->min_amount, 2)); ?></td>
                             </tr>
-                        @empty
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                             <tr>
                                 <td colspan="4" class="text-center text-muted">No data available</td>
                             </tr>
-                        @endforelse
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    {{-- Detailed Payment History --}}
+    
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-white border-0 py-3">
             <div class="d-flex justify-content-between align-items-center">
@@ -307,72 +314,80 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($paymentRecords as $i => $payment)
+                        <?php $__empty_1 = true; $__currentLoopData = $paymentRecords; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $payment): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                             <tr>
-                                <td>{{ $i + 1 }}</td>
+                                <td><?php echo e($i + 1); ?></td>
                                 <td>
                                     <small class="font-monospace text-primary">
-                                        {{ $payment->transaction_id }}
+                                        <?php echo e($payment->transaction_id); ?>
+
                                     </small>
                                 </td>
                                 <td>
-                                    @if(is_null($payment->installment_type) && !is_null($payment->misc_category))
+                                    <?php if(is_null($payment->installment_type) && !is_null($payment->misc_category)): ?>
                                         <span class="badge bg-secondary">
-                                            Misc: {{ ucfirst($payment->misc_category) }}
+                                            Misc: <?php echo e(ucfirst($payment->misc_category)); ?>
+
                                         </span>
-                                    @else
+                                    <?php else: ?>
                                         <span class="badge bg-primary">
-                                            {{ ucfirst(str_replace('_', ' ', $payment->installment_type ?? 'Unknown')) }}
+                                            <?php echo e(ucfirst(str_replace('_', ' ', $payment->installment_type ?? 'Unknown'))); ?>
+
                                         </span>
-                                    @endif
+                                    <?php endif; ?>
                                 </td>
                                 <td>
-                                    <i class="bi bi-{{ $payment->payment_method == 'cash' ? 'cash' : ($payment->payment_method == 'card' ? 'credit-card' : 'bank') }}"></i>
-                                    {{ ucfirst($payment->payment_method ?? '-') }}
+                                    <i class="bi bi-<?php echo e($payment->payment_method == 'cash' ? 'cash' : ($payment->payment_method == 'card' ? 'credit-card' : 'bank')); ?>"></i>
+                                    <?php echo e(ucfirst($payment->payment_method ?? '-')); ?>
+
                                 </td>
                                 <td class="text-end fw-bold">
-                                    LKR {{ number_format($payment->total_fee, 2) }}
+                                    LKR <?php echo e(number_format($payment->total_fee, 2)); ?>
+
                                 </td>
                                 <td class="text-end text-danger">
-                                    @if($payment->late_fee > 0)
-                                        LKR {{ number_format($payment->late_fee, 2) }}
-                                    @else
+                                    <?php if($payment->late_fee > 0): ?>
+                                        LKR <?php echo e(number_format($payment->late_fee, 2)); ?>
+
+                                    <?php else: ?>
                                         -
-                                    @endif
+                                    <?php endif; ?>
                                 </td>
                                 <td class="text-end text-warning">
-                                    @if($payment->remaining_amount > 0)
-                                        LKR {{ number_format($payment->remaining_amount, 2) }}
-                                    @else
+                                    <?php if($payment->remaining_amount > 0): ?>
+                                        LKR <?php echo e(number_format($payment->remaining_amount, 2)); ?>
+
+                                    <?php else: ?>
                                         -
-                                    @endif
+                                    <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="badge bg-{{ ($payment->status ?? 'unknown') == 'paid' ? 'success' : (($payment->status ?? 'unknown') == 'pending' ? 'warning' : 'danger') }}">
-                                        {{ ucfirst($payment->status ?? 'unknown') }}
+                                    <span class="badge bg-<?php echo e(($payment->status ?? 'unknown') == 'paid' ? 'success' : (($payment->status ?? 'unknown') == 'pending' ? 'warning' : 'danger')); ?>">
+                                        <?php echo e(ucfirst($payment->status ?? 'unknown')); ?>
+
                                     </span>
                                 </td>
                                 <td>
-                                    <small>{{ \Carbon\Carbon::parse($payment->created_at)->format('M d, Y') }}</small>
+                                    <small><?php echo e(\Carbon\Carbon::parse($payment->created_at)->format('M d, Y')); ?></small>
                                     <br>
-                                    <small class="text-muted">{{ \Carbon\Carbon::parse($payment->created_at)->format('h:i A') }}</small>
+                                    <small class="text-muted"><?php echo e(\Carbon\Carbon::parse($payment->created_at)->format('h:i A')); ?></small>
                                 </td>
                                 <td>
                                     <button class="btn btn-sm btn-outline-info btn-view-payment-details" 
-                                            data-payment-id="{{ $payment->id }}"
+                                            data-payment-id="<?php echo e($payment->id); ?>"
                                             data-bs-toggle="tooltip" title="View Details">
                                         <i class="bi bi-eye"></i>
                                     </button>
                                 </td>
                             </tr>
-                        @empty
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                             <tr>
                                 <td colspan="10" class="text-center text-muted py-5">
                                     <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                     No payment records found
                                 </td>
                             </tr>
-                        @endforelse
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -381,7 +396,7 @@
 
 </div>
 
-{{-- Payment Details Modal --}}
+
 <div class="modal fade" id="paymentDetailsModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -400,15 +415,15 @@
     </div>
 </div>
 
-<script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script nonce="<?php echo e($cspNonce); ?>" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script nonce="<?php echo e($cspNonce); ?>" src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<script nonce="{{ $cspNonce }}">
+<script nonce="<?php echo e($cspNonce); ?>">
 document.addEventListener("DOMContentLoaded", () => {
-    const paymentByMethod = @json($paymentByMethod);
-    const paymentByType = @json($paymentByType);
-    const paymentByStatus = @json($paymentByStatus);
-    const monthlyIncome = @json($monthlyIncome);
+    const paymentByMethod = <?php echo json_encode($paymentByMethod, 15, 512) ?>;
+    const paymentByType = <?php echo json_encode($paymentByType, 15, 512) ?>;
+    const paymentByStatus = <?php echo json_encode($paymentByStatus, 15, 512) ?>;
+    const monthlyIncome = <?php echo json_encode($monthlyIncome, 15, 512) ?>;
 
     // Chart.js Configuration
     Chart.defaults.font.family = "'Inter', sans-serif";
@@ -622,7 +637,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // Filter Data
 function filterData() {
     const range = document.getElementById('rangeFilter').value;
-    window.location.href = `{{ route('payment.summary.student', $studentId) }}?range=${range}`;
+    window.location.href = `<?php echo e(route('payment.summary.student', $studentId)); ?>?range=${range}`;
 }
 
 // Search Table
@@ -647,7 +662,7 @@ function viewPaymentDetails(paymentId) {
             <div class="row">
                 <div class="col-md-6">
                     <p><strong>Payment ID:</strong> ${paymentId}</p>
-                    <p><strong>Student ID:</strong> {{ $studentId }}</p>
+                    <p><strong>Student ID:</strong> <?php echo e($studentId); ?></p>
                 </div>
                 <div class="col-md-6">
                     <p><strong>Status:</strong> <span class="badge bg-success">Paid</span></p>
@@ -668,11 +683,11 @@ function printReport() {
 // Export Student Data
 function exportStudentData() {
     const range = document.getElementById('rangeFilter').value;
-    window.location.href = `{{ route('payment.export') }}?format=csv&range=${range}&student_id={{ $studentId }}`;
+    window.location.href = `<?php echo e(route('payment.export')); ?>?format=csv&range=${range}&student_id=<?php echo e($studentId); ?>`;
 }
 </script>
 
-<style nonce="{{ $cspNonce }}">
+<style nonce="<?php echo e($cspNonce); ?>">
 @media print {
     .btn, .card-header, .filter-section {
         display: none !important;
@@ -703,4 +718,5 @@ function exportStudentData() {
 }
 </style>
 
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/payments/student_summary.blade.php ENDPATH**/ ?>

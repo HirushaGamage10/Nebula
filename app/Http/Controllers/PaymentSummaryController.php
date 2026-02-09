@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\PaymentDetail;
 use App\Models\Student;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
 class PaymentSummaryController extends Controller
@@ -54,6 +55,7 @@ class PaymentSummaryController extends Controller
     public function studentSummary($studentId, Request $request)
     {
         $range = $request->input('range', 'all');
+        $hasStatus = $this->hasPaymentDetailColumn('status');
         $startDate = $range !== 'all' ? $this->getDateFromRange($range) : null;
 
         $query = PaymentDetail::query()->where('student_id', $studentId);
@@ -62,16 +64,20 @@ class PaymentSummaryController extends Controller
         }
 
         // Core Metrics
-        $totalCollected = (clone $query)->where('status', 'paid')->sum('total_fee');
-        $totalPending = (clone $query)->where('status', 'pending')->sum('remaining_amount');
-        $totalLateFee = (clone $query)->sum('late_fee');
-        $totalDiscount = (clone $query)->sum('registration_fee_discount_applied');
+        $totalCollected = $hasStatus
+            ? (clone $query)->where('status', 'paid')->sum('total_fee')
+            : (clone $query)->sum('total_fee');
+        $totalPending = $hasStatus
+            ? $this->sumIfColumnExists((clone $query)->where('status', 'pending'), 'remaining_amount')
+            : 0;
+        $totalLateFee = $this->sumIfColumnExists($query, 'late_fee');
+        $totalDiscount = $this->sumIfColumnExists($query, 'registration_fee_discount_applied');
         
         // New Advanced Metrics
-        $approvedLateFees = (clone $query)->sum('approved_late_fee');
-        $foreignCurrencyTotal = (clone $query)->sum('foreign_currency_amount');
-        $ssclTaxTotal = (clone $query)->sum('sscl_tax_amount');
-        $bankChargesTotal = (clone $query)->sum('bank_charges');
+        $approvedLateFees = $this->sumIfColumnExists($query, 'approved_late_fee');
+        $foreignCurrencyTotal = $this->sumIfColumnExists($query, 'foreign_currency_amount');
+        $ssclTaxTotal = $this->sumIfColumnExists($query, 'sscl_tax_amount');
+        $bankChargesTotal = $this->sumIfColumnExists($query, 'bank_charges');
         
         // Payment Breakdown
         $paymentByMethod = (clone $query)
@@ -91,24 +97,37 @@ class PaymentSummaryController extends Controller
             ->get();
 
         // Status Breakdown
-        $paymentByStatus = (clone $query)
-            ->select('status', 
-                DB::raw('SUM(total_fee) as total'),
-                DB::raw('COUNT(*) as count'))
-            ->groupBy('status')
-            ->get();
+        $paymentByStatus = $hasStatus
+            ? (clone $query)
+                ->select('status',
+                    DB::raw('SUM(total_fee) as total'),
+                    DB::raw('COUNT(*) as count'))
+                ->groupBy('status')
+                ->get()
+            : collect();
 
         // Monthly Trends
-        $monthlyIncome = (clone $query)
-            ->select(
-                DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
-                DB::raw('SUM(CASE WHEN status = "paid" THEN total_fee ELSE 0 END) as paid'),
-                DB::raw('SUM(CASE WHEN status = "pending" THEN total_fee ELSE 0 END) as pending'),
-                DB::raw('COUNT(*) as transaction_count')
-            )
-            ->groupBy('month')
-            ->orderBy('month')
-            ->get();
+        $monthlyIncome = $hasStatus
+            ? (clone $query)
+                ->select(
+                    DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
+                    DB::raw('SUM(CASE WHEN status = "paid" THEN total_fee ELSE 0 END) as paid'),
+                    DB::raw('SUM(CASE WHEN status = "pending" THEN total_fee ELSE 0 END) as pending'),
+                    DB::raw('COUNT(*) as transaction_count')
+                )
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get()
+            : (clone $query)
+                ->select(
+                    DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
+                    DB::raw('SUM(total_fee) as paid'),
+                    DB::raw('0 as pending'),
+                    DB::raw('COUNT(*) as transaction_count')
+                )
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get();
 
         // Recent Payments with Details
         $paymentRecords = (clone $query)
@@ -130,7 +149,7 @@ class PaymentSummaryController extends Controller
         // Student Info
         $student = Student::where('student_id', $studentId)->first();
 
-        return view('payment.student_summary', compact(
+        return view('payments.student_summary', compact(
             'studentId', 'student', 'totalCollected', 'totalPending', 'totalLateFee', 
             'totalDiscount', 'approvedLateFees', 'foreignCurrencyTotal', 'ssclTaxTotal',
             'bankChargesTotal', 'paymentByMethod', 'paymentByType', 'paymentByStatus',
@@ -214,7 +233,7 @@ class PaymentSummaryController extends Controller
             ->groupBy('payment_method')
             ->get();
 
-        return view('payment.analytics', compact(
+        return view('payments.analytics', compact(
             'revenueByDay', 'successRate', 'lateFeeAnalysis', 
             'currencyBreakdown', 'topCourses', 'methodPerformance'
         ));
@@ -282,7 +301,7 @@ class PaymentSummaryController extends Controller
             ? (($currentYearTotal - $previousYearTotal) / $previousYearTotal) * 100 
             : 0;
 
-        return view('payment.comparison', compact(
+        return view('payments.comparison', compact(
             'currentYearData', 'previousYearData', 'currentYearTotal', 
             'previousYearTotal', 'growthRate', 'currentYear', 'previousYear'
         ));
@@ -294,6 +313,7 @@ class PaymentSummaryController extends Controller
     private function generateAdvancedSummary($studentId = null, $startDate = null, $filters = [])
     {
         $query = PaymentDetail::query();
+        $hasStatus = $this->hasPaymentDetailColumn('status');
 
         // Apply student filter
         if ($studentId) {
@@ -316,21 +336,25 @@ class PaymentSummaryController extends Controller
         }
 
         // Apply status filter
-        if (!empty($filters['status'])) {
+        if (!empty($filters['status']) && $hasStatus) {
             $query->where('status', $filters['status']);
         }
 
         // Core KPIs
-        $totalCollected = (clone $query)->where('status', 'paid')->sum('total_fee');
-        $totalPending = (clone $query)->where('status', 'pending')->sum('remaining_amount');
-        $totalLateFee = (clone $query)->sum('late_fee');
-        $totalDiscount = (clone $query)->sum('registration_fee_discount_applied');
+        $totalCollected = $hasStatus
+            ? (clone $query)->where('status', 'paid')->sum('total_fee')
+            : (clone $query)->sum('total_fee');
+        $totalPending = $hasStatus
+            ? $this->sumIfColumnExists((clone $query)->where('status', 'pending'), 'remaining_amount')
+            : 0;
+        $totalLateFee = $this->sumIfColumnExists($query, 'late_fee');
+        $totalDiscount = $this->sumIfColumnExists($query, 'registration_fee_discount_applied');
         
         // Advanced KPIs
         $totalTransactions = (clone $query)->count();
         $averageTransaction = $totalTransactions > 0 ? $totalCollected / $totalTransactions : 0;
-        $ssclTaxTotal = (clone $query)->sum('sscl_tax_amount');
-        $bankChargesTotal = (clone $query)->sum('bank_charges');
+        $ssclTaxTotal = $this->sumIfColumnExists($query, 'sscl_tax_amount');
+        $bankChargesTotal = $this->sumIfColumnExists($query, 'bank_charges');
 
         // Payment Breakdowns
         $paymentByMethod = (clone $query)
@@ -349,30 +373,44 @@ class PaymentSummaryController extends Controller
             ->groupBy('type')
             ->get();
 
-        $paymentByStatus = (clone $query)
-            ->select('status', 
-                DB::raw('SUM(total_fee) as total'),
-                DB::raw('COUNT(*) as count'))
-            ->groupBy('status')
-            ->get();
+        $paymentByStatus = $hasStatus
+            ? (clone $query)
+                ->select('status',
+                    DB::raw('SUM(total_fee) as total'),
+                    DB::raw('COUNT(*) as count'))
+                ->groupBy('status')
+                ->get()
+            : collect();
 
         // Time-based Analytics
-        $monthlyIncome = (clone $query)
-            ->select(
-                DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
-                DB::raw('SUM(CASE WHEN status = "paid" THEN total_fee ELSE 0 END) as paid'),
-                DB::raw('SUM(CASE WHEN status = "pending" THEN total_fee ELSE 0 END) as pending')
-            )
-            ->groupBy('month')
-            ->orderBy('month')
-            ->get();
+        $monthlyIncome = $hasStatus
+            ? (clone $query)
+                ->select(
+                    DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
+                    DB::raw('SUM(CASE WHEN status = "paid" THEN total_fee ELSE 0 END) as paid'),
+                    DB::raw('SUM(CASE WHEN status = "pending" THEN total_fee ELSE 0 END) as pending')
+                )
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get()
+            : (clone $query)
+                ->select(
+                    DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
+                    DB::raw('SUM(total_fee) as paid'),
+                    DB::raw('0 as pending')
+                )
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get();
 
         $weeklyTrend = (clone $query)
             ->select(
                 DB::raw('YEARWEEK(created_at) as week'),
                 DB::raw('SUM(total_fee) as total')
             )
-            ->where('status', 'paid')
+            ->when($hasStatus, function ($q) {
+                return $q->where('status', 'paid');
+            })
             ->groupBy('week')
             ->orderBy('week', 'desc')
             ->take(12)
@@ -445,6 +483,35 @@ class PaymentSummaryController extends Controller
      */
     private function getPaymentTypeCase()
     {
+        $table = $this->getPaymentDetailsTable();
+        $hasInstallmentType = Schema::hasColumn($table, 'installment_type');
+        $hasMiscCategory = Schema::hasColumn($table, 'misc_category');
+
+        if (!$hasInstallmentType && !$hasMiscCategory) {
+            return "'Unknown' as type";
+        }
+
+        if ($hasInstallmentType && !$hasMiscCategory) {
+            return "CASE
+                WHEN installment_type = '' THEN 'Unknown'
+                WHEN installment_type IS NULL THEN 'Unknown'
+                ELSE
+                    CASE
+                        WHEN installment_type = 'course_fee' THEN 'Course Fee'
+                        WHEN installment_type = 'franchise_fee' THEN 'Franchise Fee'
+                        WHEN installment_type = 'registration_fee' THEN 'Registration Fee'
+                        ELSE installment_type
+                    END
+            END as type";
+        }
+
+        if (!$hasInstallmentType && $hasMiscCategory) {
+            return "CASE
+                WHEN misc_category IS NOT NULL THEN 'Miscellaneous'
+                ELSE 'Unknown'
+            END as type";
+        }
+
         return "CASE 
             WHEN installment_type IS NULL AND misc_category IS NOT NULL THEN 'Miscellaneous'
             WHEN installment_type = '' THEN 'Unknown'
@@ -457,6 +524,30 @@ class PaymentSummaryController extends Controller
                     ELSE installment_type
                 END
         END as type";
+    }
+
+    /**
+     * Helper: Sum a column only if it exists in the payments table
+     */
+    private function sumIfColumnExists($query, string $column)
+    {
+        $table = $this->getPaymentDetailsTable();
+
+        if (!Schema::hasColumn($table, $column)) {
+            return 0;
+        }
+
+        return (clone $query)->sum($column);
+    }
+
+    private function getPaymentDetailsTable(): string
+    {
+        return (new PaymentDetail())->getTable();
+    }
+
+    private function hasPaymentDetailColumn(string $column): bool
+    {
+        return Schema::hasColumn($this->getPaymentDetailsTable(), $column);
     }
 
     /**
