@@ -220,6 +220,7 @@ class AttendanceController extends Controller
                 ->get()
                 ->map(function($reg) {
                     return [
+                        'course_registration_id' => $reg->course_registration_id,
                         'registration_number' => $reg->student->registration_id ?? $reg->student->student_id,
                         'student_id' => $reg->student->student_id,
                         'name_with_initials' => $reg->student->name_with_initials,
@@ -278,10 +279,17 @@ class AttendanceController extends Controller
                 ->where('intake_id', $intakeId)
                 ->where('location', $location)
                 ->where('status', 'registered')
+                ->leftJoin('course_registration as cr', function($join) {
+                    $join->on('semester_registrations.student_id', '=', 'cr.student_id')
+                        ->on('semester_registrations.course_id', '=', 'cr.course_id')
+                        ->on('semester_registrations.intake_id', '=', 'cr.intake_id')
+                        ->on('semester_registrations.location', '=', 'cr.location');
+                })
                 ->with('student')
-                ->get()
+                ->get(['semester_registrations.*', 'cr.course_registration_id as course_registration_id'])
                 ->map(function($reg) {
                     return [
+                        'course_registration_id' => $reg->course_registration_id,
                         'registration_number' => $reg->student->registration_id ?? $reg->student->student_id,
                         'student_id' => $reg->student->student_id,
                         'name_with_initials' => $reg->student->name_with_initials,
@@ -308,10 +316,17 @@ class AttendanceController extends Controller
                 ->where('intake_id', $intakeId)
                 ->where('location', $location)
                 ->where('semester', $semester->name)
+                ->leftJoin('course_registration as cr', function($join) {
+                    $join->on('module_management.student_id', '=', 'cr.student_id')
+                        ->on('module_management.course_id', '=', 'cr.course_id')
+                        ->on('module_management.intake_id', '=', 'cr.intake_id')
+                        ->on('module_management.location', '=', 'cr.location');
+                })
                 ->with('student')
-                ->get()
+                ->get(['module_management.*', 'cr.course_registration_id as course_registration_id'])
                 ->map(function($reg) {
                     return [
+                        'course_registration_id' => $reg->course_registration_id,
                         'registration_number' => $reg->student->registration_id ?? $reg->student->student_id,
                         'student_id' => $reg->student->student_id,
                         'name_with_initials' => $reg->student->name_with_initials,
