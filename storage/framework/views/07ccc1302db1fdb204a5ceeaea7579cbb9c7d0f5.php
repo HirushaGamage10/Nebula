@@ -5,21 +5,23 @@
 <?php $__env->startSection('content'); ?>
 <div id="payment-summary" class="container-fluid mt-4 mb-5">
     
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="text-primary mb-1">💰 Payment Analytics Dashboard</h2>
-            <p class="text-muted mb-0">Real-time insights and comprehensive reports</p>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="<?php echo e(route('payment.analytics')); ?>" class="btn btn-outline-primary">
-                <i class="bi bi-graph-up"></i> Advanced Analytics
-            </a>
-            <a href="<?php echo e(route('payment.comparison')); ?>" class="btn btn-outline-info">
-                <i class="bi bi-bar-chart"></i> Comparison
-            </a>
-            <button class="btn btn-success btn-export-data">
-                <i class="bi bi-download"></i> Export
-            </button>
+    <div class="card shadow-sm border-0 mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3 text-white">
+            <div>
+                <h2 class="mb-1">💰 Payment Analytics Dashboard</h2>
+                <p class="text-white-50 mb-0">Real-time insights and comprehensive reports</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="<?php echo e(route('payment.analytics')); ?>" class="btn btn-outline-light">
+                    <i class="bi bi-graph-up"></i> Advanced Analytics
+                </a>
+                <a href="<?php echo e(route('payment.comparison')); ?>" class="btn btn-outline-light">
+                    <i class="bi bi-bar-chart"></i> Comparison
+                </a>
+                <button class="btn btn-light btn-export-data">
+                    <i class="bi bi-download"></i> Export
+                </button>
+            </div>
         </div>
     </div>
 
