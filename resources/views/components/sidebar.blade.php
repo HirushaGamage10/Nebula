@@ -121,6 +121,18 @@
                 RoleHelper::hasPermission($role, 'course.registration') ||
                 RoleHelper::hasPermission($role, 'eligibility.registration') ||
                 RoleHelper::hasPermission($role, 'semester.registration') ||
+                RoleHelper::hasPermission($role, 'semester.registration.store') ||
+                RoleHelper::hasPermission($role, 'semester.registration.getCoursesByLocation') ||
+                RoleHelper::hasPermission($role, 'semester.registration.getOngoingIntakes') ||
+                RoleHelper::hasPermission($role, 'semester.registration.getOpenSemesters') ||
+                RoleHelper::hasPermission($role, 'semester.registration.getEligibleStudents') ||
+                RoleHelper::hasPermission($role, 'semester.registration.getAllSemestersForCourse') ||
+                RoleHelper::hasPermission($role, 'semester.registration.updateStatus') ||
+                RoleHelper::hasPermission($role, 'semester.registration.checkClearances') ||
+                RoleHelper::hasPermission($role, 'semester.registration.approveReenroll') ||
+                RoleHelper::hasPermission($role, 'semester.registration.rejectReenroll') ||
+                RoleHelper::hasPermission($role, 'semester.registration.approveReRegister') ||
+                RoleHelper::hasPermission($role, 'semester.registration.rejectReRegister') ||
                 RoleHelper::hasPermission($role, 'module.management') ||
                 RoleHelper::hasPermission($role, 'uh.index.page') ||
                 RoleHelper::hasPermission($role, 'course.change.index')
@@ -146,7 +158,21 @@
                     </a>
                 </li>
             @endif
-            @if(RoleHelper::hasPermission($role, 'semester.registration'))
+            @if(
+                RoleHelper::hasPermission($role, 'semester.registration') ||
+                RoleHelper::hasPermission($role, 'semester.registration.store') ||
+                RoleHelper::hasPermission($role, 'semester.registration.getCoursesByLocation') ||
+                RoleHelper::hasPermission($role, 'semester.registration.getOngoingIntakes') ||
+                RoleHelper::hasPermission($role, 'semester.registration.getOpenSemesters') ||
+                RoleHelper::hasPermission($role, 'semester.registration.getEligibleStudents') ||
+                RoleHelper::hasPermission($role, 'semester.registration.getAllSemestersForCourse') ||
+                RoleHelper::hasPermission($role, 'semester.registration.updateStatus') ||
+                RoleHelper::hasPermission($role, 'semester.registration.checkClearances') ||
+                RoleHelper::hasPermission($role, 'semester.registration.approveReenroll') ||
+                RoleHelper::hasPermission($role, 'semester.registration.rejectReenroll') ||
+                RoleHelper::hasPermission($role, 'semester.registration.approveReRegister') ||
+                RoleHelper::hasPermission($role, 'semester.registration.rejectReRegister')
+                )
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ Route::currentRouteName() == 'semester.registration' ? 'active' : '' }}" href="{{ route('semester.registration') }}">
                         <span><i class="ti ti-calendar-stats"></i></span>

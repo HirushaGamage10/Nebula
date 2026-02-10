@@ -112,6 +112,18 @@ class RoleHelper
             
             // REGISTRATIONS
             'semester.registration',
+            'semester.registration.store',
+            'semester.registration.getCoursesByLocation',
+            'semester.registration.getOngoingIntakes',
+            'semester.registration.getOpenSemesters',
+            'semester.registration.getEligibleStudents',
+            'semester.registration.getAllSemestersForCourse',
+            'semester.registration.updateStatus',
+            'semester.registration.checkClearances',
+            'semester.registration.approveReenroll',
+            'semester.registration.rejectReenroll',
+            'semester.registration.approveReRegister',
+            'semester.registration.rejectReRegister',
             'module.management',
             'course.change',
             'uh.index.page',
