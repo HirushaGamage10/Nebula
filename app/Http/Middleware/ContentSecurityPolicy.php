@@ -71,6 +71,7 @@ class ContentSecurityPolicy
             'https://fonts.googleapis.com',
             'https://fonts.gstatic.com',
             'https://cdn.tailwindcss.com',
+            'https://cdn.jsdelivr.net',
         ];
 
         $scriptList = implode(' ', $scriptHosts);

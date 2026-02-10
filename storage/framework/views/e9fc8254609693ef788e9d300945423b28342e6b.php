@@ -33,18 +33,21 @@
     </div>
 
     
+    <?php
+        $currentRange = request('range', '1y');
+    ?>
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
             <div class="row g-3 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label small text-muted">Time Range</label>
                     <select class="form-select" id="rangeFilter">
-                        <option value="all">All Time</option>
-                        <option value="1m">Last Month</option>
-                        <option value="3m">Last 3 Months</option>
-                        <option value="6m">Last 6 Months</option>
-                        <option value="1y" selected>Last Year</option>
-                        <option value="2y">Last 2 Years</option>
+                        <option value="all" <?php echo e($currentRange === 'all' ? 'selected' : ''); ?>>All Time</option>
+                        <option value="1m" <?php echo e($currentRange === '1m' ? 'selected' : ''); ?>>Last Month</option>
+                        <option value="3m" <?php echo e($currentRange === '3m' ? 'selected' : ''); ?>>Last 3 Months</option>
+                        <option value="6m" <?php echo e($currentRange === '6m' ? 'selected' : ''); ?>>Last 6 Months</option>
+                        <option value="1y" <?php echo e($currentRange === '1y' ? 'selected' : ''); ?>>Last Year</option>
+                        <option value="2y" <?php echo e($currentRange === '2y' ? 'selected' : ''); ?>>Last 2 Years</option>
                     </select>
                 </div>
                 <div class="col-md-8 text-end">

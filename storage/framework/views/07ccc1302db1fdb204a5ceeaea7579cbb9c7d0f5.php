@@ -31,7 +31,7 @@
             <div class="row g-3">
                 <div class="col-md-3">
                     <label class="form-label small text-muted">Time Range</label>
-                    <select class="form-select" id="rangeFilter">
+                    <select class="form-select" id="rangeFilter" name="range">
                         <option value="1w">Last Week</option>
                         <option value="1m">Last Month</option>
                         <option value="3m">Last 3 Months</option>
@@ -44,7 +44,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small text-muted">Payment Method</label>
-                    <select class="form-select" id="methodFilter">
+                    <select class="form-select" id="methodFilter" name="payment_method">
                         <option value="">All Methods</option>
                         <option value="cash">Cash</option>
                         <option value="cheque">Cheque</option>
@@ -55,7 +55,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small text-muted">Status</label>
-                    <select class="form-select" id="statusFilter">
+                    <select class="form-select" id="statusFilter" name="status">
                         <option value="">All Status</option>
                         <option value="paid">Paid</option>
                         <option value="pending">Pending</option>
@@ -64,7 +64,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small text-muted">Student ID</label>
-                    <input type="text" class="form-control" id="studentFilter" placeholder="Enter Student ID">
+                    <input type="text" class="form-control" id="studentFilter" name="student_id" placeholder="Enter Student ID">
                 </div>
             </div>
             <div class="mt-3 text-end">
@@ -466,6 +466,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (urlParams.has('student_id')) {
         document.getElementById('studentFilter').value = urlParams.get('student_id');
+    }
+
+    const rangeFilter = document.getElementById('rangeFilter');
+    if (rangeFilter) {
+        rangeFilter.addEventListener('change', function() {
+            applyFilters();
+        });
     }
 });
 
