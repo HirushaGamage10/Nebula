@@ -181,7 +181,7 @@ class ExamResult extends Model
     // Methods
     public function isPassed()
     {
-        return in_array($this->grade, ['A', 'B', 'C', 'D']);
+        return in_array($this->grade, ['A', 'B', 'C', 'D','1','2','3','4','5','6','7','8','9']);
     }
 
     public function isFailed()
@@ -227,7 +227,7 @@ class ExamResult extends Model
         
         // Count students who passed based on grades OR marks
         $passed = $query->where(function($q) {
-            $q->whereIn('grade', ['A', 'B', 'C', 'D'])
+            $q->whereIn('grade', ['A', 'B', 'C', 'D','1','2','3','4','5','6','7','8','9'])
               ->orWhere(function($subQ) {
                   $subQ->whereNull('grade')
                        ->orWhere('grade', '')

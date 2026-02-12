@@ -205,7 +205,7 @@
                                         <div class="col-sm-4">
                                             <select class="form-select" id="ol_result_select">
                                                 <option selected disabled>Select a Result</option>
-                                                <option>1</option>
+                                                <option>A</option>
                                                 <option>B</option>
                                                 <option>C</option>
                                                 <option>S</option>
@@ -1604,4 +1604,4 @@ setupPhoneValidator('emergencyContactNo', 'emergencyContactNoError');
 </script>
 <?php $__env->stopPush(); ?>
 
-<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/student_management//student_registration.blade.php ENDPATH**/ ?>
+<?php echo $__env->make('inc.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\danid\Desktop\Nebula_ORG_2026\resources\views/student_management//student_registration.blade.php ENDPATH**/ ?>
