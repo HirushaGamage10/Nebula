@@ -853,7 +853,7 @@ class AttendanceController extends Controller
 
     /**
      * Download a template file for bulk attendance import.
-     * Columns: registration_number, name_with_initials, attendance (Present/Absent)
+     * Columns: No, Course Registration ID, Student Name, Present (Present/Absent)
      */
     public function downloadTemplate(Request $request)
     {
@@ -870,7 +870,7 @@ class AttendanceController extends Controller
         $sheet->setTitle('Attendance Template');
 
         // Header
-        $sheet->fromArray(['registration_number', 'name_with_initials', 'attendance'], null, 'A1');
+        $sheet->fromArray(['No', 'Course Registration ID', 'Student Name', 'Present'], null, 'A1');
 
         // If filters provided, attempt to prefill students
         $startRow = 2;
@@ -892,7 +892,7 @@ class AttendanceController extends Controller
                     foreach ($courseRegs as $reg) {
                         if ($reg->student) {
                             $students->push([
-                                $reg->student->registration_id ?? $reg->student->student_id, 
+                                $reg->course_registration_id ?? $reg->student->registration_id ?? $reg->student->student_id,
                                 $reg->student->name_with_initials
                             ]);
                         }
@@ -917,13 +917,19 @@ class AttendanceController extends Controller
                             ->where('intake_id', $intakeId)
                             ->where('location', $location)
                             ->where('status', 'registered')
+                            ->leftJoin('course_registration as cr', function($join) {
+                                $join->on('semester_registrations.student_id', '=', 'cr.student_id')
+                                    ->on('semester_registrations.course_id', '=', 'cr.course_id')
+                                    ->on('semester_registrations.intake_id', '=', 'cr.intake_id')
+                                    ->on('semester_registrations.location', '=', 'cr.location');
+                            })
                             ->with('student')
-                            ->get();
+                            ->get(['semester_registrations.*', 'cr.course_registration_id as course_registration_id']);
 
                         foreach ($regs as $r) {
                             if ($r->student) {
                                 $students->push([
-                                    $r->student->registration_id ?? $r->student->student_id, 
+                                    $r->course_registration_id ?? $r->student->registration_id ?? $r->student->student_id,
                                     $r->student->name_with_initials
                                 ]);
                             }
@@ -934,12 +940,18 @@ class AttendanceController extends Controller
                             ->where('intake_id', $intakeId)
                             ->where('location', $location)
                             ->when($semester, function($q) use ($semester) { return $q->where('semester', $semester->name); })
+                            ->leftJoin('course_registration as cr', function($join) {
+                                $join->on('module_management.student_id', '=', 'cr.student_id')
+                                    ->on('module_management.course_id', '=', 'cr.course_id')
+                                    ->on('module_management.intake_id', '=', 'cr.intake_id')
+                                    ->on('module_management.location', '=', 'cr.location');
+                            })
                             ->with('student')
-                            ->get();
+                            ->get(['module_management.*', 'cr.course_registration_id as course_registration_id']);
                         foreach ($mods as $m) {
                             if ($m->student) {
                                 $students->push([
-                                    $m->student->registration_id ?? $m->student->student_id, 
+                                    $m->course_registration_id ?? $m->student->registration_id ?? $m->student->student_id,
                                     $m->student->name_with_initials
                                 ]);
                             }
@@ -948,7 +960,15 @@ class AttendanceController extends Controller
                 }
 
                 if ($students->isNotEmpty()) {
-                    $sheet->fromArray($students->toArray(), null, 'A' . $startRow);
+                    $rows = $students->values()->map(function ($student, $index) {
+                        return [
+                            $index + 1,
+                            $student[0],
+                            $student[1],
+                            ''
+                        ];
+                    })->toArray();
+                    $sheet->fromArray($rows, null, 'A' . $startRow);
                 }
             } catch (\Exception $e) {
                 // ignore prefill errors
@@ -956,10 +976,10 @@ class AttendanceController extends Controller
             }
         }
 
-        // Add data validation dropdown for the attendance column (column C)
+        // Add data validation dropdown for the attendance column (column D)
         $highestRow = max($sheet->getHighestRow(), 100); // create at least some rows to use
         for ($row = 2; $row <= $highestRow; $row++) {
-            $validation = $sheet->getCell('C' . $row)->getDataValidation();
+            $validation = $sheet->getCell('D' . $row)->getDataValidation();
             $validation->setType(DataValidation::TYPE_LIST);
             $validation->setErrorStyle(DataValidation::STYLE_STOP);
             $validation->setAllowBlank(true);
@@ -1048,6 +1068,21 @@ class AttendanceController extends Controller
             return response()->json(['success' => false, 'message' => 'No rows found in file. Ensure file has header row and data.'], 400);
         }
 
+        $normalizeHeader = function ($value) {
+            $key = strtolower(trim((string)$value));
+            $key = preg_replace('/\s+/', '_', $key);
+            $key = preg_replace('/[^a-z0-9_]/', '', $key);
+            return $key;
+        };
+
+        $rows = array_map(function ($row) use ($normalizeHeader) {
+            $normalized = [];
+            foreach ($row as $key => $value) {
+                $normalized[$normalizeHeader($key)] = $value;
+            }
+            return $normalized;
+        }, $rows);
+
         // Validate and build attendance records
         $attendanceRecords = [];
         $date = Carbon::parse($request->date);
@@ -1063,21 +1098,31 @@ class AttendanceController extends Controller
         }
 
         foreach ($rows as $idx => $row) {
-            $regNo = $row['registration_number'] ?? $row['registration_no'] ?? null;
-            $studentName = $row['name_with_initials'] ?? $row['name'] ?? null;
-            $statusRaw = $row['attendance'] ?? null;
-            if (!$regNo || !$studentName || !$statusRaw) continue;
+            $courseRegId = $row['course_registration_id'] ?? $row['course_registration'] ?? null;
+            $regNo = $row['registration_number'] ?? $row['registration_no'] ?? $row['registration_id'] ?? null;
+            $studentName = $row['name_with_initials'] ?? $row['student_name'] ?? $row['name'] ?? null;
+            $statusRaw = $row['attendance'] ?? $row['present'] ?? null;
+            if (!$statusRaw || (!$courseRegId && !$regNo && !$studentName)) continue;
 
             $status = strtolower(trim($statusRaw)) === 'present' ? 1 : 0;
 
             // Try to resolve student_id. Some DBs don't have a `registration_id` column
             // so check the schema first and fall back to student_id
             try {
+                $student = null;
+
+                if ($courseRegId) {
+                    $courseReg = \App\Models\CourseRegistration::where('course_registration_id', $courseRegId)
+                        ->first();
+                    if ($courseReg) {
+                        $student = \App\Models\Student::where('student_id', $courseReg->student_id)->first();
+                    }
+                }
+
                 // Prefer searching by registration_id when the column is present, but run the queries
                 // in separate steps to avoid building a single query that references a missing column
                 // which can cause SQL errors on some environments.
-                $student = null;
-                if (Schema::hasColumn('students', 'registration_id')) {
+                if (!$student && Schema::hasColumn('students', 'registration_id')) {
                     try {
                         $student = \App\Models\Student::where('registration_id', $regNo)->first();
                     } catch (\Exception $inner) {
@@ -1086,13 +1131,13 @@ class AttendanceController extends Controller
                     }
                 }
 
-                if (!$student) {
+                if (!$student && $regNo) {
                     // Try matching by primary key student_id
                     $student = \App\Models\Student::where('student_id', $regNo)->first();
                 }
             } catch (\Exception $e) {
                 // In case of any DB/schema issues, fallback to searching by primary key
-                $student = \App\Models\Student::where('student_id', $regNo)->first();
+                $student = $regNo ? \App\Models\Student::where('student_id', $regNo)->first() : null;
             }
             if (!$student) {
                 // try by name

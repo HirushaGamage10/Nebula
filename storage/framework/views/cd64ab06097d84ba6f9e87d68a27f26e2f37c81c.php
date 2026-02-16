@@ -857,6 +857,15 @@ document.addEventListener('DOMContentLoaded', function() {
         .finally(() => showSpinner(false));
     });
 
+    // Degree template download should also render the table on page
+    degreeDownloadTemplateBtn.addEventListener('click', function() {
+        if (allDegreeFilled()) {
+            fetchDegreeStudentsForAttendance();
+        } else {
+            showToast('Warning', 'Please select all filters before downloading the template.', 'bg-warning');
+        }
+    });
+
     // Certificate bulk import upload handler
     certUploadAttendanceFileBtn.addEventListener('click', function() {
         const file = certAttendanceFileInput.files[0];
@@ -902,6 +911,15 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast('Error', 'Upload failed. Check console for details.', 'bg-danger');
         })
         .finally(() => showSpinner(false));
+    });
+
+    // Certificate template download should also render the table on page
+    certDownloadTemplateBtn.addEventListener('click', function() {
+        if (allCertFilled()) {
+            fetchCertStudentsForAttendance();
+        } else {
+            showToast('Warning', 'Please select all filters before downloading the template.', 'bg-warning');
+        }
     });
 });
 </script>
