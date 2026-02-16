@@ -1,8 +1,8 @@
-@extends('inc.app')
 
-@section('title', 'NEBULA | Attendance')
 
-@section('content')
+<?php $__env->startSection('title', 'NEBULA | Attendance'); ?>
+
+<?php $__env->startSection('content'); ?>
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
@@ -240,7 +240,7 @@
     </div>
 </div>
 
-<script nonce="{{ $cspNonce }}">
+<script nonce="<?php echo e($cspNonce); ?>">
 document.addEventListener('DOMContentLoaded', function() {
     let degreeStudents = [];
     let certStudents = [];
@@ -497,7 +497,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showSpinner(true);
         fetch('/get-filtered-modules', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -560,7 +560,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showSpinner(true);
         fetch('/get-students-for-attendance', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => {
@@ -610,7 +610,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showSpinner(true);
         fetch('/get-students-for-attendance', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => {
@@ -737,7 +737,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showSpinner(true);
         fetch('/store-attendance', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -780,7 +780,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showSpinner(true);
         fetch('/store-attendance', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'},
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -833,7 +833,7 @@ document.addEventListener('DOMContentLoaded', function() {
         payload.append('semester', degreeSemester.value || '');
         payload.append('module_id', degreeModule.value || '');
         payload.append('date', degreeDate.value || '');
-        payload.append('_token', '{{ csrf_token() }}');
+        payload.append('_token', '<?php echo e(csrf_token()); ?>');
 
         showSpinner(true);
         fetch('/attendance/import', {
@@ -889,7 +889,7 @@ document.addEventListener('DOMContentLoaded', function() {
         payload.append('semester', '');
         payload.append('module_id', '');
         payload.append('date', certDate.value || '');
-        payload.append('_token', '{{ csrf_token() }}');
+        payload.append('_token', '<?php echo e(csrf_token()); ?>');
 
         showSpinner(true);
         fetch('/attendance/import', {
@@ -931,7 +931,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<style nonce="{{ $cspNonce }}">
+<style nonce="<?php echo e($cspNonce); ?>">
     .lds-ring { display: inline-block; position: relative; width: 80px; height: 80px; }
     .lds-ring div { box-sizing: border-box; display: block; position: absolute; width: 64px; height: 64px; margin: 8px; border: 8px solid #fff; border-radius: 50%; animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite; border-color: #fff transparent transparent transparent; }
     .lds-ring div:nth-child(1) { animation-delay: -0.45s; }
@@ -940,4 +940,6 @@ document.addEventListener('DOMContentLoaded', function() {
     @keyframes lds-ring { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     #spinner-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 9999; }
 </style>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('inc.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\thisali\Desktop\thisali\Nebula\resources\views/attendance/attendance.blade.php ENDPATH**/ ?>

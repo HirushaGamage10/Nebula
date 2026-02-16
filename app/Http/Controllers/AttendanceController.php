@@ -275,10 +275,10 @@ class AttendanceController extends Controller
             Log::info('All semester registrations:', $allSemRegs->toArray());
             
             $students = \App\Models\SemesterRegistration::where('semester_id', $semesterId)
-                ->where('course_id', $courseId)
-                ->where('intake_id', $intakeId)
-                ->where('location', $location)
-                ->where('status', 'registered')
+                ->where('semester_registrations.course_id', $courseId)
+                ->where('semester_registrations.intake_id', $intakeId)
+                ->where('semester_registrations.location', $location)
+                ->where('semester_registrations.status', 'registered')
                 ->leftJoin('course_registration as cr', function($join) {
                     $join->on('semester_registrations.student_id', '=', 'cr.student_id')
                         ->on('semester_registrations.course_id', '=', 'cr.course_id')
@@ -312,10 +312,10 @@ class AttendanceController extends Controller
             Log::info('All module registrations:', $allModRegs->toArray());
             
             $students = \App\Models\ModuleManagement::where('module_id', $moduleId)
-                ->where('course_id', $courseId)
-                ->where('intake_id', $intakeId)
-                ->where('location', $location)
-                ->where('semester', $semester->name)
+                ->where('module_management.course_id', $courseId)
+                ->where('module_management.intake_id', $intakeId)
+                ->where('module_management.location', $location)
+                ->where('module_management.semester', $semester->name)
                 ->leftJoin('course_registration as cr', function($join) {
                     $join->on('module_management.student_id', '=', 'cr.student_id')
                         ->on('module_management.course_id', '=', 'cr.course_id')
