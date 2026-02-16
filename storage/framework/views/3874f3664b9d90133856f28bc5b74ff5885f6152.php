@@ -2872,6 +2872,11 @@ async function generatePaymentSlip() {
   if (!studentId)  return showErrorMessage('Please enter Student ID / NIC.');
   if (!paymentType)return showErrorMessage('Please select a payment type.');
   if (!courseId)   return showErrorMessage('Please select a course.');
+  
+  // Check if the selected payment is already paid
+  if (row.status && row.status.toLowerCase() === 'paid') {
+    return showErrorMessage('Cannot generate slip for an already paid installment.');
+  }
 
   // Payable amount we rendered (backend will recompute/validate anyway)
   const rawAmount     = Number(row.amount || 0);
@@ -3376,6 +3381,7 @@ function submitPayment() {
       showSuccessMessage("Payment recorded successfully!");
       bootstrap.Modal.getInstance(document.getElementById('payModal')).hide();
       loadPaymentRecords(); // refresh table
+      refreshGenerateSlipsData(); // refresh Generate Slips tab if data is loaded
     } else {
       showErrorMessage(data.message || "Failed to record payment.");
     }
@@ -3410,6 +3416,7 @@ function updatePaymentRecords() {
         if (data.success) {
             showSuccessMessage('Payment records updated successfully!');
             loadPaymentRecords();
+            refreshGenerateSlipsData(); // refresh Generate Slips tab if data is loaded
         } else {
             showErrorMessage(data.message || 'Failed to update records.');
         }
@@ -4085,6 +4092,7 @@ function displayPaymentDetails(paymentDetails) {
         // Use the currency from the payment data, default to LKR if not provided
         const currency = payment.currency || 'LKR';
         const amount = parseFloat(payment.amount);
+        const isPaid = payment.status && payment.status.toLowerCase() === 'paid';
 
         // Calculate LKR amount for franchise fees
         let lkrAmount = '';
@@ -4096,9 +4104,9 @@ function displayPaymentDetails(paymentDetails) {
         }
 
         const row = `
-            <tr>
+            <tr ${isPaid ? 'style="opacity: 0.6;"' : ''}>
                 <td>
-                    <input type="radio" name="selectedPayment" value="${index}" class="payment-radio">
+                    <input type="radio" name="selectedPayment" value="${index}" class="payment-radio" ${isPaid ? 'disabled title="Already Paid"' : ''}>
                 </td>
                 <td>${payment.installment_number || '-'}</td>
                 <td>${payment.due_date ? new Date(payment.due_date).toLocaleDateString() : '-'}</td>
@@ -4109,23 +4117,40 @@ function displayPaymentDetails(paymentDetails) {
                     <span class="badge bg-${getPaymentStatusBadgeColor(payment.status)}">
                         ${payment.status}
                     </span>
+                    ${isPaid ? '<br><small class="text-muted">Cannot generate new slip</small>' : ''}
                 </td>
                 <td>${payment.receipt_no || '-'}</td>
             </tr>
         `;
         tbody.insertAdjacentHTML('beforeend', row);
     });
+    
+    // Store payment details globally for validation
+    window.paymentDetailsData = paymentDetails;
 }
 
 // Enable generate button when a payment is selected
 function enableGenerateButton() {
-    const selectedPayment = document.querySelector('input[name="selectedPayment"]:checked');
+    const selectedPayment = document.querySelector('input[name="selectedPayment"]:checked:not([disabled])');
     const generateBtn = document.getElementById('generateSlipBtn');
 
     if (selectedPayment) {
         generateBtn.disabled = false;
     } else {
         generateBtn.disabled = true;
+    }
+}
+
+// Refresh Generate Slips tab data after payment update
+function refreshGenerateSlipsData() {
+    const studentId = document.getElementById('slip-student-id')?.value;
+    const courseId = document.getElementById('slip-course')?.value;
+    const paymentType = document.getElementById('slip-payment-type')?.value;
+    
+    // Only refresh if all fields are filled (meaning data is currently loaded)
+    if (studentId && courseId && paymentType) {
+        console.log('Refreshing Generate Slips data after payment update...');
+        loadPaymentDetails();
     }
 }
 
@@ -4479,7 +4504,9 @@ function renderPaymentDetailsTable(rows, paymentType) {
 
   // ✅ Build table rows
   normalized.forEach((p, idx) => {
-    const disabled = p.status && p.status.toLowerCase() === 'paid' ? 'disabled' : '';
+    const isPaid = p.status && p.status.toLowerCase() === 'paid';
+    const disabled = isPaid ? 'disabled' : '';
+    const rowStyle = isPaid ? 'style="opacity: 0.6; background-color: #f8f9fa;"' : '';
     const amountText = `${p.currency} ${money(p.amount)}`;
 
     // LKR column for franchise
@@ -4497,7 +4524,7 @@ function renderPaymentDetailsTable(rows, paymentType) {
     if (p.due_date) {
       const due = new Date(p.due_date);
       const today = new Date();
-      if (today > due && (!p.status || p.status.toLowerCase() !== 'paid')) {
+      if (today > due && !isPaid) {
         const diffTime = today - due; // ms
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
@@ -4518,11 +4545,25 @@ function renderPaymentDetailsTable(rows, paymentType) {
         ? `<small class="text-success">Approved Late Fee: LKR ${money(p.approved_late_fee)}</small>`
         : `<small class="text-muted">No approved late fee</small>`;
 
+    // Status badge with color
+    let statusBadge = '';
+    if (isPaid) {
+      statusBadge = `<span class="badge bg-success">Paid</span>`;
+      if (p.paid_date) {
+        statusBadge += `<br><small class="text-muted">Paid: ${dstr(p.paid_date)}</small>`;
+      }
+      if (p.receipt_no) {
+        statusBadge += `<br><small class="text-muted">Receipt: ${p.receipt_no}</small>`;
+      }
+    } else {
+      statusBadge = `<span class="badge bg-warning">Pending</span>`;
+    }
 
     const row = `
-      <tr>
+      <tr ${rowStyle}>
         <td class="text-center">
           <input type="radio" name="selectedPayment" value="${idx}" ${disabled}>
+          ${isPaid ? '<br><small class="text-danger">Cannot generate new slip</small>' : ''}
         </td>
         <td>${p.installment_number ?? '-'}</td>
         <td>${dstr(p.due_date)}</td>
@@ -4533,7 +4574,7 @@ function renderPaymentDetailsTable(rows, paymentType) {
 
         </td>
 
-        <td>${p.status ?? '-'}</td>
+        <td>${statusBadge}</td>
 
       </tr>
     `;

@@ -124,6 +124,17 @@ class PaymentController extends Controller
 
                     $final = $ins->final_amount ?? $ins->amount;
 
+                    // Check if this installment has been paid in payment_details table
+                    $paymentDetail = \App\Models\PaymentDetail::where('student_id', $student->student_id)
+                        ->where('course_registration_id', $registration->id)
+                        ->where('installment_number', $ins->installment_number)
+                        ->first();
+
+                    // Use payment_details status if it exists, otherwise use installment status
+                    $status = $paymentDetail ? ($paymentDetail->status ?? 'pending') : ($ins->status ?? 'pending');
+                    $paidDate = $paymentDetail ? optional($paymentDetail->payment_date)->toDateString() : optional($ins->paid_date)->toDateString();
+                    $receiptNo = $paymentDetail ? $paymentDetail->transaction_id : null;
+
                     $rows[] = [
                         'plan_id'             => $plan->id,
                         'plan_status'         => $plan->status ?? 'active', // show active/archived
@@ -131,9 +142,9 @@ class PaymentController extends Controller
                         'due_date'            => optional($ins->due_date)->toDateString(),
                         'amount'              => (float) $final,
                         'base_amount'         => (float) $ins->amount,
-                        'status'              => $ins->status ?? 'pending',
-                        'paid_date'           => optional($ins->paid_date)->toDateString(),
-                        'receipt_no'          => null,
+                        'status'              => $status,
+                        'paid_date'           => $paidDate,
+                        'receipt_no'          => $receiptNo,
                         'currency'            => 'LKR',
                         'approved_late_fee'   => (float) ($ins->approved_late_fee ?? 0),
                         'calculated_late_fee' => (float) ($ins->calculated_late_fee ?? 0),
@@ -158,14 +169,25 @@ class PaymentController extends Controller
             if ($franchiseInstallments->isNotEmpty()) {
                 // ✅ Found actual franchise installments in payment_installments table — use them
                 foreach ($franchiseInstallments as $ins) {
+                    // Check if this installment has been paid in payment_details table
+                    $paymentDetail = \App\Models\PaymentDetail::where('student_id', $student->student_id)
+                        ->where('course_registration_id', $registration->id)
+                        ->where('installment_number', $ins->installment_number)
+                        ->first();
+
+                    // Use payment_details status if it exists, otherwise use installment status
+                    $status = $paymentDetail ? ($paymentDetail->status ?? 'pending') : ($ins->status ?? 'pending');
+                    $paidDate = $paymentDetail ? optional($paymentDetail->payment_date)->toDateString() : optional($ins->paid_date)->toDateString();
+                    $receiptNo = $paymentDetail ? $paymentDetail->transaction_id : null;
+
                     $rows[] = [
                         'installment_number' => $ins->installment_number,
                         'due_date'           => optional($ins->due_date)->toDateString(),
                         'amount'             => (float) $ins->international_amount,
                         'base_amount'        => (float) $ins->international_amount,
-                        'status'             => $ins->status ?? 'pending',
-                        'paid_date'          => optional($ins->paid_date)->toDateString(),
-                        'receipt_no'         => null,
+                        'status'             => $status,
+                        'paid_date'          => $paidDate,
+                        'receipt_no'         => $receiptNo,
                         'currency'           => $ins->international_currency ?: 'USD',
                         'apply_tax'          => false,
                         'sscl_tax'           => 0,
@@ -260,15 +282,26 @@ class PaymentController extends Controller
                     }
                 }
 
+                // Check if registration fee has been paid in payment_details table
+                $paymentDetail = \App\Models\PaymentDetail::where('student_id', $student->student_id)
+                    ->where('course_registration_id', $registration->id)
+                    ->where('installment_number', 1)
+                    ->first();
+
+                // Use payment_details status if it exists
+                $status = $paymentDetail ? ($paymentDetail->status ?? 'pending') : 'pending';
+                $paidDate = $paymentDetail ? optional($paymentDetail->payment_date)->toDateString() : null;
+                $receiptNo = $paymentDetail ? $paymentDetail->transaction_id : null;
+
                 $rows[] = [
                     'installment_number' => 1,
                     'due_date'           => now()->toDateString(),
                     'amount'             => $discountedAmount,
                     'base_amount'        => $registrationFee,
                     'discount'           => $discountText,
-                    'status'             => 'pending',
-                    'paid_date'          => null,
-                    'receipt_no'         => null,
+                    'status'             => $status,
+                    'paid_date'          => $paidDate,
+                    'receipt_no'         => $receiptNo,
                     'currency'           => 'LKR',
                 ];
                 break;
@@ -1575,7 +1608,10 @@ public function recordPartialPayment(Request $request, $id)
             $slipData = $this->buildSlipDataFromPaymentDetail($payment);
         }
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.payment_slip', compact('slipData'))
+        // Generate a CSP nonce for inline styles
+        $cspNonce = base64_encode(random_bytes(16));
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payments.payment_slip', compact('slipData', 'cspNonce'))
               ->setPaper('A4', 'portrait')
               ->setOptions([
                   'isHtml5ParserEnabled' => true,
