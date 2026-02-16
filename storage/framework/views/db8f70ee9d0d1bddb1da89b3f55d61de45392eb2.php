@@ -205,11 +205,20 @@
                                         <div class="col-sm-4">
                                             <select class="form-select" id="ol_result_select">
                                                 <option selected disabled>Select a Result</option>
-                                                <option>A</option>
+                                                <option>1</option>
                                                 <option>B</option>
                                                 <option>C</option>
                                                 <option>S</option>
                                                 <option>F</option>
+                                                <option>1</option>
+                                                <option>2</option>
+                                                <option>3</option>
+                                                <option>4</option>
+                                                <option>5</option>
+                                                <option>6</option>
+                                                <option>7</option>
+                                                <option>8</option>
+                                                <option>9</option>
                                             </select>
                                             <div id="olResultError" class="text-danger mt-1" style="display:none;">
                                                 This subject is already added.
