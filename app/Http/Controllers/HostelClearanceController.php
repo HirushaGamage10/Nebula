@@ -18,55 +18,27 @@ class HostelClearanceController extends Controller
 
     public function showHostelClearanceFormManagement(Request $request)
     {
-        $tab = $request->get('tab', 'pending');
-        $perPage = 10;
-        
-        // Initialize queries
-        $pendingRequestsQuery = ClearanceRequest::where('clearance_type', ClearanceRequest::TYPE_HOSTEL)
+        // pending hostel clearance requests
+        $pendingRequests = ClearanceRequest::where('clearance_type', ClearanceRequest::TYPE_HOSTEL)
             ->where('status', ClearanceRequest::STATUS_PENDING)
             ->with(['student', 'course', 'intake'])
-            ->orderBy('requested_at', 'desc');
+            ->orderBy('requested_at', 'desc')
+            ->get();
 
-        $approvedRequestsQuery = ClearanceRequest::where('clearance_type', ClearanceRequest::TYPE_HOSTEL)
-            ->where('status', ClearanceRequest::STATUS_APPROVED)
+        // approved/rejected history (limit to latest 50)
+        $processedRequests = ClearanceRequest::where('clearance_type', ClearanceRequest::TYPE_HOSTEL)
+            ->whereIn('status', [
+                ClearanceRequest::STATUS_APPROVED,
+                ClearanceRequest::STATUS_REJECTED,
+            ])
             ->with(['student', 'course', 'intake', 'approvedBy'])
-            ->orderBy('approved_at', 'desc');
-
-        $rejectedRequestsQuery = ClearanceRequest::where('clearance_type', ClearanceRequest::TYPE_HOSTEL)
-            ->where('status', ClearanceRequest::STATUS_REJECTED)
-            ->with(['student', 'course', 'intake', 'approvedBy'])
-            ->orderBy('approved_at', 'desc');
-
-        // Apply search if provided
-        $search = $request->get('search');
-        if ($search) {
-            $pendingRequestsQuery->whereHas('student', function($query) use ($search) {
-                $query->where('student_id', 'LIKE', "%{$search}%")
-                    ->orWhere('name_with_initials', 'LIKE', "%{$search}%");
-            });
-            
-            $approvedRequestsQuery->whereHas('student', function($query) use ($search) {
-                $query->where('student_id', 'LIKE', "%{$search}%")
-                    ->orWhere('name_with_initials', 'LIKE', "%{$search}%");
-            });
-            
-            $rejectedRequestsQuery->whereHas('student', function($query) use ($search) {
-                $query->where('student_id', 'LIKE', "%{$search}%")
-                    ->orWhere('name_with_initials', 'LIKE', "%{$search}%");
-            });
-        }
-
-        // Get paginated results
-        $pendingRequests = $pendingRequestsQuery->paginate($perPage, ['*'], 'pending_page');
-        $approvedRequests = $approvedRequestsQuery->paginate($perPage, ['*'], 'approved_page');
-        $rejectedRequests = $rejectedRequestsQuery->paginate($perPage, ['*'], 'rejected_page');
+            ->orderBy('approved_at', 'desc')
+            ->limit(50)
+            ->get();
 
         return view('clearance.hostel_clearance', compact(
             'pendingRequests',
-            'approvedRequests',
-            'rejectedRequests',
-            'tab',
-            'search'
+            'processedRequests'
         ));
     }
 
