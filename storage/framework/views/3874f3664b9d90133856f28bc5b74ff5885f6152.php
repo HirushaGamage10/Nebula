@@ -3265,11 +3265,19 @@ function renderPaymentRecords() {
   (window.paymentRecords || []).forEach((r) => {
     const modalId = `historyModal-${r.id}`;
 
+    // ✅ Map payment_type to display name
+    const paymentTypeDisplay = {
+      'course_fee': 'Course Fee',
+      'franchise_fee': 'Franchise Fee',
+      'registration_fee': 'Registration Fee',
+      'other': 'Other'
+    }[r.payment_type] || r.payment_type || 'N/A';
+
     const row = `
       <tr>
         <td>${r.student_id}</td>
         <td>${r.student_name}</td>
-        <td>${r.payment_type}</td>
+        <td>${paymentTypeDisplay}</td>
         <td>${r.installment_number ?? '-'}</td>
         <td>${r.amount}</td>
         <td>${r.late_fee ?? 0}</td>
@@ -4150,6 +4158,9 @@ function refreshGenerateSlipsData() {
     // Only refresh if all fields are filled (meaning data is currently loaded)
     if (studentId && courseId && paymentType) {
         console.log('Refreshing Generate Slips data after payment update...');
+        // ✅ Clear cached data to force fresh fetch from backend
+        window.paymentDetailsDataRaw = null;
+        window.paymentDetailsData = null;
         loadPaymentDetails();
     }
 }
@@ -4571,7 +4582,7 @@ function renderPaymentDetailsTable(rows, paymentType) {
         ${showLkr ? lkrCell : ''}
         <td>
           LKR ${money(lateFee)} <br>
-
+          ${approvedLateFeeStr}
         </td>
 
         <td>${statusBadge}</td>

@@ -1,5 +1,23 @@
 @extends('inc.app')
 
+@php
+function semester_label($name) {
+    if(is_numeric($name)) {
+        $num = (int)$name;
+        if($num >= 1 && $num <= 26) {
+            return chr(64 + $num);
+        }
+    }
+    if(preg_match('/(\d+)/', $name, $m)) {
+        $num = (int)$m[1];
+        if($num >= 1 && $num <= 26) {
+            return chr(64 + $num);
+        }
+    }
+    return $name;
+}
+@endphp
+
 @section('title', 'NEBULA | Edit Semester')
 
 @section('content')
@@ -63,7 +81,7 @@
                     <div class="col-sm-10">
                         <select name="semester" id="semester" class="form-select" required>
                             <option selected disabled value="">Select Semester</option>
-                            <option value="{{ $semester->id }}" selected>{{ $semester->name }}</option>
+                            <option value="{{ $semester->id }}" selected>{{ semester_label($semester->name) }}</option>
                         </select>
                     </div>
                 </div>
@@ -370,7 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         addedModules.push({moduleId, moduleName, moduleType, moduleCredits, semester, specialization});
         const row = document.createElement('tr');
-        let rowHtml = `<td>{{ $semester->name }}</td>`;
+        let rowHtml = `<td>{{ semester_label($semester->name) }}</td>`;
         if (courseSpecializations.length > 0) {
             rowHtml += `<td>${specialization ? specialization : '-'}</td>`;
         }
