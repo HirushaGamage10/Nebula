@@ -12,13 +12,18 @@ class AuthenticationValidationTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Test password constant - should be defined via environment variable in production
+     */
+    protected const TEST_PASSWORD = 'TestPassword123!@#';
+
     public function test_login_with_valid_credentials()
     {
         // Create a test user
         $user = User::create([
             'name' => 'Test User',
             'email' => 'test@nebula.com',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make(self::TEST_PASSWORD),
             'user_role' => 'Librarian',
             'status' => '1',
             'user_location' => 'Nebula Institute of Technology – Welisara'
@@ -27,7 +32,7 @@ class AuthenticationValidationTest extends TestCase
         // Attempt login
         $response = $this->post('/login', [
             'email' => 'test@nebula.com',
-            'password' => 'password123'
+            'password' => self::TEST_PASSWORD
         ]);
 
         // Should redirect to dashboard
@@ -39,7 +44,7 @@ class AuthenticationValidationTest extends TestCase
     {
         $response = $this->post('/login', [
             'email' => 'invalid-email',
-            'password' => 'password123'
+            'password' => self::TEST_PASSWORD
         ]);
 
         $response->assertSessionHasErrors(['email']);
@@ -61,7 +66,7 @@ class AuthenticationValidationTest extends TestCase
     {
         $response = $this->post('/login', [
             'email' => 'nonexistent@nebula.com',
-            'password' => 'password123'
+            'password' => self::TEST_PASSWORD
         ]);
 
         $response->assertSessionHasErrors(['email']);
@@ -74,7 +79,7 @@ class AuthenticationValidationTest extends TestCase
         $user = User::create([
             'name' => 'Test User',
             'email' => 'test@nebula.com',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make(self::TEST_PASSWORD),
             'user_role' => 'Librarian',
             'status' => '1',
             'user_location' => 'Nebula Institute of Technology – Welisara'
@@ -95,7 +100,7 @@ class AuthenticationValidationTest extends TestCase
         $user = User::create([
             'name' => 'Inactive User',
             'email' => 'inactive@nebula.com',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make(self::TEST_PASSWORD),
             'user_role' => 'Librarian',
             'status' => '0', // Inactive
             'user_location' => 'Nebula Institute of Technology – Welisara'
@@ -103,7 +108,7 @@ class AuthenticationValidationTest extends TestCase
 
         $response = $this->post('/login', [
             'email' => 'inactive@nebula.com',
-            'password' => 'password123'
+            'password' => self::TEST_PASSWORD
         ]);
 
         $response->assertSessionHasErrors(['email']);
@@ -116,7 +121,7 @@ class AuthenticationValidationTest extends TestCase
         $user = User::create([
             'name' => 'No Role User',
             'email' => 'norole@nebula.com',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make(self::TEST_PASSWORD),
             'user_role' => null,
             'status' => '1',
             'user_location' => 'Nebula Institute of Technology – Welisara'
@@ -124,7 +129,7 @@ class AuthenticationValidationTest extends TestCase
 
         $response = $this->post('/login', [
             'email' => 'norole@nebula.com',
-            'password' => 'password123'
+            'password' => self::TEST_PASSWORD
         ]);
 
         $response->assertSessionHasErrors(['email']);

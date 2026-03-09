@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Phase;
 use App\Models\Team;
 use App\Models\User;
+use App\Rules\SafeExternalUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -105,8 +106,8 @@ class TeamPhaseController extends Controller
             'name' => 'required|string|max:255',
             'profile_pic' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'p_no' => 'nullable|string|max:20',
-            'link1' => 'nullable|url|max:255',
-            'link2' => 'nullable|url|max:255',
+            'link1' => ['nullable', new SafeExternalUrl()],
+            'link2' => ['nullable', new SafeExternalUrl()],
             'phases' => 'required|array|min:1',
             'roles' => 'required|array',
         ]);
@@ -145,8 +146,8 @@ class TeamPhaseController extends Controller
             'name' => 'required|string|max:255',
             'profile_pic' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'p_no' => 'nullable|string|max:20',
-            'link1' => 'nullable|url|max:255',
-            'link2' => 'nullable|url|max:255',
+            'link1' => ['nullable', new SafeExternalUrl()],
+            'link2' => ['nullable', new SafeExternalUrl()],
             'roles' => 'required|array',
         ]);
 

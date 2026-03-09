@@ -37,10 +37,10 @@
         // Build a system
         const ui = SwaggerUIBundle({
             dom_id: '#swagger-ui',
-            url: "{!! $urlToDocs !!}",
-            operationsSorter: {!! isset($operationsSorter) ? '"' . $operationsSorter . '"' : 'null' !!},
-            configUrl: {!! isset($configUrl) ? '"' . $configUrl . '"' : 'null' !!},
-            validatorUrl: {!! isset($validatorUrl) ? '"' . $validatorUrl . '"' : 'null' !!},
+            url: {{ json_encode($urlToDocs) }},
+            operationsSorter: {{ isset($operationsSorter) ? json_encode($operationsSorter) : 'null' }},
+            configUrl: {{ isset($configUrl) ? json_encode($configUrl) : 'null' }},
+            validatorUrl: {{ isset($validatorUrl) ? json_encode($validatorUrl) : 'null' }},
             oauth2RedirectUrl: "{{ route('l5-swagger.'.$documentation.'.oauth2_callback', [], $useAbsolutePath) }}",
 
             requestInterceptor: function(request) {

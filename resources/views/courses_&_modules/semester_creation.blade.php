@@ -154,8 +154,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Helper to reset and disable a select
     function resetAndDisable(select, placeholder) {
-        $(select).html(`<option value="" selected disabled>${placeholder}</option>`).prop('disabled', true);
+        $(select).html(`<option value="" selected disabled>${escapeHtml(placeholder)}</option>`).prop('disabled', true);
         $(select).removeClass('enabled-highlight');
+    }
+    // Helper function to escape HTML entities and prevent XSS
+    function escapeHtml(text) {
+        const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+        return text.replace(/[&<>"']/g, m => map[m]);
     }
     // Helper to enable a select
     function enableSelect(select) {
@@ -178,7 +183,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.success && data.courses && data.courses.length > 0) {
                         let options = '<option value="" selected disabled>Select Course</option>';
                         data.courses.forEach(course => {
-                            options += `<option value="${course.course_id}">${course.course_name}</option>`;
+                            options += `<option value="${escapeHtml(String(course.course_id))}">${escapeHtml(String(course.course_name))}</option>`;
                         });
                         courseSelect.innerHTML = options;
                         enableSelect(courseSelect);
@@ -242,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             courseSpecializations = specializations;
                             let options = '<option value="" selected disabled>Select Specialization</option>';
                             courseSpecializations.forEach(spec => {
-                                options += `<option value="${spec}">${spec}</option>`;
+                                options += `<option value="${escapeHtml(String(spec))}">${escapeHtml(String(spec))}</option>`;
                             });
                             document.getElementById('specialization_select').innerHTML = options;
                             document.getElementById('specializationRow').style.display = '';
@@ -269,7 +274,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (data.intakes && data.intakes.length > 0) {
                                 let options = '<option value="" selected disabled>Select Intake</option>';
                                 data.intakes.forEach(intake => {
-                                    options += `<option value="${intake.intake_id}">${intake.batch}</option>`;
+                                    options += `<option value="${escapeHtml(String(intake.intake_id))}">${escapeHtml(String(intake.batch))}</option>`;
                                 });
                                 intakeSelect.innerHTML = options;
                                 enableSelect(intakeSelect);
@@ -292,7 +297,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (data.intakes && data.intakes.length > 0) {
                                 let options = '<option value="" selected disabled>Select Intake</option>';
                                 data.intakes.forEach(intake => {
-                                    options += `<option value="${intake.intake_id}">${intake.batch}</option>`;
+                                    options += `<option value="${escapeHtml(String(intake.intake_id))}">${escapeHtml(String(intake.batch))}</option>`;
                                 });
                                 intakeSelect.innerHTML = options;
                                 enableSelect(intakeSelect);
@@ -334,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     displayName = String.fromCharCode(64 + num);
                                 }
                             }
-                            options += `<option value="${sem.semester_id}">${displayName}</option>`;
+                            options += `<option value="${escapeHtml(String(sem.semester_id))}">${escapeHtml(displayName)}</option>`;
                         });
                         semesterSelect.innerHTML = options;
                         enableSelect(semesterSelect);
@@ -411,9 +416,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const filtered = allModules.filter(m => m.module_type === selectedType);
         if (filtered.length > 0) {
             filtered.forEach(module => {
-                const moduleCode = module.module_code ? ` (${module.module_code})` : '';
-                options += `<option value="${module.module_id}" data-type="${module.module_type ?? ''}" data-credits="${module.credits ?? ''}">
-                    ${module.module_name}${moduleCode}
+                const moduleCode = module.module_code ? ` (${escapeHtml(String(module.module_code))})` : '';
+                options += `<option value="${escapeHtml(String(module.module_id))}" data-type="${escapeHtml(String(module.module_type ?? ''))}" data-credits="${escapeHtml(String(module.credits ?? ''))}">
+                    ${escapeHtml(String(module.module_name))}${moduleCode}
                 </option>`;
             });
             moduleSelect.innerHTML = options;

@@ -11,6 +11,11 @@ class SimpleAuthenticationTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Test password constant - should be defined via environment variable in production
+     */
+    protected const TEST_PASSWORD = 'TestPassword123!@#';
+
     public function test_login_with_empty_fields_shows_validation_errors()
     {
         $response = $this->post('/login', [
@@ -26,7 +31,7 @@ class SimpleAuthenticationTest extends TestCase
     {
         $response = $this->post('/login', [
             'email' => 'invalid-email-format',
-            'password' => 'password123'
+            'password' => self::TEST_PASSWORD
         ]);
 
         $response->assertSessionHasErrors(['email']);
@@ -37,7 +42,7 @@ class SimpleAuthenticationTest extends TestCase
     {
         $response = $this->post('/login', [
             'email' => 'test@example.com',
-            'password' => 'password123'
+            'password' => self::TEST_PASSWORD
         ]);
 
         // Should not have email validation errors
@@ -60,7 +65,7 @@ class SimpleAuthenticationTest extends TestCase
     {
         $response = $this->post('/login', [
             'email' => 'nonexistent@nebula.com',
-            'password' => 'password123'
+            'password' => self::TEST_PASSWORD
         ]);
 
         $response->assertSessionHasErrors(['email']);
@@ -73,7 +78,7 @@ class SimpleAuthenticationTest extends TestCase
         $user = User::create([
             'name' => 'Inactive User',
             'email' => 'inactive@nebula.com',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make(self::TEST_PASSWORD),
             'user_role' => 'Librarian',
             'status' => '0', // Inactive
             'user_location' => 'Nebula Institute of Technology – Welisara'
@@ -81,7 +86,7 @@ class SimpleAuthenticationTest extends TestCase
 
         $response = $this->post('/login', [
             'email' => 'inactive@nebula.com',
-            'password' => 'password123'
+            'password' => self::TEST_PASSWORD
         ]);
 
         $response->assertSessionHasErrors(['email']);
@@ -94,7 +99,7 @@ class SimpleAuthenticationTest extends TestCase
         $user = User::create([
             'name' => 'No Role User',
             'email' => 'norole@nebula.com',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make(self::TEST_PASSWORD),
             'user_role' => null,
             'status' => '1',
             'user_location' => 'Nebula Institute of Technology – Welisara'
@@ -102,7 +107,7 @@ class SimpleAuthenticationTest extends TestCase
 
         $response = $this->post('/login', [
             'email' => 'norole@nebula.com',
-            'password' => 'password123'
+            'password' => self::TEST_PASSWORD
         ]);
 
         $response->assertSessionHasErrors(['email']);
@@ -115,7 +120,7 @@ class SimpleAuthenticationTest extends TestCase
         $user = User::create([
             'name' => 'Active User',
             'email' => 'active@nebula.com',
-            'password' => Hash::make('password123'),
+            'password' => Hash::make(self::TEST_PASSWORD),
             'user_role' => 'Librarian',
             'status' => '1', // Active
             'user_location' => 'Nebula Institute of Technology – Welisara'
@@ -123,7 +128,7 @@ class SimpleAuthenticationTest extends TestCase
 
         $response = $this->post('/login', [
             'email' => 'active@nebula.com',
-            'password' => 'password123'
+            'password' => self::TEST_PASSWORD
         ]);
 
         $response->assertRedirect('/dashboard');

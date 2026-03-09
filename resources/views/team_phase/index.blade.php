@@ -332,13 +332,13 @@
                                   <hr>
                                   <p class="mb-1"><strong>{{ $team->name }}</strong></p>
                                   <p class="text-muted">Click the button below to view full LinkedIn details.</p>
-                                  <a href="{{ $team->link1 }}" target="_blank" class="btn btn-primary w-100">View LinkedIn Profile</a>
+                                  <a href="{{ htmlspecialchars($team->link1, ENT_QUOTES, 'UTF-8') }}" target="_blank" class="btn btn-primary w-100">View LinkedIn Profile</a>
                                 </div>
                               @endif
 
                               @if($team->link2)
                                 <div class="mt-3">
-                                  <a href="{{ $team->link2 }}" target="_blank" class="btn btn-outline-secondary w-100">Visit Other Link</a>
+                                  <a href="{{ htmlspecialchars($team->link2, ENT_QUOTES, 'UTF-8') }}" target="_blank" class="btn btn-outline-secondary w-100">Visit Other Link</a>
                                 </div>
                               @endif
                             </div>
@@ -643,6 +643,12 @@
 </div>
 
 <script nonce="{{ $cspNonce }}">
+/* HTML Escape Helper Function */
+function escapeHtml(text) {
+  const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+  return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
 // Event delegation for all dynamic buttons (CSP compliant)
 document.addEventListener('click', function(e) {
     // Delete phase
@@ -807,7 +813,7 @@ document.querySelectorAll('.phase-checkbox').forEach(cb => {
         container.innerHTML = '';
         document.querySelectorAll('.phase-checkbox:checked').forEach(sel => {
             const phaseId = sel.value;
-            const phaseName = sel.nextElementSibling.innerText;
+            const phaseName = escapeHtml(sel.nextElementSibling.innerText);
             const html = `
                 <div class="card mt-3 border-0 shadow-sm">
                     <div class="card-body">

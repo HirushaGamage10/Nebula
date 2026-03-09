@@ -188,6 +188,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.7.0/jspdf.plugin.autotable.min.js"></script>
 <script nonce="{{ $cspNonce }}">
+/* HTML Escape Helper Function */
+function escapeHtml(text) {
+  const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+  return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Degree Tab Elements
     const degreeLocation = document.getElementById('degree_location');
@@ -538,11 +544,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 degreeTableBody.innerHTML = '';
                 data.attendance.forEach(row => {
                     degreeTableBody.insertAdjacentHTML('beforeend', `<tr>
-                        <td>${row.registration_number}</td>
-                        <td>${row.name_with_initials}</td>
-                        <td>${row.total_sessions}</td>
-                        <td>${row.attended_sessions}</td>
-                        <td>${row.percentage}%</td>
+                        <td>${escapeHtml(row.registration_number)}</td>
+                        <td>${escapeHtml(row.name_with_initials)}</td>
+                        <td>${escapeHtml(String(row.total_sessions))}</td>
+                        <td>${escapeHtml(String(row.attended_sessions))}</td>
+                        <td>${escapeHtml(String(row.percentage))}%</td>
                     </tr>`);
                 });
             } else {
@@ -606,11 +612,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 certTableBody.innerHTML = '';
                 data.attendance.forEach(row => {
                     certTableBody.insertAdjacentHTML('beforeend', `<tr>
-                        <td>${row.registration_number}</td>
-                        <td>${row.name_with_initials}</td>
-                        <td>${row.total_sessions}</td>
-                        <td>${row.attended_sessions}</td>
-                        <td>${row.percentage}%</td>
+                        <td>${escapeHtml(row.registration_number)}</td>
+                        <td>${escapeHtml(row.name_with_initials)}</td>
+                        <td>${escapeHtml(String(row.total_sessions))}</td>
+                        <td>${escapeHtml(String(row.attended_sessions))}</td>
+                        <td>${escapeHtml(String(row.percentage))}%</td>
                     </tr>`);
                 });
             } else {

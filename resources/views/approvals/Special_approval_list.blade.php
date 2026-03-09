@@ -328,6 +328,12 @@
 function showSuccessMessage(msg){const m=document.createElement('div');m.className='success-message';m.innerHTML=`<i class="ti ti-check-circle success-icon"></i>${msg}`;document.body.appendChild(m);setTimeout(()=>m.classList.add('show'),100);setTimeout(()=>{m.classList.remove('show');setTimeout(()=>m.remove(),300)},4000)}
 function showErrorMessage(msg){const m=document.createElement('div');m.className='error-message';m.innerHTML=`<i class="ti ti-alert-circle error-icon"></i>${msg}`;document.body.appendChild(m);setTimeout(()=>m.classList.add('show'),100);setTimeout(()=>{m.classList.remove('show');setTimeout(()=>m.remove(),300)},5000)}
 
+/* HTML Escape Helper Function */
+function escapeHtml(text) {
+  const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+  return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   const tableBody = document.getElementById('specialApprovalTableBody');
   const franchiseTableBody = document.getElementById('franchisePaymentTableBody');
@@ -375,23 +381,23 @@ document.addEventListener('DOMContentLoaded', function() {
   function renderSpecialApprovalTable(students){
     tableBody.innerHTML = '';
     students.forEach(st=>{
-      const nic = st.nic && st.nic!=='N/A' ? st.nic : '';
+      const nic = st.nic && st.nic!=='N/A' ? escapeHtml(st.nic) : '';
       const docHtml = st.document_path
-        ? `<a href="/special-approval-document/${st.document_path.split('/').pop()}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="ti ti-download"></i> View Document</a>`
+        ? `<a href="/special-approval-document/${escapeHtml(st.document_path.split('/').pop())}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="ti ti-download"></i> View Document</a>`
         : '<span class="text-muted">No document</span>';
-      const remarks = st.remarks || 'No remarks';
-      const dgm     = st.dgm_comment || 'No DGM comment';
+      const remarks = escapeHtml(st.remarks || 'No remarks');
+      const dgm     = escapeHtml(st.dgm_comment || 'No DGM comment');
       const row = `
         <tr>
-          <td>${st.registration_number||''}</td>
-          <td>${st.name||''}</td>
-          <td>${st.course_name||''}</td>
+          <td>${escapeHtml(st.registration_number||'')}</td>
+          <td>${escapeHtml(st.name||'')}</td>
+          <td>${escapeHtml(st.course_name||'')}</td>
           <td>${docHtml}</td>
           <td title="${remarks}">${remarks.length>50?remarks.substring(0,50)+'…':remarks}</td>
           <td title="${dgm}">
             <div class="d-flex align-items-center">
               <span class="me-2">${dgm.length>50?dgm.substring(0,50)+'…':dgm}</span>
-              <button class="btn btn-sm btn-outline-primary edit-comment-btn" data-registration-id="${st.registration_id}" data-current-comment="${dgm}">
+              <button class="btn btn-sm btn-outline-primary edit-comment-btn" data-registration-id="${escapeHtml(String(st.registration_id))}" data-current-comment="${dgm}">
                 <i class="ti ti-edit"></i>
               </button>
             </div>

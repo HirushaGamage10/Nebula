@@ -111,6 +111,18 @@
 <script nonce="{{ $cspNonce }}">
 let tableData = [];
 
+/* HTML Escape Helper Function */
+function escapeHtml(text) {
+  const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+  return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+/* HTML Escape Helper Function */
+function escapeHtml(text) {
+  const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+  return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
 /* -------------------------------
    🔹 Filter Form Submit
 --------------------------------*/
@@ -164,18 +176,18 @@ function renderResults(items) {
   }
 
   items.forEach((s, i) => {
-    const course = s.course_registrations?.[0]?.course?.course_name || '-';
-    const intake = s.course_registrations?.[0]?.intake?.batch || '-';
-    const location = s.institute_location || '-';
+    const course = escapeHtml(s.course_registrations?.[0]?.course?.course_name || '-');
+    const intake = escapeHtml(s.course_registrations?.[0]?.intake?.batch || '-');
+    const location = escapeHtml(s.institute_location || '-');
     const status = s.academic_status
-      ? `<span class="badge bg-${getStatusColor(s.academic_status)}">${s.academic_status}</span>`
+      ? `<span class="badge bg-${getStatusColor(s.academic_status)}">${escapeHtml(s.academic_status)}</span>`
       : '-';
 
     table.innerHTML += `
       <tr>
         <td>${i + 1}</td>
-        <td class="col-student">${s.full_name}</td>
-        <td class="col-nic">${s.id_value || '-'}</td>
+        <td class="col-student">${escapeHtml(s.full_name)}</td>
+        <td class="col-nic">${escapeHtml(s.id_value || '-')}</td>
         <td class="col-course">${course}</td>
         <td class="col-intake">${intake}</td>
         <td class="col-location">${location}</td>
@@ -284,7 +296,7 @@ document.getElementById('student_id').addEventListener('change', async e => {
     if (data.success && data.courses.length > 0) {
       let html = '<option value="">All Courses</option>';
       data.courses.forEach(course => {
-        html += `<option value="${course.course_id}">${course.course_name}</option>`;
+        html += `<option value="${escapeHtml(String(course.course_id))}">${escapeHtml(String(course.course_name))}</option>`;
       });
       document.getElementById('courseSelect').innerHTML = html;
     } else {
