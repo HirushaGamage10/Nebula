@@ -15,7 +15,7 @@ jobs:
       - name: Deploy to production server
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 124.43.163.148
+          host: nebulastudentportal.slt.lk
           username: cpo_admin
           port: 2002
           key: ${{ secrets.SSH_PRIVATE_KEY }}
