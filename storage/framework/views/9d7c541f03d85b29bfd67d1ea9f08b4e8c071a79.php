@@ -140,6 +140,7 @@
 <?php $__env->startSection('scripts'); ?>
 <script nonce="<?php echo e($cspNonce); ?>">
 let courseSpecializations = [];
+let courseSemesterFormat = 'numerical'; // Default to numerical
 document.addEventListener('DOMContentLoaded', function() {
     const locationSelect = document.getElementById('location');
     const courseSelect = document.getElementById('course_id');
@@ -154,8 +155,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Helper to reset and disable a select
     function resetAndDisable(select, placeholder) {
-        $(select).html(`<option value="" selected disabled>${placeholder}</option>`).prop('disabled', true);
+        $(select).html(`<option value="" selected disabled>${escapeHtml(placeholder)}</option>`).prop('disabled', true);
         $(select).removeClass('enabled-highlight');
+    }
+    // Helper function to escape HTML entities and prevent XSS
+    function escapeHtml(text) {
+        const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+        return text.replace(/[&<>"']/g, m => map[m]);
     }
     // Helper to enable a select
     function enableSelect(select) {
@@ -178,7 +184,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.success && data.courses && data.courses.length > 0) {
                         let options = '<option value="" selected disabled>Select Course</option>';
                         data.courses.forEach(course => {
-                            options += `<option value="${course.course_id}">${course.course_name}</option>`;
+                            options += `<option value="${escapeHtml(String(course.course_id))}">${escapeHtml(String(course.course_name))}</option>`;
                         });
                         courseSelect.innerHTML = options;
                         enableSelect(courseSelect);
@@ -219,6 +225,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(data => {
                     console.log('Course data received:', data);
                     if (data.success && data.course) {
+                        // Store the semester format from the course
+                        const oldFormat = courseSemesterFormat;
+                        courseSemesterFormat = data.course.semester_format || 'numerical';
+                        console.log('Semester format changed from:', oldFormat, 'to:', courseSemesterFormat);
+                        console.log('Full course data:', data.course);
+                        
                         let specializations = [];
                         
                         // Handle different formats of specializations
@@ -242,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             courseSpecializations = specializations;
                             let options = '<option value="" selected disabled>Select Specialization</option>';
                             courseSpecializations.forEach(spec => {
-                                options += `<option value="${spec}">${spec}</option>`;
+                                options += `<option value="${escapeHtml(String(spec))}">${escapeHtml(String(spec))}</option>`;
                             });
                             document.getElementById('specialization_select').innerHTML = options;
                             document.getElementById('specializationRow').style.display = '';
@@ -269,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (data.intakes && data.intakes.length > 0) {
                                 let options = '<option value="" selected disabled>Select Intake</option>';
                                 data.intakes.forEach(intake => {
-                                    options += `<option value="${intake.intake_id}">${intake.batch}</option>`;
+                                    options += `<option value="${escapeHtml(String(intake.intake_id))}">${escapeHtml(String(intake.batch))}</option>`;
                                 });
                                 intakeSelect.innerHTML = options;
                                 enableSelect(intakeSelect);
@@ -292,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (data.intakes && data.intakes.length > 0) {
                                 let options = '<option value="" selected disabled>Select Intake</option>';
                                 data.intakes.forEach(intake => {
-                                    options += `<option value="${intake.intake_id}">${intake.batch}</option>`;
+                                    options += `<option value="${escapeHtml(String(intake.intake_id))}">${escapeHtml(String(intake.batch))}</option>`;
                                 });
                                 intakeSelect.innerHTML = options;
                                 enableSelect(intakeSelect);
@@ -321,20 +333,30 @@ document.addEventListener('DOMContentLoaded', function() {
             fetch(`/semester-registration/get-all-semesters-for-course?course_id=${encodeURIComponent(courseSelect.value)}&intake_id=${encodeURIComponent(intakeSelect.value)}`)
                 .then(response => response.json())
                 .then(data => {
+                    console.log('Semesters API response:', data);
+                    console.log('Current semester format:', courseSemesterFormat);
                     if (data.success && data.semesters && data.semesters.length > 0) {
                         let options = '<option value="" selected disabled>Select Semester</option>';
-                        data.semesters.forEach(sem => {
-                            // convert numeric semester names to letters (1->A, 2->B, etc.)
-                            const semName = sem.semester_name;
-                            let displayName = semName;
-                            const m = semName.match(/(\d+)/);
-                            if (m) {
-                                const num = parseInt(m[1], 10);
-                                if (num >= 1 && num <= 26) {
-                                    displayName = String.fromCharCode(64 + num);
+                        data.semesters.forEach((sem, index) => {
+                            // The semester number is based on its position (0-indexed, so add 1)
+                            const semesterNumber = index + 1;
+                            let displayName = '';
+                            
+                            // Convert based on course format preference
+                            if (courseSemesterFormat === 'alphabetical') {
+                                // Show as letters (A, B, C, etc.)
+                                if (semesterNumber >= 1 && semesterNumber <= 26) {
+                                    displayName = 'Semester ' + String.fromCharCode(64 + semesterNumber);
+                                } else {
+                                    displayName = 'Semester ' + semesterNumber;
                                 }
+                            } else {
+                                // Show as numbers (1, 2, 3, etc.) - this is the default
+                                displayName = 'Semester ' + String(semesterNumber);
                             }
-                            options += `<option value="${sem.semester_id}">${displayName}</option>`;
+                            
+                            console.log(`Semester ${index}: Position=${semesterNumber}, Format=${courseSemesterFormat}, Display=${displayName}, ID=${sem.semester_id}`);
+                            options += `<option value="${escapeHtml(String(sem.semester_id))}">${escapeHtml(displayName)}</option>`;
                         });
                         semesterSelect.innerHTML = options;
                         enableSelect(semesterSelect);
@@ -349,13 +371,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     
-    // utility: convert semester name to letter if numeric
+    // utility: convert semester name based on course format
     function semesterDisplay(name) {
-        const m = String(name).match(/(\d+)/);
-        if (m) {
-            const num = parseInt(m[1], 10);
-            if (num >= 1 && num <= 26) {
-                return String.fromCharCode(64 + num);
+        if (courseSemesterFormat === 'alphabetical') {
+            const m = String(name).match(/(\d+)/);
+            if (m) {
+                const num = parseInt(m[1], 10);
+                if (num >= 1 && num <= 26) {
+                    return String.fromCharCode(64 + num);
+                }
+            }
+        } else if (courseSemesterFormat === 'numerical') {
+            const m = String(name).match(/[A-Za-z]/);
+            if (m) {
+                const char = name.charCodeAt(0);
+                if (char >= 65 && char <= 90) {
+                    return String(char - 64);
+                } else if (char >= 97 && char <= 122) {
+                    return String(char - 96);
+                }
             }
         }
         return name;
@@ -411,9 +445,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const filtered = allModules.filter(m => m.module_type === selectedType);
         if (filtered.length > 0) {
             filtered.forEach(module => {
-                const moduleCode = module.module_code ? ` (${module.module_code})` : '';
-                options += `<option value="${module.module_id}" data-type="${module.module_type ?? ''}" data-credits="${module.credits ?? ''}">
-                    ${module.module_name}${moduleCode}
+                const moduleCode = module.module_code ? ` (${escapeHtml(String(module.module_code))})` : '';
+                options += `<option value="${escapeHtml(String(module.module_id))}" data-type="${escapeHtml(String(module.module_type ?? ''))}" data-credits="${escapeHtml(String(module.credits ?? ''))}">
+                    ${escapeHtml(String(module.module_name))}${moduleCode}
                 </option>`;
             });
             moduleSelect.innerHTML = options;

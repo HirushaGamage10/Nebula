@@ -16,6 +16,7 @@ class Course extends Model
     protected $fillable = [
         'location',
         'course_type',
+        'semester_format',
         'course_name',
         'no_of_semesters',
         'duration',

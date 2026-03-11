@@ -52,6 +52,16 @@
                             </select>
                         </div>
                     </div>
+                    <div class="mb-3 row mx-3">
+                        <label for="semester_format" class="col-sm-2 col-form-label">Semester Naming Convention <span class="text-danger">*</span></label>
+                        <div class="col-sm-10">
+                            <select class="form-select" id="semester_format" name="semester_format" required>
+                                <option value="">Select Semester Format</option>
+                                <option value="numerical">Numerical (1, 2, 3, 4...)</option>
+                                <option value="alphabetical">Alphabetical (A, B, C, D...)</option>
+                            </select>
+                        </div>
+                    </div>
                     <!-- Specialization Field (Degree Only) -->
                     <div class="mb-3 row mx-3 align-items-center">
                         <label class="col-sm-2 col-form-label">Specialization</label>
@@ -144,6 +154,16 @@
                                 <option selected disabled value="">Choose a medium...</option>
                                 <option value="Sinhala">Sinhala</option>
                                 <option value="English">English</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3 row mx-3">
+                        <label for="cert_semester_format" class="col-sm-2 col-form-label">Semester Naming Convention <span class="text-danger">*</span></label>
+                        <div class="col-sm-10">
+                            <select class="form-select" id="cert_semester_format" name="semester_format" required>
+                                <option value="">Select Semester Format</option>
+                                <option value="numerical">Numerical (1, 2, 3, 4...)</option>
+                                <option value="alphabetical">Alphabetical (A, B, C, D...)</option>
                             </select>
                         </div>
                     </div>
@@ -882,6 +902,7 @@ $(document).ready(function() {
                         $('#training_days').val(course.training_period.days);
                         $('#min_credits').val(course.min_credits);
                         $('#entry_qualification').val(course.entry_qualification);
+                        setSelectValue('#semester_format', course.semester_format || 'numerical');
                     } else if (course.course_type === 'certificate') {
                         $('#cert_course_name').val(course.course_name);
                         $('#cert_duration_years').val(course.duration.years);
@@ -904,6 +925,7 @@ $(document).ready(function() {
                         $('#cert_training_days').val(course.training_period.days);
                         $('#course_content').val(course.course_content);
                         $('#cert_entry_qualification').val(course.entry_qualification);
+                        setSelectValue('#cert_semester_format', course.semester_format || 'numerical');
                     }
                 } else {
                     showToast('Failed to fetch course details for editing', 'danger');

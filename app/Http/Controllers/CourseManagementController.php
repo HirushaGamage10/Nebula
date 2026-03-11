@@ -24,6 +24,7 @@ class CourseManagementController extends Controller
         $validatedData = $request->validate([
             'location' => ['required', Rule::in(['Welisara', 'Moratuwa', 'Peradeniya'])],
             'course_type' => ['required', Rule::in(['degree', 'diploma', 'certificate'])],
+            'semester_format' => ['required', Rule::in(['numerical', 'alphabetical'])],
             'course_name' => [
                 'required',
                 'string',
@@ -161,6 +162,7 @@ class CourseManagementController extends Controller
         $validatedData = $request->validate([
             'location' => ['required', Rule::in(['Welisara', 'Moratuwa', 'Peradeniya'])],
             'course_type' => ['required', Rule::in(['degree', 'diploma', 'certificate'])],
+            'semester_format' => ['required', Rule::in(['numerical', 'alphabetical'])],
             'course_name' => [
                 'required',
                 'string',

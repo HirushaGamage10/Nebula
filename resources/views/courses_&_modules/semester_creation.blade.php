@@ -140,6 +140,7 @@
 @section('scripts')
 <script nonce="{{ $cspNonce }}">
 let courseSpecializations = [];
+let courseSemesterFormat = 'numerical'; // Default to numerical
 document.addEventListener('DOMContentLoaded', function() {
     const locationSelect = document.getElementById('location');
     const courseSelect = document.getElementById('course_id');
@@ -224,6 +225,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(data => {
                     console.log('Course data received:', data);
                     if (data.success && data.course) {
+                        // Store the semester format from the course
+                        const oldFormat = courseSemesterFormat;
+                        courseSemesterFormat = data.course.semester_format || 'numerical';
+                        console.log('Semester format changed from:', oldFormat, 'to:', courseSemesterFormat);
+                        console.log('Full course data:', data.course);
+                        
                         let specializations = [];
                         
                         // Handle different formats of specializations
@@ -326,19 +333,29 @@ document.addEventListener('DOMContentLoaded', function() {
             fetch(`/semester-registration/get-all-semesters-for-course?course_id=${encodeURIComponent(courseSelect.value)}&intake_id=${encodeURIComponent(intakeSelect.value)}`)
                 .then(response => response.json())
                 .then(data => {
+                    console.log('Semesters API response:', data);
+                    console.log('Current semester format:', courseSemesterFormat);
                     if (data.success && data.semesters && data.semesters.length > 0) {
                         let options = '<option value="" selected disabled>Select Semester</option>';
-                        data.semesters.forEach(sem => {
-                            // convert numeric semester names to letters (1->A, 2->B, etc.)
-                            const semName = sem.semester_name;
-                            let displayName = semName;
-                            const m = semName.match(/(\d+)/);
-                            if (m) {
-                                const num = parseInt(m[1], 10);
-                                if (num >= 1 && num <= 26) {
-                                    displayName = String.fromCharCode(64 + num);
+                        data.semesters.forEach((sem, index) => {
+                            // The semester number is based on its position (0-indexed, so add 1)
+                            const semesterNumber = index + 1;
+                            let displayName = '';
+                            
+                            // Convert based on course format preference
+                            if (courseSemesterFormat === 'alphabetical') {
+                                // Show as letters (A, B, C, etc.)
+                                if (semesterNumber >= 1 && semesterNumber <= 26) {
+                                    displayName = 'Semester ' + String.fromCharCode(64 + semesterNumber);
+                                } else {
+                                    displayName = 'Semester ' + semesterNumber;
                                 }
+                            } else {
+                                // Show as numbers (1, 2, 3, etc.) - this is the default
+                                displayName = 'Semester ' + String(semesterNumber);
                             }
+                            
+                            console.log(`Semester ${index}: Position=${semesterNumber}, Format=${courseSemesterFormat}, Display=${displayName}, ID=${sem.semester_id}`);
                             options += `<option value="${escapeHtml(String(sem.semester_id))}">${escapeHtml(displayName)}</option>`;
                         });
                         semesterSelect.innerHTML = options;
@@ -354,13 +371,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     
-    // utility: convert semester name to letter if numeric
+    // utility: convert semester name based on course format
     function semesterDisplay(name) {
-        const m = String(name).match(/(\d+)/);
-        if (m) {
-            const num = parseInt(m[1], 10);
-            if (num >= 1 && num <= 26) {
-                return String.fromCharCode(64 + num);
+        if (courseSemesterFormat === 'alphabetical') {
+            const m = String(name).match(/(\d+)/);
+            if (m) {
+                const num = parseInt(m[1], 10);
+                if (num >= 1 && num <= 26) {
+                    return String.fromCharCode(64 + num);
+                }
+            }
+        } else if (courseSemesterFormat === 'numerical') {
+            const m = String(name).match(/[A-Za-z]/);
+            if (m) {
+                const char = name.charCodeAt(0);
+                if (char >= 65 && char <= 90) {
+                    return String(char - 64);
+                } else if (char >= 97 && char <= 122) {
+                    return String(char - 96);
+                }
             }
         }
         return name;
