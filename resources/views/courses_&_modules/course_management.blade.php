@@ -52,16 +52,6 @@
                             </select>
                         </div>
                     </div>
-                    <div class="mb-3 row mx-3">
-                        <label for="semester_format" class="col-sm-2 col-form-label">Semester Naming Convention <span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <select class="form-select" id="semester_format" name="semester_format" required>
-                                <option value="">Select Semester Format</option>
-                                <option value="numerical">Numerical (1, 2, 3, 4...)</option>
-                                <option value="alphabetical">Alphabetical (A, B, C, D...)</option>
-                            </select>
-                        </div>
-                    </div>
                     <!-- Specialization Field (Degree Only) -->
                     <div class="mb-3 row mx-3 align-items-center">
                         <label class="col-sm-2 col-form-label">Specialization</label>
@@ -115,6 +105,16 @@
                         <label for="no_of_semesters" class="col-sm-2 col-form-label">Semesters</label>
                         <div class="col-sm-10">
                             <input type="number" class="form-control" id="no_of_semesters" name="no_of_semesters" placeholder="Enter the number of total semesters">
+                        </div>
+                    </div>
+                    <div class="mb-3 row mx-3">
+                        <label for="semester_format" class="col-sm-2 col-form-label">Semester Naming Convention <span class="text-danger">*</span></label>
+                        <div class="col-sm-10">
+                            <select class="form-select" id="semester_format" name="semester_format" required>
+                                <option value="">Select Semester Format</option>
+                                <option value="numerical">Numerical (1, 2, 3, 4...)</option>
+                                <option value="alphabetical">Alphabetical (A, B, C, D...)</option>
+                            </select>
                         </div>
                     </div>
                     <div class="mb-3 row mx-3">

@@ -117,7 +117,6 @@ class AttendanceController extends Controller
 
         $semesters = \App\Models\Semester::where('course_id', $request->course_id)
             ->where('intake_id', $request->intake_id)
-            ->whereIn('status', ['active', 'upcoming'])
             ->get(['id as semester_id', 'name as semester_name']);
             
         return response()->json(['semesters' => $semesters, 'is_certificate' => false]);

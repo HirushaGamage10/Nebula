@@ -381,7 +381,6 @@ class ExamResultController extends Controller
         // Get semesters that have been created for this course and intake
         $semesters = \App\Models\Semester::where('course_id', $request->course_id)
             ->where('intake_id', $request->intake_id)
-            ->whereIn('status', ['active', 'upcoming'])
             ->select('id', 'name')
             ->get();
 
