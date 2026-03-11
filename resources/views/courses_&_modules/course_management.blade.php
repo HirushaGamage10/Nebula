@@ -6,7 +6,7 @@
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
-              <h2 class="text-center mb-4">Course Management</h2>
+              <h2 class="text-center mb-4">Create New Courses</h2>
             <hr>
             <form id="courseForm">
                 @csrf
