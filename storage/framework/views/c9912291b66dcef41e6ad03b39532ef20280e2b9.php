@@ -6,7 +6,7 @@
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
-              <h2 class="text-center mb-4">Course Management</h2>
+              <h2 class="text-center mb-4">Create New Courses</h2>
             <hr>
             <form id="courseForm">
                 <?php echo csrf_field(); ?>
@@ -49,16 +49,6 @@
                                 <option selected disabled value="">Choose a medium...</option>
                                 <option value="Sinhala">Sinhala</option>
                                 <option value="English">English</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-3 row mx-3">
-                        <label for="semester_format" class="col-sm-2 col-form-label">Semester Naming Convention <span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <select class="form-select" id="semester_format" name="semester_format" required>
-                                <option value="">Select Semester Format</option>
-                                <option value="numerical">Numerical (1, 2, 3, 4...)</option>
-                                <option value="alphabetical">Alphabetical (A, B, C, D...)</option>
                             </select>
                         </div>
                     </div>
@@ -115,6 +105,16 @@
                         <label for="no_of_semesters" class="col-sm-2 col-form-label">Semesters</label>
                         <div class="col-sm-10">
                             <input type="number" class="form-control" id="no_of_semesters" name="no_of_semesters" placeholder="Enter the number of total semesters">
+                        </div>
+                    </div>
+                    <div class="mb-3 row mx-3">
+                        <label for="semester_format" class="col-sm-2 col-form-label">Semester Naming Convention <span class="text-danger">*</span></label>
+                        <div class="col-sm-10">
+                            <select class="form-select" id="semester_format" name="semester_format" required>
+                                <option value="">Select Semester Format</option>
+                                <option value="numerical">Numerical (1, 2, 3, 4...)</option>
+                                <option value="alphabetical">Alphabetical (A, B, C, D...)</option>
+                            </select>
                         </div>
                     </div>
                     <div class="mb-3 row mx-3">
