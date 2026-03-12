@@ -620,6 +620,7 @@ class PaymentController extends Controller
             // Use intake-based fees if available, otherwise fall back to course fees
             $courseFee = $registration->intake->course_fee ?? $registration->course->course_fee ?? 0;
             $franchiseFee = $registration->intake->franchise_payment ?? $registration->course->franchise_payment ?? 0;
+            $franchiseCurrency = $registration->intake->franchise_payment_currency ?? 'USD';
             $registrationFee = $registration->intake->registration_fee ?? $registration->registration_fee ?? 0;
             $totalAmount = $courseFee + $franchiseFee + $registrationFee;
             
@@ -631,7 +632,8 @@ class PaymentController extends Controller
                 'course_name' => $registration->course->course_name,
                 'intake_name' => $registration->intake->batch ?? 'N/A',
                 'course_fee' => $courseFee,
-                'franchise_fee' => $franchiseFee,
+                'international_fee' => $franchiseFee,
+                'international_currency' => $franchiseCurrency,
                 'registration_fee' => $registrationFee,
                 'total_amount' => $totalAmount,
                 'registration_date' => $registration->registration_date,
@@ -1763,7 +1765,7 @@ public function getPaymentRecords(Request $request)
         'payment_id'         => $payment->id,
         'student_id'         => $student->student_id,
         'student_name'       => $student->full_name,
-        'payment_type'       => $payment->payment_type ?? 'course_fee',
+        'payment_type'       => $payment->installment_type ?? $payment->payment_type ?? 'course_fee',
         'installment_number' => $payment->installment_number,
         'amount'             => (float) $payment->amount,
         'late_fee'           => (float) ($payment->late_fee ?? 0),

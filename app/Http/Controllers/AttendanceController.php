@@ -609,7 +609,7 @@ class AttendanceController extends Controller
                     ->where('status', true)
                     ->count();
                 $attendanceData[] = [
-                    'registration_number' => $reg->student->registration_id ?? $reg->student->student_id,
+                    'registration_number' => $reg->course_registration_id,
                     'name_with_initials' => $reg->student->name_with_initials,
                     'total_sessions' => $totalSessions,
                     'attended_sessions' => $attendedSessions,
@@ -669,6 +669,13 @@ class AttendanceController extends Controller
 
         $attendanceData = [];
         foreach ($registrations as $reg) {
+            // Get the course registration ID from CourseRegistration table
+            $courseReg = \App\Models\CourseRegistration::where('student_id', $reg->student_id)
+                ->where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->first();
+            
             $attendedSessions = \App\Models\Attendance::where('course_id', $courseId)
                 ->where('intake_id', $intakeId)
                 ->where('location', $location)
@@ -678,7 +685,7 @@ class AttendanceController extends Controller
                 ->where('status', true)
                 ->count();
             $attendanceData[] = [
-                'registration_number' => $reg->student->registration_id ?? $reg->student->student_id,
+                'registration_number' => $courseReg ? $courseReg->course_registration_id : '',
                 'name_with_initials' => $reg->student->name_with_initials,
                 'total_sessions' => $totalSessions,
                 'attended_sessions' => $attendedSessions,

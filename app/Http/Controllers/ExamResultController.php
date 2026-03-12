@@ -441,7 +441,7 @@ class ExamResultController extends Controller
                 ->get()
                 ->map(function($reg) use ($request, $existingResults, $courseId, $intakeId, $location) {
                     $studentData = [
-                        'registration_id' => $reg->student->registration_id ?? $reg->student->student_id,
+                        'registration_id' => $reg->course_registration_id,
                         'student_id' => $reg->student->student_id,
                         'name' => $reg->student->full_name,
                     ];
@@ -507,9 +507,16 @@ class ExamResultController extends Controller
                 ->where('status', 'registered')
                 ->with('student')
                 ->get()
-                ->map(function($reg) use ($request, $existingResults, $semester) {
+                ->map(function($reg) use ($request, $existingResults, $semester, $courseId, $intakeId, $location) {
+                    // Get the course registration ID from CourseRegistration table
+                    $courseReg = \App\Models\CourseRegistration::where('student_id', $reg->student_id)
+                        ->where('course_id', $courseId)
+                        ->where('intake_id', $intakeId)
+                        ->where('location', $location)
+                        ->first();
+                    
                     $studentData = [
-                        'registration_id' => $reg->student->registration_id ?? $reg->student->student_id,
+                        'registration_id' => $courseReg ? $courseReg->course_registration_id : '',
                         'student_id' => $reg->student->student_id,
                         'name' => $reg->student->full_name,
                     ];
@@ -547,9 +554,16 @@ class ExamResultController extends Controller
                 ->where('semester', $semester->name)
                 ->with('student')
                 ->get()
-                ->map(function($reg) use ($request, $existingResults, $semester) {
+                ->map(function($reg) use ($request, $existingResults, $semester, $courseId, $intakeId, $location) {
+                    // Get the course registration ID from CourseRegistration table
+                    $courseReg = \App\Models\CourseRegistration::where('student_id', $reg->student_id)
+                        ->where('course_id', $courseId)
+                        ->where('intake_id', $intakeId)
+                        ->where('location', $location)
+                        ->first();
+                    
                     $studentData = [
-                        'registration_id' => $reg->student->registration_id ?? $reg->student->student_id,
+                        'registration_id' => $courseReg ? $courseReg->course_registration_id : '',
                         'student_id' => $reg->student->student_id,
                         'name' => $reg->student->full_name,
                     ];

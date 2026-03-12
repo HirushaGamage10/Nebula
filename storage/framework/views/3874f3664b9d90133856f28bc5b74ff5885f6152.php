@@ -421,14 +421,18 @@
                                             <div class="col-md-6">
                                                 <label class="form-label fw-bold">Fee Structure</label>
                                                 <div class="mb-2">
-                                                    <strong>Course Fee (Without Registration Fee):</strong> <span id="course-fee-display">-</span>
+                                                    <strong>Local Course Fee:</strong> <span id="course-fee-display">-</span>
                                                 </div>
                                                 <div class="mb-2">
                                                     <strong>Registration Fee:</strong> <span id="registration-fee-display">-</span>
                                                 </div>
                                                 <div class="mb-2">
-                                                    <strong>Total Amount (Course Fee + Registration Fee):</strong> <span id="total-amount-display">-</span>
+                                                    <strong>Franchise Fee:</strong> <span id="franchise-amount-display">-</span>
                                                 </div>
+                                                <!-- <div class="mb-2">
+                                                    <strong>Total Amount (Course Fee + Registration Fee):</strong> <span id="total-amount-display">-</span>
+                                                </div> -->
+                                                
                                                 <!-- <div class="mb-2">
                                                 <strong>Franchise Fee:</strong> <span id="franchise-amount-display">-</span>
                                                 </div> -->
@@ -1591,7 +1595,14 @@ function loadStudentForPaymentPlan() {
             course_id: parseInt(courseId)
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || `HTTP Error: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             // Populate the form with student and course details
@@ -1603,8 +1614,9 @@ function loadStudentForPaymentPlan() {
             showErrorMessage(data.message || 'Failed to load student details.');
         }
     })
-    .catch(() => {
-        showErrorMessage('An error occurred while loading student details.');
+    .catch((error) => {
+        console.error('Error loading student details:', error);
+        showErrorMessage(error.message || 'An error occurred while loading student details.');
     })
     .finally(() => showSpinner(false));
 }
@@ -1621,24 +1633,35 @@ function populatePaymentPlanForm(studentData) {
     const fmt2 = (n) => n.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
     // Basic info
-    document.getElementById('student-name-display').textContent = studentData.student_name || 'N/A';
-    document.getElementById('student-id-display').textContent   = studentData.student_id || 'N/A';
-    document.getElementById('course-name-display').textContent  = studentData.course_name || 'N/A';
-    document.getElementById('intake-name-display').textContent  = studentData.intake_name || 'N/A';
+    const nameEl = document.getElementById('student-name-display');
+    if (nameEl) nameEl.textContent = studentData.student_name || 'N/A';
+    
+    const idEl = document.getElementById('student-id-display');
+    if (idEl) idEl.textContent = studentData.student_id || 'N/A';
+    
+    const courseEl = document.getElementById('course-name-display');
+    if (courseEl) courseEl.textContent = studentData.course_name || 'N/A';
+    
+    const intakeEl = document.getElementById('intake-name-display');
+    if (intakeEl) intakeEl.textContent = studentData.intake_name || 'N/A';
 
     // LKR breakdown
-    document.getElementById('course-fee-display').textContent       = 'LKR ' + fmt2(courseFee);
-    document.getElementById('registration-fee-display').textContent = 'LKR ' + fmt2(regFee);
+    const courseFeeEl = document.getElementById('course-fee-display');
+    if (courseFeeEl) courseFeeEl.textContent = 'LKR ' + fmt2(courseFee);
+    
+    const regFeeEl = document.getElementById('registration-fee-display');
+    if (regFeeEl) regFeeEl.textContent = 'LKR ' + fmt2(regFee);
 
     // LKR total = course + registration (franchise NOT included)
     const totalAmount = courseFee + regFee;
-    document.getElementById('total-amount-display').textContent = 'LKR ' + fmt2(totalAmount);
+    const totalEl = document.getElementById('total-amount-display');
+    if (totalEl) totalEl.textContent = 'LKR ' + fmt2(totalAmount);
 
-    // Show franchise fee (amount only)
-const frEl = document.getElementById('franchise-amount-display');
-if (frEl) {
-    frEl.textContent = intlFee > 0 ? fmt2(intlFee) : '-';
-}
+    // Show franchise fee (with currency)
+    const frEl = document.getElementById('franchise-amount-display');
+    if (frEl) {
+        frEl.textContent = intlFee > 0 ? `${fmt2(intlFee)} ${intlCur}` : '-';
+    }
 
 
 
@@ -3036,7 +3059,24 @@ const payload = {
 
     setText('print-generated-date', new Date().toLocaleString());
 
-    showSuccessMessage(data.message || 'Payment slip generated successfully! ��');
+    showSuccessMessage(data.message || 'Payment slip generated successfully! 🎉');
+    
+    // Update the payment status in the table
+    const selectedIndex = parseInt(document.querySelector('input[name="selectedPayment"]:checked')?.value || '-1', 10);
+    if (selectedIndex >= 0 && window.paymentDetailsData && window.paymentDetailsData[selectedIndex]) {
+        // Update local data immediately for UI feedback
+        window.paymentDetailsData[selectedIndex].status = 'paid';
+        
+        // Force refresh the table to show the LATEST data from backend
+        // Wait longer to ensure database transaction is fully committed
+        if (typeof refreshGenerateSlipsData === 'function') {
+            console.log('Scheduling payment table refresh after 2.5 seconds...');
+            setTimeout(() => {
+                console.log('Calling refreshGenerateSlipsData()...');
+                refreshGenerateSlipsData();
+            }, 2500); // Increased from 1500ms to 2500ms to ensure DB commit finishes
+        }
+    }
   } catch (err) {
     console.error(err);
     showErrorMessage(err.message || 'An error occurred while generating payment slip.');
@@ -3263,7 +3303,7 @@ function renderPaymentRecords() {
   tbody.innerHTML = "";
 
   (window.paymentRecords || []).forEach((r) => {
-    const modalId = `historyModal-${r.id}`;
+    const modalId = `historyModal-${r.payment_id}`; // ✅ Use payment_id instead of id
 
     // ✅ Map payment_type to display name
     const paymentTypeDisplay = {
@@ -3275,7 +3315,6 @@ function renderPaymentRecords() {
 
     const row = `
       <tr>
-        <td>${r.student_id}</td>
         <td>${r.student_name}</td>
         <td>${paymentTypeDisplay}</td>
         <td>${r.installment_number ?? '-'}</td>
@@ -3972,7 +4011,8 @@ async function loadPaymentDetails() {
   const payload = {
     student_id: studentIdOrNic,
     course_id: String(courseId),
-    payment_type: paymentType
+    payment_type: paymentType,
+    _timestamp: Date.now() // ✅ Cache-busting parameter to force fresh data from backend
   };
 
   try {
@@ -3981,9 +4021,13 @@ async function loadPaymentDetails() {
       headers: {
         'Content-Type': 'application/json',
         'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate', // ✅ Prevent HTTP caching
+        'Pragma': 'no-cache',
+        'Expires': '0'
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      cache: 'no-store' // ✅ Prevent browser caching
     });
 
     const text = await res.text();
@@ -4157,11 +4201,42 @@ function refreshGenerateSlipsData() {
     
     // Only refresh if all fields are filled (meaning data is currently loaded)
     if (studentId && courseId && paymentType) {
-        console.log('Refreshing Generate Slips data after payment update...');
-        // ✅ Clear cached data to force fresh fetch from backend
+        console.log('🔄 Refreshing Generate Slips data...', { studentId, courseId, paymentType });
+        
+        // Show loading state in the table
+        const tbody = document.getElementById('paymentDetailsTableBody');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted">
+                <div class="spinner-border spinner-border-sm me-2" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                Refreshing payment data...
+            </td></tr>`;
+        }
+        
+        // ✅ Clear ALL cached data to force absolute fresh fetch from backend
         window.paymentDetailsDataRaw = null;
         window.paymentDetailsData = null;
-        loadPaymentDetails();
+        window.paymentDetailsPaymentType = null;
+        
+        // Disable all payment radios temporarily to prevent new selections during refresh
+        const radioButtons = document.querySelectorAll('input[name="selectedPayment"]');
+        radioButtons.forEach(radio => radio.disabled = true);
+        
+        // Fetch fresh data from backend - WAIT FOR IT TO COMPLETE
+        (async () => {
+            try {
+                console.log('⏳ Waiting for fresh data from backend...');
+                await loadPaymentDetails();
+                console.log('✅ Fresh data loaded and table refreshed!');
+                console.log('📊 Current payment details:', window.paymentDetailsData);
+            } catch (err) {
+                console.error('❌ Error refreshing payment data:', err);
+                showErrorMessage('Error refreshing payment data. Please try again.');
+            }
+        })();
+    } else {
+        console.log('⚠️ Cannot refresh: Missing student ID, course ID, or payment type');
     }
 }
 
@@ -4433,7 +4508,8 @@ function recalculateLKRAmounts() {
 
 // ---------- main renderer ----------
 function renderPaymentDetailsTable(rows, paymentType) {
-    console.log('Payment rows from API:', rows);
+    console.log('Payment rows from API (FRESH DATA):', rows);
+    console.log('Payment statuses:', rows.map(r => ({ inst: r.installment_number, status: r.status, receipt: r.receipt_no })));
 
   // keep originals so we can re-render on FX change
   window.paymentDetailsDataRaw    = Array.isArray(rows) ? rows : [];
@@ -4606,6 +4682,15 @@ document.getElementById('currency-from')?.addEventListener('change', recalculate
 $('#paymentTabs .nav-link').on('shown.bs.tab', function (e) {
     $('#paymentTabs .nav-link').removeClass('bg-primary text-white');
     $(e.target).addClass('bg-primary text-white');
+    
+    // ✅ REFRESH Generate Slips tab data when it becomes active
+    if ($(e.target).attr('id') === 'generate-slips-tab') {
+        console.log('✅ Generate Slips tab activated - refreshing data from backend...');
+        // Small delay to ensure the tab is fully shown
+        setTimeout(() => {
+            refreshGenerateSlipsData();
+        }, 300);
+    }
 });
 
 function deleteSlip(id) {
