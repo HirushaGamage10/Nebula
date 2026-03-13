@@ -1,9 +1,12 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 echo "Nebula CI Deploy Started"
 
 cd /var/www/html/nebula
+
+php artisan down --retry=60 || true
+trap 'php artisan up || true' EXIT
 
 ENV_BACKUP="/tmp/nebula_env_$(date +%s)"
 
@@ -15,7 +18,24 @@ git fetch origin main
 git reset --hard origin/main
 
 if [ -f "$ENV_BACKUP" ]; then
-	mv "$ENV_BACKUP" .env
+	cp "$ENV_BACKUP" .env
+elif [ -f .env.backup ]; then
+	cp .env.backup .env
+else
+	echo "ERROR: .env restoration source not found"
+	exit 1
+fi
+
+if ! grep -qE '^APP_KEY=base64:.+' .env; then
+	echo "ERROR: APP_KEY missing after .env restoration"
+	exit 1
+fi
+
+if command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
+	sudo -n chown cpo_admin:www-data .env || true
+	sudo -n chmod 640 .env || true
+else
+	chmod 644 .env || true
 fi
 
 if command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
