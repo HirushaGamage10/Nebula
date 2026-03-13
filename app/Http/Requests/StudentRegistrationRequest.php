@@ -62,6 +62,7 @@ class StudentRegistrationRequest extends FormRequest
                 }
             ],
             'address' => 'required|string|max:500',
+            'district' => 'required|in:Ampara,Anuradhapura,Badulla,Batticaloa,Colombo,Galle,Gampaha,Hambantota,Jaffna,Kalutara,Kandy,Kegalle,Kilinochchi,Kurunegala,Mannar,Matale,Matara,Monaragala,Mullaitivu,Nuwara Eliya,Polonnaruwa,Puttalam,Ratnapura,Trincomalee,Vavuniya',
             'email' => 'required|email|max:255|unique:students,email',
             // Sri Lankan phone number: +94 or 0, then 9 digits
             'mobilePhone' => [
@@ -221,6 +222,8 @@ class StudentRegistrationRequest extends FormRequest
             'idValue.required' => 'ID value is required.',
             'idValue.unique' => 'This ID value is already registered.',
             'address.required' => 'Address is required.',
+            'district.required' => 'Please select a district.',
+            'district.in' => 'Please select a valid district in Sri Lanka.',
             'email.required' => 'Email address is required.',
             'email.email' => 'Please enter a valid email address.',
             'email.unique' => 'This email address is already registered.',
@@ -276,6 +279,7 @@ class StudentRegistrationRequest extends FormRequest
             'fullName' => 'full name',
             'identificationType' => 'identification type',
             'idValue' => 'ID value',
+            'district' => 'district',
             'mobilePhone' => 'mobile phone',
             'whatsappPhone' => 'WhatsApp phone',
             'birthday' => 'date of birth',

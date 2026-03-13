@@ -95,6 +95,18 @@
                 </div>
 
                 <div class="row mb-3">
+                    <label for="district" class="col-sm-2 col-form-label">District<span class="text-danger">*</span></label>
+                    <div class="col-sm-10">
+                        <select class="form-select" id="district" name="district" required>
+                            <option selected disabled value="">Select a District</option>
+                            @foreach($districts as $district)
+                            <option value="{{ $district }}">{{ $district }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
                     <label for="email" class="col-sm-2 col-form-label">Email<span class="text-danger">*</span></label>
                     <div class="col-sm-10">
                         <input type="email" class="form-control" id="email" name="email" placeholder="example@example.com" required>
@@ -1100,7 +1112,7 @@ setupPhoneValidator('emergencyContactNo', 'emergencyContactNoError');
         // Explicit required-fields check (some inputs may not rely on HTML5 validity because form has novalidate)
         const requiredIds = [
             'title','nameWithInitials','fullName','birthday','gender',
-            'identificationType','idValue','address','email','mobilePhone',
+            'identificationType','idValue','address','district','email','mobilePhone',
             'pending_result','institute_location','parentName','parentContactNo','parentAddress','emergencyContactNo'
         ];
         const requiredErrors = [];

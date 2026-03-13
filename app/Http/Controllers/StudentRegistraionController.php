@@ -58,6 +58,34 @@ class StudentRegistraionController extends Controller
                 ['id' => 'Peradeniya', 'name' => 'Nebula Institute of Technology - Peradeniya']
             ];
 
+            $districts = [
+                'Ampara',
+                'Anuradhapura',
+                'Badulla',
+                'Batticaloa',
+                'Colombo',
+                'Galle',
+                'Gampaha',
+                'Hambantota',
+                'Jaffna',
+                'Kalutara',
+                'Kandy',
+                'Kegalle',
+                'Kilinochchi',
+                'Kurunegala',
+                'Mannar',
+                'Matale',
+                'Matara',
+                'Monaragala',
+                'Mullaitivu',
+                'Nuwara Eliya',
+                'Polonnaruwa',
+                'Puttalam',
+                'Ratnapura',
+                'Trincomalee',
+                'Vavuniya'
+            ];
+
             $btecCourses = [
                 ['id' => 1, 'course_name' => 'BTEC Level 3 Extended Diploma in Business'],
                 ['id' => 2, 'course_name' => 'BTEC Level 3 Extended Diploma in Computing'],
@@ -69,7 +97,7 @@ class StudentRegistraionController extends Controller
             // Get exam types from StudentExam model
             $examTypes = StudentExam::getExamTypes();
 
-            return view('student_management..student_registration', compact('titles', 'genders', 'idTypes', 'campuses', 'btecCourses', 'examTypes'));
+            return view('student_management..student_registration', compact('titles', 'genders', 'idTypes', 'campuses', 'districts', 'btecCourses', 'examTypes'));
         } else {
             return redirect()->route('login')->with('error', 'You are not authorized to access this page.');
         }
@@ -158,6 +186,7 @@ class StudentRegistraionController extends Controller
             $student->id_type = $request->identificationType;
             $student->id_value = $request->idValue;
             $student->address = $request->address;
+            $student->district = $request->district;
             $student->email = $request->email;
             $student->mobile_phone = $request->mobilePhone;
             $student->home_phone = $request->homePhone;

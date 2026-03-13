@@ -712,15 +712,41 @@ public function createPaymentPlan(Request $request)
 
         return \DB::transaction(function () use ($request, $registration) {
 
-            // ===== 1) Get fee data from payment_plans =====
-            $paymentPlan = \App\Models\PaymentPlan::where('course_id', $request->course_id)->first();
-            if (!$paymentPlan) {
-                throw new \Exception('Payment plan definition not found for this course.');
+            // ===== 1) Get fee definition =====
+            // Prefer payment_plans; if missing (common for some certificate intakes),
+            // fall back to intake fee fields so plan creation still works.
+            $paymentPlan = \App\Models\PaymentPlan::query()
+                ->where('course_id', $request->course_id)
+                ->when($registration->intake_id, function ($q) use ($registration) {
+                    $q->where('intake_id', $registration->intake_id);
+                })
+                ->orderByDesc('id')
+                ->first();
+
+            // Secondary fallback: intake-only payment plan rows
+            if (!$paymentPlan && $registration->intake_id) {
+                $paymentPlan = \App\Models\PaymentPlan::where('intake_id', $registration->intake_id)
+                    ->orderByDesc('id')
+                    ->first();
             }
 
-            $registrationFee = (float) $paymentPlan->registration_fee;
-            $localFee        = (float) $paymentPlan->local_fee;
-            $totalFeeForDiscount = $localFee + $registrationFee; // ✅ correct base
+            if ($paymentPlan) {
+                $registrationFee = (float) $paymentPlan->registration_fee;
+                $localFee        = (float) $paymentPlan->local_fee;
+            } else {
+                $intake = \App\Models\Intake::where('intake_id', $registration->intake_id)->first();
+                if (!$intake) {
+                    throw new \Exception('Payment plan definition not found for this course/intake.');
+                }
+
+                $registrationFee = (float) ($intake->registration_fee ?? 0);
+                $localFee        = (float) ($intake->course_fee ?? 0);
+            }
+
+            $totalFeeForDiscount = $localFee + $registrationFee;
+            if ($totalFeeForDiscount <= 0 && $request->filled('total_amount')) {
+                $totalFeeForDiscount = (float) $request->total_amount;
+            }
 
             // collect rows - for full payment, create a single installment
             $rows = collect($request->installments ?? [])->sortBy('installment_number')->values()->all();

@@ -39,6 +39,7 @@ class Student extends Model
         'id_type',
         'id_value',
         'address',
+        'district',
         'email',
         'mobile_phone',
         'home_phone',
