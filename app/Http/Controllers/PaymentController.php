@@ -128,6 +128,10 @@ class PaymentController extends Controller
                     $paymentDetail = \App\Models\PaymentDetail::where('student_id', $student->student_id)
                         ->where('course_registration_id', $registration->id)
                         ->where('installment_number', $ins->installment_number)
+                        ->where(function ($q) {
+                                                        $q->where('installment_type', 'course_fee');
+                        })
+                        ->orderByDesc('id')
                         ->first();
 
                     // Use payment_details status if it exists, otherwise use installment status
@@ -180,6 +184,10 @@ class PaymentController extends Controller
                     $paymentDetail = \App\Models\PaymentDetail::where('student_id', $student->student_id)
                         ->where('course_registration_id', $registration->id)
                         ->where('installment_number', $ins->installment_number)
+                        ->where(function ($q) {
+                                                        $q->where('installment_type', 'franchise_fee');
+                        })
+                        ->orderByDesc('id')
                         ->first();
 
                     // Use payment_details status if it exists, otherwise use installment status
@@ -226,14 +234,27 @@ class PaymentController extends Controller
                     $fx = (float) ($item['international_amount'] ?? 0);
                     if ($fx <= 0) continue; // only franchise (international) rows
 
+                    $paymentDetail = \App\Models\PaymentDetail::where('student_id', $student->student_id)
+                        ->where('course_registration_id', $registration->id)
+                        ->where('installment_number', $item['installment_number'] ?? null)
+                        ->where(function ($q) {
+                                                        $q->where('installment_type', 'franchise_fee');
+                        })
+                        ->orderByDesc('id')
+                        ->first();
+
+                    $status = $paymentDetail ? ($paymentDetail->status ?? 'pending') : 'pending';
+                    $paidDate = $paymentDetail ? optional($paymentDetail->payment_date)->toDateString() : null;
+                    $receiptNo = $paymentDetail ? $paymentDetail->transaction_id : null;
+
                     $rows[] = [
                         'installment_number' => $item['installment_number'] ?? null,
                         'due_date'           => $item['due_date'] ?? null,
                         'amount'             => $fx,
                         'base_amount'        => $fx,
-                        'status'             => 'pending',
-                        'paid_date'          => null,
-                        'receipt_no'         => null,
+                        'status'             => $status,
+                        'paid_date'          => $paidDate,
+                        'receipt_no'         => $receiptNo,
                         'currency'           => $plan->international_currency ?: 'USD',
                         'apply_tax'          => (bool)($item['apply_tax'] ?? false),
                         'sscl_tax'           => (float)($plan->sscl_tax ?? 0),
