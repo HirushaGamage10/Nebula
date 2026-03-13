@@ -32,6 +32,7 @@ return new class extends Migration {
             $table->text('other_document_upload')->nullable();
             $table->text('remarks')->nullable();
             $table->enum('status', ['Married','Unmarried']);
+            $table->enum('academic_status', ['active', 'terminated', 'suspended', 'graduated'])->default('active');
             $table->boolean('btec_completed')->default(0);
             $table->enum('marketing_survey', ['LinkedIn', 'Facebook', 'Radio Advertisement', 'TV advertisement'])->nullable();
             $table->timestamps();

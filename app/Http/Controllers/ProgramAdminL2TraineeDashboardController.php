@@ -26,7 +26,7 @@ class ProgramAdminL2TraineeDashboardController extends Controller
     // Get overview metrics
     public function getOverviewMetrics()
     {
-        $totalStudents = Student::where('status', 'active')->count();
+        $totalStudents = Student::where('academic_status', 'active')->count();
         $activeIntakes = Intake::where('status', 'active')->count();
         $todayAttendance = Attendance::whereDate('date', Carbon::today())->count();
         $pendingResults = ExamResult::where('status', 'pending')->count();
