@@ -270,7 +270,7 @@ class StudentRegistraionController extends Controller
     $studentExam->save();
 }
  
-            return redirect()->route('student_management.student.registration')->with('success', 'Student registered successfully!');
+            return redirect()->route('student_management.registration')->with('success', 'Student registered successfully!');
 
         } catch (QueryException $e) {
             return redirect()->back()->withErrors(['Database error occurred. Please try again.'])->withInput();
