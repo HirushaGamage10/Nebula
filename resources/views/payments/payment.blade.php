@@ -429,9 +429,9 @@
                                                 <div class="mb-2">
                                                     <strong>Franchise Fee:</strong> <span id="franchise-amount-display">-</span>
                                                 </div>
-                                                <!-- <div class="mb-2">
-                                                    <strong>Total Amount (Course Fee + Registration Fee):</strong> <span id="total-amount-display">-</span>
-                                                </div> -->
+                                                <div class="mb-2">
+                                                    <strong>Total Fee:</strong> <span id="total-amount-display">-</span>
+                                                </div>
                                                 
                                                 <!-- <div class="mb-2">
                                                 <strong>Franchise Fee:</strong> <span id="franchise-amount-display">-</span>
@@ -1655,7 +1655,11 @@ function populatePaymentPlanForm(studentData) {
     // LKR total = course + registration (franchise NOT included)
     const totalAmount = courseFee + regFee;
     const totalEl = document.getElementById('total-amount-display');
-    if (totalEl) totalEl.textContent = 'LKR ' + fmt2(totalAmount);
+    if (totalEl) {
+        totalEl.textContent = intlFee > 0
+            ? `LKR ${fmt2(totalAmount)} + ${fmt2(intlFee)} ${intlCur}`
+            : `LKR ${fmt2(totalAmount)}`;
+    }
 
     // Show franchise fee (with currency)
     const frEl = document.getElementById('franchise-amount-display');
