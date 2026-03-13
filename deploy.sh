@@ -31,7 +31,12 @@ if ! grep -qE '^APP_KEY=base64:.+' .env; then
 	exit 1
 fi
 
-chmod 640 .env || true
+if command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
+	sudo -n chown cpo_admin:www-data .env || true
+	sudo -n chmod 640 .env || true
+else
+	chmod 644 .env || true
+fi
 
 if command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
 	sudo -n chown -R cpo_admin:www-data storage bootstrap/cache || true
