@@ -50,7 +50,7 @@ class LoginController extends Controller
                 }
                 
                 // Check if user has a valid role
-                if (empty($user->user_role)) {
+                if (!$user->hasAssignedRoles()) {
                     Auth::logout();
                     return back()
                         ->withErrors(['email' => 'Your account does not have a valid role assigned. Please contact administrator.'])
@@ -66,6 +66,7 @@ class LoginController extends Controller
                     'user_id' => $user->user_id,
                     'email' => $user->email,
                     'role' => $user->user_role,
+                    'roles' => $user->getRoleList(),
                     'location' => $user->user_location
                 ]);
                 

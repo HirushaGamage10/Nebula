@@ -1,6 +1,6 @@
 @php
     use App\Helpers\RoleHelper;
-    $role = auth()->user()->user_role ?? '';
+    $roles = auth()->user() ? auth()->user()->getRoleList() : [];
     $sections = config('menu.sections');
 @endphp
 
@@ -8,12 +8,12 @@
 @foreach($sections as $section)
     @php
         // Determine if any items in this section are visible to this user
-        $visible = collect($section['items'])->contains(function($item) use ($role) {
+        $visible = collect($section['items'])->contains(function($item) use ($roles) {
             if(isset($item['roles'])) {
-                return in_array($role, $item['roles']);
+                return RoleHelper::hasAnyRole($roles, $item['roles']);
             }
             if(isset($item['permission'])) {
-                return RoleHelper::hasPermission($role, $item['permission']);
+                return RoleHelper::hasPermission($roles, $item['permission']);
             }
             // Also ensure a named route exists for the item when provided
             if(isset($item['route'])) {
@@ -32,9 +32,9 @@
             @php
                 $hasAccess = true;
                 if(isset($item['roles'])) {
-                    $hasAccess = in_array($role, $item['roles']);
+                    $hasAccess = RoleHelper::hasAnyRole($roles, $item['roles']);
                 } elseif(isset($item['permission'])) {
-                    $hasAccess = RoleHelper::hasPermission($role, $item['permission']);
+                    $hasAccess = RoleHelper::hasPermission($roles, $item['permission']);
                 }
             @endphp
 

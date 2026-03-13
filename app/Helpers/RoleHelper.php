@@ -20,6 +20,22 @@ class RoleHelper
         'Developer' => 'Developer',
     ];
 
+    // Higher priority roles should appear earlier in this list.
+    const ROLE_PRIORITY = [
+        'Developer',
+        'DGM',
+        'Program Administrator (level 01)',
+        'Program Administrator (level 02)',
+        'Program Administrator (level 02) Trainee',
+        'Student Counselor',
+        'Student Counselor Trainee',
+        'Marketing Manager',
+        'Bursar',
+        'Project Tutor',
+        'Librarian',
+        'Hostel Manager',
+    ];
+
     // Define role permissions
     const PERMISSIONS = [
         'DGM' => [
@@ -442,20 +458,100 @@ class RoleHelper
         ],
     ];
 
-    // Check if a user has permission to access a specific route
-    public static function hasPermission($userRole, $routeName)
+    public static function normalizeRoles($userRoles): array
     {
-        if (!isset(self::PERMISSIONS[$userRole])) {
+        if (is_object($userRoles) && method_exists($userRoles, 'getRoleList')) {
+            $userRoles = $userRoles->getRoleList();
+        }
+
+        $roles = [];
+
+        if (is_array($userRoles)) {
+            $roles = $userRoles;
+        } elseif (is_string($userRoles)) {
+            $raw = trim($userRoles);
+
+            if ($raw === '') {
+                return [];
+            }
+
+            $decoded = json_decode($raw, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $roles = $decoded;
+            } elseif (strpos($raw, ',') !== false) {
+                $roles = array_map('trim', explode(',', $raw));
+            } else {
+                $roles = [$raw];
+            }
+        }
+
+        $roles = array_values(array_filter(array_map(function ($role) {
+            return is_string($role) ? trim($role) : '';
+        }, $roles)));
+
+        return array_values(array_unique($roles));
+    }
+
+    public static function resolvePrimaryRole($userRoles): ?string
+    {
+        $roles = self::normalizeRoles($userRoles);
+
+        if (empty($roles)) {
+            return null;
+        }
+
+        foreach (self::ROLE_PRIORITY as $role) {
+            if (in_array($role, $roles, true)) {
+                return $role;
+            }
+        }
+
+        return $roles[0];
+    }
+
+    public static function hasAnyRole($userRoles, array $requiredRoles): bool
+    {
+        if (empty($requiredRoles)) {
+            return true;
+        }
+
+        $assignedRoles = self::normalizeRoles($userRoles);
+        $requiredRoles = self::normalizeRoles($requiredRoles);
+
+        if (empty($assignedRoles) || empty($requiredRoles)) {
             return false;
         }
 
-        return in_array($routeName, self::PERMISSIONS[$userRole]);
+        return count(array_intersect($assignedRoles, $requiredRoles)) > 0;
     }
 
-    // Get all permissions for a specific role
-    public static function getRolePermissions($role)
+    // Check if a user has permission to access a specific route
+    public static function hasPermission($userRoles, $routeName)
     {
-        return self::PERMISSIONS[$role] ?? [];
+        $roles = self::normalizeRoles($userRoles);
+
+        foreach ($roles as $role) {
+            if (isset(self::PERMISSIONS[$role]) && in_array($routeName, self::PERMISSIONS[$role], true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Get all permissions for one or many roles
+    public static function getRolePermissions($roles)
+    {
+        $normalizedRoles = self::normalizeRoles($roles);
+        $permissions = [];
+
+        foreach ($normalizedRoles as $role) {
+            if (isset(self::PERMISSIONS[$role])) {
+                $permissions = array_merge($permissions, self::PERMISSIONS[$role]);
+            }
+        }
+
+        return array_values(array_unique($permissions));
     }
 
     // Get all available roles

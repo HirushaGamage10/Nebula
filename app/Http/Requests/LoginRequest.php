@@ -97,7 +97,7 @@ class LoginRequest extends FormRequest
                 }
 
                 // Check if user has a valid role
-                if (empty($user->user_role)) {
+                if (!$user->hasAssignedRoles()) {
                     $validator->errors()->add('email', 'Your account does not have a valid role assigned. Please contact administrator.');
                     return;
                 }

@@ -26,7 +26,7 @@ class TeamPhaseController extends Controller
             }
             
             // Check if user has Developer role in users table
-            if ($user && strtolower($user->user_role) === 'developer') {
+            if ($user && $user->hasRole('Developer')) {
                 return $next($request);
             }
             
@@ -38,7 +38,7 @@ class TeamPhaseController extends Controller
     public function index()
     {
         $phases = Phase::with(['teams.roles'])->orderBy('id', 'asc')->get();
-        $isDeveloper = Auth::check() && strtolower(Auth::user()->user_role) === 'developer';
+        $isDeveloper = Auth::check() && Auth::user()->hasRole('Developer');
         
         return view('team_phase.index', compact('phases', 'isDeveloper'));
     }

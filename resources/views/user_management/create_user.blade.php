@@ -4,10 +4,10 @@
 
 @section('content')
 @php
-    $currentUserRole = auth()->user()->user_role ?? '';
+  $currentUserHasAccess = auth()->check() && auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Developer']);
 @endphp
 
-@if($currentUserRole == 'Program Administrator (level 01)' || $currentUserRole == 'Developer')
+@if($currentUserHasAccess)
 <div class="container mt-5">
   <div class="p-4 rounded shadow w-100 bg-white mt-4">
     <h3 class="text-center mb-4">Create a User</h3>
@@ -83,20 +83,44 @@
       </div>
       
       <div class="mb-3 row align-items-center mx-3">
-        <label for="role" class="col-sm-2 col-form-label fw-bold">Role<span style="color: red;">*</span></label>
+        <label for="role" class="col-sm-2 col-form-label fw-bold">Roles<span style="color: red;">*</span></label>
         <div class="col-sm-10">
-          <select class="form-control @error('user_role') is-invalid @enderror" 
-                  id="role" 
-                  name="user_role" 
-                  required>
-            <option value="">Select Role</option>
+          @php
+              $oldRoles = old('user_roles', old('user_role') ? [old('user_role')] : []);
+          @endphp
+          <div class="dropdown">
+            <button class="form-control text-start dropdown-toggle @error('user_roles') is-invalid @enderror @error('user_roles.*') is-invalid @enderror"
+                    type="button"
+                    id="roleDropdownButton"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false">
+                Select role(s)
+            </button>
+            <div class="dropdown-menu w-100 p-2" aria-labelledby="roleDropdownButton" style="max-height: 260px; overflow-y: auto;">
+              @foreach ($userRoles as $index => $role)
+                <div class="form-check">
+                  <input class="form-check-input create-role-option"
+                         type="checkbox"
+                         value="{{ $role }}"
+                         id="create_role_{{ $index }}"
+                         {{ in_array($role, $oldRoles) ? 'checked' : '' }}>
+                  <label class="form-check-label" for="create_role_{{ $index }}">{{ $role }}</label>
+                </div>
+              @endforeach
+            </div>
+          </div>
+          <select class="d-none" id="role" name="user_roles[]" multiple required>
             @foreach ($userRoles as $role)
-              <option value="{{ $role }}" {{ old('user_role') == $role ? 'selected' : '' }}>{{ $role }}</option>
+              <option value="{{ $role }}" {{ in_array($role, $oldRoles) ? 'selected' : '' }}>{{ $role }}</option>
             @endforeach
           </select>
-          @error('user_role')
-              <div class="invalid-feedback">{{ $message }}</div>
+          @error('user_roles')
+              <div class="text-danger small mt-1">{{ $message }}</div>
           @enderror
+          @error('user_roles.*')
+              <div class="text-danger small mt-1">{{ $message }}</div>
+          @enderror
+          <div class="form-text mt-1">You can select more than one role from the dropdown.</div>
         </div>
       </div>
       
@@ -166,6 +190,45 @@ document.addEventListener('DOMContentLoaded', function() {
   const form = document.getElementById('createUserForm');
   const createUserBtn = document.getElementById('createUserBtn');
   const passwordInput = document.getElementById('setPassword');
+  const roleSelect = document.getElementById('role');
+  const roleDropdownButton = document.getElementById('roleDropdownButton');
+  const roleCheckboxes = document.querySelectorAll('.create-role-option');
+
+  function getRoleButtonText(selectedRoles) {
+    if (selectedRoles.length === 0) {
+      return 'Select role(s)';
+    }
+
+    if (selectedRoles.length <= 2) {
+      return selectedRoles.join(', ');
+    }
+
+    return `${selectedRoles.length} roles selected`;
+  }
+
+  function syncCreateRoleSelection() {
+    const selectedRoles = [];
+
+    roleCheckboxes.forEach((checkbox) => {
+      const option = Array.from(roleSelect.options).find((opt) => opt.value === checkbox.value);
+
+      if (option) {
+        option.selected = checkbox.checked;
+      }
+
+      if (checkbox.checked) {
+        selectedRoles.push(checkbox.value);
+      }
+    });
+
+    roleDropdownButton.textContent = getRoleButtonText(selectedRoles);
+  }
+
+  roleCheckboxes.forEach((checkbox) => {
+    checkbox.addEventListener('change', syncCreateRoleSelection);
+  });
+
+  syncCreateRoleSelection();
 
   // 🔹 Password generator
   document.getElementById('generatePassword').addEventListener('click', function() {

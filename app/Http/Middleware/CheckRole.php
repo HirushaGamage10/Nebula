@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Helpers\RoleHelper;
 
 class CheckRole
 {
@@ -37,7 +38,7 @@ class CheckRole
         }
 
         // Check if user has any of the required roles
-        if (in_array($user->user_role, $roles)) {
+        if (RoleHelper::hasAnyRole($user->getRoleList(), $roles)) {
             return $next($request);
         }
 

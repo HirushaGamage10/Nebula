@@ -92,7 +92,7 @@
                         <th>Name</th>
                         <th>Email</th>
                         <th>Employee ID</th>
-                        <th>Role</th>
+                        <th>Roles</th>
                         <th>Location</th>
                         <th>Created</th>
                         <th>Actions</th>
@@ -156,13 +156,30 @@
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="edit_user_role" class="form-label">Role <span class="text-danger">*</span></label>
-                                <select class="form-control" id="edit_user_role" name="user_role" required>
-                                    <option value="">Select Role</option>
+                                <label for="edit_user_roles" class="form-label">Roles <span class="text-danger">*</span></label>
+                                <div class="dropdown">
+                                    <button class="form-control text-start dropdown-toggle"
+                                            type="button"
+                                            id="editRoleDropdownButton"
+                                            data-bs-toggle="dropdown"
+                                            aria-expanded="false">
+                                        Select role(s)
+                                    </button>
+                                    <div class="dropdown-menu w-100 p-2" aria-labelledby="editRoleDropdownButton" style="max-height: 260px; overflow-y: auto;">
+                                        @foreach ($userRoles as $index => $role)
+                                            <div class="form-check">
+                                                <input class="form-check-input edit-role-option" type="checkbox" value="{{ $role }}" id="edit_role_{{ $index }}">
+                                                <label class="form-check-label" for="edit_role_{{ $index }}">{{ $role }}</label>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                <select class="d-none" id="edit_user_roles" name="user_roles[]" multiple required>
                                     @foreach ($userRoles as $role)
                                         <option value="{{ $role }}">{{ $role }}</option>
                                     @endforeach
                                 </select>
+                                <small class="text-muted">You can select more than one role from the dropdown.</small>
                             </div>
                         </div>
                     </div>
@@ -240,6 +257,54 @@
 
 <script nonce="{{ $cspNonce }}">
 document.addEventListener('DOMContentLoaded', function() {
+    const editRoleSelect = document.getElementById('edit_user_roles');
+    const editRoleDropdownButton = document.getElementById('editRoleDropdownButton');
+    const editRoleCheckboxes = document.querySelectorAll('.edit-role-option');
+
+    function getRoleButtonText(selectedRoles) {
+        if (selectedRoles.length === 0) {
+            return 'Select role(s)';
+        }
+
+        if (selectedRoles.length <= 2) {
+            return selectedRoles.join(', ');
+        }
+
+        return `${selectedRoles.length} roles selected`;
+    }
+
+    function syncEditRoleSelection() {
+        const selectedRoles = [];
+
+        editRoleCheckboxes.forEach((checkbox) => {
+            const option = Array.from(editRoleSelect.options).find((opt) => opt.value === checkbox.value);
+
+            if (option) {
+                option.selected = checkbox.checked;
+            }
+
+            if (checkbox.checked) {
+                selectedRoles.push(checkbox.value);
+            }
+        });
+
+        editRoleDropdownButton.textContent = getRoleButtonText(selectedRoles);
+    }
+
+    window.setEditRoleSelection = function(selectedRoles) {
+        editRoleCheckboxes.forEach((checkbox) => {
+            checkbox.checked = selectedRoles.includes(checkbox.value);
+        });
+
+        syncEditRoleSelection();
+    };
+
+    editRoleCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', syncEditRoleSelection);
+    });
+
+    syncEditRoleSelection();
+
     // Event delegation for action buttons (CSP compliant)
     document.addEventListener('click', function(e) {
         if (e.target.closest('.btn-edit-user')) {
@@ -328,7 +393,12 @@ function editUser(userId) {
             document.getElementById('edit_name').value = user.name;
             document.getElementById('edit_email').value = user.email;
             document.getElementById('edit_employee_id').value = user.employee_id;
-            document.getElementById('edit_user_role').value = user.user_role;
+            const selectedRoles = Array.isArray(user.user_roles) && user.user_roles.length > 0
+                ? user.user_roles
+                : (user.user_role ? [user.user_role] : []);
+            if (typeof window.setEditRoleSelection === 'function') {
+                window.setEditRoleSelection(selectedRoles);
+            }
             document.getElementById('edit_user_location').value = user.user_location;
             document.getElementById('edit_status').value = user.status;
             

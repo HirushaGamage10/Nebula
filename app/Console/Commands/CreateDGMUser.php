@@ -45,6 +45,7 @@ class CreateDGMUser extends Command
             'employee_id' => 'DGM001',
             'password' => Hash::make($password),
             'user_role' => 'DGM',
+            'user_roles' => ['DGM'],
             'status' => '1', // Active
             'user_location' => 'Nebula Institute of Technology – Welisara',
         ]);

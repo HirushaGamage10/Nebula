@@ -25,13 +25,14 @@ class DashboardController extends Controller
     public function showDashboard()
     {
         $user = Auth::user();
-        $userRole = $user->user_role;
+        $userRoles = $user->getRoleList();
+        $userRole = RoleHelper::resolvePrimaryRole($userRoles) ?? $user->user_role;
         
         // Get role-specific welcome message
         $welcomeMessage = $this->getWelcomeMessage($userRole);
         
         // Get role-specific permissions
-        $permissions = RoleHelper::getRolePermissions($userRole);
+        $permissions = RoleHelper::getRolePermissions($userRoles);
         
         // Get available features for this role
         $availableFeatures = $this->getAvailableFeatures($userRole);

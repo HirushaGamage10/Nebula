@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash; // Import the Hash facade
 use Illuminate\Validation\Rules\Password; // Import the Password rule
 use App\Models\User;
 use App\Http\Requests\CreateUserRequest;
+use App\Helpers\RoleHelper;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -29,12 +30,14 @@ class UserProfileController extends Controller
 
         // Prepare the array with user details
         $usersArray = $users->map(function ($user) {
+            $displayRoles = implode(', ', $user->getRoleList());
+
             return [
                 'user_id' => $user->user_id,
                 'user_name' => $user->name,
                 'email' => $user->email,
                 'employee_id' => $user->employee_id,
-                'user_role' => $user->user_role,
+                'user_role' => $displayRoles !== '' ? $displayRoles : 'N/A',
                 'status' => ($user->status == "1" ? "Active" : ($user->status == "0" ? "Inactive" : ($user->status == "2" ? "Suspended" : "Unknown"))),
                 'user_location' => $user->user_location ?? 'Unknown'
             ];
@@ -45,14 +48,14 @@ class UserProfileController extends Controller
             'user_name' => $user->name,
             'email' => $user->email,
             'employee_id' => $user->employee_id,
-            'user_role' => $user->user_role,
+            'user_role' => implode(', ', $user->getRoleList()),
             'status' => ($user->status == "1" ? "Active" : ($user->status == "0" ? "Inactive" : ($user->status == "2" ? "Suspended" : "Unknown"))),
             'user_location' => $user->user_location ?? 'Unknown',
             'user_profile' => $user->user_profile ?? null,
         ];
 
         // Fetch all user roles from RoleHelper
-        $userRoles = array_keys(\App\Helpers\RoleHelper::getRoles());
+        $userRoles = array_keys(RoleHelper::getRoles());
 
         // Add hardcoded locations array for dropdown
         $locations = [
@@ -88,12 +91,16 @@ class UserProfileController extends Controller
     
 public function updateUserStatus(Request $request)
 {
+    $validRoles = array_keys(RoleHelper::getRoles());
+
     // Validate the request data
     $request->validate([
         'user_id' => 'required|exists:users,user_id',
         'name' => 'required|string|max:255',
         'email' => 'required|email|max:255|unique:users,email,' . $request->user_id . ',user_id',
-        'user_role' => 'required|string|in:"DGM","Program Administrator (level 01)","Program Administrator (level 02)","Student Counselor","Librarian","Hostel Manager","Bursar","Project Tutor","Marketing Manager","Developer"', // 0 (Inactive), 1 (Active), 2 (Suspended)
+        'user_roles' => ['required_without:user_role', 'array', 'min:1'],
+        'user_roles.*' => ['required', 'string', \Illuminate\Validation\Rule::in($validRoles)],
+        'user_role' => ['required_without:user_roles', 'string', \Illuminate\Validation\Rule::in($validRoles)],
         'status' => 'required|in:"0","1","2"', // 0 (Inactive), 1 (Active), 2 (Suspended)
         'user_location' => 'required|string', // Validate location as string
     ]);
@@ -102,11 +109,24 @@ public function updateUserStatus(Request $request)
         // Find the user by user_id
         $user = User::findOrFail($request->user_id);
 
+        $updatedRoles = $request->input('user_roles', []);
+        if (empty($updatedRoles) && $request->filled('user_role')) {
+            $updatedRoles = [$request->user_role];
+        }
+
+        $updatedRoles = RoleHelper::normalizeRoles($updatedRoles);
+        $primaryRole = RoleHelper::resolvePrimaryRole($updatedRoles);
+
+        if (empty($updatedRoles) || !$primaryRole) {
+            return response()->json(['success' => false, 'message' => 'At least one valid role is required.'], 422);
+        }
+
         // Update user information
         $user->name = $request->name;
         $user->email = $request->email;
         $user->employee_id = $request->employee_id;
-        $user->user_role = $request->user_role;
+        $user->user_role = $primaryRole;
+        $user->user_roles = $updatedRoles;
         $user->user_location = $request->user_location; // Update user location
         $user->status = $request->status;
         $user->save();
@@ -192,7 +212,7 @@ public function updateUserStatus(Request $request)
         ]);
 
         $admin = Auth::user();
-        if (!in_array($admin->user_role, ['DGM', 'Program Administrator (level 01)', 'Developer'])) {
+        if (!$admin->hasAnyRole(['DGM', 'Program Administrator (level 01)', 'Developer'])) {
             abort(403, 'Unauthorized');
         }
 
@@ -210,7 +230,7 @@ public function updateUserStatus(Request $request)
         $currentUser = Auth::user();
         
         // Check if user is Program Administrator (level 01) or Developer
-        if (!in_array($currentUser->user_role, ['Program Administrator (level 01)', 'Developer'])) {
+        if (!$currentUser->hasAnyRole(['Program Administrator (level 01)', 'Developer'])) {
             abort(403, 'Access denied. Only Program Administrator (level 01) and Developer can access this page.');
         }
 
@@ -219,12 +239,14 @@ public function updateUserStatus(Request $request)
 
         // Prepare the array with user details
         $usersArray = $users->map(function ($user) {
+            $displayRoles = implode(', ', $user->getRoleList());
+
             return [
                 'user_id' => $user->user_id,
                 'user_name' => $user->name,
                 'email' => $user->email,
                 'employee_id' => $user->employee_id,
-                'user_role' => $user->user_role,
+                'user_role' => $displayRoles !== '' ? $displayRoles : 'N/A',
                 'status' => ($user->status == "1" ? "Active" : ($user->status == "0" ? "Inactive" : ($user->status == "2" ? "Suspended" : "Unknown"))),
                 'user_location' => $user->user_location ?? 'Unknown',
                 'created_at' => $user->created_at ? $user->created_at->format('Y-m-d H:i:s') : 'N/A',
@@ -233,7 +255,7 @@ public function updateUserStatus(Request $request)
         });
 
         // Fetch all user roles from RoleHelper
-        $userRoles = array_keys(\App\Helpers\RoleHelper::getRoles());
+        $userRoles = array_keys(RoleHelper::getRoles());
 
         // Add hardcoded locations array for dropdown
         $locations = [
@@ -253,10 +275,10 @@ public function updateUserStatus(Request $request)
     public function showCreateUserForm()
     {
         $currentUser = Auth::user();
-        if (!in_array($currentUser->user_role, ['DGM', 'Program Administrator (level 01)', 'Developer'])) {
+        if (!$currentUser->hasAnyRole(['DGM', 'Program Administrator (level 01)', 'Developer'])) {
             abort(403, 'Access denied. Only DGM, Program Administrator (level 01), and Developer can access this page.');
         }
-        $userRoles = array_keys(\App\Helpers\RoleHelper::getRoles());
+        $userRoles = array_keys(RoleHelper::getRoles());
         $locations = [
             'Nebula Institute of Technology – Welisara',
             'Nebula Institute of Technology – Moratuwa',
@@ -282,6 +304,7 @@ public function updateUserStatus(Request $request)
                     'email' => $user->email,
                     'employee_id' => $user->employee_id,
                     'user_role' => $user->user_role,
+                    'user_roles' => $user->getRoleList(),
                     'status' => $user->status,
                     'user_location' => $user->user_location,
                 ]
@@ -310,7 +333,18 @@ public function updateUserStatus(Request $request)
         $user->name = $validated['name'];
         $user->email = $validated['email'];
         $user->employee_id = $validated['employee_id'];
-        $user->user_role = $validated['user_role'];
+        $assignedRoles = RoleHelper::normalizeRoles($validated['user_roles'] ?? ($validated['user_role'] ?? null));
+        $primaryRole = RoleHelper::resolvePrimaryRole($assignedRoles);
+
+        if (empty($assignedRoles) || !$primaryRole) {
+            return response()->json([
+                'success' => false,
+                'message' => 'At least one valid user role is required.'
+            ], 422);
+        }
+
+        $user->user_role = $primaryRole;
+        $user->user_roles = $assignedRoles;
         $user->status = 1; // Default Active
         $user->user_location = $validated['user_location'];
         $user->password = Hash::make($validated['password']);

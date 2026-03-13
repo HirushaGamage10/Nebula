@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use App\Helpers\RoleHelper;
 
 class CreateUserRequest extends FormRequest
 {
@@ -22,6 +23,8 @@ class CreateUserRequest extends FormRequest
      */
     public function rules(): array
     {
+        $validRoles = array_keys(RoleHelper::getRoles());
+
         return [
             'name' => 'required|string|max:255|regex:/^[a-zA-Z\s]+$/',
             'email' => [
@@ -31,23 +34,20 @@ class CreateUserRequest extends FormRequest
                 'unique:users,email',
             ],
             'employee_id' => 'required|string|max:255|unique:users,employee_id',
-            'user_role' => [
+            'user_roles' => [
+                'required',
+                'array',
+                'min:1',
+            ],
+            'user_roles.*' => [
                 'required',
                 'string',
-                Rule::in([
-                    'DGM',
-                    'Program Administrator (level 01)',
-                    'Program Administrator (level 02)',
-                    'Program Administrator (level 02) Trainee',
-                    'Student Counselor',
-                    'Student Counselor Trainee',
-                    'Librarian',
-                    'Hostel Manager',
-                    'Bursar',
-                    'Project Tutor',
-                    'Marketing Manager',
-                    'Developer'
-                ])
+                Rule::in($validRoles)
+            ],
+            'user_role' => [
+                'nullable',
+                'string',
+                Rule::in($validRoles)
             ],
             'user_location' => [
                 'required',
@@ -86,8 +86,12 @@ class CreateUserRequest extends FormRequest
             'employee_id.max' => 'Employee ID cannot exceed 255 characters.',
             'employee_id.unique' => 'This Employee ID is already registered.',
             
-            'user_role.required' => 'User role is required.',
-            'user_role.string' => 'User role must be a valid string.',
+            'user_roles.required' => 'At least one user role is required.',
+            'user_roles.array' => 'User roles must be a valid list.',
+            'user_roles.min' => 'Select at least one user role.',
+            'user_roles.*.required' => 'Each selected role is required.',
+            'user_roles.*.string' => 'Each selected role must be valid.',
+            'user_roles.*.in' => 'Please select valid user roles.',
             'user_role.in' => 'Please select a valid user role.',
             
             'user_location.required' => 'User location is required.',
@@ -112,10 +116,32 @@ class CreateUserRequest extends FormRequest
             'name' => 'user name',
             'email' => 'email address',
             'employee_id' => 'employee ID',
-            'user_role' => 'user role',
+            'user_roles' => 'user roles',
+            'user_role' => 'primary user role',
             'user_location' => 'user location',
             'password' => 'password',
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $roles = $this->input('user_roles');
+
+        if (is_string($roles)) {
+            $roles = [$roles];
+        }
+
+        if (empty($roles) && $this->filled('user_role')) {
+            $roles = [$this->input('user_role')];
+        }
+
+        if (!empty($roles)) {
+            $roles = array_values(array_unique(array_filter(array_map(function ($role) {
+                return is_string($role) ? trim($role) : '';
+            }, $roles))));
+
+            $this->merge(['user_roles' => $roles]);
+        }
     }
 
     /**

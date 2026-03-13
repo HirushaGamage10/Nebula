@@ -40,7 +40,7 @@ class AuthenticationService
             }
 
             // Check if user has a valid role
-            if (empty($user->user_role)) {
+            if (!$user->hasAssignedRoles()) {
                 return [
                     'success' => false,
                     'message' => 'Your account does not have a valid role assigned. Please contact administrator.',
@@ -55,6 +55,7 @@ class AuthenticationService
                     'user_id' => $user->user_id,
                     'email' => $user->email,
                     'role' => $user->user_role,
+                    'roles' => $user->getRoleList(),
                     'location' => $user->user_location,
                     'ip' => request()->ip(),
                     'user_agent' => request()->userAgent()
@@ -177,6 +178,7 @@ class AuthenticationService
             'user_id' => $user->user_id,
             'email' => $user->email,
             'role' => $user->user_role,
+            'roles' => $user->getRoleList(),
             'location' => $user->user_location,
             'ip' => request()->ip(),
             'user_agent' => request()->userAgent(),

@@ -1,7 +1,7 @@
 <div>
     @php
         use App\Helpers\RoleHelper;
-        $role = auth()->user()->user_role ?? '';
+        $role = auth()->user() ? auth()->user()->getRoleList() : [];
     @endphp
     <div class="brand-logo d-flex align-items-center justify-content-center py-3 position-relative w-100">
         <!-- Mobile close button (uses the same toggler JS) -->
@@ -30,7 +30,7 @@
             @endif
 
             {{-- USER MANAGEMENT --}}
-            @if($role == 'Program Administrator (level 01)' || $role == 'Developer')
+            @if(RoleHelper::hasAnyRole($role, ['Program Administrator (level 01)', 'Developer']))
             <li class="nav-small-cap">
                 <span class="nav-small-cap-text">USER MANAGEMENT</span>
             </li>
@@ -333,7 +333,7 @@
                     <span class="nav-small-cap-text">COURSES & MODULES</span>
                 </li>
             @endif
-            @if($role == 'Developer' || $role == 'Program Administrator (level 02)' || RoleHelper::hasPermission($role, 'module.creation'))
+                @if(RoleHelper::hasAnyRole($role, ['Developer', 'Program Administrator (level 02)']) || RoleHelper::hasPermission($role, 'module.creation'))
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ Route::currentRouteName() == 'module.creation' ? 'active' : '' }}" href="{{ route('module.creation') }}">
                         <span><i class="ti ti-plus"></i></span>
