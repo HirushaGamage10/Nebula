@@ -2926,10 +2926,11 @@ if (paymentType === 'franchise_fee') {
         return;
     }
 
-    // ✅ SSCL calculated (already pre-computed via recalculateSSCL)
-    ssclTaxAmount = parseFloat(document.getElementById('sscl-tax-amount').value || 0);
+    // Keep charges synced with selected installment defaults before payload
+    syncFranchiseChargeInputsToSelection();
 
-    // ✅ Bank Charges direct input
+    // ✅ SSCL and bank charges from synced inputs
+    ssclTaxAmount = parseFloat(document.getElementById('sscl-tax-amount').value || 0);
     bankCharges = parseFloat(document.getElementById('bank-charges').value || 0);
 }
 
@@ -3315,14 +3316,15 @@ function renderPaymentRecords() {
 
     const row = `
       <tr>
+                <td>${r.student_id ?? '-'}</td>
         <td>${r.student_name}</td>
         <td>${paymentTypeDisplay}</td>
         <td>${r.installment_number ?? '-'}</td>
-        <td>${r.amount}</td>
-        <td>${r.late_fee ?? 0}</td>
-        <td>${r.approved_late_fee ?? 0}</td>
-        <td>${r.total_fee ?? 0}</td>
-        <td>${r.remaining_amount ?? 0}</td>
+                <td>${Number(r.amount ?? 0).toLocaleString()}</td>
+                <td>${Number(r.late_fee ?? 0).toLocaleString()}</td>
+                <td>${Number(r.approved_late_fee ?? 0).toLocaleString()}</td>
+                <td>${Number(r.total_fee ?? 0).toLocaleString()}</td>
+                <td>${Number(r.remaining_amount ?? 0).toLocaleString()}</td>
         <td>${r.payment_method ?? '-'}</td>
         <td>${r.payment_date ?? '-'}</td>
         <td>${r.receipt_no}</td>
@@ -4064,7 +4066,10 @@ async function loadPaymentDetails() {
       status:             d.status || 'pending',
       paid_date:          d.paid_date || null,
       receipt_no:         d.receipt_no || null,
-      currency:           d.currency || 'LKR'
+            currency:           d.currency || 'LKR',
+            sscl_tax:           Number(d.sscl_tax || 0),
+            bank_charges:       Number(d.bank_charges || 0),
+            apply_tax:          Boolean(d.apply_tax)
     }));
 
     renderPaymentDetailsTable(details, paymentType);
@@ -4274,9 +4279,49 @@ function recalculateLKRAmounts() {
 
     // Only recalculate if we have payment data and it's franchise fee
     if (paymentType === 'franchise_fee' && window.paymentDetailsData) {
+        syncFranchiseChargeInputsToSelection();
         // Update only the LKR amounts in the existing table rows
         updateLKRAmountsInTable(conversionRate);
     }
+}
+
+function calculateFranchiseChargesForRow(row, conversionRate) {
+    const amount = Number(row?.amount || 0);
+    const ssclPercent = Number(row?.sscl_tax || 0);
+    const bankCharges = Number(row?.bank_charges || 0);
+    const lkrBase = conversionRate > 0 ? amount * conversionRate : amount;
+    const ssclAmount = (lkrBase * ssclPercent) / 100;
+
+    return {
+        ssclPercent,
+        ssclAmount,
+        bankCharges,
+        lkrFinal: lkrBase + ssclAmount + bankCharges
+    };
+}
+
+function syncFranchiseChargeInputsToSelection() {
+    const paymentType = document.getElementById('slip-payment-type')?.value;
+    if (paymentType !== 'franchise_fee') return;
+
+    const selected = document.querySelector('input[name="selectedPayment"]:checked');
+    if (!selected) return;
+
+    const row = (window.paymentDetailsData || [])[Number(selected.value)];
+    if (!row) return;
+
+    const conversionRate = Number(document.getElementById('currency-conversion-rate')?.value || 0);
+    const ssclTypeEl = document.getElementById('sscl-type');
+    const ssclValueEl = document.getElementById('sscl-value');
+    const ssclAmountEl = document.getElementById('sscl-tax-amount');
+    const bankChargesEl = document.getElementById('bank-charges');
+
+    const charges = calculateFranchiseChargesForRow(row, conversionRate);
+
+    if (ssclTypeEl) ssclTypeEl.value = 'percentage';
+    if (ssclValueEl) ssclValueEl.value = charges.ssclPercent;
+    if (ssclAmountEl) ssclAmountEl.value = charges.ssclAmount.toFixed(2);
+    if (bankChargesEl) bankChargesEl.value = charges.bankCharges;
 }
 
 // Update LKR amounts in the existing table without recreating the entire table
@@ -4287,11 +4332,21 @@ function updateLKRAmountsInTable(conversionRate) {
     rows.forEach((row, index) => {
         const lkrCell = row.querySelector('td:nth-child(5)'); // LKR amount column
         if (lkrCell && window.paymentDetailsData[index]) {
-            const amount = parseFloat(window.paymentDetailsData[index].amount);
+            const payment = window.paymentDetailsData[index];
+            const amount = parseFloat(payment.amount || 0);
+            const ssclTax = parseFloat(payment.sscl_tax || 0);
+            const bankCharges = parseFloat(payment.bank_charges || 0);
             if (conversionRate > 0) {
+                const lkrBase = amount * conversionRate;
+                const ssclAmount = (lkrBase * ssclTax) / 100;
+                const lkrFinal = lkrBase + ssclAmount + bankCharges;
+
                 // Add a brief highlight effect to show the update
                 lkrCell.style.backgroundColor = '#fff3cd';
-                lkrCell.textContent = `LKR ${(amount * conversionRate).toLocaleString()}`;
+                lkrCell.innerHTML = `
+                    <div>LKR ${money(lkrFinal)}</div>
+                    <small class="text-muted">Base: LKR ${money(lkrBase)} | SSCL: LKR ${money(ssclAmount)} | Bank: LKR ${money(bankCharges)}</small>
+                `;
 
                 // Remove highlight after a short delay
                 setTimeout(() => {
@@ -4532,6 +4587,7 @@ function renderPaymentDetailsTable(rows, paymentType) {
   let showLkr = paymentType === 'franchise_fee';
   convRow.style.display = showLkr ? '' : 'none';
   lkrHeader.style.display = showLkr ? '' : 'none';
+    lkrHeader.textContent = showLkr ? 'Final Amount (LKR)' : 'LKR Amount';
   amountHeader.textContent = 'Amount';
 
   // capture FX inputs (if needed)
@@ -4571,7 +4627,10 @@ function renderPaymentDetailsTable(rows, paymentType) {
       paid_date:          r.paid_date || null,
       receipt_no:         r.receipt_no || null,
       approved_late_fee:  Number(r.approved_late_fee ?? r.approvedLateFee ?? 0), // ✅ map both cases
-      currency:           r.currency || (paymentType === 'franchise_fee' ? (ccy || 'USD') : 'LKR')
+            currency:           r.currency || (paymentType === 'franchise_fee' ? (ccy || 'USD') : 'LKR'),
+            sscl_tax:           Number(r.sscl_tax || 0),
+            bank_charges:       Number(r.bank_charges || 0),
+            apply_tax:          Boolean(r.apply_tax)
     };
   });
 
@@ -4600,7 +4659,13 @@ function renderPaymentDetailsTable(rows, paymentType) {
     let lkrCell = '';
     if (showLkr) {
       if (rate && rate > 0) {
-        lkrCell = `<td>LKR ${money(p.amount * rate)}</td>`;
+                const lkrBase = p.amount * rate;
+                const ssclAmount = (lkrBase * p.sscl_tax) / 100;
+                const lkrFinal = lkrBase + ssclAmount + p.bank_charges;
+                lkrCell = `<td>
+                    <div>LKR ${money(lkrFinal)}</div>
+                    <small class="text-muted">Base: LKR ${money(lkrBase)} | SSCL: LKR ${money(ssclAmount)} | Bank: LKR ${money(p.bank_charges)}</small>
+                </td>`;
       } else {
         lkrCell = `<td class="text-muted">—</td>`;
       }
@@ -4675,7 +4740,10 @@ function renderPaymentDetailsTable(rows, paymentType) {
 
   // enable "Generate" only when a selection is made
   tbody.querySelectorAll('input[name="selectedPayment"]').forEach(r =>
-    r.addEventListener('change', () => { generateBtn.disabled = false; })
+        r.addEventListener('change', () => {
+            generateBtn.disabled = false;
+            syncFranchiseChargeInputsToSelection();
+        })
   );
 }
 

@@ -156,6 +156,13 @@ class PaymentController extends Controller
 
 
             case 'franchise_fee':
+            $franchisePlan = \App\Models\PaymentPlan::where('course_id', $request->course_id)
+                ->where('intake_id', $registration->intake_id)
+                ->first();
+
+            $franchiseSsclTax = (float) ($franchisePlan->sscl_tax ?? optional($registration->intake)->sscl_tax ?? 0);
+            $franchiseBankCharges = (float) ($franchisePlan->bank_charges ?? optional($registration->intake)->bank_charges ?? 0);
+
             // 🔹 Step 1: Try to get real franchise installments from student's payment plans
             $franchiseInstallments = \App\Models\PaymentInstallment::whereHas('paymentPlan', function($q) use ($student, $request) {
                     $q->where('student_id', $student->student_id)
@@ -190,8 +197,8 @@ class PaymentController extends Controller
                         'receipt_no'         => $receiptNo,
                         'currency'           => $ins->international_currency ?: 'USD',
                         'apply_tax'          => false,
-                        'sscl_tax'           => 0,
-                        'bank_charges'       => 0,
+                        'sscl_tax'           => $franchiseSsclTax,
+                        'bank_charges'       => $franchiseBankCharges,
                     ];
                 }
 
@@ -200,9 +207,7 @@ class PaymentController extends Controller
             }
 
             // 🔹 Step 2: Fallback to PaymentPlan JSON (if no franchise installments exist yet)
-            $plan = \App\Models\PaymentPlan::where('course_id', $request->course_id)
-                ->where('intake_id', $registration->intake_id)
-                ->first();
+            $plan = $franchisePlan;
 
             if (!$plan) {
                 return response()->json([
@@ -1791,7 +1796,7 @@ public function getPaymentRecords(Request $request)
         'payment_id'         => $payment->id,
         'student_id'         => $student->student_id,
         'student_name'       => $student->full_name,
-        'payment_type'       => $payment->installment_type ?? $payment->payment_type ?? 'course_fee',
+        'payment_type'       => $payment->payment_type ?? $payment->installment_type ?? 'course_fee',
         'installment_number' => $payment->installment_number,
         'amount'             => (float) $payment->amount,
         'late_fee'           => (float) ($payment->late_fee ?? 0),
