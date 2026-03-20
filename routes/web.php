@@ -60,7 +60,8 @@ use App\Http\Controllers\{
     DeveloperDashboardController,
     PaymentClearanceController,
     RepeatStudentPaymentController,
-    AcademicDetailsController
+    AcademicDetailsController,
+    TerminationTrackingController
 };
 
 /*
@@ -214,6 +215,10 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/api/student/{studentId}/course/{courseId}/intake/{intake}/payment-details', [StudentProfileController::class, 'getPaymentDetails'])->name('student.payment.details');
         Route::get('/api/student/{studentId}/course/{courseId}/intake/{intake}/payment-history', [StudentProfileController::class, 'getPaymentHistory'])->name('student.payment.history');
         Route::get('/api/student/{studentId}/course/{courseId}/intake/{intake}/payment-schedule', [StudentProfileController::class, 'getPaymentSchedule'])->name('student.payment.schedule');
+    });
+
+    Route::middleware(['auth', 'role:DGM,Program Administrator (level 01),Program Administrator (level 02),Developer'])->group(function () {
+        Route::get('/termination-tracking', [TerminationTrackingController::class, 'index'])->name('termination.tracking');
     });
 
     // ========================================================================

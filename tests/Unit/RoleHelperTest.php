@@ -52,6 +52,7 @@ class RoleHelperTest extends TestCase
         $this->assertTrue(RoleHelper::hasPermission('Developer', 'course.registration'));
         $this->assertTrue(RoleHelper::hasPermission('Developer', 'attendance'));
         $this->assertTrue(RoleHelper::hasPermission('Developer', 'special.approval'));
+        $this->assertTrue(RoleHelper::hasPermission('Developer', 'termination.tracking'));
         $this->assertTrue(RoleHelper::hasPermission('Developer', 'library.clearance'));
         $this->assertTrue(RoleHelper::hasPermission('Developer', 'hostel.clearance.form.management'));
         $this->assertTrue(RoleHelper::hasPermission('Developer', 'project.clearance.management'));
@@ -81,9 +82,16 @@ class RoleHelperTest extends TestCase
 
         // Test that Program Administrator (level 02) can access course management
         $this->assertTrue(RoleHelper::hasPermission('Program Administrator (level 02)', 'course.management'));
+        $this->assertTrue(RoleHelper::hasPermission('Program Administrator (level 02)', 'termination.tracking'));
         
         // Test that Librarian cannot access academic management
         $this->assertFalse(RoleHelper::canAccessAcademicManagement('Librarian'));
+    }
+
+    public function test_termination_tracking_permissions_for_supported_roles()
+    {
+        $this->assertTrue(RoleHelper::hasPermission('Developer', 'termination.tracking'));
+        $this->assertTrue(RoleHelper::hasPermission('Program Administrator (level 02)', 'termination.tracking'));
     }
 
     public function test_role_helper_get_roles()

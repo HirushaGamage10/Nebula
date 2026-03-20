@@ -21,7 +21,6 @@
 .nav-tabs .nav-link i{font-size:1.1rem}
 .tab-content{padding-top:20px}
 
-.franchise-payment-table th{background-color:#f8f9fa;border-color:#dee2e6;font-weight:600}
 .status-badge{font-size:.75rem;padding:4px 8px}
 </style>
 
@@ -36,11 +35,6 @@
         <li class="nav-item" role="presentation">
           <button class="nav-link active" id="student-registration-tab" data-bs-toggle="tab" data-bs-target="#student-registration" type="button" role="tab" aria-controls="student-registration" aria-selected="true">
             <i class="ti ti-user me-2"></i>Student Registration
-          </button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="franchise-payment-tab" data-bs-toggle="tab" data-bs-target="#franchise-payment" type="button" role="tab" aria-controls="franchise-payment" aria-selected="false">
-            <i class="ti ti-currency-dollar me-2"></i>Franchise Payment Delays
           </button>
         </li>
         <!-- NEW TAB -->
@@ -86,46 +80,6 @@
           </div>
         </div>
 
-
-        <!-- Franchise Payment Delays (existing placeholder) -->
-        <div class="tab-pane fade" id="franchise-payment" role="tabpanel" aria-labelledby="franchise-payment-tab">
-          <div class="mt-4">
-            <div class="alert alert-info">
-              <i class="ti ti-info-circle me-2"></i>
-              <strong>Franchise Payment Delays</strong>
-              <p class="mb-0 mt-2">Review and approve franchise payment delay requests that require special approval.</p>
-            </div>
-
-            <div class="table-responsive">
-              <table class="table table-bordered franchise-payment-table">
-                <thead class="table-light">
-                  <tr>
-                    <th>Franchise Name</th>
-                    <th>Student Name</th>
-                    <th>Course</th>
-                    <th>Due Date</th>
-                    <th>Days Delayed</th>
-                    <th>Amount Due</th>
-                    <th>Reason</th>
-                    <th>DGM Comment</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody id="franchisePaymentTableBody">
-                  <tr>
-                    <td colspan="10" class="text-center text-muted py-4">
-                      <i class="ti ti-inbox" style="font-size:2rem;"></i>
-                      <p class="mt-2 mb-0">No franchise payment delay requests found</p>
-                      <small class="text-muted">This feature will be implemented in future updates</small>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-          </div>
-        </div>
 
         <!-- NEW: Semester Register Termination -->
         <div class="tab-pane fade" id="semterm" role="tabpanel" aria-labelledby="semterm-tab">
@@ -336,7 +290,6 @@ function escapeHtml(text) {
 
 document.addEventListener('DOMContentLoaded', function() {
   const tableBody = document.getElementById('specialApprovalTableBody');
-  const franchiseTableBody = document.getElementById('franchisePaymentTableBody');
   const semtermTableBody = document.getElementById('semtermTableBody');
 
   // Approve modal refs
@@ -359,7 +312,6 @@ document.addEventListener('DOMContentLoaded', function() {
     tab.addEventListener('shown.bs.tab', (ev)=>{
       const t = ev.target.getAttribute('data-bs-target');
       if(t==='#student-registration') loadStudentRegistrationData();
-      if(t==='#franchise-payment')   loadFranchisePaymentData();
       if(t==='#semterm')             loadSemTermRequests();
     });
   });
@@ -558,18 +510,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }).catch(()=>showErrorMessage('An error occurred while updating the comment.'))
       .finally(()=>{btn.disabled=false;btn.innerHTML='Save Comment';});
   });
-
-  // ===== Franchise stub =====
-  function loadFranchisePaymentData(){
-    franchiseTableBody.innerHTML = `
-      <tr>
-        <td colspan="10" class="text-center text-muted py-4">
-          <i class="ti ti-inbox" style="font-size: 2rem;"></i>
-          <p class="mt-2 mb-0">No franchise payment delay requests found</p>
-          <small class="text-muted">This feature will be implemented in future updates</small>
-        </td>
-      </tr>`;
-  }
 
   // ===== NEW: Semester termination → re-register =====
   function loadSemTermRequests(){

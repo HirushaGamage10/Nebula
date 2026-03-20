@@ -26,6 +26,7 @@ return [
                 ['label' => 'All Students View', 'route' => 'students.view', 'icon' => 'ti ti-users'],
                 ['label' => 'Badges Generation', 'route' => 'badges.generate', 'icon' => 'ti ti-id-badge', 'permission' => 'badges.generate'],
                 ['label' => 'Student Profile', 'route' => 'student.profile', 'icon' => 'ti ti-id', 'permission' => 'student.profile', 'is_profile' => true],
+                ['label' => 'Termination Tracking', 'route' => 'termination.tracking', 'icon' => 'ti ti-user-exclamation', 'permission' => 'termination.tracking'],
             ],
         ],
 

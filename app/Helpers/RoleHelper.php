@@ -52,6 +52,7 @@ class RoleHelper
             'student.list',
             'student.profile',
             'student.view',
+            'termination.tracking',
 
             // FINANCIAL            
             'payment.dashboard',
@@ -77,6 +78,7 @@ class RoleHelper
             'student.list',
             'student.profile',
             'student.view',
+            'termination.tracking',
 
             // REGISTRATIONS
             'course.registration',
@@ -125,6 +127,7 @@ class RoleHelper
             'student.other.information',
             'student.profile',
             'student.list',
+            'termination.tracking',
             
             // REGISTRATIONS
             'semester.registration',
@@ -388,6 +391,7 @@ class RoleHelper
             'student.list',
             'student.view',
             'student.profile',         
+            'termination.tracking',
             'course.change',
             
             // REGISTRATIONS
