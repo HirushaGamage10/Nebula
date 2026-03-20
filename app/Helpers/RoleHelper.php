@@ -156,6 +156,7 @@ class RoleHelper
 
             // COURSES & MODULES
             'module.creation',
+            'course.management',
             'semesters.create',
             'intake.create',
             'timetable',

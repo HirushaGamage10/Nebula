@@ -78,6 +78,9 @@ class RoleHelperTest extends TestCase
         
         // Test that Program Administrator can access academic management
         $this->assertTrue(RoleHelper::canAccessAcademicManagement('Program Administrator (level 01)'));
+
+        // Test that Program Administrator (level 02) can access course management
+        $this->assertTrue(RoleHelper::hasPermission('Program Administrator (level 02)', 'course.management'));
         
         // Test that Librarian cannot access academic management
         $this->assertFalse(RoleHelper::canAccessAcademicManagement('Librarian'));
