@@ -37,7 +37,7 @@ class UhIndexController extends Controller
             $course = Course::find($request->input('course_id'));
             if (!$course) return response()->json(['intakes' => []]);
 
-            $intakes = Intake::where('course_name', $course->course_name)
+            $intakes = Intake::forCourse($course)
                 ->get(['intake_id', 'batch']);
             return response()->json(['intakes' => $intakes]);
         } catch (\Throwable $e) {

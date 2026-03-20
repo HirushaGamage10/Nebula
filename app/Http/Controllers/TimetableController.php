@@ -387,8 +387,7 @@ class TimetableController extends Controller
         if (!$course) {
             return response()->json(['intakes' => []]);
         }
-        $intakes = \App\Models\Intake::where('course_name', $course->course_name)
-            ->where('location', $location)
+        $intakes = \App\Models\Intake::forCourse($course, $location)
             ->orderBy('batch')
             ->get(['intake_id', 'batch']);
         return response()->json(['intakes' => $intakes]);

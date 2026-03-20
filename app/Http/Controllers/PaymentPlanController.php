@@ -289,9 +289,8 @@ public function update(Request $request, $id)
             return response()->json(['success' => false, 'message' => 'Course not found.'], 404);
         }
 
-        $intake = \App\Models\Intake::where('intake_id', $request->intake_id)
-            ->where('course_name', $course->course_name)
-            ->where('location', $request->location)
+        $intake = \App\Models\Intake::forCourse($course, $request->location)
+            ->where('intake_id', $request->intake_id)
             ->first();
 
         if (!$intake) {
@@ -320,13 +319,9 @@ public function update(Request $request, $id)
         return response()->json(['success' => false, 'data' => []]);
     }
 
-    $courseName = Course::where('course_id', $request->course_id)->value('course_name');
-
-$intakes = Intake::whereRaw('LOWER(TRIM(course_name)) = ?', [strtolower(trim($courseName))])
-    ->where('location', $request->location)
-    ->orderBy('batch')
-    ->get(['intake_id','batch']);
-
+    $intakes = Intake::forCourse($course, $request->location)
+        ->orderBy('batch')
+        ->get(['intake_id','batch']);
 
     return response()->json([
         'success' => true,

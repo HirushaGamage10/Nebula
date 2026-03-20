@@ -462,10 +462,18 @@ class CourseRegistraionController extends Controller
     public function getIntakesForCourseAndLocation($courseName, $location)
     {
         try {
-            $intakes = Intake::where('course_name', $courseName)
-                ->where('location', $location)
-                ->orderBy('batch')
-                ->get(['intake_id', 'batch', 'start_date', 'registration_fee']);
+            $course = \App\Models\Course::where('course_name', $courseName)->first();
+            if ($course) {
+                $intakes = Intake::forCourse($course, $location)
+                    ->orderBy('batch')
+                    ->get(['intake_id', 'batch', 'start_date', 'registration_fee']);
+            } else {
+                // Legacy fallback if no matching course record exists
+                $intakes = Intake::where('course_name', $courseName)
+                    ->where('location', $location)
+                    ->orderBy('batch')
+                    ->get(['intake_id', 'batch', 'start_date', 'registration_fee']);
+            }
 
             return response()->json([
                 'success' => true,
@@ -635,10 +643,18 @@ class CourseRegistraionController extends Controller
         $courseName = $request->input('course_name');
         $location = $request->input('location');
 
-        $intakes = \App\Models\Intake::where('course_name', $courseName)
-            ->where('location', $location)
-            ->orderBy('start_date', 'asc')
-            ->get(['intake_id', 'batch', 'start_date', 'registration_fee']);
+        $course = \App\Models\Course::where('course_name', $courseName)->first();
+        if ($course) {
+            $intakes = \App\Models\Intake::forCourse($course, $location)
+                ->orderBy('start_date', 'asc')
+                ->get(['intake_id', 'batch', 'start_date', 'registration_fee']);
+        } else {
+            // Legacy fallback if no matching course record
+            $intakes = \App\Models\Intake::where('course_name', $courseName)
+                ->where('location', $location)
+                ->orderBy('start_date', 'asc')
+                ->get(['intake_id', 'batch', 'start_date', 'registration_fee']);
+        }
 
         return response()->json($intakes);
     }

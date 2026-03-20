@@ -55,8 +55,7 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
             }
 
             // Build the query
-            $query = \App\Models\Intake::where('course_name', $course->course_name)
-                ->where('location', $request->location);
+            $query = \App\Models\Intake::forCourse($course, $request->location);
 
             // Add course_type filter if provided
             if ($request->has('course_type') && $request->course_type) {

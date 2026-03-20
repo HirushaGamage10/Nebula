@@ -217,6 +217,14 @@ class CourseManagementController extends Controller
             }
 
             $course->update($courseData);
+
+            // Keep intakes.course_name in sync if the course name changed,
+            // so legacy name-based lookups continue to work after a rename.
+            if ($course->wasChanged('course_name')) {
+                \App\Models\Intake::where('course_id', $course->course_id)
+                    ->update(['course_name' => $course->course_name]);
+            }
+
             DB::commit();
 
             $durationParts = explode('-', $course->duration);

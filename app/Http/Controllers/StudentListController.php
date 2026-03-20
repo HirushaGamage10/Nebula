@@ -208,8 +208,7 @@ class StudentListController extends Controller
                 return response()->json(['intakes' => []]);
             }
 
-            $intakes = Intake::where('course_name', $course->course_name)
-                ->where('location', $location)
+            $intakes = Intake::forCourse($course, $location)
                 ->orderBy('batch')
                 ->get(['intake_id', 'batch']);
 

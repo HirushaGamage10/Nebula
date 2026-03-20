@@ -299,8 +299,7 @@ class RepeatStudentsController extends Controller
                 return response()->json(['success' => false, 'message' => 'Course not found.'], Response::HTTP_NOT_FOUND);
             }
 
-            $intakes = Intake::where('course_name', $course->course_name)
-                ->where('location', $location)
+            $intakes = Intake::forCourse($course, $location)
                 ->get();
 
             return response()->json(['success' => true, 'intakes' => $intakes]);
@@ -524,16 +523,12 @@ public function updateSemesterRegistration(Request $request)
                 return response()->json(['success' => false, 'message' => 'Course not found.'], Response::HTTP_NOT_FOUND);
             }
 
-            $query = Intake::where('course_name', $course->course_name);
-            if ($location) {
-                $query->where('location', $location);
-            }
+            $query = Intake::forCourse($course, $location ?: null);
 
             $now = Carbon::now();
 
             // identify next upcoming intake (if any)
-            $next = Intake::where('course_name', $course->course_name)
-                ->when($location, function ($q) use ($location) { return $q->where('location', $location); })
+            $next = Intake::forCourse($course, $location ?: null)
                 ->whereNotNull('start_date')
                 ->where('start_date', '>=', $now->toDateString())
                 ->orderBy('start_date', 'asc')

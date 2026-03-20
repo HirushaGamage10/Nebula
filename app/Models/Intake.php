@@ -242,4 +242,22 @@ class Intake extends Model
     {
         return $this->getCurrentStudentCount() < $this->batch_size;
     }
+
+    /**
+     * Resilient intake query builder for a given course (and optional location).
+     * Prefers course_id FK; falls back to course_name string match for legacy
+     * intakes that pre-date the course_id column (which was nullable on creation).
+     *
+     * Use this everywhere instead of bare where('course_name', ...).
+     */
+    public static function forCourse(\App\Models\Course $course, ?string $location = null): \Illuminate\Database\Eloquent\Builder
+    {
+        return static::where(function ($q) use ($course) {
+            $q->where('course_id', $course->course_id)
+              ->orWhere(function ($q2) use ($course) {
+                  $q2->whereNull('course_id')
+                     ->where('course_name', $course->course_name);
+              });
+        })->when($location, fn($q) => $q->where('location', $location));
+    }
 } 
