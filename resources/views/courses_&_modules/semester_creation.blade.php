@@ -169,6 +169,32 @@ document.addEventListener('DOMContentLoaded', function() {
         $(select).addClass('enabled-highlight');
     }
 
+    // Fetch intakes for the selected course/location from semester-specific endpoint.
+    function fetchIntakesForSemesterCreation() {
+        if (!courseSelect.value || !locationSelect.value) {
+            resetAndDisable(intakeSelect, 'Select Intake');
+            return;
+        }
+
+        fetch(`/semester/get-intakes/${encodeURIComponent(courseSelect.value)}/${encodeURIComponent(locationSelect.value)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.intakes && data.intakes.length > 0) {
+                    let options = '<option value="" selected disabled>Select Intake</option>';
+                    data.intakes.forEach(intake => {
+                        options += `<option value="${escapeHtml(String(intake.intake_id))}">${escapeHtml(String(intake.batch))}</option>`;
+                    });
+                    intakeSelect.innerHTML = options;
+                    enableSelect(intakeSelect);
+                } else {
+                    resetAndDisable(intakeSelect, 'No intakes available');
+                }
+            })
+            .catch(() => {
+                resetAndDisable(intakeSelect, 'Failed to load intakes');
+            });
+    }
+
     // 1. Location -> Course
     locationSelect.addEventListener('change', function() {
         resetAndDisable(courseSelect, 'Select Course');
@@ -274,47 +300,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         updateModulesTableHeader();
                         console.log('Course data not found or invalid');
                     }
-                    // --- Always fetch intakes after handling specializations ---
-                    fetch(`/get-intakes/${courseSelect.value}/${locationSelect.value}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.intakes && data.intakes.length > 0) {
-                                let options = '<option value="" selected disabled>Select Intake</option>';
-                                data.intakes.forEach(intake => {
-                                    options += `<option value="${escapeHtml(String(intake.intake_id))}">${escapeHtml(String(intake.batch))}</option>`;
-                                });
-                                intakeSelect.innerHTML = options;
-                                enableSelect(intakeSelect);
-                            } else {
-                                resetAndDisable(intakeSelect, 'No intakes available');
-                            }
-                        })
-                        .catch(error => {
-                            resetAndDisable(intakeSelect, 'Failed to load intakes');
-                        });
+                    // Always fetch intakes after handling specializations.
+                    fetchIntakesForSemesterCreation();
                 })
                 .catch(() => {
                     courseSpecializations = [];
                     document.getElementById('specializationRow').style.display = 'none';
                     updateModulesTableHeader();
-                    // --- Still fetch intakes even if specializations fetch fails ---
-                    fetch(`/get-intakes/${courseSelect.value}/${locationSelect.value}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.intakes && data.intakes.length > 0) {
-                                let options = '<option value="" selected disabled>Select Intake</option>';
-                                data.intakes.forEach(intake => {
-                                    options += `<option value="${escapeHtml(String(intake.intake_id))}">${escapeHtml(String(intake.batch))}</option>`;
-                                });
-                                intakeSelect.innerHTML = options;
-                                enableSelect(intakeSelect);
-                            } else {
-                                resetAndDisable(intakeSelect, 'No intakes available');
-                            }
-                        })
-                        .catch(error => {
-                            resetAndDisable(intakeSelect, 'Failed to load intakes');
-                        });
+                    // Still fetch intakes even if specializations fetch fails.
+                    fetchIntakesForSemesterCreation();
                 });
         } else {
             courseSpecializations = [];

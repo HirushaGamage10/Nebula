@@ -297,6 +297,51 @@ class SemesterCreationController extends Controller
         return response()->json(['success' => true, 'courses' => $courses]);
     }
 
+    public function getIntakesForCourseAndLocation($courseId, $location)
+    {
+        try {
+            $course = Course::select('course_id', 'course_name')->find($courseId);
+
+            if (!$course) {
+                return response()->json([
+                    'success' => false,
+                    'intakes' => [],
+                    'message' => 'Course not found.'
+                ], 404);
+            }
+
+            $intakes = Intake::query()
+                ->where('location', trim($location))
+                ->where(function ($query) use ($course) {
+                    $query->where('course_id', $course->course_id)
+                        // Fallback keeps old records (created before course_id linkage) working.
+                        ->orWhere(function ($fallback) use ($course) {
+                            $fallback->whereNull('course_id')
+                                ->where('course_name', $course->course_name);
+                        });
+                })
+                ->orderBy('batch', 'asc')
+                ->get(['intake_id', 'batch']);
+
+            return response()->json([
+                'success' => true,
+                'intakes' => $intakes
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching intakes for semester creation:', [
+                'course_id' => $courseId,
+                'location' => $location,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'intakes' => [],
+                'message' => 'Failed to load intakes.'
+            ], 500);
+        }
+    }
+
     public function bulkUpdateStatus(Request $request)
     {
         try {

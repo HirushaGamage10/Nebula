@@ -376,6 +376,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::post('semesters/{semester}/duplicate', [SemesterCreationController::class, 'duplicateSemester'])->name('semesters.duplicate');
         Route::post('/semester/get-filtered-modules', [SemesterCreationController::class, 'getFilteredModules'])->name('semester.get.filtered.modules');
         Route::get('/courses/by-location', [SemesterCreationController::class, 'getCoursesByLocation'])->name('courses.byLocation');
+        Route::get('/semester/get-intakes/{courseId}/{location}', [SemesterCreationController::class, 'getIntakesForCourseAndLocation'])->name('semester.get.intakes.by.course.location');
     });
 
     // ========================================================================

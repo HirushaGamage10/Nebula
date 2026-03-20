@@ -10,6 +10,7 @@ return new class extends Migration {
             $table->id('course_id');
             $table->enum('location', ['Welisara', 'Mathara', 'Peradeniya']);
             $table->string('course_name');
+            $table->enum('course_type', ['degree', 'diploma'])->default('degree');
             $table->integer('no_of_semesters');
             $table->string('duration');
             $table->integer('semester'); // If needed to mark current semester
