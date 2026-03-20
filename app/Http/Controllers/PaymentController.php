@@ -1159,6 +1159,9 @@ public function generatePaymentSlip(Request $request)
             'conversion_rate'    => 'nullable|numeric|min:0',
             'currency_from'      => 'nullable|string',
             'remarks'            => 'nullable|string',
+            // Actual date the payment was made; may differ from the system update date when
+            // staff enter payments retroactively. Late fees are calculated against this date.
+            'payment_effective_date' => 'nullable|date',
         ]);
 
         // 🔹 Find Student
@@ -1376,9 +1379,20 @@ public function generatePaymentSlip(Request $request)
                     ->first();
 
                 if ($inst) {
-                    $dueDate  = \Carbon\Carbon::parse($inst->due_date);
-                    $daysLate = $dueDate->isPast() ? $dueDate->diffInDays(now()) : 0;
-                    $baseAmt  = $inst->final_amount ?? $inst->amount ?? 0;
+                    $dueDate = \Carbon\Carbon::parse($inst->due_date)->startOfDay();
+
+                    // Use the supplied effective date (actual payment date) so that
+                    // retroactive entries by staff don't generate false late fees for
+                    // payments that were actually on time.
+                    $effectiveDate = $request->payment_effective_date
+                        ? \Carbon\Carbon::parse($request->payment_effective_date)->startOfDay()
+                        : now()->startOfDay();
+
+                    $daysLate = $dueDate->lt($effectiveDate)
+                        ? $dueDate->diffInDays($effectiveDate)
+                        : 0;
+
+                    $baseAmt = $inst->final_amount ?? $inst->amount ?? 0;
 
                     // 🔹 Calculate late fee and update installment
                     $calcFee = $this->calculateLateFee($baseAmt, $daysLate);
@@ -1409,10 +1423,11 @@ if ($existingPayment) {
     $remaining = max(($existingPayment->total_fee - $paidSoFar), 0);
 
     $existingPayment->update([
-        'late_fee'          => $lateFee,
-        'approved_late_fee' => $approvedLateFee,
-        'total_fee'         => $totalFee,
-        'remaining_amount'  => $remaining,  // ✅ recalc if needed
+        'late_fee'               => $lateFee,
+        'approved_late_fee'      => $approvedLateFee,
+        'total_fee'              => $totalFee,
+        'remaining_amount'       => $remaining,  // ✅ recalc if needed
+        'payment_effective_date' => $request->payment_effective_date ?: null,
     ]);
 
     $slipData = $this->buildSlipArray(
@@ -1474,8 +1489,9 @@ if ($existingPayment) {
             'partial_payments'  => json_encode([]), // ensures proper JSON
             'foreign_currency_code'  => $foreignCurrency,
             'foreign_currency_amount'=> $foreignAmount,
-            'installment_type'         => $installmentType,
-
+            'installment_type'           => $installmentType,
+            // Actual payment date supplied by staff; drives late-fee calculations
+            'payment_effective_date'     => $request->payment_effective_date ?: null,
         ]);
 
 
@@ -1987,7 +2003,10 @@ public function makePayment(Request $request)
                         ->where('installment_number', $payment->installment_number)
                         ->update([
                             'status'    => 'paid',
-                            'paid_date' => now(),
+                            // Use the submitted payment_date (the actual payment date) not
+                            // the system clock, so late-fee history is accurate even when
+                            // staff enter payments retrospectively.
+                            'paid_date' => $request->payment_date ?? now(),
                         ]);
                 }
             }

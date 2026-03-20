@@ -197,9 +197,15 @@ class LatePaymentController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($payment) {
+                    // Use payment_effective_date when available (the actual date the student
+                    // paid), falling back to payment_date, then created_at as a last resort.
+                    $effectiveDateRef = $payment->payment_effective_date
+                        ?? $payment->payment_date
+                        ?? $payment->created_at;
+
                     return [
                         'payment_id' => $payment->id,
-                        'payment_date' => $payment->created_at->format('Y-m-d'),
+                        'payment_date' => \Carbon\Carbon::parse($effectiveDateRef)->format('Y-m-d'),
                         'amount' => $payment->amount,
                         'payment_method' => $payment->payment_method,
                         'receipt_no' => $payment->transaction_id,
@@ -207,8 +213,8 @@ class LatePaymentController extends Controller
                         'due_date' => $payment->due_date ? $payment->due_date->format('Y-m-d') : null,
                         'paid_slip_path' => $payment->paid_slip_path,
                         'remarks' => $payment->remarks,
-                        'days_late' => $this->calculateDaysLate($payment->due_date, $payment->created_at),
-                        'late_fee_paid' => $this->calculateLateFeePaid($payment->amount, $payment->due_date, $payment->created_at),
+                        'days_late' => $this->calculateDaysLate($payment->due_date, $effectiveDateRef),
+                        'late_fee_paid' => $this->calculateLateFeePaid($payment->amount, $payment->due_date, $effectiveDateRef),
                     ];
                 });
 

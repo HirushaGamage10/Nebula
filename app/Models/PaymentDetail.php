@@ -39,6 +39,7 @@ class PaymentDetail extends Model
         'installment_type',
         'sscl_tax_amount',
         'bank_charges',
+        'payment_effective_date',
     ];
 
     protected $casts = [
@@ -50,6 +51,7 @@ class PaymentDetail extends Model
         'due_date' => 'date',
         'partial_payments' => 'array',
         'remaining_amount' => 'decimal:2',
+        'payment_effective_date' => 'date',
     ];
 
     // 🔹 Relationships

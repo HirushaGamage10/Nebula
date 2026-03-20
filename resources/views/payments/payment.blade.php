@@ -632,6 +632,18 @@
                                 </div>
                             </div>
                             <div class="row mb-3 align-items-center" id="currencyConversionRow" style="display: none;">
+                            <div class="row mb-3 align-items-center">
+                                <label class="col-sm-2 col-form-label fw-bold">Payment Effective Date</label>
+                                <div class="col-sm-10">
+                                    <input type="date" class="form-control" id="payment-effective-date"
+                                        value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}">
+                                    <small class="form-text text-muted">
+                                        Enter the actual date the student made the payment.
+                                        Late fees are calculated from this date, not the date you are updating the system.
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="row mb-3 align-items-center" id="currencyConversionRow" style="display: none;">
                                 <label class="col-sm-2 col-form-label fw-bold">Currency Conversion Rate <span class="text-danger">*</span></label>
                                 <div class="col-sm-10">
                                     <div class="input-group">
@@ -2952,7 +2964,8 @@ const payload = {
     currency_from:      currencyFrom,
     sscl_tax_amount:    ssclTaxAmount,
     bank_charges:       bankCharges,
-    remarks:            ''
+    remarks:            '',
+    payment_effective_date: (document.getElementById('payment-effective-date')?.value || null)
 };
 
 
