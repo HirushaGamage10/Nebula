@@ -381,7 +381,24 @@ class ExamResultController extends Controller
         $semesters = \App\Models\Semester::where('course_id', $request->course_id)
             ->where('intake_id', $request->intake_id)
             ->select('id', 'name')
-            ->get();
+            ->get()
+            ->map(function ($semester) use ($course) {
+                // Format the display name based on course semester format
+                $displayName = $semester->name;
+                if ($course->semester_format === 'alphabetical') {
+                    // Convert number to letter (1='Semester A', 2='Semester B', etc.)
+                    $letterIndex = intval($semester->name) - 1;
+                    if ($letterIndex >= 0 && $letterIndex < 26) {
+                        $displayName = chr(65 + $letterIndex);
+                    }
+                }
+                
+                return [
+                    'id' => $semester->id,
+                    'name' => $semester->name,
+                    'display_name' => 'Semester ' . $displayName
+                ];
+            });
 
         \Log::info('ExamResultController getSemesters called with:', [
             'course_id' => $request->course_id,
@@ -613,28 +630,45 @@ class ExamResultController extends Controller
      */
     public function getExistingExamResults(Request $request)
     {
-        $request->validate([
+        $validatedBase = $request->validate([
             'course_id' => 'required|integer|exists:courses,course_id',
             'intake_id' => 'required|integer|exists:intakes,intake_id',
             'location' => 'required|string',
-            'semester' => 'required',
-            'module_id' => 'required|integer|exists:modules,module_id',
         ]);
 
-        // Get the semester to convert ID to name
-        $semester = \App\Models\Semester::find($request->semester);
-        if (!$semester) {
+        $course = Course::where('course_id', $validatedBase['course_id'])->first();
+        if (!$course) {
             return response()->json([
                 'success' => false,
-                'message' => 'Semester not found.'
+                'message' => 'Course not found.'
             ], 404);
         }
 
-        $results = ExamResult::where('course_id', $request->course_id)
-            ->where('intake_id', $request->intake_id)
-            ->where('location', $request->location)
-            ->where('semester', $semester->name)
-            ->where('module_id', $request->module_id)
+        $resultsQuery = ExamResult::where('course_id', $validatedBase['course_id'])
+            ->where('intake_id', $validatedBase['intake_id'])
+            ->where('location', $validatedBase['location']);
+
+        if ($course->course_type === 'certificate') {
+            $resultsQuery->whereNull('semester')->whereNull('module_id');
+        } else {
+            $validatedDegree = $request->validate([
+                'semester' => 'required|integer|exists:semesters,id',
+                'module_id' => 'required|integer|exists:modules,module_id',
+            ]);
+
+            $semester = \App\Models\Semester::find($validatedDegree['semester']);
+            if (!$semester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Semester not found.'
+                ], 404);
+            }
+
+            $resultsQuery->where('semester', $semester->name)
+                ->where('module_id', $validatedDegree['module_id']);
+        }
+
+        $results = $resultsQuery
             ->with(['student.courseRegistrations', 'course', 'module', 'intake'])
             ->get()
             ->map(function($result) {

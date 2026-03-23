@@ -666,7 +666,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.semesters && data.semesters.length > 0) {
-                    populateDropdown(degreeSemester, data.semesters, 'id', 'name', 'Semester');
+                    populateDropdown(degreeSemester, data.semesters, 'id', 'display_name', 'Semester');
                     degreeSemester.disabled = false;
                 } else {
                     resetAndDisable(degreeSemester, 'Select a Semester');
@@ -762,7 +762,11 @@ document.addEventListener('DOMContentLoaded', function() {
         showSpinner(true);
         fetch('{{ route("get.existing.exam.results") }}', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
             body: JSON.stringify(data)
         })
         .then(response => response.json())
@@ -792,13 +796,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById(updateAllBtnSection).style.display = '';
                 updateResultsHeader();
             } else {
-                resultsTableBody.innerHTML = '<tr><td colspan="6" class="text-center">No existing results found for these filters.</td></tr>';
+                    resultsTableBody.innerHTML = '<tr><td colspan="6" class="text-center">No existing results found for these filters. If you have entered results, please check that all filters (Course, Intake, Semester, Module, Location) match the saved records.</td></tr>';
                 document.getElementById(resultsTableSection).style.display = '';
                 document.getElementById(updateAllBtnSection).style.display = 'none';
                 statisticsCards.style.display = 'none';
+                
+                    // Log filter data for debugging
+                    console.log('No results found for filters:', {
+                        location: activeTab === 'degree' ? degreeLocation.value : certLocation.value,
+                        course_type: activeTab === 'degree' ? degreeCourseType.value : 'certificate',
+                        course_id: activeTab === 'degree' ? degreeCourse.value : certCourse.value,
+                        intake_id: activeTab === 'degree' ? degreeIntake.value : certIntake.value,
+                        semester: activeTab === 'degree' ? degreeSemester.value : null,
+                        module_id: activeTab === 'degree' ? degreeModule.value : null
+                    });
             }
         })
-        .catch(() => showToast('Error', 'Failed to fetch existing results.', 'bg-danger'))
+            .catch(error => {
+                console.error('Error fetching results:', error);
+                showToast('Error', 'Failed to fetch existing results. Check console for details.', 'bg-danger');
+            })
         .finally(() => showSpinner(false));
     }
 });
