@@ -579,15 +579,25 @@ class PaymentController extends Controller
     public function getStudentCourses(Request $request)
     {
         try {
-            $request->validate([
-                'student_nic' => 'required|string',
-            ]);
+            $studentNic = trim((string) $request->input('student_nic', ''));
+
+            if ($studentNic === '') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Student NIC is required.',
+                    'courses' => []
+                ]);
+            }
 
             // Find student by NIC
-            $student = Student::where('id_value', $request->student_nic)->first();
+            $student = Student::where('id_value', $studentNic)->first();
             
             if (!$student) {
-                return response()->json(['success' => false, 'message' => 'Student not found with the provided NIC.'], Response::HTTP_NOT_FOUND);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Student not found with the provided NIC.',
+                    'courses' => []
+                ]);
             }
 
             // Get courses that the student is registered for and approved by manager or DGM
@@ -596,6 +606,10 @@ class PaymentController extends Controller
                 ->with('course')
                 ->get()
                 ->map(function ($registration) {
+                    if (!$registration->course) {
+                        return null;
+                    }
+
                     return [
                         'course_id' => $registration->course->course_id,
                         'course_name' => $registration->course->course_name,
@@ -603,7 +617,9 @@ class PaymentController extends Controller
                         'status' => $registration->status,
                         'approval_status' => $registration->approval_status,
                     ];
-                });
+                })
+                ->filter()
+                ->values();
 
             return response()->json([
                 'success' => true,

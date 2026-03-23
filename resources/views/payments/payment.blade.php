@@ -322,13 +322,29 @@
 .math-formula .times {
   margin-left: 6px;
 }
+
+/* Keep payment container height tied to visible tab content */
+#payment-page-card,
+#paymentTabContent {
+    min-height: 0 !important;
+    height: auto !important;
+}
+
+/* Prevent tab panes from becoming invisible when only .active is applied */
+#paymentTabContent .tab-pane.fade {
+    transition: none;
+}
+
+#paymentTabContent .tab-pane.fade:not(.show) {
+    opacity: 1;
+}
 </style>
 
 
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
 <div class="container-fluid">
-    <div class="card">
+    <div class="card" id="payment-page-card">
         <div class="card-body">
             <h2 class="text-center mb-4">Student Payment Plan</h2>
             <hr>
@@ -631,7 +647,6 @@
 
                                 </div>
                             </div>
-                            <div class="row mb-3 align-items-center" id="currencyConversionRow" style="display: none;">
                             <div class="row mb-3 align-items-center">
                                 <label class="col-sm-2 col-form-label fw-bold">Payment Effective Date</label>
                                 <div class="col-sm-10">
@@ -692,7 +707,6 @@
                                     </div>
                                 </div>
                             </div>
-
                         </div>
 
                         <!-- Payment Details Table -->
