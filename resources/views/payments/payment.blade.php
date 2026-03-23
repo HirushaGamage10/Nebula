@@ -341,8 +341,6 @@
 </style>
 
 
-<!-- Toast Container -->
-<div class="toast-container" id="toastContainer"></div>
 <div class="container-fluid">
     <div class="card" id="payment-page-card">
         <div class="card-body">
@@ -951,7 +949,16 @@
 
                     </tbody>
                 </table>
-                <!-- Pay Modal -->
+            </div>
+            <div class="text-center mt-3" id="updateSaveBtnSection" style="display:none;">
+                <button type="button" class="btn btn-success" id="updatePaymentRecordsBtn">
+                    <i class="ti ti-device-floppy me-2"></i>Update Records
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Pay Modal -->
 <div class="modal fade" id="payModal" tabindex="-1">
   <div class="modal-dialog">
@@ -1000,17 +1007,6 @@
       </div>
     </div>
   </div>
-</div>
-
-
-            </div>
-            <div class="text-center mt-3" id="updateSaveBtnSection" style="display:none;">
-                <button type="button" class="btn btn-success" id="updatePaymentRecordsBtn">
-                    <i class="ti ti-device-floppy me-2"></i>Update Records
-                </button>
-            </div>
-        </div>
-    </div>
 </div>
 
 
