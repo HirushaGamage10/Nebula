@@ -1718,6 +1718,55 @@ function populatePaymentPlanForm(studentData) {
 const fmtLKR = n => `LKR ${Number(n || 0).toLocaleString()}`;
 const badge  = s => `<span class="badge bg-${s==='paid'?'success':(s==='pending'?'warning':'danger')}">${s}</span>`;
 
+const toYmd = (dateObj) => {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
+
+function normalizeDueDate(raw, installmentNumber = 1, useFallback = true) {
+    const value = String(raw || '').trim();
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return value;
+    }
+
+    const slashMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (slashMatch) {
+        const month = Number(slashMatch[1]);
+        const day = Number(slashMatch[2]);
+        const year = Number(slashMatch[3]);
+        if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            const parsed = new Date(year, month - 1, day);
+            if (!Number.isNaN(parsed.getTime())) {
+                return toYmd(parsed);
+            }
+        }
+    }
+
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+        return toYmd(parsed);
+    }
+
+    if (!useFallback) {
+        return '';
+    }
+
+    const fallback = new Date();
+    fallback.setDate(fallback.getDate() + 7 + (Math.max(1, Number(installmentNumber) || 1) - 1) * 30);
+    return toYmd(fallback);
+}
+
+function formatDueDateForTable(raw, installmentNumber = 1) {
+    const ymd = normalizeDueDate(raw, installmentNumber, true);
+    if (!ymd) {
+        return '-';
+    }
+    return new Date(`${ymd}T00:00:00`).toLocaleDateString();
+}
+
 
 
 
@@ -1884,7 +1933,7 @@ if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value && disc
     const row = `
       <tr>
         <td>${ins.installment_number}</td>
-        <td>${new Date(ins.due_date).toLocaleDateString()}</td>
+                <td>${formatDueDateForTable(ins.due_date, ins.installment_number)}</td>
         <td>LKR ${fmt(ins.amount)}</td>
         <td>${discountText}</td>
         <td>${sltLoanText}</td>
@@ -2425,9 +2474,8 @@ function calculateAndDisplayInstallments() {
         return;
     }
 
-    console.log('Loading existing payment plans for student:', window.currentStudentData.student_nic, 'course:', window.currentStudentData.course_id);
-    // Try to load installments from payment plan first
-    loadExistingPaymentPlans(window.currentStudentData.student_nic, window.currentStudentData.course_id);
+    // Re-render current preview so discount/loan changes are reflected immediately.
+    showInstallmentPreview();
 }
 // Calculate final amount after multiple discounts and SLT loan
 function calculateFinalAmount() {
@@ -2564,8 +2612,8 @@ if (sltLoanAppliedField) {
     document.querySelectorAll('.discount-select').forEach(el => {
         el.addEventListener('change', function() {
             calculateFinalAmount();
-            if (document.getElementById('payment-plan-type').value === 'full') {
-                showInstallmentPreview();
+            if (window.currentStudentData) {
+                calculateAndDisplayInstallments();
             }
         });
     });
@@ -2682,16 +2730,23 @@ function createPaymentPlan() {
     const count = (data.installments || []).length || 1;
     const sltPerInst = (sltLoanApplied === 'yes' && sltLoanAmount > 0) ? (sltLoanAmount / count) : 0;
 
+        let usedFallbackDueDate = false;
+
     // Build installments INCLUDING final_amount
 const installments = (data.installments || []).map(inst => {
   const base = parseFloat(inst.amount || 0);
   const discounted = parseFloat(inst.final_amount || base);
   const discountAmount = Math.max(0, base - discounted);
   const finalWithLoan = Math.max(0, discounted - sltPerInst);
+    const originalDate = normalizeDueDate(inst.due_date, inst.installment_number, false);
+    const normalizedDueDate = normalizeDueDate(inst.due_date, inst.installment_number, true);
+    if (!originalDate && normalizedDueDate) {
+        usedFallbackDueDate = true;
+    }
 
   return {
     installment_number: inst.installment_number,
-    due_date: inst.due_date,
+        due_date: normalizedDueDate,
     amount: base,
     discount_amount: discountAmount,
     discount_note: inst.discount || null,
@@ -2702,6 +2757,10 @@ const installments = (data.installments || []).map(inst => {
     status: 'pending'
   };
 });
+
+if (usedFallbackDueDate) {
+    showWarningMessage('Some installment due dates were invalid and were auto-corrected before saving.');
+}
 
 // ===============================
 // Handle registration fee discount excess
@@ -2758,12 +2817,13 @@ if (registrationFeeDiscount && installments.length > 0) {
       body: JSON.stringify(payload)
     }, 15000);
   })
-  .then(r => {
-    console.log('Response status:', r.status);
-    if (!r.ok) {
-      throw new Error(`HTTP error! status: ${r.status}`);
-    }
-    return r.json();
+    .then(async r => {
+        console.log('Response status:', r.status);
+        const responseData = await r.json().catch(() => ({}));
+        if (!r.ok) {
+            throw new Error(responseData.message || `HTTP error! status: ${r.status}`);
+        }
+        return responseData;
   })
   .then(data => {
     console.log('Response data:', data);
@@ -2787,7 +2847,7 @@ if (registrationFeeDiscount && installments.length > 0) {
     window.isCreatingPaymentPlan = false;
 
     // Re-enable submit button
-    const submitBtn = document.querySelector('button[onclick="createPaymentPlan()"]');
+        const submitBtn = document.querySelector('.btn-create-payment-plan');
     if (submitBtn) {
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<i class="ti ti-check me-2"></i>Submit';
@@ -3718,7 +3778,7 @@ function resetErrorStates() {
   window.calculateInstallmentsTimeout = null;
 
   // Re-enable submit button if it was disabled
-  const submitBtn = document.querySelector('button[onclick="createPaymentPlan()"]');
+    const submitBtn = document.querySelector('.btn-create-payment-plan');
   if (submitBtn) {
     submitBtn.disabled = false;
     submitBtn.innerHTML = '<i class="ti ti-check me-2"></i>Submit';
@@ -3802,8 +3862,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (registrationFeeDiscountField) {
         registrationFeeDiscountField.addEventListener('change', function() {
             calculateFinalAmount();
-            if (document.getElementById('payment-plan-type').value === 'full') {
-                showInstallmentPreview();
+            if (window.currentStudentData) {
+                calculateAndDisplayInstallments();
             }
         });
     }
@@ -3822,8 +3882,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 sltLoanAmountField.value = '';
             }
             calculateFinalAmount();
-            if (document.getElementById('payment-plan-type').value === 'full') {
-                showInstallmentPreview();
+            if (window.currentStudentData) {
+                calculateAndDisplayInstallments();
             }
         });
     }
