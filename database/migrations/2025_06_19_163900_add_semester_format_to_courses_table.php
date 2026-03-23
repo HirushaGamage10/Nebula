@@ -11,12 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('courses', function (Blueprint $table) {
-            $table->enum('semester_format', ['numerical', 'alphabetical'])
-                  ->default('numerical')
-                  ->after('course_type')
-                  ->comment('Display semesters as numerical (1,2,3) or alphabetical (A,B,C)');
-        });
+        if (!Schema::hasColumn('courses', 'semester_format')) {
+            Schema::table('courses', function (Blueprint $table) {
+                $table->enum('semester_format', ['numerical', 'alphabetical'])
+                      ->default('numerical')
+                      ->after('course_type')
+                      ->comment('Display semesters as numerical (1,2,3) or alphabetical (A,B,C)');
+            });
+        }
     }
 
     /**
