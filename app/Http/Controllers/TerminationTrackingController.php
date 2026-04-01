@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\ClearanceRequest;
 use App\Models\CourseRegistration;
-use App\Models\SemesterRegistration;
 use App\Models\Student;
 use App\Models\StudentStatusHistory;
 use Illuminate\Support\Collection;
@@ -27,11 +26,8 @@ class TerminationTrackingController extends Controller
             'clearance_in_progress' => $processes->filter(function ($process) {
                 return in_array($process['overall_status']['key'], ['not_started', 'awaiting_clearances', 'clearance_rejected'], true);
             })->count(),
-            'awaiting_dgm' => $processes->filter(function ($process) {
-                return $process['overall_status']['key'] === 'awaiting_dgm';
-            })->count(),
             'completed' => $processes->filter(function ($process) {
-                return in_array($process['overall_status']['key'], ['completed', 'dgm_approved'], true);
+                return $process['overall_status']['key'] === 'completed';
             })->count(),
         ];
 
@@ -129,19 +125,7 @@ class TerminationTrackingController extends Controller
             })->count(),
         ];
 
-        $dgmRequest = SemesterRegistration::where('student_id', $student->student_id)
-            ->where(function ($query) {
-                $query->where('desired_status', 'registered')
-                    ->orWhereIn('approval_status', ['pending', 'approved', 'rejected']);
-            })
-            ->with(['course', 'intake', 'semester'])
-            ->orderByDesc('approval_requested_at')
-            ->orderByDesc('approval_decided_at')
-            ->orderByDesc('updated_at')
-            ->first();
-
-        $dgmStatus = $this->buildDgmStatus($dgmRequest);
-        $overallStatus = $this->buildOverallStatus($clearanceSummary, $dgmStatus);
+        $overallStatus = $this->buildOverallStatus($clearanceSummary);
 
         return [
             'student_id' => $student->student_id,
@@ -157,57 +141,12 @@ class TerminationTrackingController extends Controller
             'intake_name' => optional($latestRegistration?->intake)->batch,
             'clearances' => $clearances,
             'clearance_summary' => $clearanceSummary,
-            'dgm_status' => $dgmStatus,
             'overall_status' => $overallStatus,
             'profile_url' => url('/student/profile/' . $student->student_id),
         ];
     }
 
-    private function buildDgmStatus(?SemesterRegistration $request): array
-    {
-        if (!$request) {
-            return [
-                'required' => false,
-                'status_key' => 'not_required',
-                'status_label' => 'Not required',
-                'badge_class' => 'bg-secondary',
-                'course_name' => null,
-                'intake_name' => null,
-                'semester_name' => null,
-                'reason' => null,
-                'comment' => null,
-                'requested_at' => null,
-                'decided_at' => null,
-                'document_url' => null,
-            ];
-        }
-
-        $statusKey = in_array($request->approval_status, ['pending', 'approved', 'rejected'], true)
-            ? $request->approval_status
-            : 'not_required';
-
-        return [
-            'required' => $statusKey !== 'not_required',
-            'status_key' => $statusKey,
-            'status_label' => match ($statusKey) {
-                'pending' => 'Pending',
-                'approved' => 'Approved',
-                'rejected' => 'Rejected',
-                default => 'Not required',
-            },
-            'badge_class' => $statusKey === 'not_required' ? 'bg-secondary' : $this->statusBadgeClass($statusKey),
-            'course_name' => optional($request->course)->course_name,
-            'intake_name' => optional($request->intake)->batch,
-            'semester_name' => optional($request->semester)->name,
-            'reason' => $request->approval_reason,
-            'comment' => $request->approval_dgm_comment,
-            'requested_at' => optional($request->approval_requested_at)->format('Y-m-d H:i'),
-            'decided_at' => optional($request->approval_decided_at)->format('Y-m-d H:i'),
-            'document_url' => $this->publicFileUrl($request->approval_file_path),
-        ];
-    }
-
-    private function buildOverallStatus(array $clearanceSummary, array $dgmStatus): array
+    private function buildOverallStatus(array $clearanceSummary): array
     {
         if ($clearanceSummary['requested'] === 0) {
             return [
@@ -230,30 +169,6 @@ class TerminationTrackingController extends Controller
                 'key' => 'awaiting_clearances',
                 'label' => 'Awaiting clearances',
                 'badge_class' => 'bg-warning text-dark',
-            ];
-        }
-
-        if ($dgmStatus['status_key'] === 'pending') {
-            return [
-                'key' => 'awaiting_dgm',
-                'label' => 'Awaiting DGM approval',
-                'badge_class' => 'bg-info text-dark',
-            ];
-        }
-
-        if ($dgmStatus['status_key'] === 'rejected') {
-            return [
-                'key' => 'dgm_rejected',
-                'label' => 'DGM rejected',
-                'badge_class' => 'bg-danger',
-            ];
-        }
-
-        if ($dgmStatus['status_key'] === 'approved') {
-            return [
-                'key' => 'dgm_approved',
-                'label' => 'DGM approved',
-                'badge_class' => 'bg-success',
             ];
         }
 

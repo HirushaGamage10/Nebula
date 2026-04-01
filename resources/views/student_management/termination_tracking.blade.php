@@ -68,7 +68,7 @@
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
                 <div>
                     <h2 class="mb-1">Termination Tracking</h2>
-                    <p class="text-muted mb-0">Track clearance progress and any DGM-related approval status for terminated students.</p>
+                    <p class="text-muted mb-0">Track clearance progress for terminated students.</p>
                 </div>
                 <a href="{{ route('termination.tracking') }}" class="btn btn-outline-primary">
                     <i class="ti ti-refresh me-1"></i>Refresh
@@ -76,25 +76,19 @@
             </div>
 
             <div class="row g-3 mb-4">
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="summary-card">
                         <div class="label">Currently Terminated Students</div>
                         <div class="value">{{ $summary['total'] }}</div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="summary-card">
                         <div class="label">Clearance In Progress</div>
                         <div class="value">{{ $summary['clearance_in_progress'] }}</div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="summary-card">
-                        <div class="label">Awaiting DGM</div>
-                        <div class="value">{{ $summary['awaiting_dgm'] }}</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="summary-card">
                         <div class="label">Completed</div>
                         <div class="value">{{ $summary['completed'] }}</div>
@@ -139,9 +133,6 @@
                         <option value="not_started">No clearances requested</option>
                         <option value="awaiting_clearances">Awaiting clearances</option>
                         <option value="clearance_rejected">Clearance rejected</option>
-                        <option value="awaiting_dgm">Awaiting DGM approval</option>
-                        <option value="dgm_rejected">DGM rejected</option>
-                        <option value="dgm_approved">DGM approved</option>
                         <option value="completed">Clearances completed</option>
                     </select>
                 </div>
@@ -161,7 +152,6 @@
                                 <th>Course / Intake</th>
                                 <th>Terminated On</th>
                                 <th>Clearances</th>
-                                <th>DGM Status</th>
                                 <th>Overall</th>
                                 <th>Action</th>
                             </tr>
@@ -210,9 +200,6 @@
                                         <div class="small">{{ $summaryText }}</div>
                                     </td>
                                     <td>
-                                        <span class="badge {{ $process['dgm_status']['badge_class'] }}">{{ $process['dgm_status']['status_label'] }}</span>
-                                    </td>
-                                    <td>
                                         <span class="badge {{ $process['overall_status']['badge_class'] }}">{{ $process['overall_status']['label'] }}</span>
                                     </td>
                                     <td>
@@ -258,8 +245,7 @@
                 </div>
 
                 <div class="card mb-3">
-                    <div class="card-header fw-semibold">Clearance Status</div>
-                    <div class="card-body">
+                    <div class="card-header fw-semibold">Clearance Status</div>                    <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-bordered align-middle mb-0">
                                 <thead class="table-light">
@@ -279,10 +265,6 @@
                     </div>
                 </div>
 
-                <div class="card">
-                    <div class="card-header fw-semibold">DGM / Re-Registration Approval</div>
-                    <div class="card-body" id="processDgmBlock"></div>
-                </div>
             </div>
         </div>
     </div>
@@ -376,7 +358,6 @@ document.addEventListener('DOMContentLoaded', function () {
         setHtml('processOverallBlock', [
             '<div>' + renderBadge(process.overall_status.label, process.overall_status.badge_class) + '</div>',
             '<div class="mt-2 detail-meta">Clearances: ' + process.clearance_summary.approved + ' approved / ' + process.clearance_summary.pending + ' pending / ' + process.clearance_summary.rejected + ' rejected / ' + process.clearance_summary.not_requested + ' not requested</div>',
-            '<div class="mt-2">DGM Status: ' + renderBadge(process.dgm_status.status_label, process.dgm_status.badge_class) + '</div>'
         ].join(''));
 
         const clearanceRows = process.clearances.map(function (clearance) {
@@ -396,21 +377,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }).join('');
 
         setHtml('processClearanceBody', clearanceRows);
-
-        const dgm = process.dgm_status;
-        setHtml('processDgmBlock', [
-            '<div class="mb-2">' + renderBadge(dgm.status_label, dgm.badge_class) + '</div>',
-            '<div><strong>Course:</strong> ' + escapeHtml(dgm.course_name || 'N/A') + '</div>',
-            '<div><strong>Intake:</strong> ' + escapeHtml(dgm.intake_name || 'N/A') + '</div>',
-            '<div><strong>Semester:</strong> ' + escapeHtml(dgm.semester_name || 'N/A') + '</div>',
-            '<div><strong>Requested At:</strong> ' + escapeHtml(dgm.requested_at || 'N/A') + '</div>',
-            '<div><strong>Decided At:</strong> ' + escapeHtml(dgm.decided_at || 'N/A') + '</div>',
-            '<div class="mt-2"><strong>Reason:</strong><br>' + escapeHtml(dgm.reason || 'N/A') + '</div>',
-            '<div class="mt-2"><strong>DGM Comment:</strong><br>' + escapeHtml(dgm.comment || 'N/A') + '</div>',
-            (dgm.document_url
-                ? '<div class="mt-3"><a class="btn btn-sm btn-outline-primary" target="_blank" href="' + escapeHtml(dgm.document_url) + '">View Attachment</a></div>'
-                : '')
-        ].join(''));
 
         if (modal) {
             modal.show();

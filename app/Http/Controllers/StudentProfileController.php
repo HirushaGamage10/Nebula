@@ -20,6 +20,7 @@ use App\Models\Intake;
 use App\Models\Batch;
 use Illuminate\Support\Facades\Log;
 use App\Models\StudentStatusHistory;
+use App\Models\ClearanceRequest;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\UpdateParentInfoRequest;
 
@@ -1043,7 +1044,39 @@ class StudentProfileController extends Controller
         $student->academic_status = 'terminated';
         $student->save();
 
-        return response()->json(['success' => true, 'message' => 'Student terminated successfully.']);
+        // Auto-create clearance requests for all 4 clearance types
+        $clearanceTypes = [
+            ClearanceRequest::TYPE_HOSTEL,
+            ClearanceRequest::TYPE_LIBRARY,
+            ClearanceRequest::TYPE_PAYMENT,
+            ClearanceRequest::TYPE_PROJECT,
+        ];
+
+        $registrations = CourseRegistration::where('student_id', $student->student_id)->get();
+
+        foreach ($registrations as $registration) {
+            foreach ($clearanceTypes as $type) {
+                $exists = ClearanceRequest::where('student_id', $student->student_id)
+                    ->where('clearance_type', $type)
+                    ->where('course_id', $registration->course_id)
+                    ->where('intake_id', $registration->intake_id)
+                    ->exists();
+
+                if (!$exists) {
+                    ClearanceRequest::create([
+                        'clearance_type' => $type,
+                        'location'       => $registration->location,
+                        'course_id'      => $registration->course_id,
+                        'intake_id'      => $registration->intake_id,
+                        'student_id'     => $student->student_id,
+                        'status'         => ClearanceRequest::STATUS_PENDING,
+                        'requested_at'   => now(),
+                    ]);
+                }
+            }
+        }
+
+        return response()->json(['success' => true, 'message' => 'Student terminated successfully. Clearance requests have been sent for hostel, library, payment, and project.']);
     }
 
     public function reinstate(Request $request)
