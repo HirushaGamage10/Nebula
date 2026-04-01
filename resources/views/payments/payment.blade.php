@@ -1357,6 +1357,12 @@ document.getElementById('slip-payment-type')?.addEventListener('change', functio
     setTimeout(toggleLateFeeColumn, 300);
 });
 
+document.getElementById('payment-effective-date')?.addEventListener('change', function() {
+    if (window.paymentDetailsDataRaw) {
+        renderPaymentDetailsTable(window.paymentDetailsDataRaw, window.paymentDetailsPaymentType || 'course_fee');
+    }
+});
+
 document.getElementById('currency-from')?.addEventListener('change', function() {
     updateConversionLabel();
 });
@@ -3096,7 +3102,7 @@ const payload = {
 
     setText('slip-installment-display',  installmentNo ?? '-');
     setText('slip-due-date-display',     dueDate ? new Date(dueDate).toLocaleDateString() : '-');
-    setText('slip-date-display',         s.payment_date || '');
+    setText('slip-date-display',         s.payment_date ? new Date(s.payment_date).toLocaleDateString() : '');
     setText('slip-receipt-no-display',   s.receipt_no || '');
 
     // Amount text (FX + LKR for franchise; LKR for others)
@@ -4760,13 +4766,13 @@ function renderPaymentDetailsTable(rows, paymentType) {
 
     // ---- ✅ Late Fee Calculation ----
         let lateFee = 0, lateFeeNote = '';
-        // Only apply late fee for degree and diploma courses
-        const courseType = document.getElementById('slip-course-type')?.value || '';
-        if (p.due_date && (courseType.toLowerCase() === 'degree' || courseType.toLowerCase() === 'diploma')) {
-            const due = new Date(p.due_date);
-            const today = new Date();
-            if (today > due && !isPaid) {
-                const diffTime = today - due; // ms
+        // Apply late fee for course_fee payments; compare against the payment effective date if entered
+        if (paymentType === 'course_fee' && p.due_date) {
+            const due = new Date(p.due_date + 'T00:00:00');
+            const effectiveDateInput = document.getElementById('payment-effective-date')?.value;
+            const compareDate = effectiveDateInput ? new Date(effectiveDateInput + 'T00:00:00') : new Date();
+            if (compareDate > due && !isPaid) {
+                const diffTime = compareDate - due; // ms
                 const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
                 let rawLateFee = calculateLateFee(p.amount, diffDays);
@@ -4774,15 +4780,12 @@ function renderPaymentDetailsTable(rows, paymentType) {
                 const approved = p.approved_late_fee;
                 if (approved > 0) {
                     lateFee = Math.max(0, rawLateFee - approved);
-                    lateFeeNote = `<small class="text-success">Reduced by Approval: LKR ${money(approved)}</small>`;
+                    lateFeeNote = `<small class="text-success">Approved reduction: LKR ${money(approved)}</small>`;
                 } else {
                     lateFee = rawLateFee;
-                    lateFeeNote = `<small class="text-muted">No special approval</small>`;
+                    lateFeeNote = `<small class="text-muted">Days late: ${diffDays}</small>`;
                 }
             }
-        } else if (courseType.toLowerCase() === 'certificate') {
-            lateFee = 0;
-            lateFeeNote = `<small class="text-muted">No late fee for certificate courses</small>`;
         }
     // ---- ✅ Approved Late Fee Display String ----
     const approvedLateFeeStr = p.approved_late_fee && Number(p.approved_late_fee) > 0

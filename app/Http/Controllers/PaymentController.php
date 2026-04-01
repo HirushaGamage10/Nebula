@@ -1436,13 +1436,13 @@ $existingPayment = \App\Models\PaymentDetail::where('student_id', $student->stud
 
 if ($existingPayment) {
     $paidSoFar = collect($existingPayment->partial_payments ?? [])->sum('amount');
-    $remaining = max(($existingPayment->total_fee - $paidSoFar), 0);
+    $remaining = max(($totalFee - $paidSoFar), 0);
 
     $existingPayment->update([
         'late_fee'               => $lateFee,
         'approved_late_fee'      => $approvedLateFee,
         'total_fee'              => $totalFee,
-        'remaining_amount'       => $remaining,  // ✅ recalc if needed
+        'remaining_amount'       => $remaining,
         'payment_effective_date' => $request->payment_effective_date ?: null,
     ]);
 
@@ -1546,23 +1546,38 @@ private function buildSlipArray(\App\Models\PaymentDetail $payment, $student, $c
         $partials = json_decode($partials, true) ?? [];
     }
 
+    $rawType = $payment->installment_type ?? $payment->payment_type ?? '';
+    $typeDisplayMap = [
+        'course_fee'       => 'Course Fee',
+        'franchise_fee'    => 'Franchise Fee',
+        'registration_fee' => 'Registration Fee',
+        'other'            => 'Other',
+    ];
+    $typeDisplay = $typeDisplayMap[$rawType] ?? ucwords(str_replace('_', ' ', $rawType));
+
+    // Use payment_effective_date for the slip date when payment_date is not yet set
+    $slipDate = $payment->payment_date
+        ?? $payment->payment_effective_date
+        ?? now()->toDateString();
+
     return [
-        'receipt_no'        => $payment->transaction_id,
-        'student_id'        => $student->student_id,
-        'student_name'      => $student->full_name,
-        'student_nic'       => $student->id_value,
-        'mobile_phone'      => $student->mobile_phone ?? '-',  
-        'course_name'       => $course->course_name ?? 'N/A',
-        'course_code'       => $course->course_code ?? 'N/A',
-        'intake'            => $intake->batch ?? 'N/A',
-        'intake_id'         => $intake->intake_id ?? null,
-        'payment_type'      => $payment->payment_type ?? '',
-        'amount'            => (float) $payment->amount,
-        'installment_number'=> $payment->installment_number,
-        'payment_name'      => $payment->payment_name ?? null, // For custom payments
-        'due_date'          => $payment->due_date,
-        'payment_date'      => $payment->payment_date,
-        'payment_method'    => $payment->payment_method ?? 'Cash',
+        'receipt_no'          => $payment->transaction_id,
+        'student_id'          => $student->student_id,
+        'student_name'        => $student->full_name,
+        'student_nic'         => $student->id_value,
+        'mobile_phone'        => $student->mobile_phone ?? '-',
+        'course_name'         => $course->course_name ?? 'N/A',
+        'course_code'         => $course->course_code ?? 'N/A',
+        'intake'              => $intake->batch ?? 'N/A',
+        'intake_id'           => $intake->intake_id ?? null,
+        'payment_type'        => $rawType,
+        'payment_type_display'=> $typeDisplay,
+        'amount'              => (float) $payment->amount,
+        'installment_number'  => $payment->installment_number,
+        'payment_name'        => $payment->payment_name ?? null,
+        'due_date'            => $payment->due_date,
+        'payment_date'        => $slipDate,
+        'payment_method'      => $payment->payment_method ?? 'Cash',
         'remarks'           => $payment->remarks,
         'status'            => $payment->status,
         'course_fee'        => $courseFee,
