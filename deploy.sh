@@ -48,6 +48,7 @@ find storage bootstrap/cache -type f -writable -exec chmod 664 {} + 2>/dev/null 
 fi
 
 php artisan config:clear
+php artisan migrate --force
 
 if ! php artisan cache:clear; then
 echo "WARN: cache:clear failed due to file ownership/permissions; continuing deploy"
