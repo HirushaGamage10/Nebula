@@ -668,7 +668,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.semesters && data.semesters.length > 0) {
-                    populateDropdown(degreeSemester, data.semesters, 'id', 'name', 'Semester');
+                    populateDropdown(degreeSemester, data.semesters, 'id', 'display_name', 'Semester');
                     degreeSemester.disabled = false;
                 } else {
                     resetAndDisable(degreeSemester, 'Select a Semester');
