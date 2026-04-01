@@ -381,22 +381,42 @@ class ExamResultController extends Controller
         $semesters = \App\Models\Semester::where('course_id', $request->course_id)
             ->where('intake_id', $request->intake_id)
             ->select('id', 'name')
+            ->orderBy('start_date')
+            ->orderBy('id')
             ->get()
-            ->map(function ($semester) use ($course) {
-                // Format the display name based on course semester format
-                $displayName = $semester->name;
+            ->values()
+            ->map(function ($semester, $index) use ($course) {
+                $rawName = trim((string) $semester->name);
+                $normalized = $rawName;
+                $fallbackNumber = $index + 1;
+                $maxSemesters = (int) ($course->no_of_semesters ?? 0);
+
                 if ($course->semester_format === 'alphabetical') {
-                    // Convert number to letter (1='Semester A', 2='Semester B', etc.)
-                    $letterIndex = intval($semester->name) - 1;
-                    if ($letterIndex >= 0 && $letterIndex < 26) {
-                        $displayName = chr(65 + $letterIndex);
+                    if (is_numeric($rawName)) {
+                        $numeric = (int) $rawName;
+                        if ($numeric < 1 || ($maxSemesters > 0 && $numeric > $maxSemesters)) {
+                            $numeric = $fallbackNumber;
+                        }
+                        $normalized = $numeric >= 1 && $numeric <= 26 ? chr(64 + $numeric) : (string) $numeric;
+                    } elseif (preg_match('/^[A-Za-z]$/', $rawName)) {
+                        $normalized = strtoupper($rawName);
+                    }
+                } else {
+                    if (is_numeric($rawName)) {
+                        $numeric = (int) $rawName;
+                        if ($numeric < 1 || ($maxSemesters > 0 && $numeric > $maxSemesters)) {
+                            $numeric = $fallbackNumber;
+                        }
+                        $normalized = (string) $numeric;
+                    } elseif (preg_match('/^[A-Za-z]$/', $rawName)) {
+                        $normalized = (string) (ord(strtoupper($rawName)) - 64);
                     }
                 }
-                
+
                 return [
                     'id' => $semester->id,
                     'name' => $semester->name,
-                    'display_name' => 'Semester ' . $displayName
+                    'display_name' => 'Semester ' . $normalized,
                 ];
             });
 
