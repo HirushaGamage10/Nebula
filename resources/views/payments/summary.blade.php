@@ -195,11 +195,10 @@
                 <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
                         <h6 class="fw-bold mb-0">Sri Lanka Student Distribution</h6>
-                        <small class="text-muted">District-wise student footprint from payment activity under the current filters</small>
+                        <small class="text-muted">District-wise registered student count</small>
                     </div>
                     <div class="d-flex gap-3 small text-muted">
                         <span><strong id="district-map-total-students">0</strong> students</span>
-                        <span><strong id="district-map-total-transactions">0</strong> transactions</span>
                     </div>
                 </div>
                 <div class="card-body">
@@ -227,14 +226,6 @@
                                         <span>Students</span>
                                         <strong id="district-highlight-students">0</strong>
                                     </div>
-                                    <div>
-                                        <span>Transactions</span>
-                                        <strong id="district-highlight-transactions">0</strong>
-                                    </div>
-                                    <div>
-                                        <span>Total</span>
-                                        <strong id="district-highlight-total">LKR 0.00</strong>
-                                    </div>
                                 </div>
                             </div>
                             <div class="table-responsive mt-3">
@@ -243,8 +234,6 @@
                                         <tr>
                                             <th>District</th>
                                             <th class="text-end">Students</th>
-                                            <th class="text-end">Transactions</th>
-                                            <th class="text-end">Total</th>
                                         </tr>
                                     </thead>
                                     <tbody id="districtAnalyticsTableBody"></tbody>
@@ -598,14 +587,11 @@ document.addEventListener("DOMContentLoaded", () => {
         return {
             district: name,
             student_count: Number(match?.student_count || 0),
-            transaction_count: Number(match?.transaction_count || 0),
-            total_amount: Number(match?.total_amount || 0),
             coordinates: districtCoordinates[name]
         };
     });
 
     const totalDistrictStudents = districtMapData.reduce((sum, item) => sum + item.student_count, 0);
-    const totalDistrictTransactions = districtMapData.reduce((sum, item) => sum + item.transaction_count, 0);
 
     // Bounds for Wikimedia Sri Lanka location map (equirectangular)
     const mapGeoBounds = {
@@ -630,7 +616,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         document.getElementById('district-map-total-students').textContent = totalDistrictStudents.toLocaleString();
-        document.getElementById('district-map-total-transactions').textContent = totalDistrictTransactions.toLocaleString();
 
         const maxStudents = Math.max(...items.map(item => item.student_count), 1);
         markerLayer.innerHTML = '';
@@ -657,7 +642,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 ? `rgba(29, 78, 216, ${0.35 + intensity * 0.5})`
                 : 'rgba(148, 163, 184, 0.5)';
             marker.style.borderColor = item.student_count > 0 ? '#1d4ed8' : '#94a3b8';
-            marker.title = `${item.district}: ${item.student_count.toLocaleString()} students, ${item.transaction_count.toLocaleString()} transactions, ${formatCurrency(item.total_amount)}`;
+            marker.title = `${item.district}: ${item.student_count.toLocaleString()} students`;
             marker.setAttribute('aria-label', marker.title);
             marker.addEventListener('mouseenter', () => updateDistrictHighlight(item));
             marker.addEventListener('focus', () => updateDistrictHighlight(item));
@@ -668,8 +653,6 @@ document.addEventListener("DOMContentLoaded", () => {
             row.innerHTML = `
                 <td>${item.district}</td>
                 <td class="text-end">${item.student_count.toLocaleString()}</td>
-                <td class="text-end">${item.transaction_count.toLocaleString()}</td>
-                <td class="text-end">${formatCurrency(item.total_amount)}</td>
             `;
             row.addEventListener('mouseenter', () => updateDistrictHighlight(item));
             row.addEventListener('click', () => updateDistrictHighlight(item));
@@ -678,7 +661,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const ranked = [...items]
             .filter(item => item.student_count > 0)
-            .sort((a, b) => b.student_count - a.student_count || b.total_amount - a.total_amount)
+            .sort((a, b) => b.student_count - a.student_count)
             .slice(0, 6);
 
         topList.innerHTML = ranked.length
@@ -687,18 +670,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="district-top-rank">${index + 1}</div>
                     <div class="district-top-content">
                         <div class="district-top-name">${item.district}</div>
-                        <div class="district-top-meta">${item.student_count} students • ${item.transaction_count} transactions</div>
+                        <div class="district-top-meta">${item.student_count} students</div>
                     </div>
-                    <div class="district-top-amount">${formatCurrency(item.total_amount)}</div>
+                    <div class="district-top-amount">${item.student_count}</div>
                 </div>
             `).join('')
             : '<div class="text-muted small">No district activity found for the selected filters.</div>';
 
         const initial = ranked[0] || items[0] || {
             district: 'All districts',
-            student_count: totalDistrictStudents,
-            transaction_count: totalDistrictTransactions,
-            total_amount: items.reduce((sum, item) => sum + item.total_amount, 0)
+            student_count: totalDistrictStudents
         };
         updateDistrictHighlight(initial);
     }
@@ -711,8 +692,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         nameEl.textContent = item.district;
         document.getElementById('district-highlight-students').textContent = Number(item.student_count || 0).toLocaleString();
-        document.getElementById('district-highlight-transactions').textContent = Number(item.transaction_count || 0).toLocaleString();
-        document.getElementById('district-highlight-total').textContent = formatCurrency(item.total_amount || 0);
     }
 
     renderDistrictMap(districtMapData);
@@ -1098,7 +1077,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 .district-highlight-stats {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(1, minmax(0, 1fr));
     gap: 0.75rem;
 }
 

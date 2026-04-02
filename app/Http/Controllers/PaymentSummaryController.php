@@ -433,13 +433,10 @@ class PaymentSummaryController extends Controller
             ->take(15)
             ->get();
 
-        $districtAnalytics = (clone $query)
-            ->leftJoin('students', $paymentTable . '.student_id', '=', 'students.student_id')
+        $districtAnalytics = Student::query()
             ->select(
-                DB::raw("COALESCE(NULLIF(TRIM(students.district), ''), 'Unknown') as district"),
-                DB::raw("COUNT(DISTINCT {$paymentTable}.student_id) as student_count"),
-                DB::raw("COUNT({$paymentTable}.id) as transaction_count"),
-                DB::raw("SUM({$paymentTable}.total_fee) as total_amount")
+                DB::raw("COALESCE(NULLIF(TRIM(district), ''), 'Unknown') as district"),
+                DB::raw('COUNT(student_id) as student_count')
             )
             ->groupBy('district')
             ->orderByDesc('student_count')
