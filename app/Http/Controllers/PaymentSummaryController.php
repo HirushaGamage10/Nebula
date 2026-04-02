@@ -312,40 +312,41 @@ class PaymentSummaryController extends Controller
      */
     private function generateAdvancedSummary($studentId = null, $startDate = null, $filters = [])
     {
+        $paymentTable = $this->getPaymentDetailsTable();
         $query = PaymentDetail::query();
         $hasStatus = $this->hasPaymentDetailColumn('status');
 
         // Apply student filter
         if ($studentId) {
-            $query->where('student_id', $studentId);
+            $query->where($paymentTable . '.student_id', $studentId);
         }
 
         // Apply student filter from filters array
         if (!empty($filters['student_id'])) {
-            $query->where('student_id', $filters['student_id']);
+            $query->where($paymentTable . '.student_id', $filters['student_id']);
         }
 
         // Apply date range filter
         if ($startDate) {
-            $query->where('created_at', '>=', $startDate);
+            $query->where($paymentTable . '.created_at', '>=', $startDate);
         }
 
         // Apply payment method filter
         if (!empty($filters['payment_method'])) {
-            $query->where('payment_method', $filters['payment_method']);
+            $query->where($paymentTable . '.payment_method', $filters['payment_method']);
         }
 
         // Apply status filter
         if (!empty($filters['status']) && $hasStatus) {
-            $query->where('status', $filters['status']);
+            $query->where($paymentTable . '.status', $filters['status']);
         }
 
         // Core KPIs
         $totalCollected = $hasStatus
-            ? (clone $query)->where('status', 'paid')->sum('total_fee')
-            : (clone $query)->sum('total_fee');
+            ? (clone $query)->where($paymentTable . '.status', 'paid')->sum($paymentTable . '.total_fee')
+            : (clone $query)->sum($paymentTable . '.total_fee');
         $totalPending = $hasStatus
-            ? $this->sumIfColumnExists((clone $query)->where('status', 'pending'), 'remaining_amount')
+            ? $this->sumIfColumnExists((clone $query)->where($paymentTable . '.status', 'pending'), 'remaining_amount')
             : 0;
         $totalLateFee = $this->sumIfColumnExists($query, 'late_fee');
         $totalDiscount = $this->sumIfColumnExists($query, 'registration_fee_discount_applied');
@@ -358,16 +359,16 @@ class PaymentSummaryController extends Controller
 
         // Payment Breakdowns
         $paymentByMethod = (clone $query)
-            ->select('payment_method', 
-                DB::raw('SUM(total_fee) as total'),
+            ->select($paymentTable . '.payment_method', 
+                DB::raw("SUM({$paymentTable}.total_fee) as total"),
                 DB::raw('COUNT(*) as count'))
-            ->groupBy('payment_method')
+            ->groupBy($paymentTable . '.payment_method')
             ->get();
 
         $paymentByType = (clone $query)
             ->select(
                 DB::raw($this->getPaymentTypeCase()),
-                DB::raw('SUM(total_fee) as total'),
+                DB::raw("SUM({$paymentTable}.total_fee) as total"),
                 DB::raw('COUNT(*) as count')
             )
             ->groupBy('type')
@@ -375,10 +376,10 @@ class PaymentSummaryController extends Controller
 
         $paymentByStatus = $hasStatus
             ? (clone $query)
-                ->select('status',
-                    DB::raw('SUM(total_fee) as total'),
+                ->select($paymentTable . '.status',
+                    DB::raw("SUM({$paymentTable}.total_fee) as total"),
                     DB::raw('COUNT(*) as count'))
-                ->groupBy('status')
+                ->groupBy($paymentTable . '.status')
                 ->get()
             : collect();
 
@@ -386,17 +387,17 @@ class PaymentSummaryController extends Controller
         $monthlyIncome = $hasStatus
             ? (clone $query)
                 ->select(
-                    DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
-                    DB::raw('SUM(CASE WHEN status = "paid" THEN total_fee ELSE 0 END) as paid'),
-                    DB::raw('SUM(CASE WHEN status = "pending" THEN total_fee ELSE 0 END) as pending')
+                    DB::raw("DATE_FORMAT({$paymentTable}.created_at, '%Y-%m') as month"),
+                    DB::raw("SUM(CASE WHEN {$paymentTable}.status = 'paid' THEN {$paymentTable}.total_fee ELSE 0 END) as paid"),
+                    DB::raw("SUM(CASE WHEN {$paymentTable}.status = 'pending' THEN {$paymentTable}.total_fee ELSE 0 END) as pending")
                 )
                 ->groupBy('month')
                 ->orderBy('month')
                 ->get()
             : (clone $query)
                 ->select(
-                    DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month"),
-                    DB::raw('SUM(total_fee) as paid'),
+                    DB::raw("DATE_FORMAT({$paymentTable}.created_at, '%Y-%m') as month"),
+                    DB::raw("SUM({$paymentTable}.total_fee) as paid"),
                     DB::raw('0 as pending')
                 )
                 ->groupBy('month')
@@ -405,11 +406,11 @@ class PaymentSummaryController extends Controller
 
         $weeklyTrend = (clone $query)
             ->select(
-                DB::raw('YEARWEEK(created_at) as week'),
-                DB::raw('SUM(total_fee) as total')
+                DB::raw("YEARWEEK({$paymentTable}.created_at) as week"),
+                DB::raw("SUM({$paymentTable}.total_fee) as total")
             )
             ->when($hasStatus, function ($q) {
-                return $q->where('status', 'paid');
+                return $q->where($this->getPaymentDetailsTable() . '.status', 'paid');
             })
             ->groupBy('week')
             ->orderBy('week', 'desc')
@@ -418,18 +419,31 @@ class PaymentSummaryController extends Controller
 
         // Top Students
         $topStudents = (clone $query)
-            ->select('student_id', 
-                DB::raw('SUM(total_fee) as total'),
+            ->select($paymentTable . '.student_id', 
+                DB::raw("SUM({$paymentTable}.total_fee) as total"),
                 DB::raw('COUNT(*) as payment_count'))
-            ->groupBy('student_id')
+            ->groupBy($paymentTable . '.student_id')
             ->orderByDesc('total')
             ->take(10)
             ->get();
 
         // Recent Activity
         $recentPayments = (clone $query)
-            ->orderByDesc('created_at')
+            ->orderByDesc($paymentTable . '.created_at')
             ->take(15)
+            ->get();
+
+        $districtAnalytics = (clone $query)
+            ->leftJoin('students', $paymentTable . '.student_id', '=', 'students.student_id')
+            ->select(
+                DB::raw("COALESCE(NULLIF(TRIM(students.district), ''), 'Unknown') as district"),
+                DB::raw("COUNT(DISTINCT {$paymentTable}.student_id) as student_count"),
+                DB::raw("COUNT({$paymentTable}.id) as transaction_count"),
+                DB::raw("SUM({$paymentTable}.total_fee) as total_amount")
+            )
+            ->groupBy('district')
+            ->orderByDesc('student_count')
+            ->orderBy('district')
             ->get();
 
         if (request()->ajax()) {
@@ -449,6 +463,7 @@ class PaymentSummaryController extends Controller
                 'weeklyTrend' => $weeklyTrend,
                 'topStudents' => $topStudents,
                 'recentPayments' => $recentPayments,
+                'districtAnalytics' => $districtAnalytics,
             ]);
         }
 
@@ -456,7 +471,7 @@ class PaymentSummaryController extends Controller
             'totalCollected', 'totalPending', 'totalLateFee', 'totalDiscount',
             'totalTransactions', 'averageTransaction', 'ssclTaxTotal', 'bankChargesTotal',
             'paymentByMethod', 'paymentByType', 'paymentByStatus', 'monthlyIncome',
-            'weeklyTrend', 'topStudents', 'recentPayments'
+            'weeklyTrend', 'topStudents', 'recentPayments', 'districtAnalytics'
         ));
     }
 

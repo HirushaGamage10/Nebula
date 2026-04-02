@@ -189,6 +189,85 @@
         </div>
     </div>
 
+    <div class="row g-4 mb-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h6 class="fw-bold mb-0">Sri Lanka Student Distribution</h6>
+                        <small class="text-muted">District-wise student footprint from payment activity under the current filters</small>
+                    </div>
+                    <div class="d-flex gap-3 small text-muted">
+                        <span><strong id="district-map-total-students">0</strong> students</span>
+                        <span><strong id="district-map-total-transactions">0</strong> transactions</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="district-map-layout">
+                        <div class="district-map-panel">
+                            <div class="district-map-shell">
+                                <img src="{{ asset('images/general/sri-lanka-location-map.svg') }}" class="district-real-map-image" alt="Sri Lanka map">
+                                <div class="district-map-markers" id="districtMapMarkers"></div>
+                            </div>
+                            <div class="district-map-legend mt-3">
+                                <span class="legend-title">Student count</span>
+                                <div class="legend-scale">
+                                    <span>Low</span>
+                                    <div class="legend-bar"></div>
+                                    <span>High</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="district-map-insights">
+                            <div class="district-highlight-card" id="districtHighlightCard">
+                                <div class="district-highlight-label">Selected district</div>
+                                <div class="district-highlight-name">All districts</div>
+                                <div class="district-highlight-stats">
+                                    <div>
+                                        <span>Students</span>
+                                        <strong id="district-highlight-students">0</strong>
+                                    </div>
+                                    <div>
+                                        <span>Transactions</span>
+                                        <strong id="district-highlight-transactions">0</strong>
+                                    </div>
+                                    <div>
+                                        <span>Total</span>
+                                        <strong id="district-highlight-total">LKR 0.00</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-responsive mt-3">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>District</th>
+                                            <th class="text-end">Students</th>
+                                            <th class="text-end">Transactions</th>
+                                            <th class="text-end">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="districtAnalyticsTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 py-3">
+                    <h6 class="fw-bold mb-0">Area Insights</h6>
+                </div>
+                <div class="card-body">
+                    <div id="districtTopList" class="district-top-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- Charts Row 1 --}}
     <div class="row g-4 mb-4">
         <div class="col-lg-8">
@@ -476,6 +555,167 @@ document.addEventListener("DOMContentLoaded", () => {
     const paymentByStatus = @json($paymentByStatus ?? []);
     const monthlyIncome = @json($monthlyIncome);
     const weeklyTrend = @json($weeklyTrend ?? []);
+    const districtAnalytics = @json($districtAnalytics ?? []);
+
+    const districtCoordinates = {
+        'Jaffna': { lat: 9.6615, lng: 80.0255 },
+        'Kilinochchi': { lat: 9.3803, lng: 80.4088 },
+        'Mannar': { lat: 8.9806, lng: 79.9042 },
+        'Mullaitivu': { lat: 9.2671, lng: 80.8142 },
+        'Vavuniya': { lat: 8.7514, lng: 80.4971 },
+        'Trincomalee': { lat: 8.5874, lng: 81.2152 },
+        'Anuradhapura': { lat: 8.3114, lng: 80.4037 },
+        'Puttalam': { lat: 8.0362, lng: 79.8283 },
+        'Kurunegala': { lat: 7.4863, lng: 80.3647 },
+        'Polonnaruwa': { lat: 7.9403, lng: 81.0188 },
+        'Matale': { lat: 7.4675, lng: 80.6234 },
+        'Kandy': { lat: 7.2906, lng: 80.6337 },
+        'Kegalle': { lat: 7.2513, lng: 80.3464 },
+        'Nuwara Eliya': { lat: 6.9497, lng: 80.7891 },
+        'Badulla': { lat: 6.9934, lng: 81.0550 },
+        'Gampaha': { lat: 7.0873, lng: 79.9990 },
+        'Colombo': { lat: 6.9271, lng: 79.8612 },
+        'Kalutara': { lat: 6.5854, lng: 79.9607 },
+        'Ratnapura': { lat: 6.6828, lng: 80.3992 },
+        'Monaragala': { lat: 6.8728, lng: 81.3507 },
+        'Ampara': { lat: 7.2917, lng: 81.6724 },
+        'Batticaloa': { lat: 7.7102, lng: 81.6924 },
+        'Galle': { lat: 6.0535, lng: 80.2210 },
+        'Matara': { lat: 5.9549, lng: 80.5540 },
+        'Hambantota': { lat: 6.1241, lng: 81.1185 }
+    };
+
+    const districtNames = [
+        'Ampara', 'Anuradhapura', 'Badulla', 'Batticaloa', 'Colombo', 'Galle',
+        'Gampaha', 'Hambantota', 'Jaffna', 'Kalutara', 'Kandy', 'Kegalle',
+        'Kilinochchi', 'Kurunegala', 'Mannar', 'Matale', 'Matara', 'Monaragala',
+        'Mullaitivu', 'Nuwara Eliya', 'Polonnaruwa', 'Puttalam', 'Ratnapura',
+        'Trincomalee', 'Vavuniya'
+    ];
+
+    const districtMapData = districtNames.map(name => {
+        const match = districtAnalytics.find(item => item.district === name);
+        return {
+            district: name,
+            student_count: Number(match?.student_count || 0),
+            transaction_count: Number(match?.transaction_count || 0),
+            total_amount: Number(match?.total_amount || 0),
+            coordinates: districtCoordinates[name]
+        };
+    });
+
+    const totalDistrictStudents = districtMapData.reduce((sum, item) => sum + item.student_count, 0);
+    const totalDistrictTransactions = districtMapData.reduce((sum, item) => sum + item.transaction_count, 0);
+
+    // Bounds for Wikimedia Sri Lanka location map (equirectangular)
+    const mapGeoBounds = {
+        north: 10.2,
+        south: 5.5,
+        west: 79.2,
+        east: 82.3
+    };
+
+    const nf = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    function formatCurrency(value) {
+        return `LKR ${nf.format(Number(value || 0))}`;
+    }
+
+    function renderDistrictMap(items) {
+        const markerLayer = document.getElementById('districtMapMarkers');
+        const tableBody = document.getElementById('districtAnalyticsTableBody');
+        const topList = document.getElementById('districtTopList');
+        if (!tableBody || !topList || !markerLayer) {
+            return;
+        }
+
+        document.getElementById('district-map-total-students').textContent = totalDistrictStudents.toLocaleString();
+        document.getElementById('district-map-total-transactions').textContent = totalDistrictTransactions.toLocaleString();
+
+        const maxStudents = Math.max(...items.map(item => item.student_count), 1);
+        markerLayer.innerHTML = '';
+        tableBody.innerHTML = '';
+
+        items.forEach(item => {
+            if (!item.coordinates || typeof item.coordinates.lat !== 'number' || typeof item.coordinates.lng !== 'number') {
+                return;
+            }
+
+            const intensity = item.student_count > 0 ? (item.student_count / maxStudents) : 0;
+            const xPct = ((item.coordinates.lng - mapGeoBounds.west) / (mapGeoBounds.east - mapGeoBounds.west)) * 100;
+            const yPct = ((mapGeoBounds.north - item.coordinates.lat) / (mapGeoBounds.north - mapGeoBounds.south)) * 100;
+
+            const size = item.student_count > 0 ? (10 + Math.round(intensity * 16)) : 8;
+            const marker = document.createElement('button');
+            marker.type = 'button';
+            marker.className = 'district-marker';
+            marker.style.left = `${xPct}%`;
+            marker.style.top = `${yPct}%`;
+            marker.style.width = `${size}px`;
+            marker.style.height = `${size}px`;
+            marker.style.background = item.student_count > 0
+                ? `rgba(29, 78, 216, ${0.35 + intensity * 0.5})`
+                : 'rgba(148, 163, 184, 0.5)';
+            marker.style.borderColor = item.student_count > 0 ? '#1d4ed8' : '#94a3b8';
+            marker.title = `${item.district}: ${item.student_count.toLocaleString()} students, ${item.transaction_count.toLocaleString()} transactions, ${formatCurrency(item.total_amount)}`;
+            marker.setAttribute('aria-label', marker.title);
+            marker.addEventListener('mouseenter', () => updateDistrictHighlight(item));
+            marker.addEventListener('focus', () => updateDistrictHighlight(item));
+            marker.addEventListener('click', () => updateDistrictHighlight(item));
+            markerLayer.appendChild(marker);
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.district}</td>
+                <td class="text-end">${item.student_count.toLocaleString()}</td>
+                <td class="text-end">${item.transaction_count.toLocaleString()}</td>
+                <td class="text-end">${formatCurrency(item.total_amount)}</td>
+            `;
+            row.addEventListener('mouseenter', () => updateDistrictHighlight(item));
+            row.addEventListener('click', () => updateDistrictHighlight(item));
+            tableBody.appendChild(row);
+        });
+
+        const ranked = [...items]
+            .filter(item => item.student_count > 0)
+            .sort((a, b) => b.student_count - a.student_count || b.total_amount - a.total_amount)
+            .slice(0, 6);
+
+        topList.innerHTML = ranked.length
+            ? ranked.map((item, index) => `
+                <div class="district-top-item">
+                    <div class="district-top-rank">${index + 1}</div>
+                    <div class="district-top-content">
+                        <div class="district-top-name">${item.district}</div>
+                        <div class="district-top-meta">${item.student_count} students • ${item.transaction_count} transactions</div>
+                    </div>
+                    <div class="district-top-amount">${formatCurrency(item.total_amount)}</div>
+                </div>
+            `).join('')
+            : '<div class="text-muted small">No district activity found for the selected filters.</div>';
+
+        const initial = ranked[0] || items[0] || {
+            district: 'All districts',
+            student_count: totalDistrictStudents,
+            transaction_count: totalDistrictTransactions,
+            total_amount: items.reduce((sum, item) => sum + item.total_amount, 0)
+        };
+        updateDistrictHighlight(initial);
+    }
+
+    function updateDistrictHighlight(item) {
+        const nameEl = document.querySelector('.district-highlight-name');
+        if (!nameEl) {
+            return;
+        }
+
+        nameEl.textContent = item.district;
+        document.getElementById('district-highlight-students').textContent = Number(item.student_count || 0).toLocaleString();
+        document.getElementById('district-highlight-transactions').textContent = Number(item.transaction_count || 0).toLocaleString();
+        document.getElementById('district-highlight-total').textContent = formatCurrency(item.total_amount || 0);
+    }
+
+    renderDistrictMap(districtMapData);
 
     // Chart.js default options
     Chart.defaults.font.family = "'Inter', sans-serif";
@@ -756,6 +996,178 @@ document.addEventListener("DOMContentLoaded", () => {
 
 .table-hover tbody tr:hover {
     background-color: rgba(0, 0, 0, 0.02);
+}
+
+.district-map-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.district-map-shell {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+.district-real-map-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 20px;
+    border: 1px solid #c7d2fe;
+    box-shadow: 0 18px 35px rgba(59, 130, 246, 0.12);
+    background: #f8fafc;
+}
+
+.district-map-markers {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+}
+
+.district-marker {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    border: 2px solid transparent;
+    border-radius: 999px;
+    box-shadow: 0 8px 18px rgba(30, 41, 59, 0.14);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    cursor: pointer;
+}
+
+.district-marker:hover,
+.district-marker:focus {
+    transform: translate(-50%, -50%) scale(1.12);
+    box-shadow: 0 12px 26px rgba(30, 41, 59, 0.2);
+    outline: none;
+}
+
+.district-map-legend {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.district-map-legend .legend-title {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.district-map-legend .legend-scale {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    justify-content: flex-end;
+    color: #64748b;
+    font-size: 0.78rem;
+}
+
+.district-map-legend .legend-bar {
+    width: 140px;
+    height: 10px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(148, 163, 184, 0.3) 0%, rgba(13, 110, 253, 0.95) 100%);
+}
+
+.district-highlight-card {
+    background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+    border: 1px solid #dbeafe;
+    border-radius: 18px;
+    padding: 1rem 1.1rem;
+}
+
+.district-highlight-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    margin-bottom: 0.35rem;
+}
+
+.district-highlight-name {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.9rem;
+}
+
+.district-highlight-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.district-highlight-stats span {
+    display: block;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    color: #64748b;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.2rem;
+}
+
+.district-highlight-stats strong {
+    display: block;
+    color: #0f172a;
+    font-size: 1rem;
+}
+
+.district-top-list {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.district-top-item {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    gap: 0.8rem;
+    align-items: center;
+    padding: 0.85rem 0.9rem;
+    border-radius: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.district-top-rank {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-weight: 700;
+}
+
+.district-top-name {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.district-top-meta {
+    font-size: 0.82rem;
+    color: #64748b;
+}
+
+.district-top-amount {
+    font-weight: 700;
+    color: #0f766e;
+    white-space: nowrap;
+}
+
+@media (max-width: 991.98px) {
+    .district-map-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .district-highlight-stats {
+        grid-template-columns: 1fr;
+    }
 }
 
 .card {
