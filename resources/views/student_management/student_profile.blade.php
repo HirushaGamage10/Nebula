@@ -2071,7 +2071,7 @@ $(function(){
   function fetchCourseRegistrationHistory(){
     const sid = $('#studentIdHidden').val();
     if (!sid) return;
-    $.get('/api/student/' + sid + '/course-registration-history', function(res){
+    $.get('/api/student/' + sid + '/history', function(res){
       const $tb = $('#historyTableBody').empty();
       if (res.success && res.history && res.history.length) {
         res.history.forEach(h => {

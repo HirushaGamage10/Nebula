@@ -19,6 +19,7 @@ class Attendance extends Model
         'intake_id',
         'semester',
         'date',
+        'attendance_type',
         'student_id',
         'status',
         'created_at',

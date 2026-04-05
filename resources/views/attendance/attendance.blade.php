@@ -87,6 +87,19 @@
                                     <input type="date" class="form-control" id="degree_date" name="attendance_date" required>
                                 </div>
                             </div>
+                            <div class="mb-3 row mx-3">
+                                <label for="degree_attendance_type" class="col-sm-2 col-form-label">Attendance Type <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select degree-filter" id="degree_attendance_type" name="attendance_type" required>
+                                        <option value="" selected disabled>Select Attendance Type</option>
+                                        <option value="lectures">Lectures</option>
+                                        <option value="labs">Labs</option>
+                                        <option value="special_lectures">Special Lectures</option>
+                                        <option value="tutorials">Tutorials</option>
+                                        <option value="other">Other Categories</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -180,6 +193,19 @@
                                     <input type="date" class="form-control" id="cert_date" name="attendance_date" required>
                                 </div>
                             </div>
+                            <div class="mb-3 row mx-3">
+                                <label for="cert_attendance_type" class="col-sm-2 col-form-label">Attendance Type <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select cert-filter" id="cert_attendance_type" name="attendance_type" required>
+                                        <option value="" selected disabled>Select Attendance Type</option>
+                                        <option value="lectures">Lectures</option>
+                                        <option value="labs">Labs</option>
+                                        <option value="special_lectures">Special Lectures</option>
+                                        <option value="tutorials">Tutorials</option>
+                                        <option value="other">Other Categories</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -253,12 +279,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const degreeSemester = document.getElementById('degree_semester');
     const degreeModule = document.getElementById('degree_module');
     const degreeDate = document.getElementById('degree_date');
+    const degreeAttendanceType = document.getElementById('degree_attendance_type');
     
     // Certificate Tab Elements
     const certLocation = document.getElementById('cert_location');
     const certCourse = document.getElementById('cert_course');
     const certIntake = document.getElementById('cert_intake');
     const certDate = document.getElementById('cert_date');
+    const certAttendanceType = document.getElementById('cert_attendance_type');
     
     // Degree-specific elements
     const degreeAttendanceTableBody = document.getElementById('degreeAttendanceTableBody');
@@ -379,6 +407,11 @@ document.addEventListener('DOMContentLoaded', function() {
         updateBulkImportSection();
     });
 
+    degreeAttendanceType.addEventListener('change', function() {
+        maybeFetchDegreeStudents();
+        updateBulkImportSection();
+    });
+
     // CERTIFICATE TAB EVENT LISTENERS
     certLocation.addEventListener('change', function() {
         resetAndDisable(certCourse, 'Select a Course');
@@ -409,14 +442,21 @@ document.addEventListener('DOMContentLoaded', function() {
         updateBulkImportSection();
     });
 
+    certAttendanceType.addEventListener('change', function() {
+        if (allCertFilled()) {
+            fetchCertStudentsForAttendance();
+        }
+        updateBulkImportSection();
+    });
+
     // Validation functions
     function allDegreeFilled() {
         return degreeLocation.value && degreeCourseType.value && degreeCourse.value && 
-               degreeIntake.value && degreeSemester.value && degreeModule.value && degreeDate.value;
+               degreeIntake.value && degreeSemester.value && degreeModule.value && degreeDate.value && degreeAttendanceType.value;
     }
 
     function allCertFilled() {
-        return certLocation.value && certCourse.value && certIntake.value && certDate.value;
+        return certLocation.value && certCourse.value && certIntake.value && certDate.value && certAttendanceType.value;
     }
 
     function maybeFetchDegreeStudents() {
@@ -681,7 +721,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let hasDate = false;
         let params = new URLSearchParams();
         
-        if (activeTab === 'degree' && degreeDate.value) {
+        if (activeTab === 'degree' && degreeDate.value && degreeAttendanceType.value) {
             hasDate = true;
             params.append('location', degreeLocation.value || '');
             params.append('course_id', degreeCourse.value || '');
@@ -689,6 +729,7 @@ document.addEventListener('DOMContentLoaded', function() {
             params.append('semester', degreeSemester.value || '');
             params.append('module_id', degreeModule.value || '');
             params.append('date', degreeDate.value || '');
+            params.append('attendance_type', degreeAttendanceType.value || '');
             
             document.getElementById('degreeBulkImportSection').style.display = '';
             degreeDownloadTemplateBtn.href = '/attendance/download-template?' + params.toString();
@@ -696,7 +737,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('degreeBulkImportSection').style.display = 'none';
         }
         
-        if (activeTab === 'certificate' && certDate.value) {
+        if (activeTab === 'certificate' && certDate.value && certAttendanceType.value) {
             hasDate = true;
             params = new URLSearchParams();
             params.append('location', certLocation.value || '');
@@ -705,6 +746,7 @@ document.addEventListener('DOMContentLoaded', function() {
             params.append('semester', '');
             params.append('module_id', '');
             params.append('date', certDate.value || '');
+            params.append('attendance_type', certAttendanceType.value || '');
             
             document.getElementById('certBulkImportSection').style.display = '';
             certDownloadTemplateBtn.href = '/attendance/download-template?' + params.toString();
@@ -728,6 +770,7 @@ document.addEventListener('DOMContentLoaded', function() {
         data.semester = degreeSemester.value;
         data.module_id = degreeModule.value;
         data.date = degreeDate.value;
+        data.attendance_type = degreeAttendanceType.value;
         
         if (Object.values(data).filter(v => v !== null).some(v => !v) || !data.attendance_data.length) {
             showToast('Warning', 'Please select all filters and mark attendance for at least one student.', 'bg-warning');
@@ -771,6 +814,7 @@ document.addEventListener('DOMContentLoaded', function() {
         data.semester = null;
         data.module_id = null;
         data.date = certDate.value;
+        data.attendance_type = certAttendanceType.value;
         
         if (Object.values(data).filter(v => v !== null).some(v => !v) || !data.attendance_data.length) {
             showToast('Warning', 'Please select all filters and mark attendance for at least one student.', 'bg-warning');
@@ -833,6 +877,7 @@ document.addEventListener('DOMContentLoaded', function() {
         payload.append('semester', degreeSemester.value || '');
         payload.append('module_id', degreeModule.value || '');
         payload.append('date', degreeDate.value || '');
+        payload.append('attendance_type', degreeAttendanceType.value || '');
         payload.append('_token', '{{ csrf_token() }}');
 
         showSpinner(true);
@@ -889,6 +934,7 @@ document.addEventListener('DOMContentLoaded', function() {
         payload.append('semester', '');
         payload.append('module_id', '');
         payload.append('date', certDate.value || '');
+        payload.append('attendance_type', certAttendanceType.value || '');
         payload.append('_token', '{{ csrf_token() }}');
 
         showSpinner(true);

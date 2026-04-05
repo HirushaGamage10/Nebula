@@ -354,6 +354,7 @@ class AttendanceController extends Controller
                 'course_id' => 'required|integer',
                 'intake_id' => 'required|integer',
                 'date' => 'required|date',
+                'attendance_type' => 'nullable|string|in:lectures,labs,special_lectures,tutorials,other',
                 'attendance_data' => 'required|array|min:1'
             ]);
         } else {
@@ -364,6 +365,7 @@ class AttendanceController extends Controller
                 'semester' => 'required',
                 'module_id' => 'required|integer',
                 'date' => 'required|date',
+                'attendance_type' => 'nullable|string|in:lectures,labs,special_lectures,tutorials,other',
                 'attendance_data' => 'required|array|min:1'
             ]);
         }
@@ -372,16 +374,23 @@ class AttendanceController extends Controller
             DB::beginTransaction();
 
             $date = Carbon::parse($request->date);
+            $attendanceType = $request->input('attendance_type', 'lectures');
+            $hasAttendanceTypeColumn = Schema::hasColumn('attendance', 'attendance_type');
             
             // For certificate courses, use null for semester and module_id
             if ($isCertificate) {
                 // Delete existing attendance records for this date, course, intake (certificate)
-                Attendance::where('date', $date)
+                $deleteQuery = Attendance::where('date', $date)
                          ->where('course_id', $request->course_id)
                          ->where('intake_id', $request->intake_id)
                          ->whereNull('semester')
-                         ->whereNull('module_id')
-                         ->delete();
+                         ->whereNull('module_id');
+
+                if ($hasAttendanceTypeColumn) {
+                    $deleteQuery->where('attendance_type', $attendanceType);
+                }
+
+                $deleteQuery->delete();
 
                 // Insert new attendance records
                 $attendanceRecords = [];
@@ -390,7 +399,7 @@ class AttendanceController extends Controller
                         continue; // Skip invalid records
                     }
                     
-                    $attendanceRecords[] = [
+                    $record = [
                         'location' => $request->location,
                         'course_id' => $request->course_id,
                         'intake_id' => $request->intake_id,
@@ -402,6 +411,12 @@ class AttendanceController extends Controller
                         'created_at' => now(),
                         'updated_at' => now()
                     ];
+
+                    if ($hasAttendanceTypeColumn) {
+                        $record['attendance_type'] = $attendanceType;
+                    }
+
+                    $attendanceRecords[] = $record;
                 }
 
                 if (empty($attendanceRecords)) {
@@ -432,12 +447,17 @@ class AttendanceController extends Controller
             }
             
             // Delete existing attendance records for this date, course, intake, semester, and module
-            Attendance::where('date', $date)
+            $deleteQuery = Attendance::where('date', $date)
                      ->where('course_id', $request->course_id)
                      ->where('intake_id', $request->intake_id)
                      ->where('semester', $semester->name)
-                     ->where('module_id', $request->module_id)
-                     ->delete();
+                     ->where('module_id', $request->module_id);
+
+            if ($hasAttendanceTypeColumn) {
+                $deleteQuery->where('attendance_type', $attendanceType);
+            }
+
+            $deleteQuery->delete();
 
             // Insert new attendance records
             $attendanceRecords = [];
@@ -446,7 +466,7 @@ class AttendanceController extends Controller
                     continue; // Skip invalid records
                 }
                 
-                $attendanceRecords[] = [
+                $record = [
                     'location' => $request->location,
                     'course_id' => $request->course_id,
                     'intake_id' => $request->intake_id,
@@ -458,6 +478,12 @@ class AttendanceController extends Controller
                     'created_at' => now(),
                     'updated_at' => now()
                 ];
+
+                if ($hasAttendanceTypeColumn) {
+                    $record['attendance_type'] = $attendanceType;
+                }
+
+                $attendanceRecords[] = $record;
             }
 
             if (empty($attendanceRecords)) {
@@ -499,7 +525,8 @@ class AttendanceController extends Controller
             'intake_id' => 'required|integer',
             'semester' => 'required',
             'module_id' => 'required|integer',
-            'date' => 'required|date'
+            'date' => 'required|date',
+            'attendance_type' => 'nullable|string|in:lectures,labs,special_lectures,tutorials,other'
         ]);
 
         try {
@@ -517,9 +544,13 @@ class AttendanceController extends Controller
                                    ->where('intake_id', $request->intake_id)
                                    ->where('semester', $semester->name)
                                    ->where('module_id', $request->module_id)
-                                   ->where('date', $request->date)
-                                   ->with('student')
-                                   ->get();
+                                   ->where('date', $request->date);
+
+            if ($request->filled('attendance_type') && Schema::hasColumn('attendance', 'attendance_type')) {
+                $attendance->where('attendance_type', $request->attendance_type);
+            }
+
+            $attendance = $attendance->with('student')->get();
 
             return response()->json([
                 'success' => true,
@@ -1024,6 +1055,7 @@ class AttendanceController extends Controller
             'course_id' => 'required|integer',
             'intake_id' => 'required|integer',
             'date' => 'required|date',
+            'attendance_type' => 'nullable|string|in:lectures,labs,special_lectures,tutorials,other',
             'attendance_file' => 'required|file'
         ];
         
@@ -1091,6 +1123,8 @@ class AttendanceController extends Controller
         // Validate and build attendance records
         $attendanceRecords = [];
         $date = Carbon::parse($request->date);
+        $attendanceType = $request->input('attendance_type', 'lectures');
+        $hasAttendanceTypeColumn = Schema::hasColumn('attendance', 'attendance_type');
         
         // For certificates, semester and module_id are null
         $semesterName = null;
@@ -1150,7 +1184,7 @@ class AttendanceController extends Controller
             }
             if (!$student) continue;
 
-            $attendanceRecords[] = [
+            $record = [
                 'location' => $request->location,
                 'course_id' => $request->course_id,
                 'intake_id' => $request->intake_id,
@@ -1162,6 +1196,12 @@ class AttendanceController extends Controller
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
+
+            if ($hasAttendanceTypeColumn) {
+                $record['attendance_type'] = $attendanceType;
+            }
+
+            $attendanceRecords[] = $record;
         }
 
         if (empty($attendanceRecords)) {
@@ -1182,6 +1222,10 @@ class AttendanceController extends Controller
             } else {
                 $deleteQuery->where('semester', $semesterName)
                     ->where('module_id', $moduleId);
+            }
+
+            if ($hasAttendanceTypeColumn) {
+                $deleteQuery->where('attendance_type', $attendanceType);
             }
             
             $deleteQuery->delete();

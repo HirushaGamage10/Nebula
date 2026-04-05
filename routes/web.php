@@ -198,6 +198,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::post('/student/terminate', [StudentProfileController::class, 'terminate'])->name('student_management.terminate');
         Route::post('/student/reinstate', [StudentProfileController::class, 'reinstate'])->name('student_management.reinstate');
         Route::get('/api/student/{studentId}/history', [StudentProfileController::class, 'getCourseRegistrationHistory']);
+        Route::get('/api/student/{studentId}/course-registration-history', [StudentProfileController::class, 'getCourseRegistrationHistory']);
+        Route::get('/api/student/{studentId}/administration-history', [StudentProfileController::class, 'getStudentStatusHistory']);
         Route::get('/api/student-details-by-nic', [StudentProfileController::class, 'getStudentDetailsByNic']);
         Route::get('/api/student/{studentId}/courses', [StudentProfileController::class, 'getRegisteredCourses']);
         Route::get('/api/student/{studentId}/course/{courseId}/semesters', [StudentProfileController::class, 'getSemesters']);

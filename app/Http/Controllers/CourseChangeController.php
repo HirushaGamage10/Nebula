@@ -445,13 +445,15 @@ public function checkPaymentStatus(Request $request)
             $oldIntakeId = $registration->intake_id;
             $oldCourseId = $registration->course_id;
             $studentId = $registration->student_id;
+            $isIntakeOnlyChange = (int) $newIntake->course_id === (int) $oldCourseId;
 
             Log::info('Course change details', [
                 'student_id' => $studentId,
                 'old_course_id' => $oldCourseId,
                 'old_intake_id' => $oldIntakeId,
                 'new_course_id' => $newIntake->course_id,
-                'new_intake_id' => $newIntake->intake_id
+                'new_intake_id' => $newIntake->intake_id,
+                'change_type' => $isIntakeOnlyChange ? 'intake_only' : 'course_and_intake'
             ]);
 
             // Check if course change is within 1 year from course start date
@@ -488,8 +490,8 @@ public function checkPaymentStatus(Request $request)
 
             Log::info('Course change logged with ID: ' . $logId);
 
-            // Create new payment plan for new course if needed
-            $this->createNewPaymentPlan($studentId, $newIntake->course_id);
+            // Create new payment plan for the selected new course/intake if needed
+            $this->createNewPaymentPlan($studentId, $newIntake->course_id, $newIntake->intake_id);
 
             DB::commit();
 
@@ -497,7 +499,8 @@ public function checkPaymentStatus(Request $request)
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Course changed successfully!',
+                'message' => $isIntakeOnlyChange ? 'Intake changed successfully!' : 'Course changed successfully!',
+                'change_type' => $isIntakeOnlyChange ? 'intake_only' : 'course_and_intake',
                 'payment_summary' => [
                     'total_paid_amount' => $paymentProcessResult['total_paid_amount'] ?? 0,
                     'payment_records_updated' => $paymentProcessResult['records_updated'] ?? 0,
@@ -612,17 +615,21 @@ public function checkPaymentStatus(Request $request)
 
         Log::info('Cancelled payment plan: ' . $oldPaymentPlan->id);
 
-        // Store payment summary
-        DB::table('course_change_payments')->insert([
-            'student_id' => $studentId,
-            'old_course_id' => $oldCourseId,
-            'old_intake_id' => $oldIntakeId ?? null,
-            'old_payment_plan_id' => $oldPaymentPlan->id,
-            'total_paid_amount' => $result['total_paid_amount'],
-            'remarks' => 'Payment records cancelled due to course change',
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
+        // Store payment summary when the optional audit table is available
+        if (Schema::hasTable('course_change_payments')) {
+            DB::table('course_change_payments')->insert([
+                'student_id' => $studentId,
+                'old_course_id' => $oldCourseId,
+                'old_intake_id' => $oldIntakeId ?? null,
+                'old_payment_plan_id' => $oldPaymentPlan->id,
+                'total_paid_amount' => $result['total_paid_amount'],
+                'remarks' => 'Payment records cancelled due to course change',
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        } else {
+            Log::warning('course_change_payments table is missing; skipping payment audit insert.');
+        }
 
         Log::info('Payment processing complete', $result);
 
@@ -684,7 +691,7 @@ public function checkPaymentStatus(Request $request)
     /**
      * Create new payment plan for new course
      */
-    private function createNewPaymentPlan($studentId, $newCourseId)
+    private function createNewPaymentPlan($studentId, $newCourseId, $newIntakeId = null)
     {
         try {
             // Check if payment plan already exists for new course
@@ -705,10 +712,19 @@ public function checkPaymentStatus(Request $request)
                 return null;
             }
 
-            // Get intake for this course to get fee details
-            $intake = Intake::where('course_id', $newCourseId)
-                ->orderBy('start_date', 'desc')
-                ->first();
+            // Prefer the selected intake so intake-only changes keep the correct batch
+            $intake = null;
+            if ($newIntakeId) {
+                $intake = Intake::where('course_id', $newCourseId)
+                    ->where('intake_id', $newIntakeId)
+                    ->first();
+            }
+
+            if (!$intake) {
+                $intake = Intake::where('course_id', $newCourseId)
+                    ->orderBy('start_date', 'desc')
+                    ->first();
+            }
 
             $totalAmount = $intake ? ($intake->course_fee ?? 0) : 0;
 
@@ -742,21 +758,39 @@ public function checkPaymentStatus(Request $request)
      */
     private function logCourseChange($studentId, $oldIntakeId, $oldCourseId, $newIntakeId, $newCourseId, $oldPaymentPlanId, $totalPaidAmount)
     {
-        return DB::table('course_change_logs')->insertGetId([
+        if (!Schema::hasTable('course_change_logs')) {
+            Log::warning('course_change_logs table is missing; skipping course change audit insert.');
+            return null;
+        }
+
+        $payload = [
             'student_id' => $studentId,
             'old_intake_id' => $oldIntakeId,
-            'old_course_id' => $oldCourseId,
             'new_intake_id' => $newIntakeId,
+            'changed_by' => auth()->id(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        $optionalColumns = [
+            'old_course_id' => $oldCourseId,
             'new_course_id' => $newCourseId,
             'old_payment_plan_id' => $oldPaymentPlanId,
             'total_paid_amount' => $totalPaidAmount,
-            'changed_by' => auth()->id(),
             'changed_by_name' => auth()->user()->name ?? 'System',
             'changed_at' => now(),
             'remarks' => 'Course change processed',
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
+        ];
+
+        foreach ($optionalColumns as $column => $value) {
+            if (Schema::hasColumn('course_change_logs', $column)) {
+                $payload[$column] = $value;
+            }
+        }
+
+        return DB::table('course_change_logs')->insertGetId($payload);
     }
 
     /**
@@ -766,6 +800,13 @@ public function checkPaymentStatus(Request $request)
     {
         try {
             Log::info('Getting payment summary for student: ' . $studentId . ', course: ' . $courseId);
+
+            if (!Schema::hasTable('course_change_payments')) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Payment audit table is not available yet'
+                ], 404);
+            }
 
             $summary = DB::table('course_change_payments')
                 ->where('student_id', $studentId)
@@ -811,6 +852,14 @@ public function checkPaymentStatus(Request $request)
     public function getChangeLogs($studentId)
     {
         try {
+            if (!Schema::hasTable('course_change_logs')) {
+                return response()->json([
+                    'status' => 'success',
+                    'logs' => [],
+                    'count' => 0
+                ]);
+            }
+
             $logs = DB::table('course_change_logs')
                 ->where('student_id', $studentId)
                 ->orderBy('changed_at', 'desc')
@@ -903,15 +952,19 @@ public function checkPaymentStatus(Request $request)
     public function getCourseChangeHistory($studentId)
     {
         try {
-            $logs = DB::table('course_change_logs')
-                ->where('student_id', $studentId)
-                ->orderBy('changed_at', 'desc')
-                ->get();
+            $logs = Schema::hasTable('course_change_logs')
+                ? DB::table('course_change_logs')
+                    ->where('student_id', $studentId)
+                    ->orderBy('changed_at', 'desc')
+                    ->get()
+                : collect();
 
-            $payments = DB::table('course_change_payments')
-                ->where('student_id', $studentId)
-                ->orderBy('created_at', 'desc')
-                ->get();
+            $payments = Schema::hasTable('course_change_payments')
+                ? DB::table('course_change_payments')
+                    ->where('student_id', $studentId)
+                    ->orderBy('created_at', 'desc')
+                    ->get()
+                : collect();
 
             return response()->json([
                 'status' => 'success',

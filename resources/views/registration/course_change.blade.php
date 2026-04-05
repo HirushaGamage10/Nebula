@@ -1,13 +1,13 @@
 @extends('inc.app')
 
-@section('title', 'Course Change - Switch Intake')
+@section('title', 'Course / Intake Change')
 
 @section('content')
 <div class="container mt-5 mb-5">
     <div class="card shadow border-0">
         <div class="card-body">
             <h3 class="text-primary mb-4">
-                <i class="ti ti-refresh"></i> Course Change (Switch Intake)
+                <i class="ti ti-refresh"></i> Course / Intake Change
             </h3>
 
             <!-- Alert Messages -->
@@ -150,6 +150,11 @@
                                     </select>
                                     <div class="form-text" id="intakeError" style="color: red; display: none;"></div>
                                 </div>
+                            </div>
+
+                            <div class="alert alert-info mt-3 mb-0">
+                                <i class="ti ti-info-circle me-2"></i>
+                                <small>Select the <strong>same course</strong> if you only need to move the student to a different intake/batch.</small>
                             </div>
 
                             <div class="mt-4">
@@ -322,7 +327,7 @@
         <div class="d-flex">
             <div class="toast-body">
                 <i class="ti ti-check me-2"></i>
-                <span id="successMessage">Course change completed successfully!</span>
+                <span id="successMessage">Course / intake change completed successfully!</span>
             </div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
@@ -991,17 +996,24 @@ async function loadCourses() {
             
             // Courses in this location
             coursesByLocation[location].forEach(course => {
-                const isCurrentCourse = course.course_id == currentCourseId;
+                const isCurrentCourse = String(course.course_id) === String(currentCourseId);
                 const courseOption = document.createElement('option');
                 courseOption.value = course.course_id;
-                if (isCurrentCourse) courseOption.disabled = true;
-                courseOption.textContent = `${isCurrentCourse ? '⮕ ' : ''}${course.course_type} - ${course.course_name}`;
+                courseOption.dataset.current = isCurrentCourse ? 'true' : 'false';
+                courseOption.textContent = `${isCurrentCourse ? '⮕ Current: ' : ''}${course.course_type} - ${course.course_name}`;
                 courseSelect.appendChild(courseOption);
             });
         });
         
         courseSelect.disabled = false;
-        
+
+        if (currentCourseId) {
+            courseSelect.value = String(currentCourseId);
+            if (courseSelect.value === String(currentCourseId)) {
+                courseSelect.dispatchEvent(new Event('change'));
+            }
+        }
+
     } catch (error) {
         console.error('Error loading courses:', error);
         courseSelect.innerHTML = '<option value="">Error loading courses</option>';
@@ -1166,7 +1178,7 @@ async function submitChange() {
             if (modal) modal.hide();
             
             // Show success toast
-            showToast(data.message || 'Course changed successfully');
+            showToast(data.message || 'Course / intake updated successfully');
 
             showPaymentPlanPanel(data.payment_summary?.total_paid_amount || 0);
             
@@ -1199,7 +1211,7 @@ async function submitChange() {
                 paymentModal.show();
             } else {
                 // Show simple success alert
-                showAlert('Course changed successfully', 'success');
+                showAlert(data.message || 'Course / intake updated successfully', 'success');
             }
             
             // Refresh student data after delay
