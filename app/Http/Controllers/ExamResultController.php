@@ -386,37 +386,12 @@ class ExamResultController extends Controller
             ->get()
             ->values()
             ->map(function ($semester, $index) use ($course) {
-                $rawName = trim((string) $semester->name);
-                $normalized = $rawName;
-                $fallbackNumber = $index + 1;
-                $maxSemesters = (int) ($course->no_of_semesters ?? 0);
-
-                if ($course->semester_format === 'alphabetical') {
-                    if (is_numeric($rawName)) {
-                        $numeric = (int) $rawName;
-                        if ($numeric < 1 || ($maxSemesters > 0 && $numeric > $maxSemesters)) {
-                            $numeric = $fallbackNumber;
-                        }
-                        $normalized = $numeric >= 1 && $numeric <= 26 ? chr(64 + $numeric) : (string) $numeric;
-                    } elseif (preg_match('/^[A-Za-z]$/', $rawName)) {
-                        $normalized = strtoupper($rawName);
-                    }
-                } else {
-                    if (is_numeric($rawName)) {
-                        $numeric = (int) $rawName;
-                        if ($numeric < 1 || ($maxSemesters > 0 && $numeric > $maxSemesters)) {
-                            $numeric = $fallbackNumber;
-                        }
-                        $normalized = (string) $numeric;
-                    } elseif (preg_match('/^[A-Za-z]$/', $rawName)) {
-                        $normalized = (string) (ord(strtoupper($rawName)) - 64);
-                    }
-                }
+                $displayValue = $this->formatSemesterDisplayValue($course, $semester->name, $index + 1);
 
                 return [
                     'id' => $semester->id,
                     'name' => $semester->name,
-                    'display_name' => 'Semester ' . $normalized,
+                    'display_name' => 'Semester ' . $displayValue,
                 ];
             });
 
@@ -428,6 +403,44 @@ class ExamResultController extends Controller
         ]);
         
         return response()->json(['semesters' => $semesters, 'is_certificate' => false]);
+    }
+
+    private function formatSemesterDisplayValue(Course $course, $rawName, ?int $fallbackNumber = null): string
+    {
+        $rawName = trim((string) $rawName);
+        $normalized = $rawName;
+        $maxSemesters = (int) ($course->no_of_semesters ?? 0);
+        $fallbackNumber = $fallbackNumber && $fallbackNumber > 0 ? $fallbackNumber : 1;
+
+        if ($course->semester_format === 'alphabetical') {
+            if (is_numeric($rawName)) {
+                $numeric = (int) $rawName;
+                if ($numeric < 1 || ($maxSemesters > 0 && $numeric > $maxSemesters)) {
+                    $numeric = $fallbackNumber;
+                }
+                $normalized = $numeric >= 1 && $numeric <= 26 ? chr(64 + $numeric) : (string) $numeric;
+            } elseif (preg_match('/^[A-Za-z]$/', $rawName)) {
+                $normalized = strtoupper($rawName);
+            } else {
+                $normalized = $fallbackNumber >= 1 && $fallbackNumber <= 26
+                    ? chr(64 + $fallbackNumber)
+                    : (string) $fallbackNumber;
+            }
+        } else {
+            if (is_numeric($rawName)) {
+                $numeric = (int) $rawName;
+                if ($numeric < 1 || ($maxSemesters > 0 && $numeric > $maxSemesters)) {
+                    $numeric = $fallbackNumber;
+                }
+                $normalized = (string) $numeric;
+            } elseif (preg_match('/^[A-Za-z]$/', $rawName)) {
+                $normalized = (string) max(1, ord(strtoupper($rawName)) - 64);
+            } else {
+                $normalized = (string) $fallbackNumber;
+            }
+        }
+
+        return $normalized === '' ? (string) $fallbackNumber : $normalized;
     }
 
     public function getStudentsForExamResult(Request $request)
@@ -873,6 +886,19 @@ class ExamResultController extends Controller
                 return response()->json(['error' => 'Invalid course, intake, semester, or module.'], 404);
             }
 
+            $semesterSequence = \App\Models\Semester::where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->orderBy('start_date')
+                ->orderBy('id')
+                ->pluck('id')
+                ->values();
+            $semesterIndex = $semesterSequence->search($semester->id);
+            $semesterDisplayValue = $this->formatSemesterDisplayValue(
+                $course,
+                $semester->name,
+                $semesterIndex === false ? null : ($semesterIndex + 1)
+            );
+
             Log::info('Download template called with:', [
                 'course_id' => $courseId,
                 'intake_id' => $intakeId,
@@ -882,6 +908,7 @@ class ExamResultController extends Controller
                 'course_name' => $course->course_name,
                 'intake_no' => $intake->intake_no,
                 'semester_name' => $semester->name,
+                'semester_display' => $semesterDisplayValue,
                 'module_name' => $module->module_name
             ]);
 
@@ -902,14 +929,14 @@ class ExamResultController extends Controller
             ]);
 
             if ($semesterRegistrations->count() > 0) {
-                $students = $semesterRegistrations->map(function($reg) use ($course, $module, $intake, $semester, $location) {
+                $students = $semesterRegistrations->map(function($reg) use ($course, $module, $intake, $location, $semesterDisplayValue) {
                     return [
                         'Student Name' => $reg->student->full_name,
                         'Course Name' => $course->course_name,
                         'Module Name' => $module->module_name,
                         'Intake' => $intake->intake_no ?? $intake->batch ?? '2025-August',
                         'Location' => $location,
-                        'Semester' => $semester->name,
+                        'Semester' => $semesterDisplayValue,
                         'Marks' => '',
                         'Grade' => '',
                         'Remarks' => ''
@@ -930,14 +957,14 @@ class ExamResultController extends Controller
                 ]);
 
                 if ($moduleRegistrations->count() > 0) {
-                    $students = $moduleRegistrations->map(function($reg) use ($course, $module, $intake, $semester, $location) {
+                    $students = $moduleRegistrations->map(function($reg) use ($course, $module, $intake, $location, $semesterDisplayValue) {
                         return [
                             'Student Name' => $reg->student->full_name,
                             'Course Name' => $course->course_name,
                             'Module Name' => $module->module_name,
                             'Intake' => $intake->intake_no ?? $intake->batch ?? '2025-August',
                             'Location' => $location,
-                            'Semester' => $semester->name,
+                            'Semester' => $semesterDisplayValue,
                             'Marks' => '',
                             'Grade' => '',
                             'Remarks' => ''
@@ -957,14 +984,14 @@ class ExamResultController extends Controller
                         'student_ids' => $courseRegistrations->pluck('student_id')->toArray()
                     ]);
 
-                    $students = $courseRegistrations->map(function($reg) use ($course, $module, $intake, $semester, $location) {
+                    $students = $courseRegistrations->map(function($reg) use ($course, $module, $intake, $location, $semesterDisplayValue) {
                         return [
                             'Student Name' => $reg->student->full_name,
                             'Course Name' => $course->course_name,
                             'Module Name' => $module->module_name,
                             'Intake' => $intake->intake_no ?? $intake->batch ?? '2025-August',
                             'Location' => $location,
-                            'Semester' => $semester->name,
+                            'Semester' => $semesterDisplayValue,
                             'Marks' => '',
                             'Grade' => '',
                             'Remarks' => ''
