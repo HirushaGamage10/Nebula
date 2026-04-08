@@ -6,6 +6,13 @@ use Illuminate\Http\Request;
 use App\Models\Course;
 use App\Models\PaymentPlan;
 use App\Models\Intake;
+use App\Models\CourseRegistration;
+use App\Models\StudentPaymentPlan;
+use App\Models\PaymentInstallment;
+use App\Models\PaymentPlanDiscount;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class PaymentPlanController extends Controller
 {
@@ -91,7 +98,6 @@ class PaymentPlanController extends Controller
             'installments' => 'nullable',
         ]);
 
-        // ✅ Step 1: Prevent duplicate Payment Plan
         $exists = PaymentPlan::where('location', $validated['location'])
             ->where('course_id', $validated['course'])
             ->where('intake_id', $validated['intake'])
@@ -103,7 +109,6 @@ class PaymentPlanController extends Controller
                 ->with('error', 'A payment plan already exists for this Location, Course, and Intake.');
         }
 
-        // ✅ Step 2: Handle installments logic as before
         $installments = $request->input('installments');
         if (is_string($installments)) {
             $installments = json_decode($installments, true);
@@ -113,28 +118,40 @@ class PaymentPlanController extends Controller
             $this->validateInstallmentAmounts($installments, $validated['localFee'], $validated['internationalFee']);
         }
 
-        // ✅ Step 3: Save payment plan
-        PaymentPlan::create([
-            'location' => $validated['location'],
-            'course_id' => $validated['course'],
-            'intake_id' => $validated['intake'],
-            'registration_fee' => $validated['registrationFee'],
-            'local_fee' => $validated['localFee'],
-            'international_fee' => $validated['internationalFee'],
-            'international_currency' => $validated['currency'],
-            'sscl_tax' => $validated['ssclTax'],
-            'bank_charges' => $validated['bankCharges'] ?? null,
-            'apply_discount' => $validated['applyDiscount'] === 'yes',
-            'discount' => $validated['fullPaymentDiscount'] ?? null,
-            'installment_plan' => $request->input('franchisePayment') === 'yes',
-            'installments' => $installments ? json_encode($installments) : null,
-        ]);
+        $syncSummary = DB::transaction(function () use ($validated, $request, $installments) {
+            $plan = PaymentPlan::create([
+                'location' => $validated['location'],
+                'course_id' => $validated['course'],
+                'intake_id' => $validated['intake'],
+                'registration_fee' => $validated['registrationFee'],
+                'local_fee' => $validated['localFee'],
+                'international_fee' => $validated['internationalFee'],
+                'international_currency' => $validated['currency'],
+                'sscl_tax' => $validated['ssclTax'],
+                'bank_charges' => $validated['bankCharges'] ?? null,
+                'apply_discount' => $validated['applyDiscount'] === 'yes',
+                'discount' => $validated['fullPaymentDiscount'] ?? null,
+                'installment_plan' => $request->input('franchisePayment') === 'yes',
+                'installments' => $installments ?: null,
+            ]);
 
-        return redirect()->back()->with('success', 'Payment plan created successfully!');
+            return $this->syncStudentsForIntakePlan($plan);
+        });
+
+        $syncedPlans = ($syncSummary['plans_created'] ?? 0) + ($syncSummary['plans_updated'] ?? 0);
+
+        return redirect()->back()->with(
+            'success',
+            "Payment plan created successfully! Synced {$syncedPlans} student payment plan(s)."
+        );
 
     } catch (\Illuminate\Validation\ValidationException $e) {
         return redirect()->back()->withErrors($e->errors())->withInput();
     } catch (\Exception $e) {
+        Log::error('PaymentPlan store failed: ' . $e->getMessage(), [
+            'trace' => $e->getTraceAsString()
+        ]);
+
         return redirect()->back()
             ->with('error', 'An error occurred while creating the payment plan. Please try again.')
             ->withInput();
@@ -164,7 +181,6 @@ public function update(Request $request, $id)
     try {
         $plan = PaymentPlan::findOrFail($id);
 
-        // Validate input
         $request->validate([
             'location'               => 'required|string',
             'course_id'              => 'required|integer',
@@ -181,43 +197,44 @@ public function update(Request $request, $id)
             'installments'           => 'nullable|array',
         ]);
 
-        // Assign values
-        $plan->location               = $request->location;
-        $plan->course_id              = $request->course_id;
-        $plan->intake_id              = $request->intake_id;
-        $plan->registration_fee       = $request->registration_fee;
-        $plan->local_fee              = $request->local_fee;
-        $plan->international_fee      = $request->international_fee;
-        $plan->international_currency = $request->international_currency;
-        $plan->sscl_tax               = $request->sscl_tax;
-        $plan->bank_charges           = $request->bank_charges;
-        $plan->apply_discount         = $request->apply_discount ? 1 : 0;
-        $plan->discount               = $request->discount;
-        $plan->installment_plan       = $request->installment_plan ? 1 : 0;
+        $syncSummary = DB::transaction(function () use ($request, $plan) {
+            $plan->location               = $request->location;
+            $plan->course_id              = $request->course_id;
+            $plan->intake_id              = $request->intake_id;
+            $plan->registration_fee       = $request->registration_fee;
+            $plan->local_fee              = $request->local_fee;
+            $plan->international_fee      = $request->international_fee;
+            $plan->international_currency = $request->international_currency;
+            $plan->sscl_tax               = $request->sscl_tax;
+            $plan->bank_charges           = $request->bank_charges;
+            $plan->apply_discount         = $request->apply_discount ? 1 : 0;
+            $plan->discount               = $request->discount;
+            $plan->installment_plan       = $request->installment_plan ? 1 : 0;
 
-        // Build installments
-        $installments = [];
-        if ($request->has('installments')) {
-            foreach ($request->installments as $i => $inst) {
-                $installments[] = [
-                    'installment_number'   => $i + 1,
-                    'due_date'             => $inst['due_date'] ?? null,
-                    'local_amount'         => (float) ($inst['local_amount'] ?? 0),
-                    'international_amount' => (float) ($inst['international_amount'] ?? 0),
-                    'apply_tax'            => isset($inst['apply_tax']),
-                ];
+            $installments = [];
+            if ($request->has('installments')) {
+                foreach ($request->installments as $i => $inst) {
+                    $installments[] = [
+                        'installment_number'   => $i + 1,
+                        'due_date'             => $inst['due_date'] ?? null,
+                        'local_amount'         => (float) ($inst['local_amount'] ?? 0),
+                        'international_amount' => (float) ($inst['international_amount'] ?? 0),
+                        'apply_tax'            => isset($inst['apply_tax']),
+                    ];
+                }
             }
-        }
 
-        // Let Laravel cast array → JSON
-        $plan->installments = $installments;
+            $plan->installments = $installments;
+            $plan->save();
 
-        // Save to DB
-        $plan->save();
+            return $this->syncStudentsForIntakePlan($plan);
+        });
+
+        $syncedPlans = ($syncSummary['plans_created'] ?? 0) + ($syncSummary['plans_updated'] ?? 0);
 
         return redirect()
             ->route('payment.plan.index')
-            ->with('success', 'Payment plan updated successfully.');
+            ->with('success', "Payment plan updated successfully. Synced {$syncedPlans} student payment plan(s).");
 
     } catch (\Illuminate\Validation\ValidationException $e) {
         return redirect()
@@ -226,7 +243,7 @@ public function update(Request $request, $id)
             ->withInput();
 
     } catch (\Exception $e) {
-        \Log::error('PaymentPlan update failed: '.$e->getMessage(), [
+        Log::error('PaymentPlan update failed: ' . $e->getMessage(), [
             'trace' => $e->getTraceAsString()
         ]);
 
@@ -238,6 +255,280 @@ public function update(Request $request, $id)
 }
 
 
+
+    /**
+     * Create or refresh student payment plans for the students currently registered in the intake.
+     */
+    private function syncStudentsForIntakePlan(PaymentPlan $templatePlan): array
+    {
+        $registrations = CourseRegistration::query()
+            ->where('course_id', $templatePlan->course_id)
+            ->where('intake_id', $templatePlan->intake_id)
+            ->when(!empty($templatePlan->location), function ($query) use ($templatePlan) {
+                $query->where('location', $templatePlan->location);
+            })
+            ->whereIn('status', ['Registered', 'registered'])
+            ->get(['id', 'student_id', 'course_id']);
+
+        $summary = [
+            'registrations_found' => $registrations->count(),
+            'plans_created' => 0,
+            'plans_updated' => 0,
+            'installments_synced' => 0,
+        ];
+
+        foreach ($registrations as $registration) {
+            $studentPlan = StudentPaymentPlan::where('student_id', $registration->student_id)
+                ->where('course_id', $registration->course_id)
+                ->where('status', '!=', 'archived')
+                ->orderByDesc('id')
+                ->first();
+
+            $isNew = !$studentPlan;
+
+            if (!$studentPlan) {
+                $studentPlan = new StudentPaymentPlan([
+                    'student_id' => $registration->student_id,
+                    'course_id' => $registration->course_id,
+                ]);
+            }
+
+            $computed = $this->buildStudentPlanFromIntake($templatePlan, $studentPlan);
+
+            $studentPlan->fill($computed['attributes']);
+            $studentPlan->status = $studentPlan->status ?: 'active';
+            $studentPlan->save();
+
+            $summary[$isNew ? 'plans_created' : 'plans_updated']++;
+            $summary['installments_synced'] += $this->syncPlanInstallments($studentPlan, $computed['installments']);
+
+            if (Schema::hasColumn('course_registration', 'payment_plan_id')) {
+                DB::table('course_registration')
+                    ->where('id', $registration->id)
+                    ->update([
+                        'payment_plan_id' => $studentPlan->id,
+                        'updated_at' => now(),
+                    ]);
+            }
+        }
+
+        Log::info('Synced intake payment plan to student payment plans', [
+            'payment_plan_id' => $templatePlan->id,
+            'course_id' => $templatePlan->course_id,
+            'intake_id' => $templatePlan->intake_id,
+            'summary' => $summary,
+        ]);
+
+        return $summary;
+    }
+
+    private function buildStudentPlanFromIntake(PaymentPlan $templatePlan, ?StudentPaymentPlan $existingPlan = null): array
+    {
+        $registrationFee = round((float) ($templatePlan->registration_fee ?? 0), 2);
+        $localFee = round((float) ($templatePlan->local_fee ?? 0), 2);
+        $totalAmount = round($registrationFee + $localFee, 2);
+
+        $discountSummary = $this->getStudentDiscountSummary($templatePlan, $existingPlan, $registrationFee, $totalAmount);
+        $rows = $this->getTemplateInstallmentRows($templatePlan, $localFee);
+
+        $lastIndex = count($rows) - 1;
+        $discountedBases = array_map(function ($row) {
+            return round((float) ($row['base_amount'] ?? 0), 2);
+        }, $rows);
+
+        $normalDiscountApplied = 0.0;
+        if ($lastIndex >= 0) {
+            $normalDiscountApplied = min($discountSummary['normal_discount_total'], $discountedBases[$lastIndex]);
+            $discountedBases[$lastIndex] = round($discountedBases[$lastIndex] - $normalDiscountApplied, 2);
+        }
+
+        $registrationDiscountApplied = 0.0;
+        if (!empty($discountedBases)) {
+            $registrationDiscountApplied = min($discountSummary['registration_discount_excess'], $discountedBases[0]);
+            $discountedBases[0] = round($discountedBases[0] - $registrationDiscountApplied, 2);
+        }
+
+        $sumAfterDiscounts = round(array_sum($discountedBases), 2);
+        $sltLoanApplied = ($existingPlan?->slt_loan_applied ?? 'no') === 'yes' ? 'yes' : 'no';
+        $sltLoanAmount = $sltLoanApplied === 'yes' ? round((float) ($existingPlan?->slt_loan_amount ?? 0), 2) : 0.0;
+        $sltLoanAmount = min($sltLoanAmount, $sumAfterDiscounts);
+        $targetFinalTotal = round($sumAfterDiscounts - $sltLoanAmount, 2);
+
+        $installments = [];
+        $runningTotal = 0.0;
+
+        foreach ($rows as $index => $row) {
+            $discountedBase = $discountedBases[$index] ?? 0.0;
+            $isLast = $index === $lastIndex;
+
+            if ($isLast) {
+                $finalAmount = round($targetFinalTotal - $runningTotal, 2);
+            } else {
+                $finalAmount = $sumAfterDiscounts > 0
+                    ? round(($discountedBase / $sumAfterDiscounts) * $targetFinalTotal, 2)
+                    : 0.0;
+                $runningTotal += $finalAmount;
+            }
+
+            $loanShare = round($discountedBase - $finalAmount, 2);
+
+            $installments[] = [
+                'installment_number' => (int) ($row['installment_number'] ?? ($index + 1)),
+                'due_date' => $row['due_date'] ?? null,
+                'status' => $row['status'] ?? 'pending',
+                'base_amount' => round((float) ($row['base_amount'] ?? 0), 2),
+                'amount' => max(0, $finalAmount),
+                'discount_amount' => $isLast ? round($normalDiscountApplied, 2) : 0.0,
+                'discount_note' => $isLast && $normalDiscountApplied > 0 ? 'Normal Discounts Applied' : null,
+                'slt_loan_amount' => max(0, $loanShare),
+                'registration_fee_discount_applied' => $index === 0 ? round($registrationDiscountApplied, 2) : 0.0,
+                'registration_fee_discount_note' => $index === 0 && $registrationDiscountApplied > 0 ? 'Reg. Fee Excess' : null,
+                'final_amount' => max(0, $finalAmount),
+            ];
+        }
+
+        return [
+            'attributes' => [
+                'payment_plan_type' => $templatePlan->installment_plan ? 'installments' : 'full',
+                'slt_loan_applied' => $sltLoanApplied,
+                'slt_loan_amount' => $sltLoanAmount,
+                'total_amount' => $totalAmount,
+                'final_amount' => round(array_sum(array_column($installments, 'final_amount')), 2),
+                'remaining_registration_discount' => $discountSummary['remaining_registration_discount'],
+                'status' => $existingPlan?->status ?? 'active',
+            ],
+            'installments' => $installments,
+        ];
+    }
+
+    private function getStudentDiscountSummary(PaymentPlan $templatePlan, ?StudentPaymentPlan $studentPlan, float $registrationFee, float $totalFeeForDiscount): array
+    {
+        $normalPercentage = $templatePlan->apply_discount ? (float) ($templatePlan->discount ?? 0) : 0.0;
+        $normalFixed = 0.0;
+        $registrationDiscountAmount = 0.0;
+
+        if ($studentPlan && $studentPlan->exists) {
+            $discountRows = PaymentPlanDiscount::with('discount')
+                ->where('payment_plan_id', $studentPlan->id)
+                ->get();
+
+            foreach ($discountRows as $row) {
+                $category = $row->discount->discount_category ?? 'local_course_fee';
+                $type = strtolower((string) ($row->discount_type ?? ''));
+                $value = (float) ($row->discount_value ?? 0);
+
+                if ($category === 'registration_fee') {
+                    $registrationDiscountAmount += $type === 'percentage'
+                        ? ($registrationFee * ($value / 100))
+                        : $value;
+                } else {
+                    if ($type === 'percentage') {
+                        $normalPercentage += $value;
+                    } elseif ($type === 'amount') {
+                        $normalFixed += $value;
+                    }
+                }
+            }
+        }
+
+        $normalDiscountTotal = (($totalFeeForDiscount * $normalPercentage) / 100) + $normalFixed;
+        $registrationDiscountExcess = max(0, $registrationDiscountAmount - $registrationFee);
+        $existingRemaining = $studentPlan && $studentPlan->exists
+            ? (float) ($studentPlan->remaining_registration_discount ?? 0)
+            : 0.0;
+        $remainingRegistrationDiscount = $existingRemaining > 0
+            ? min($existingRemaining, $registrationDiscountExcess > 0 ? round($registrationDiscountExcess, 2) : $existingRemaining)
+            : round($registrationDiscountExcess, 2);
+
+        return [
+            'normal_discount_total' => round($normalDiscountTotal, 2),
+            'registration_discount_excess' => round($registrationDiscountExcess, 2),
+            'remaining_registration_discount' => $remainingRegistrationDiscount,
+        ];
+    }
+
+    private function getTemplateInstallmentRows(PaymentPlan $templatePlan, float $localFee): array
+    {
+        $rows = [];
+        $templateRows = is_array($templatePlan->installments)
+            ? $templatePlan->installments
+            : (json_decode($templatePlan->installments ?? '[]', true) ?: []);
+
+        foreach ($templateRows as $index => $row) {
+            $baseAmount = round((float) ($row['local_amount'] ?? $row['amount'] ?? 0), 2);
+
+            if ($baseAmount <= 0) {
+                continue;
+            }
+
+            $rows[] = [
+                'installment_number' => (int) ($row['installment_number'] ?? ($index + 1)),
+                'due_date' => $row['due_date'] ?? null,
+                'base_amount' => $baseAmount,
+                'status' => 'pending',
+            ];
+        }
+
+        if (empty($rows)) {
+            $defaultDueDate = $templatePlan->intake && $templatePlan->intake->start_date
+                ? date('Y-m-d', strtotime($templatePlan->intake->start_date))
+                : now()->addDays(7)->toDateString();
+
+            $rows[] = [
+                'installment_number' => 1,
+                'due_date' => $defaultDueDate,
+                'base_amount' => $localFee,
+                'status' => 'pending',
+            ];
+        }
+
+        return $rows;
+    }
+
+    private function syncPlanInstallments(StudentPaymentPlan $studentPlan, array $installments): int
+    {
+        $seenNumbers = [];
+
+        foreach ($installments as $installment) {
+            $seenNumbers[] = (int) $installment['installment_number'];
+
+            $existing = PaymentInstallment::where('payment_plan_id', $studentPlan->id)
+                ->where('installment_number', $installment['installment_number'])
+                ->first();
+
+            PaymentInstallment::updateOrCreate(
+                [
+                    'payment_plan_id' => $studentPlan->id,
+                    'installment_number' => $installment['installment_number'],
+                ],
+                [
+                    'due_date' => $installment['due_date'],
+                    'amount' => $installment['amount'],
+                    'base_amount' => $installment['base_amount'],
+                    'discount_amount' => $installment['discount_amount'],
+                    'discount_note' => $installment['discount_note'],
+                    'slt_loan_amount' => $installment['slt_loan_amount'],
+                    'registration_fee_discount_applied' => $installment['registration_fee_discount_applied'],
+                    'registration_fee_discount_note' => $installment['registration_fee_discount_note'],
+                    'final_amount' => $installment['final_amount'],
+                    'installment_type' => 'course_fee',
+                    'status' => $existing?->status ?? $installment['status'],
+                    'paid_date' => $existing?->paid_date,
+                    'approved_late_fee' => $existing?->approved_late_fee ?? 0,
+                    'calculated_late_fee' => $existing?->calculated_late_fee ?? 0,
+                ]
+            );
+        }
+
+        if (!empty($seenNumbers)) {
+            PaymentInstallment::where('payment_plan_id', $studentPlan->id)
+                ->whereNotIn('installment_number', $seenNumbers)
+                ->where('status', '!=', 'paid')
+                ->delete();
+        }
+
+        return count($seenNumbers);
+    }
 
     /**
      * Validate that the sum of installment amounts matches the course fees
