@@ -445,6 +445,7 @@ public function checkPaymentStatus(Request $request)
             $oldIntakeId = $registration->intake_id;
             $oldCourseId = $registration->course_id;
             $studentId = $registration->student_id;
+            $newLocation = $newIntake->location ?? ($newIntake->course->location ?? $registration->location);
             $isIntakeOnlyChange = (int) $newIntake->course_id === (int) $oldCourseId;
 
             Log::info('Course change details', [
@@ -453,6 +454,7 @@ public function checkPaymentStatus(Request $request)
                 'old_intake_id' => $oldIntakeId,
                 'new_course_id' => $newIntake->course_id,
                 'new_intake_id' => $newIntake->intake_id,
+                'new_location' => $newLocation,
                 'change_type' => $isIntakeOnlyChange ? 'intake_only' : 'course_and_intake'
             ]);
 
@@ -467,15 +469,27 @@ public function checkPaymentStatus(Request $request)
             // Process payment records
             $paymentProcessResult = $this->processPaymentRecords($studentId, $oldCourseId, $registration->id, $oldIntakeId);
 
-            // Update course registration
+            // Update the main course registration
             $registration->course_id = $newIntake->course_id;
             $registration->intake_id = $newIntake->intake_id;
+            $registration->location = $newLocation;
             $registration->course_start_date = $newIntake->start_date;
             $registration->course_registration_id = $request->new_course_registration_id;
             $registration->updated_at = now();
             $registration->save();
 
-            Log::info('Course registration updated successfully');
+            // Keep related student records aligned with the newly selected course/intake
+            $syncResults = $this->syncRelatedStudentRecords(
+                $studentId,
+                $oldCourseId,
+                $oldIntakeId,
+                $newIntake,
+                $newLocation
+            );
+
+            Log::info('Course registration updated successfully', [
+                'sync_results' => $syncResults
+            ]);
 
             // Log the course change
             $logId = $this->logCourseChange(
@@ -524,6 +538,76 @@ public function checkPaymentStatus(Request $request)
                 'message' => 'Error changing course: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Sync related student records so intake/course listings reflect the new assignment.
+     */
+    private function syncRelatedStudentRecords($studentId, $oldCourseId, $oldIntakeId, Intake $newIntake, $newLocation = null)
+    {
+        $summary = [];
+        $newCourseId = (int) $newIntake->course_id;
+        $newIntakeId = (int) $newIntake->intake_id;
+        $newLocation = $newLocation ?? ($newIntake->location ?? optional($newIntake->course)->location);
+
+        $tablesToSync = [
+            'semester_registrations',
+            'module_management',
+            'student_lists',
+            'course_badges',
+        ];
+
+        foreach ($tablesToSync as $table) {
+            if (!Schema::hasTable($table) || !Schema::hasColumn($table, 'student_id')) {
+                continue;
+            }
+
+            $query = DB::table($table)
+                ->where('student_id', $studentId);
+
+            if (Schema::hasColumn($table, 'course_id')) {
+                $query->where('course_id', $oldCourseId);
+            }
+
+            if (Schema::hasColumn($table, 'intake_id')) {
+                $query->where('intake_id', $oldIntakeId);
+            }
+
+            $payload = [];
+
+            if (Schema::hasColumn($table, 'course_id')) {
+                $payload['course_id'] = $newCourseId;
+            }
+
+            if (Schema::hasColumn($table, 'intake_id')) {
+                $payload['intake_id'] = $newIntakeId;
+            }
+
+            if ($newLocation && Schema::hasColumn($table, 'location')) {
+                $payload['location'] = $newLocation;
+            }
+
+            if (Schema::hasColumn($table, 'updated_at')) {
+                $payload['updated_at'] = now();
+            }
+
+            if (empty($payload)) {
+                continue;
+            }
+
+            $summary[$table] = $query->update($payload);
+        }
+
+        Log::info('Synced related records after course/intake change', [
+            'student_id' => $studentId,
+            'old_course_id' => $oldCourseId,
+            'old_intake_id' => $oldIntakeId,
+            'new_course_id' => $newCourseId,
+            'new_intake_id' => $newIntakeId,
+            'summary' => $summary,
+        ]);
+
+        return $summary;
     }
 
     /**
