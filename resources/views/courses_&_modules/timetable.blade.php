@@ -673,8 +673,9 @@
 
                             if (data.semesters && data.semesters.length > 0) {
                                 $.each(data.semesters, function (index, semester) {
+                                    const label = semester.display_name || semester.semester_name || semester.name;
                                     // include start/end dates in option attributes so we can auto-fill date inputs
-                                    $('#degree_semester').append('<option value="' + semester.id + '" data-start="' + (semester.start_date || '') + '" data-end="' + (semester.end_date || '') + '">' + semester.name + '</option>');
+                                    $('#degree_semester').append('<option value="' + semester.id + '" data-start="' + (semester.start_date || '') + '" data-end="' + (semester.end_date || '') + '">' + label + '</option>');
                                 });
                                 $('#degree_semester').prop('disabled', false);
                             } else {
@@ -703,7 +704,8 @@
                             $('#certificate_semester').append('<option selected disabled value="">Select Semester</option>');
                             if (data.semesters && data.semesters.length > 0) {
                                 $.each(data.semesters, function (index, semester) {
-                                    $('#certificate_semester').append('<option value="' + semester.id + '" data-start="' + (semester.start_date || '') + '" data-end="' + (semester.end_date || '') + '">' + semester.name + '</option>');
+                                    const label = semester.display_name || semester.semester_name || semester.name;
+                                    $('#certificate_semester').append('<option value="' + semester.id + '" data-start="' + (semester.start_date || '') + '" data-end="' + (semester.end_date || '') + '">' + label + '</option>');
                                 });
                                 $('#certificate_semester').prop('disabled', false);
                             } else {

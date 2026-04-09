@@ -894,10 +894,34 @@ class TimetableController extends Controller
             $courseId = $request->input('course_id');
             $intakeId = $request->input('intake_id');
 
-            // Fetch the semesters based on course and intake
+            $course = Course::find($courseId);
+            if (!$course) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Course not found.'
+                ], 404);
+            }
+
+            // Fetch the semesters based on course and intake and return formatted labels.
             $semesters = Semester::where('course_id', $courseId)
                 ->where('intake_id', $intakeId)
-                ->get();
+                ->select('id', 'name', 'start_date', 'end_date', 'course_id', 'intake_id')
+                ->orderBy('start_date')
+                ->orderBy('id')
+                ->get()
+                ->values()
+                ->map(function ($semester, $index) use ($course) {
+                    $label = 'Semester ' . $this->formatSemesterDisplayValue($course, $semester->name, $index + 1);
+
+                    return [
+                        'id' => $semester->id,
+                        'name' => $semester->name,
+                        'semester_name' => $label,
+                        'display_name' => $label,
+                        'start_date' => $semester->start_date,
+                        'end_date' => $semester->end_date,
+                    ];
+                });
 
             return response()->json([
                 'success' => true,
@@ -906,6 +930,53 @@ class TimetableController extends Controller
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()]);
         }
+    }
+
+    private function formatSemesterDisplayValue(Course $course, $rawName, ?int $fallbackNumber = null): string
+    {
+        $rawName = trim((string) $rawName);
+        $fallbackNumber = $fallbackNumber && $fallbackNumber > 0 ? $fallbackNumber : 1;
+        $maxSemesters = (int) ($course->no_of_semesters ?? 0);
+        $numericUpperBound = $maxSemesters > 0 ? $maxSemesters : 12;
+
+        if ($course->semester_format === 'alphabetical') {
+            if (preg_match('/^[A-Za-z]$/', $rawName)) {
+                return strtoupper($rawName);
+            }
+
+            if (is_numeric($rawName)) {
+                $numeric = (int) $rawName;
+                if ($numeric < 1 || $numeric > $numericUpperBound || $numeric > 26) {
+                    $numeric = $fallbackNumber;
+                }
+
+                return $numeric >= 1 && $numeric <= 26 ? chr(64 + $numeric) : (string) $numeric;
+            }
+
+            return $fallbackNumber >= 1 && $fallbackNumber <= 26
+                ? chr(64 + $fallbackNumber)
+                : (string) $fallbackNumber;
+        }
+
+        if (is_numeric($rawName)) {
+            $numeric = (int) $rawName;
+            if ($numeric < 1 || $numeric > $numericUpperBound) {
+                $numeric = $fallbackNumber;
+            }
+
+            return (string) $numeric;
+        }
+
+        if (preg_match('/^[A-Za-z]$/', $rawName)) {
+            $numeric = ord(strtoupper($rawName)) - 64;
+            if ($numeric < 1 || $numeric > $numericUpperBound) {
+                $numeric = $fallbackNumber;
+            }
+
+            return (string) $numeric;
+        }
+
+        return (string) $fallbackNumber;
     }
 
     public function getAvailableSubjects(Request $request)
