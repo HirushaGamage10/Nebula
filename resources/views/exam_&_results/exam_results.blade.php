@@ -1057,19 +1057,24 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
             body: JSON.stringify(payload)
         })
-        .then(response => {
+        .then(async response => {
+            const data = await response.json().catch(() => null);
+
             console.log('Response status:', response.status);
             console.log('Response headers:', response.headers);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            return response.json();
-        })
-        .then(data => {
             console.log('Response data:', data);
             
+            if (!response.ok) {
+                let errorMsg = data?.message || `HTTP error! status: ${response.status}`;
+                if (data?.errors) {
+                    errorMsg = Object.values(data.errors).flat().join('<br>');
+                }
+                throw new Error(errorMsg);
+            }
+            
+            return data;
+        })
+        .then(data => {
             if (data.success) {
                 showToast('Success', data.message, '#ccffcc');
                 setTimeout(function() {
@@ -1095,7 +1100,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Save error:', error);
             console.error('Error details:', error.message);
-            showToast('Error', 'An error occurred while saving results. Please check the console for details.', 'bg-danger');
+            showToast('Error', error.message || 'An error occurred while saving results.', 'bg-danger');
         })
         .finally(() => showSpinner(false));
     }

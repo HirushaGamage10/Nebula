@@ -139,8 +139,17 @@ class ExamResultController extends Controller
             
             \Log::info('Validation passed, validated data:', $validatedData);
 
-            // Get the semester name (only for degree/diploma)
+            $course = Course::find($validatedData['course_id']);
+            if (!$course) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Course not found.'
+                ], 404);
+            }
+
+            // Resolve the semester value that should be stored in exam_results.
             $semesterName = null;
+            $semesterLookupValues = [];
             if (!$isCertificate) {
                 $semester = \App\Models\Semester::find($validatedData['semester']);
                 if (!$semester) {
@@ -149,7 +158,16 @@ class ExamResultController extends Controller
                         'message' => 'Semester not found.'
                     ], 404);
                 }
-                $semesterName = $semester->name;
+
+                $semesterName = $this->getSemesterStorageValue($course, $semester);
+                $semesterLookupValues = $this->getSemesterLookupValues($course, $semester);
+
+                \Log::info('Resolved exam result semester value', [
+                    'semester_id' => $semester->id,
+                    'raw_name' => $semester->name,
+                    'stored_value' => $semesterName,
+                    'lookup_values' => $semesterLookupValues,
+                ]);
             }
 
             DB::beginTransaction();
@@ -170,7 +188,7 @@ class ExamResultController extends Controller
                 if ($isCertificate) {
                     $existingQuery->whereNull('semester')->whereNull('module_id');
                 } else {
-                    $existingQuery->where('semester', $semesterName)
+                    $existingQuery->whereIn('semester', $semesterLookupValues)
                                   ->where('module_id', $validatedData['module_id']);
                 }
                 
@@ -452,6 +470,61 @@ class ExamResultController extends Controller
         return (string) $fallbackNumber;
     }
 
+    private function getSemesterSequenceNumber(int $courseId, int $intakeId, int $semesterId): int
+    {
+        $semesterSequence = \App\Models\Semester::where('course_id', $courseId)
+            ->where('intake_id', $intakeId)
+            ->orderBy('start_date')
+            ->orderBy('id')
+            ->pluck('id')
+            ->values();
+
+        $semesterIndex = $semesterSequence->search($semesterId);
+
+        return $semesterIndex === false ? 1 : ($semesterIndex + 1);
+    }
+
+    private function getSemesterStorageValue(Course $course, \App\Models\Semester $semester, ?int $fallbackNumber = null): string
+    {
+        $rawName = trim((string) $semester->name);
+        $fallbackNumber = $fallbackNumber && $fallbackNumber > 0
+            ? $fallbackNumber
+            : $this->getSemesterSequenceNumber($course->course_id, $semester->intake_id, $semester->id);
+        $maxSemesters = (int) ($course->no_of_semesters ?? 0);
+        $numericUpperBound = $maxSemesters > 0 ? min($maxSemesters, 12) : 12;
+
+        if (is_numeric($rawName)) {
+            $numeric = (int) $rawName;
+            if ($numeric >= 1 && $numeric <= $numericUpperBound) {
+                return (string) $numeric;
+            }
+        }
+
+        if (preg_match('/^[A-Za-z]$/', $rawName)) {
+            $numeric = ord(strtoupper($rawName)) - 64;
+            if ($numeric >= 1 && $numeric <= min($numericUpperBound, 26)) {
+                return (string) $numeric;
+            }
+        }
+
+        return (string) $fallbackNumber;
+    }
+
+    private function getSemesterLookupValues(Course $course, \App\Models\Semester $semester): array
+    {
+        $fallbackNumber = $this->getSemesterSequenceNumber($course->course_id, $semester->intake_id, $semester->id);
+
+        return collect([
+            $this->getSemesterStorageValue($course, $semester, $fallbackNumber),
+            trim((string) $semester->name),
+            $this->formatSemesterDisplayValue($course, $semester->name, $fallbackNumber),
+        ])
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     public function getStudentsForExamResult(Request $request)
     {
         // Check if this is a certificate course (no semester or module required)
@@ -542,6 +615,13 @@ class ExamResultController extends Controller
             return response()->json(['error' => 'Semester not found.'], 404);
         }
 
+        $course = Course::find($courseId);
+        if (!$course) {
+            return response()->json(['error' => 'Course not found.'], 404);
+        }
+
+        $semesterLookupValues = $this->getSemesterLookupValues($course, $semester);
+
         // Check if this is a core module (assigned to semester) or elective module
         $isCoreModule = \DB::table('semester_module')
             ->where('semester_id', $semesterId)
@@ -552,7 +632,7 @@ class ExamResultController extends Controller
         $existingResults = ExamResult::where('course_id', $courseId)
             ->where('intake_id', $intakeId)
             ->where('location', $location)
-            ->where('semester', $semester->name)
+            ->whereIn('semester', $semesterLookupValues)
             ->where('module_id', $moduleId)
             ->exists();
 
@@ -565,7 +645,7 @@ class ExamResultController extends Controller
                 ->where('status', 'registered')
                 ->with('student')
                 ->get()
-                ->map(function($reg) use ($request, $existingResults, $semester, $courseId, $intakeId, $location) {
+                ->map(function($reg) use ($request, $existingResults, $semesterLookupValues, $courseId, $intakeId, $location) {
                     // Get the course registration ID from CourseRegistration table
                     $courseReg = \App\Models\CourseRegistration::where('student_id', $reg->student_id)
                         ->where('course_id', $courseId)
@@ -584,7 +664,7 @@ class ExamResultController extends Controller
                         $existingResult = ExamResult::where('course_id', $request->course_id)
                             ->where('intake_id', $request->intake_id)
                             ->where('location', $request->location)
-                            ->where('semester', $semester->name)
+                            ->whereIn('semester', $semesterLookupValues)
                             ->where('module_id', $request->module_id)
                             ->where('student_id', $reg->student->student_id)
                             ->first();
@@ -612,7 +692,7 @@ class ExamResultController extends Controller
                 ->where('semester', $semester->name)
                 ->with('student')
                 ->get()
-                ->map(function($reg) use ($request, $existingResults, $semester, $courseId, $intakeId, $location) {
+                ->map(function($reg) use ($request, $existingResults, $semesterLookupValues, $courseId, $intakeId, $location) {
                     // Get the course registration ID from CourseRegistration table
                     $courseReg = \App\Models\CourseRegistration::where('student_id', $reg->student_id)
                         ->where('course_id', $courseId)
@@ -631,7 +711,7 @@ class ExamResultController extends Controller
                         $existingResult = ExamResult::where('course_id', $request->course_id)
                             ->where('intake_id', $request->intake_id)
                             ->where('location', $request->location)
-                            ->where('semester', $semester->name)
+                            ->whereIn('semester', $semesterLookupValues)
                             ->where('module_id', $request->module_id)
                             ->where('student_id', $reg->student->student_id)
                             ->first();
@@ -706,7 +786,7 @@ class ExamResultController extends Controller
                 ], 404);
             }
 
-            $resultsQuery->where('semester', $semester->name)
+            $resultsQuery->whereIn('semester', $this->getSemesterLookupValues($course, $semester))
                 ->where('module_id', $validatedDegree['module_id']);
         }
 
