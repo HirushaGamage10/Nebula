@@ -408,39 +408,48 @@ class ExamResultController extends Controller
     private function formatSemesterDisplayValue(Course $course, $rawName, ?int $fallbackNumber = null): string
     {
         $rawName = trim((string) $rawName);
-        $normalized = $rawName;
-        $maxSemesters = (int) ($course->no_of_semesters ?? 0);
         $fallbackNumber = $fallbackNumber && $fallbackNumber > 0 ? $fallbackNumber : 1;
+        $maxSemesters = (int) ($course->no_of_semesters ?? 0);
+        $numericUpperBound = $maxSemesters > 0 ? $maxSemesters : 12;
 
         if ($course->semester_format === 'alphabetical') {
+            if (preg_match('/^[A-Za-z]$/', $rawName)) {
+                return strtoupper($rawName);
+            }
+
             if (is_numeric($rawName)) {
                 $numeric = (int) $rawName;
-                if ($numeric < 1 || ($maxSemesters > 0 && $numeric > $maxSemesters)) {
+                if ($numeric < 1 || $numeric > $numericUpperBound || $numeric > 26) {
                     $numeric = $fallbackNumber;
                 }
-                $normalized = $numeric >= 1 && $numeric <= 26 ? chr(64 + $numeric) : (string) $numeric;
-            } elseif (preg_match('/^[A-Za-z]$/', $rawName)) {
-                $normalized = strtoupper($rawName);
-            } else {
-                $normalized = $fallbackNumber >= 1 && $fallbackNumber <= 26
-                    ? chr(64 + $fallbackNumber)
-                    : (string) $fallbackNumber;
+
+                return $numeric >= 1 && $numeric <= 26 ? chr(64 + $numeric) : (string) $numeric;
             }
-        } else {
-            if (is_numeric($rawName)) {
-                $numeric = (int) $rawName;
-                if ($numeric < 1 || ($maxSemesters > 0 && $numeric > $maxSemesters)) {
-                    $numeric = $fallbackNumber;
-                }
-                $normalized = (string) $numeric;
-            } elseif (preg_match('/^[A-Za-z]$/', $rawName)) {
-                $normalized = (string) max(1, ord(strtoupper($rawName)) - 64);
-            } else {
-                $normalized = (string) $fallbackNumber;
-            }
+
+            return $fallbackNumber >= 1 && $fallbackNumber <= 26
+                ? chr(64 + $fallbackNumber)
+                : (string) $fallbackNumber;
         }
 
-        return $normalized === '' ? (string) $fallbackNumber : $normalized;
+        if (is_numeric($rawName)) {
+            $numeric = (int) $rawName;
+            if ($numeric < 1 || $numeric > $numericUpperBound) {
+                $numeric = $fallbackNumber;
+            }
+
+            return (string) $numeric;
+        }
+
+        if (preg_match('/^[A-Za-z]$/', $rawName)) {
+            $numeric = ord(strtoupper($rawName)) - 64;
+            if ($numeric < 1 || $numeric > $numericUpperBound) {
+                $numeric = $fallbackNumber;
+            }
+
+            return (string) $numeric;
+        }
+
+        return (string) $fallbackNumber;
     }
 
     public function getStudentsForExamResult(Request $request)

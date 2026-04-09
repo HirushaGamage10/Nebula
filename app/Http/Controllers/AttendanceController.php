@@ -116,9 +116,70 @@ class AttendanceController extends Controller
 
         $semesters = \App\Models\Semester::where('course_id', $request->course_id)
             ->where('intake_id', $request->intake_id)
-            ->get(['id as semester_id', 'name as semester_name']);
+            ->orderBy('start_date')
+            ->orderBy('id')
+            ->get(['id', 'name'])
+            ->values()
+            ->map(function ($semester, $index) use ($course) {
+                $displayValue = $this->formatSemesterDisplayValue($course, $semester->name, $index + 1);
+                $label = 'Semester ' . $displayValue;
+
+                return [
+                    'semester_id' => $semester->id,
+                    'semester_name' => $label,
+                    'display_name' => $label,
+                    'name' => $semester->name,
+                ];
+            });
             
         return response()->json(['semesters' => $semesters, 'is_certificate' => false]);
+    }
+
+    private function formatSemesterDisplayValue(Course $course, $rawName, ?int $fallbackNumber = null): string
+    {
+        $rawName = trim((string) $rawName);
+        $fallbackNumber = $fallbackNumber && $fallbackNumber > 0 ? $fallbackNumber : 1;
+        $maxSemesters = (int) ($course->no_of_semesters ?? 0);
+        $numericUpperBound = $maxSemesters > 0 ? $maxSemesters : 12;
+
+        if ($course->semester_format === 'alphabetical') {
+            if (preg_match('/^[A-Za-z]$/', $rawName)) {
+                return strtoupper($rawName);
+            }
+
+            if (is_numeric($rawName)) {
+                $numeric = (int) $rawName;
+                if ($numeric < 1 || $numeric > $numericUpperBound || $numeric > 26) {
+                    $numeric = $fallbackNumber;
+                }
+
+                return $numeric >= 1 && $numeric <= 26 ? chr(64 + $numeric) : (string) $numeric;
+            }
+
+            return $fallbackNumber >= 1 && $fallbackNumber <= 26
+                ? chr(64 + $fallbackNumber)
+                : (string) $fallbackNumber;
+        }
+
+        if (is_numeric($rawName)) {
+            $numeric = (int) $rawName;
+            if ($numeric < 1 || $numeric > $numericUpperBound) {
+                $numeric = $fallbackNumber;
+            }
+
+            return (string) $numeric;
+        }
+
+        if (preg_match('/^[A-Za-z]$/', $rawName)) {
+            $numeric = ord(strtoupper($rawName)) - 64;
+            if ($numeric < 1 || $numeric > $numericUpperBound) {
+                $numeric = $fallbackNumber;
+            }
+
+            return (string) $numeric;
+        }
+
+        return (string) $fallbackNumber;
     }
 
     public function getFilteredModules(Request $request)
@@ -879,10 +940,13 @@ class AttendanceController extends Controller
 
         // Generate filename
         $filename = 'attendance_report_' . date('Y-m-d_H-i-s') . '.xlsx';
+        $semesterLabel = $semester
+            ? 'Semester ' . $this->formatSemesterDisplayValue($course, $semester->name)
+            : 'N/A';
         
         // Return Excel file as download
         return Excel::download(
-            new AttendanceExport($excelData, $location, $course?->course_name ?? 'N/A', $intake?->batch ?? 'N/A', $semester->name, $module?->module_name ?? 'N/A'),
+            new AttendanceExport($excelData, $location, $course?->course_name ?? 'N/A', $intake?->batch ?? 'N/A', $semesterLabel, $module?->module_name ?? 'N/A'),
             $filename
         );
     }
