@@ -2993,6 +2993,10 @@ async function generatePaymentSlip() {
     return showErrorMessage('Cannot generate slip for an already paid installment.');
   }
 
+  if (row.is_payable === false) {
+    return showErrorMessage(row.blocked_reason || 'Please complete the previous installment first.');
+  }
+
   // Payable amount we rendered (backend will recompute/validate anyway)
   const rawAmount     = Number(row.amount || 0);
   const installmentNo = row.installment_number ?? null;
@@ -4720,10 +4724,12 @@ function renderPaymentDetailsTable(rows, paymentType) {
       paid_date:          r.paid_date || null,
       receipt_no:         r.receipt_no || null,
       approved_late_fee:  Number(r.approved_late_fee ?? r.approvedLateFee ?? 0), // ✅ map both cases
-            currency:           r.currency || (paymentType === 'franchise_fee' ? (ccy || 'USD') : 'LKR'),
-            sscl_tax:           Number(r.sscl_tax || 0),
-            bank_charges:       Number(r.bank_charges || 0),
-            apply_tax:          Boolean(r.apply_tax)
+      currency:           r.currency || (paymentType === 'franchise_fee' ? (ccy || 'USD') : 'LKR'),
+      sscl_tax:           Number(r.sscl_tax || 0),
+      bank_charges:       Number(r.bank_charges || 0),
+      apply_tax:          Boolean(r.apply_tax),
+      is_payable:         r.is_payable !== false,
+      blocked_reason:     r.blocked_reason || null
     };
   });
 
@@ -4744,8 +4750,11 @@ function renderPaymentDetailsTable(rows, paymentType) {
   // ✅ Build table rows
   normalized.forEach((p, idx) => {
     const isPaid = p.status && p.status.toLowerCase() === 'paid';
-    const disabled = isPaid ? 'disabled' : '';
-    const rowStyle = isPaid ? 'style="opacity: 0.6; background-color: #f8f9fa;"' : '';
+    const isBlockedByOrder = !isPaid && p.is_payable === false;
+    const disabled = (isPaid || isBlockedByOrder) ? 'disabled' : '';
+    const rowStyle = isPaid
+      ? 'style="opacity: 0.6; background-color: #f8f9fa;"'
+      : (isBlockedByOrder ? 'style="background-color: #fff8e1;"' : '');
     const amountText = `${p.currency} ${money(p.amount)}`;
 
     // LKR column for franchise
@@ -4810,7 +4819,11 @@ function renderPaymentDetailsTable(rows, paymentType) {
       <tr ${rowStyle}>
         <td class="text-center">
           <input type="radio" name="selectedPayment" value="${idx}" ${disabled}>
-          ${isPaid ? '<br><small class="text-danger">Cannot generate new slip</small>' : ''}
+          ${isPaid
+            ? '<br><small class="text-danger">Cannot generate new slip</small>'
+            : (isBlockedByOrder
+                ? `<br><small class="text-warning">${p.blocked_reason || 'Pay the previous installment first.'}</small>`
+                : '')}
         </td>
         <td>${p.installment_number ?? '-'}</td>
         <td>${dstr(p.due_date)}</td>
@@ -4835,6 +4848,13 @@ function renderPaymentDetailsTable(rows, paymentType) {
             syncFranchiseChargeInputsToSelection();
         })
   );
+
+  const firstAvailable = tbody.querySelector('input[name="selectedPayment"]:not(:disabled)');
+  if (firstAvailable) {
+    firstAvailable.checked = true;
+    generateBtn.disabled = false;
+    syncFranchiseChargeInputsToSelection();
+  }
 }
 
 // If user changes FX inputs, recompute the LKR column live

@@ -365,9 +365,41 @@ class PaymentController extends Controller
                 break;
         }
 
+        $nextPayableInstallment = null;
+        if (in_array($request->payment_type, ['course_fee', 'franchise_fee'], true) && !empty($rows)) {
+            $nextPayableInstallment = collect($rows)
+                ->filter(function ($row) {
+                    $amount = (float) ($row['amount'] ?? 0);
+                    $status = strtolower((string) ($row['status'] ?? 'pending'));
+
+                    return $amount > 0 && $status !== 'paid' && !empty($row['installment_number']);
+                })
+                ->sortBy('installment_number')
+                ->pluck('installment_number')
+                ->map(fn ($value) => (int) $value)
+                ->first();
+
+            $rows = collect($rows)
+                ->map(function ($row) use ($nextPayableInstallment) {
+                    $status = strtolower((string) ($row['status'] ?? 'pending'));
+                    $installmentNumber = isset($row['installment_number']) ? (int) $row['installment_number'] : null;
+                    $isPayable = !$installmentNumber || ($status !== 'paid' && ($nextPayableInstallment === null || $installmentNumber === $nextPayableInstallment));
+
+                    $row['is_payable'] = $isPayable;
+                    $row['blocked_reason'] = (!$isPayable && $nextPayableInstallment !== null)
+                        ? "Please complete installment {$nextPayableInstallment} first."
+                        : null;
+
+                    return $row;
+                })
+                ->values()
+                ->all();
+        }
+
         return response()->json([
-            'success'         => true,
-            'payment_details' => $rows,
+            'success'                  => true,
+            'payment_details'          => $rows,
+            'next_payable_installment' => $nextPayableInstallment,
         ]);
 
     } catch (\Throwable $e) {
@@ -1088,6 +1120,107 @@ public function deletePaymentPlan($id)
     }
 }
 
+private function getInstallmentPaymentState(int $studentId, \App\Models\CourseRegistration $registration, string $paymentType): array
+{
+    if (!in_array($paymentType, ['course_fee', 'franchise_fee'], true)) {
+        return ['rows' => [], 'next_installment_number' => null];
+    }
+
+    $planQuery = \App\Models\StudentPaymentPlan::where('student_id', $studentId)
+        ->where('course_id', $registration->course_id);
+
+    $plans = (clone $planQuery)
+        ->where('status', 'active')
+        ->orderByDesc('created_at')
+        ->get();
+
+    if ($plans->isEmpty()) {
+        $plans = $planQuery->orderByDesc('created_at')->get();
+    }
+
+    $rows = collect();
+
+    foreach ($plans as $plan) {
+        $installments = \App\Models\PaymentInstallment::where('payment_plan_id', $plan->id)
+            ->orderBy('installment_number')
+            ->get();
+
+        foreach ($installments as $installment) {
+            if (
+                $paymentType === 'course_fee'
+                && !is_null($installment->international_amount)
+                && (float) $installment->international_amount > 0
+            ) {
+                continue;
+            }
+
+            $amount = $paymentType === 'franchise_fee'
+                ? (float) ($installment->international_amount ?? 0)
+                : (float) ($installment->final_amount ?? $installment->amount ?? 0);
+
+            if ($amount <= 0) {
+                continue;
+            }
+
+            $paymentDetail = \App\Models\PaymentDetail::where('student_id', $studentId)
+                ->where('course_registration_id', $registration->id)
+                ->where('installment_number', $installment->installment_number)
+                ->where('installment_type', $paymentType)
+                ->orderByDesc('id')
+                ->first();
+
+            $status = strtolower((string) ($paymentDetail->status ?? $installment->status ?? 'pending'));
+
+            $rows->push([
+                'installment_number' => (int) $installment->installment_number,
+                'status' => $status,
+                'amount' => $amount,
+            ]);
+        }
+    }
+
+    $rows = $rows->sortBy('installment_number')->unique('installment_number')->values();
+    $nextInstallmentRow = $rows->first(function ($row) {
+        return (float) ($row['amount'] ?? 0) > 0 && ($row['status'] ?? 'pending') !== 'paid';
+    });
+
+    return [
+        'rows' => $rows->all(),
+        'next_installment_number' => $nextInstallmentRow['installment_number'] ?? null,
+    ];
+}
+
+private function enforceInstallmentPaymentOrder(int $studentId, \App\Models\CourseRegistration $registration, string $paymentType, ?int $requestedInstallmentNumber)
+{
+    if (!in_array($paymentType, ['course_fee', 'franchise_fee'], true) || !$requestedInstallmentNumber) {
+        return null;
+    }
+
+    $state = $this->getInstallmentPaymentState($studentId, $registration, $paymentType);
+    $currentRow = collect($state['rows'])->firstWhere('installment_number', (int) $requestedInstallmentNumber);
+
+    if (!$currentRow) {
+        return null;
+    }
+
+    if (($currentRow['status'] ?? 'pending') === 'paid') {
+        return response()->json([
+            'success' => false,
+            'message' => "Installment {$requestedInstallmentNumber} has already been paid."
+        ], 422);
+    }
+
+    $nextInstallmentNumber = $state['next_installment_number'] ?? null;
+    if ($nextInstallmentNumber !== null && (int) $requestedInstallmentNumber !== (int) $nextInstallmentNumber) {
+        return response()->json([
+            'success' => false,
+            'message' => "Please complete installment {$nextInstallmentNumber} before paying installment {$requestedInstallmentNumber}."
+        ], 422);
+    }
+
+    return null;
+}
+
 // Teleshop constants (from Teleshop Payment slip)
 private const TS_PAYMENT_TYPE = 'Miscellaneous';
 private const TS_COST_CENTRE  = '5212';
@@ -1203,6 +1336,15 @@ public function generatePaymentSlip(Request $request)
         $intake      = $registration->intake;
         $paymentType = $request->payment_type;
         $amount      = (float) $request->amount;
+
+        if ($orderResponse = $this->enforceInstallmentPaymentOrder(
+            $student->student_id,
+            $registration,
+            $paymentType,
+            $request->installment_number ? (int) $request->installment_number : null
+        )) {
+            return $orderResponse;
+        }
 
 
         // 🔹 Franchise currency conversion
@@ -1988,6 +2130,21 @@ public function makePayment(Request $request)
         ]);
 
         $payment = PaymentDetail::findOrFail($request->payment_id);
+        $paymentType = $payment->installment_type ?? null;
+
+        if ($payment->installment_number && in_array($paymentType, ['course_fee', 'franchise_fee'], true)) {
+            $registration = $payment->registration;
+            if ($registration) {
+                if ($orderResponse = $this->enforceInstallmentPaymentOrder(
+                    (int) $payment->student_id,
+                    $registration,
+                    $paymentType,
+                    (int) $payment->installment_number
+                )) {
+                    return $orderResponse;
+                }
+            }
+        }
 
         // Decode existing partial payments (JSON field)
         $partials = $payment->partial_payments ?? [];
@@ -2021,13 +2178,20 @@ public function makePayment(Request $request)
             'status'           => $remaining <= 0 ? 'paid' : 'pending',
         ]);
 
-        // If fully paid, mark installment as paid
-        if ($remaining <= 0 && $payment->payment_type === 'course_fee' && $payment->installment_number) {
+        // If fully paid, mark the matching installment as paid.
+        if ($remaining <= 0 && in_array($paymentType, ['course_fee', 'franchise_fee'], true) && $payment->installment_number) {
             $registration = $payment->registration;
             if ($registration) {
                 $plan = \App\Models\StudentPaymentPlan::where('student_id', $payment->student_id)
                     ->where('course_id', $registration->course_id)
+                    ->where('status', 'active')
                     ->first();
+
+                if (!$plan) {
+                    $plan = \App\Models\StudentPaymentPlan::where('student_id', $payment->student_id)
+                        ->where('course_id', $registration->course_id)
+                        ->first();
+                }
 
                 if ($plan) {
                     \App\Models\PaymentInstallment::where('payment_plan_id', $plan->id)
