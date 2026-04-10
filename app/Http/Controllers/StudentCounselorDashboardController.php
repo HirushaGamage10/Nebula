@@ -21,40 +21,108 @@ class StudentCounselorDashboardController extends Controller
     }
 
     // Get overview metrics
-    public function getOverviewMetrics()
+    public function getOverviewMetrics(Request $request)
     {
+        $period = $request->input('period', 'week');
+        $customDate = $request->input('date');
+        $dateRange = $this->getDateRange($period, $customDate);
+        $previousRange = $this->getPreviousDateRange($dateRange['start'], $dateRange['end']);
+
         $totalRegisteredStudents = CourseRegistration::where('status', 'Registered')->count();
         $pendingRegistrations = CourseRegistration::where('status', 'Pending')->count();
         $todayRegistrations = CourseRegistration::whereDate('registration_date', Carbon::today())->count();
         $thisWeekRegistrations = CourseRegistration::whereBetween('registration_date', [
-            Carbon::now()->startOfWeek(),
-            Carbon::now()->endOfWeek()
+            Carbon::now()->startOfWeek()->toDateString(),
+            Carbon::now()->endOfWeek()->toDateString(),
         ])->count();
+
+        $periodRegistrations = CourseRegistration::whereBetween('registration_date', [
+            $dateRange['start']->toDateString(),
+            $dateRange['end']->toDateString(),
+        ])->count();
+
+        $periodPendingRegistrations = CourseRegistration::where('status', 'Pending')
+            ->whereBetween('registration_date', [
+                $dateRange['start']->toDateString(),
+                $dateRange['end']->toDateString(),
+            ])->count();
+
+        $previousPeriodRegistrations = CourseRegistration::whereBetween('registration_date', [
+            $previousRange['start']->toDateString(),
+            $previousRange['end']->toDateString(),
+        ])->count();
+
+        $growthPercentage = 0;
+        if ($previousPeriodRegistrations > 0) {
+            $growthPercentage = round((($periodRegistrations - $previousPeriodRegistrations) / $previousPeriodRegistrations) * 100, 1);
+        } elseif ($periodRegistrations > 0) {
+            $growthPercentage = 100;
+        }
 
         return response()->json([
             'total_registered' => $totalRegisteredStudents,
             'pending_registrations' => $pendingRegistrations,
             'today_registrations' => $todayRegistrations,
-            'week_registrations' => $thisWeekRegistrations
+            'week_registrations' => $thisWeekRegistrations,
+            'period_registrations' => $periodRegistrations,
+            'period_pending_registrations' => $periodPendingRegistrations,
+            'today_growth_percentage' => $growthPercentage,
+            'selected_period' => $period,
         ]);
     }
 
     // Get recent registrations
-    public function getRecentRegistrations()
+    public function getRecentRegistrations(Request $request)
     {
-        $recentRegistrations = CourseRegistration::with(['student', 'course', 'intake'])
-            ->orderBy('registration_date', 'desc')
-            ->take(10)
+        $period = $request->input('period', 'week');
+        $customDate = $request->input('date');
+        $filter = strtolower($request->input('filter', 'all'));
+        $search = trim((string) $request->input('search', ''));
+        $dateRange = $this->getDateRange($period, $customDate);
+
+        $query = CourseRegistration::with(['student', 'course', 'intake'])
+            ->whereBetween('registration_date', [
+                $dateRange['start']->toDateString(),
+                $dateRange['end']->toDateString(),
+            ]);
+
+        if ($filter !== 'all') {
+            $query->where('status', ucfirst($filter));
+        }
+
+        if ($search !== '') {
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery->where('location', 'like', "%{$search}%")
+                    ->orWhere('counselor_name', 'like', "%{$search}%")
+                    ->orWhereHas('course', function ($courseQuery) use ($search) {
+                        $courseQuery->where('course_name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('student', function ($studentQuery) use ($search) {
+                        $studentQuery->where('name_with_initials', 'like', "%{$search}%")
+                            ->orWhere('full_name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%")
+                            ->orWhere('student_id', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $recentRegistrations = $query->orderBy('registration_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->take(25)
             ->get()
             ->map(function ($registration) {
                 return [
                     'id' => $registration->id,
-                    'student_name' => $registration->student->full_name ?? 'N/A',
+                    'student_id' => $registration->student_id,
+                    'student_name' => $registration->student->name_with_initials ?? $registration->student->full_name ?? 'N/A',
+                    'email' => $registration->student->email ?? '',
                     'course_name' => $registration->course->course_name ?? 'N/A',
-                    'registration_date' => Carbon::parse($registration->registration_date)->format('Y-m-d'),
+                    'registration_date' => $registration->registration_date ? Carbon::parse($registration->registration_date)->format('Y-m-d') : 'N/A',
+                    'registration_time' => $registration->created_at ? Carbon::parse($registration->created_at)->format('H:i') : '',
                     'status' => $registration->status,
-                    'location' => $registration->location,
-                    'counselor_name' => $registration->counselor_name ?? 'N/A'
+                    'location' => $registration->location ?? 'N/A',
+                    'counselor_name' => $registration->counselor_name ?? 'N/A',
+                    'marketing_source' => $registration->student->marketing_survey ?? 'Direct'
                 ];
             });
 
@@ -62,12 +130,21 @@ class StudentCounselorDashboardController extends Controller
     }
 
     // Get marketing survey data
-    public function getMarketingSurveyData()
+    public function getMarketingSurveyData(Request $request)
     {
-        $surveyData = Student::select('marketing_survey', DB::raw('COUNT(*) as count'))
-            ->whereNotNull('marketing_survey')
-            ->where('marketing_survey', '!=', '')
-            ->groupBy('marketing_survey')
+        $period = $request->input('period', 'week');
+        $customDate = $request->input('date');
+        $dateRange = $this->getDateRange($period, $customDate);
+
+        $surveyData = Student::join('course_registration', 'students.student_id', '=', 'course_registration.student_id')
+            ->select('students.marketing_survey', DB::raw('COUNT(*) as count'))
+            ->whereNotNull('students.marketing_survey')
+            ->where('students.marketing_survey', '!=', '')
+            ->whereBetween('course_registration.registration_date', [
+                $dateRange['start']->toDateString(),
+                $dateRange['end']->toDateString(),
+            ])
+            ->groupBy('students.marketing_survey')
             ->get()
             ->map(function ($item) {
                 // Handle multiple sources separated by comma
@@ -107,26 +184,49 @@ class StudentCounselorDashboardController extends Controller
         return response()->json($chartData);
     }
 
-    // Get daily registration trend (last 30 days)
-    public function getDailyRegistrationTrend()
+    // Get daily registration trend
+    public function getDailyRegistrationTrend(Request $request)
     {
-        $last30Days = CourseRegistration::select(
-                DB::raw('DATE(registration_date) as date'),
+        $period = $request->input('period', 'week');
+        $customDate = $request->input('date');
+        $dateRange = $this->getDateRange($period, $customDate);
+
+        [$groupSql, $labelSql] = match ($period) {
+            'quarter' => ['DATE_FORMAT(registration_date, "%Y-%m-01")', 'DATE_FORMAT(registration_date, "%b %Y")'],
+            'month' => ['DATE(registration_date)', 'DATE_FORMAT(registration_date, "%d %b")'],
+            'today', 'custom' => ['DATE(registration_date)', 'DATE_FORMAT(registration_date, "%d %b")'],
+            default => ['DATE(registration_date)', 'DATE_FORMAT(registration_date, "%a %d")'],
+        };
+
+        $trendData = CourseRegistration::select(
+                DB::raw("{$groupSql} as group_key"),
+                DB::raw("{$labelSql} as date"),
                 DB::raw('COUNT(*) as count')
             )
-            ->where('registration_date', '>=', Carbon::now()->subDays(30))
-            ->groupBy('date')
-            ->orderBy('date', 'asc')
+            ->whereBetween('registration_date', [
+                $dateRange['start']->toDateString(),
+                $dateRange['end']->toDateString(),
+            ])
+            ->groupBy('group_key', 'date')
+            ->orderBy('group_key', 'asc')
             ->get();
 
-        return response()->json($last30Days);
+        return response()->json($trendData);
     }
 
     // Get registrations by location
-    public function getRegistrationsByLocation()
+    public function getRegistrationsByLocation(Request $request)
     {
+        $period = $request->input('period', 'week');
+        $customDate = $request->input('date');
+        $dateRange = $this->getDateRange($period, $customDate);
+
         $locationData = CourseRegistration::select('location', DB::raw('COUNT(*) as count'))
             ->whereNotNull('location')
+            ->whereBetween('registration_date', [
+                $dateRange['start']->toDateString(),
+                $dateRange['end']->toDateString(),
+            ])
             ->groupBy('location')
             ->get();
 
@@ -178,25 +278,57 @@ class StudentCounselorDashboardController extends Controller
     public function getCounselorPerformanceData(Request $request)
     {
         $period = $request->input('period', 'week');
-        
-        // Define date range based on period
-        $startDate = match($period) {
-            'today' => Carbon::today(),
-            'week' => Carbon::now()->subWeek(),
-            'month' => Carbon::now()->subMonth(),
-            'year' => Carbon::now()->subYear(),
-            default => Carbon::now()->subWeek(),
-        };
+        $customDate = $request->input('date');
+        $dateRange = $this->getDateRange($period, $customDate);
 
         $performanceData = CourseRegistration::select('counselor_name', DB::raw('COUNT(*) as student_count'))
             ->whereNotNull('counselor_name')
             ->where('counselor_name', '!=', '')
-            ->where('registration_date', '>=', $startDate)
+            ->whereBetween('registration_date', [
+                $dateRange['start']->toDateString(),
+                $dateRange['end']->toDateString(),
+            ])
             ->groupBy('counselor_name')
             ->orderBy('student_count', 'desc')
             ->limit(10)
             ->get();
 
         return response()->json($performanceData);
+    }
+
+    private function getDateRange(string $period = 'week', ?string $customDate = null): array
+    {
+        return match ($period) {
+            'today' => [
+                'start' => Carbon::today()->startOfDay(),
+                'end' => Carbon::today()->endOfDay(),
+            ],
+            'month' => [
+                'start' => Carbon::now()->startOfMonth()->startOfDay(),
+                'end' => Carbon::now()->endOfMonth()->endOfDay(),
+            ],
+            'quarter' => [
+                'start' => Carbon::now()->subMonths(2)->startOfMonth()->startOfDay(),
+                'end' => Carbon::now()->endOfDay(),
+            ],
+            'custom' => [
+                'start' => $customDate ? Carbon::parse($customDate)->startOfDay() : Carbon::today()->startOfDay(),
+                'end' => $customDate ? Carbon::parse($customDate)->endOfDay() : Carbon::today()->endOfDay(),
+            ],
+            default => [
+                'start' => Carbon::now()->startOfWeek()->startOfDay(),
+                'end' => Carbon::now()->endOfWeek()->endOfDay(),
+            ],
+        };
+    }
+
+    private function getPreviousDateRange(Carbon $start, Carbon $end): array
+    {
+        $days = max(1, $start->copy()->startOfDay()->diffInDays($end->copy()->endOfDay()) + 1);
+
+        return [
+            'start' => $start->copy()->subDays($days)->startOfDay(),
+            'end' => $start->copy()->subDay()->endOfDay(),
+        ];
     }
 }

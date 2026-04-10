@@ -159,9 +159,9 @@
         </div>
 
         <div class="d-flex align-items-center gap-2">
-            <div class="input-group input-group-sm" style="width: 200px;">
-                <input type="text" class="form-control" placeholder="Search students..." id="searchStudents">
-                <button class="btn btn-outline-secondary" type="button">
+            <div class="input-group input-group-sm" style="width: 240px;">
+                <input type="text" class="form-control" placeholder="Search recent registrations..." id="searchStudents">
+                <button class="btn btn-outline-secondary" type="button" id="searchStudentsButton" onclick="applyStudentSearch()" title="Search recent registrations">
                     <i class="fas fa-search"></i>
                 </button>
             </div>
@@ -184,12 +184,12 @@
                         <div class="d-flex flex-wrap align-items-center">
                             <span class="me-3 text-muted"><i class="fas fa-calendar-alt me-1"></i> Time Period:</span>
                             <div class="d-flex flex-wrap">
-                                <button class="time-filter-btn active" onclick="setTimePeriod('today')">Today</button>
-                                <button class="time-filter-btn" onclick="setTimePeriod('week')">This Week</button>
-                                <button class="time-filter-btn" onclick="setTimePeriod('month')">This Month</button>
-                                <button class="time-filter-btn" onclick="setTimePeriod('quarter')">Last 3 Months</button>
+                                <button type="button" class="time-filter-btn" data-period="today" onclick="setTimePeriod('today', this)">Today</button>
+                                <button type="button" class="time-filter-btn active" data-period="week" onclick="setTimePeriod('week', this)">This Week</button>
+                                <button type="button" class="time-filter-btn" data-period="month" onclick="setTimePeriod('month', this)">This Month</button>
+                                <button type="button" class="time-filter-btn" data-period="quarter" onclick="setTimePeriod('quarter', this)">Last 3 Months</button>
                                 <div class="d-inline-block ms-2">
-                                    <input type="date" id="customDate" class="form-control form-control-sm" style="width: 140px;">
+                                    <input type="date" id="customDate" class="form-control form-control-sm" style="width: 140px;" title="Filter dashboard by a specific date">
                                 </div>
                             </div>
                         </div>
@@ -252,12 +252,12 @@
                             <div class="avatar-initial bg-success bg-opacity-10 text-success">
                                 <i class="fas fa-calendar-week"></i>
                             </div>
-                            <span class="badge bg-success bg-opacity-10 text-success">Weekly</span>
+                            <span class="badge bg-success bg-opacity-10 text-success" id="selectedPeriodBadge">Weekly</span>
                         </div>
-                        <h5 class="card-title text-muted text-uppercase fs-12">This Week</h5>
+                        <h5 class="card-title text-muted text-uppercase fs-12" id="selectedPeriodTitle">This Week</h5>
                         <h2 class="fw-bold text-success mb-1" id="weekRegistrations">-</h2>
-                        <div class="text-muted fs-13">
-                            <i class="fas fa-chart-line me-1"></i> Registrations
+                        <div class="text-muted fs-13" id="selectedPeriodSubtext">
+                            <i class="fas fa-chart-line me-1"></i> Registrations this week
                         </div>
                         <div class="progress mt-3" style="height: 4px;">
                             <div class="progress-bar bg-success" id="weekProgress" style="width: 0%"></div>
@@ -275,10 +275,10 @@
                             </div>
                             <span class="badge bg-warning bg-opacity-10 text-warning">Action Needed</span>
                         </div>
-                        <h5 class="card-title text-muted text-uppercase fs-12">Pending</h5>
+                        <h5 class="card-title text-muted text-uppercase fs-12" id="pendingCardTitle">Pending</h5>
                         <h2 class="fw-bold text-warning mb-1" id="pendingRegistrations">-</h2>
-                        <div class="text-muted fs-13">
-                            <i class="fas fa-exclamation-circle me-1"></i> Awaiting approval
+                        <div class="text-muted fs-13" id="pendingCardSubtext">
+                            <i class="fas fa-exclamation-circle me-1"></i> Awaiting approval in this week
                         </div>
                         <div class="progress mt-3" style="height: 4px;">
                             <div class="progress-bar bg-warning" id="pendingProgress" style="width: 0%"></div>
@@ -320,10 +320,10 @@
                                 <p class="text-muted mb-0">Last 7 days performance</p>
                             </div>
                             <div class="btn-group btn-group-sm">
-                                <button class="chart-toggle-btn active" onclick="toggleTrendChart('line')">
+                                <button type="button" class="chart-toggle-btn active" onclick="toggleTrendChart('line', this)">
                                     <i class="fas fa-chart-line"></i>
                                 </button>
-                                <button class="chart-toggle-btn" onclick="toggleTrendChart('bar')">
+                                <button type="button" class="chart-toggle-btn" onclick="toggleTrendChart('bar', this)">
                                     <i class="fas fa-chart-bar"></i>
                                 </button>
                             </div>
@@ -387,13 +387,13 @@
                                 <p class="text-muted mb-0">Latest student intake</p>
                             </div>
                             <div class="d-flex gap-2">
-                                <button class="btn btn-outline-secondary btn-sm" onclick="filterRegistrations('all')">
+                                <button type="button" class="btn btn-outline-secondary btn-sm registration-filter-btn active" onclick="filterRegistrations('all', this)">
                                     All
                                 </button>
-                                <button class="btn btn-outline-warning btn-sm" onclick="filterRegistrations('pending')">
+                                <button type="button" class="btn btn-outline-warning btn-sm registration-filter-btn" onclick="filterRegistrations('pending', this)">
                                     <i class="fas fa-clock me-1"></i> Pending
                                 </button>
-                                <button class="btn btn-outline-success btn-sm" onclick="filterRegistrations('registered')">
+                                <button type="button" class="btn btn-outline-success btn-sm registration-filter-btn" onclick="filterRegistrations('registered', this)">
                                     <i class="fas fa-check me-1"></i> Registered
                                 </button>
                             </div>
@@ -453,6 +453,7 @@
         let totalPages = 1;
         let currentTimePeriod = 'week';
         let currentFilter = 'all';
+        let currentSearchQuery = '';
         let chartInstances = {};
         
         // Initialize dashboard
@@ -467,10 +468,24 @@
             document.getElementById('performancePeriod').addEventListener('change', function() {
                 fetchCounselorPerformanceData(this.value);
             });
+
+            document.getElementById('customDate').addEventListener('change', function() {
+                if (this.value) {
+                    setTimePeriod('custom');
+                }
+            });
             
             // Search functionality
             document.getElementById('searchStudents').addEventListener('input', function(e) {
-                searchRegistrations(e.target.value);
+                currentSearchQuery = e.target.value.trim();
+                searchRegistrations(currentSearchQuery);
+            });
+
+            document.getElementById('searchStudents').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyStudentSearch();
+                }
             });
             
             // Auto-refresh every 3 minutes
@@ -479,10 +494,10 @@
         
         function loadDashboardData() {
             fetchOverviewMetrics();
-            fetchMarketingSurveyData('bar');
+            fetchMarketingSurveyData(document.getElementById('surveyChartType')?.value || 'bar');
             fetchDailyTrend('line');
             fetchLocationData();
-            fetchCounselorPerformanceData('week');
+            fetchCounselorPerformanceData(currentTimePeriod);
             fetchRecentRegistrations(1);
         }
         
@@ -500,27 +515,76 @@
             }, 1000);
         }
         
-        function setTimePeriod(period) {
+        function setTimePeriod(period, buttonElement = null) {
             currentTimePeriod = period;
-            
-            // Update active button
+
             document.querySelectorAll('.time-filter-btn').forEach(btn => {
-                btn.classList.remove('active');
+                btn.classList.toggle('active', btn.dataset.period === period);
             });
-            event.target.classList.add('active');
+
+            if (period !== 'custom') {
+                const customDateInput = document.getElementById('customDate');
+                if (customDateInput) {
+                    customDateInput.value = '';
+                }
+            }
+
+            if (buttonElement) {
+                buttonElement.blur();
+            }
             
-            // Refresh data
             loadDashboardData();
         }
+
+        function getPeriodMeta() {
+            const customDateValue = document.getElementById('customDate')?.value;
+
+            if (currentTimePeriod === 'custom' && customDateValue) {
+                const formattedDate = new Date(customDateValue).toLocaleDateString();
+                return {
+                    title: formattedDate,
+                    badge: 'Custom',
+                    short: `for ${formattedDate}`
+                };
+            }
+
+            const meta = {
+                today: { title: 'Today', badge: 'Today', short: 'today' },
+                week: { title: 'This Week', badge: 'Weekly', short: 'this week' },
+                month: { title: 'This Month', badge: 'Monthly', short: 'this month' },
+                quarter: { title: 'Last 3 Months', badge: 'Quarter', short: 'in the last 3 months' }
+            };
+
+            return meta[currentTimePeriod] || { title: 'This Period', badge: 'Period', short: 'in this period' };
+        }
+
+        function buildPeriodQuery(additionalParams = {}, period = currentTimePeriod) {
+            const params = new URLSearchParams({ ...additionalParams, period });
+            const customDateValue = document.getElementById('customDate')?.value;
+
+            if (period === 'custom' && customDateValue) {
+                params.set('date', customDateValue);
+            }
+
+            return params.toString();
+        }
+
+        function applyStudentSearch() {
+            currentSearchQuery = document.getElementById('searchStudents')?.value.trim() || '';
+            fetchRecentRegistrations(1);
+        }
         
-        function filterRegistrations(filter) {
+        function filterRegistrations(filter, buttonElement = null) {
             currentFilter = filter;
             
-            // Update button states
-            document.querySelectorAll('.btn-outline-secondary, .btn-outline-warning, .btn-outline-success').forEach(btn => {
+            document.querySelectorAll('.registration-filter-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            event.target.classList.add('active');
+
+            if (buttonElement) {
+                buttonElement.classList.add('active');
+                buttonElement.blur();
+            }
             
             fetchRecentRegistrations(1);
         }
@@ -560,24 +624,34 @@
         // Overview Metrics
         async function fetchOverviewMetrics() {
             try {
-                const response = await fetch(`/api/student-counselor/overview?period=${currentTimePeriod}`, {
+                const response = await fetch(`/api/student-counselor/overview?${buildPeriodQuery()}`, {
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
                     }
                 });
                 const data = await response.json();
+                const periodMeta = getPeriodMeta();
                 
-                // Update KPI cards
                 document.getElementById('totalRegistered').textContent = data.total_registered?.toLocaleString() || '0';
                 document.getElementById('todayRegistrations').textContent = data.today_registrations?.toLocaleString() || '0';
-                document.getElementById('weekRegistrations').textContent = data.week_registrations?.toLocaleString() || '0';
-                document.getElementById('pendingRegistrations').textContent = data.pending_registrations?.toLocaleString() || '0';
+                document.getElementById('weekRegistrations').textContent = data.period_registrations?.toLocaleString() || '0';
+                document.getElementById('pendingRegistrations').textContent = data.period_pending_registrations?.toLocaleString() || '0';
+
+                const selectedPeriodTitle = document.getElementById('selectedPeriodTitle');
+                const selectedPeriodBadge = document.getElementById('selectedPeriodBadge');
+                const selectedPeriodSubtext = document.getElementById('selectedPeriodSubtext');
+                const pendingCardTitle = document.getElementById('pendingCardTitle');
+                const pendingCardSubtext = document.getElementById('pendingCardSubtext');
+
+                if (selectedPeriodTitle) selectedPeriodTitle.textContent = periodMeta.title;
+                if (selectedPeriodBadge) selectedPeriodBadge.textContent = periodMeta.badge;
+                if (selectedPeriodSubtext) selectedPeriodSubtext.innerHTML = `<i class="fas fa-chart-line me-1"></i> Registrations ${periodMeta.short}`;
+                if (pendingCardTitle) pendingCardTitle.textContent = `Pending (${periodMeta.title})`;
+                if (pendingCardSubtext) pendingCardSubtext.innerHTML = `<i class="fas fa-exclamation-circle me-1"></i> Awaiting approval ${periodMeta.short}`;
                 
-                // Update progress bars
                 updateProgressBars(data);
                 
-                // Update today's growth indicator
                 const todayGrowth = document.getElementById('todayGrowth');
                 const todayGrowthValue = document.getElementById('todayGrowthValue');
                 const todayGrowthIcon = document.getElementById('todayGrowthIcon');
@@ -593,7 +667,6 @@
                     todayGrowth.style.display = 'none';
                 }
                 
-                // Update quick stats
                 updateQuickStats(data);
             } catch (error) {
                 console.error('Error fetching overview metrics:', error);
@@ -602,11 +675,10 @@
         }
         
         function updateProgressBars(data) {
-            // These are example progress calculations - adjust based on your actual data
-            const totalProgress = Math.min((data.total_registered / 500) * 100, 100);
-            const todayProgress = Math.min((data.today_registrations / 50) * 100, 100);
-            const weekProgress = Math.min((data.week_registrations / 200) * 100, 100);
-            const pendingProgress = Math.min((data.pending_registrations / 30) * 100, 100);
+            const totalProgress = Math.min(((data.total_registered ?? 0) / 500) * 100, 100);
+            const todayProgress = Math.min(((data.today_registrations ?? 0) / 50) * 100, 100);
+            const weekProgress = Math.min(((data.period_registrations ?? 0) / 200) * 100, 100);
+            const pendingProgress = Math.min(((data.period_pending_registrations ?? 0) / 30) * 100, 100);
             
             document.getElementById('totalProgress').style.width = `${totalProgress}%`;
             document.getElementById('todayProgress').style.width = `${todayProgress}%`;
@@ -615,16 +687,21 @@
         }
         
         function updateQuickStats(data) {
-            if (data.avg_daily) document.getElementById('avgDaily').textContent = data.avg_daily.toLocaleString();
-            if (data.conversion_rate) document.getElementById('conversionRate').textContent = data.conversion_rate + '%';
-            if (data.top_course) document.getElementById('topCourse').textContent = data.top_course;
-            if (data.avg_response_time) document.getElementById('responseTime').textContent = data.avg_response_time;
+            const avgDaily = document.getElementById('avgDaily');
+            const conversionRate = document.getElementById('conversionRate');
+            const topCourse = document.getElementById('topCourse');
+            const responseTime = document.getElementById('responseTime');
+
+            if (avgDaily && data.avg_daily !== undefined) avgDaily.textContent = Number(data.avg_daily).toLocaleString();
+            if (conversionRate && data.conversion_rate !== undefined) conversionRate.textContent = data.conversion_rate + '%';
+            if (topCourse && data.top_course) topCourse.textContent = data.top_course;
+            if (responseTime && data.avg_response_time) responseTime.textContent = data.avg_response_time;
         }
         
         // Marketing Survey Chart
         async function fetchMarketingSurveyData(chartType = 'bar') {
             try {
-                const response = await fetch(`/api/student-counselor/marketing-survey?period=${currentTimePeriod}`, {
+                const response = await fetch(`/api/student-counselor/marketing-survey?${buildPeriodQuery()}`, {
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
@@ -696,7 +773,7 @@
         // Daily Trend Chart
         async function fetchDailyTrend(chartType = 'line') {
             try {
-                const response = await fetch(`/api/student-counselor/daily-trend?period=${currentTimePeriod}`, {
+                const response = await fetch(`/api/student-counselor/daily-trend?${buildPeriodQuery()}`, {
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
@@ -759,12 +836,14 @@
             }
         }
         
-        function toggleTrendChart(type) {
-            // Update button states
+        function toggleTrendChart(type, buttonElement = null) {
             document.querySelectorAll('.chart-toggle-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            event.target.closest('button').classList.add('active');
+
+            if (buttonElement) {
+                buttonElement.classList.add('active');
+            }
             
             fetchDailyTrend(type);
         }
@@ -772,7 +851,7 @@
         // Location Data
         async function fetchLocationData() {
             try {
-                const response = await fetch(`/api/student-counselor/location-data?period=${currentTimePeriod}`, {
+                const response = await fetch(`/api/student-counselor/location-data?${buildPeriodQuery()}`, {
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
@@ -822,7 +901,7 @@
         // Counselor Performance Chart
         async function fetchCounselorPerformanceData(period = 'week') {
             try {
-                const response = await fetch(`/api/student-counselor/counselor-performance?period=${period}`, {
+                const response = await fetch(`/api/student-counselor/counselor-performance?${buildPeriodQuery({}, period)}`, {
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
@@ -911,7 +990,7 @@
             `;
             
             try {
-                const response = await fetch(`/api/student-counselor/recent-registrations?page=${page}&period=${currentTimePeriod}&filter=${currentFilter}`, {
+                const response = await fetch(`/api/student-counselor/recent-registrations?${buildPeriodQuery({ page, filter: currentFilter, search: currentSearchQuery })}`, {
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
@@ -1032,18 +1111,29 @@
             });
             
             container.innerHTML = html;
-            document.getElementById('registrationsCount').textContent = 
-                `Showing ${data.length} student registrations`;
+            searchRegistrations(currentSearchQuery);
         }
         
         function searchRegistrations(query) {
+            const normalizedQuery = (query || '').toLowerCase();
             const rows = document.querySelectorAll('#recentRegistrationsContainer tr');
+            let visibleRows = 0;
+
             rows.forEach(row => {
                 if (row.cells.length > 1) {
                     const text = row.textContent.toLowerCase();
-                    row.style.display = text.includes(query.toLowerCase()) ? '' : 'none';
+                    const isVisible = normalizedQuery === '' || text.includes(normalizedQuery);
+                    row.style.display = isVisible ? '' : 'none';
+
+                    if (isVisible) {
+                        visibleRows += 1;
+                    }
                 }
             });
+
+            document.getElementById('registrationsCount').textContent = normalizedQuery
+                ? `Showing ${visibleRows} matching registration${visibleRows === 1 ? '' : 's'}`
+                : `Showing ${visibleRows} student registration${visibleRows === 1 ? '' : 's'}`;
         }
         
         function previousPage() {
