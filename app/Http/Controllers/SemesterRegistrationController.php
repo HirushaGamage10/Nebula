@@ -273,14 +273,22 @@ class SemesterRegistrationController extends Controller
     {
         $courseId = $request->input('course_id');
         $intakeId = $request->input('intake_id');
+        $course = Course::find($courseId);
 
         $semesters = Semester::where('course_id', $courseId)
             ->where('intake_id', $intakeId)
-            ->get(['id', 'name', 'status'])
-            ->map(function ($semester) {
+            ->orderBy('start_date')
+            ->orderBy('id')
+            ->get(['id', 'name', 'status', 'course_id', 'intake_id'])
+            ->values()
+            ->map(function ($semester, $index) use ($course) {
+                $label = $this->getSemesterDisplayLabel($course, $semester, $index + 1);
+
                 return [
                     'semester_id'   => $semester->id,
-                    'semester_name' => $semester->name,
+                    'semester_name' => $label,
+                    'display_name'  => $label,
+                    'raw_name'      => $semester->name,
                     'status'        => $semester->status
                 ];
             });
@@ -482,7 +490,7 @@ class SemesterRegistrationController extends Controller
                 'intake_id'      => $r->intake_id,
                 'intake'         => optional($r->intake)->batch ?? '',
                 'semester_id'    => $r->semester_id,
-                'semester_name'  => optional($r->semester)->name ?? '',
+                'semester_name'  => $this->getSemesterDisplayLabel($r->course, $r->semester),
                 'current_status' => $r->status,                 // 'terminated'
                 'desired_status' => $r->desired_status,         // 'registered'
                 'reason'         => $r->approval_reason ?? '',
@@ -498,6 +506,76 @@ class SemesterRegistrationController extends Controller
             'success'  => true,
             'requests' => $requests,
         ]);
+    }
+
+    private function getSemesterSequenceNumber(int $courseId, int $intakeId, int $semesterId): int
+    {
+        $semesterIds = Semester::where('course_id', $courseId)
+            ->where('intake_id', $intakeId)
+            ->orderBy('start_date')
+            ->orderBy('id')
+            ->pluck('id')
+            ->values();
+
+        $position = $semesterIds->search($semesterId);
+
+        return $position === false ? 1 : $position + 1;
+    }
+
+    private function getSemesterDisplayLabel(?Course $course, ?Semester $semester, ?int $fallbackNumber = null): string
+    {
+        if (!$semester) {
+            return '';
+        }
+
+        $course = $course ?: Course::find($semester->course_id);
+        if (!$course) {
+            return (string) ($semester->name ?? '');
+        }
+
+        $sequenceNumber = $fallbackNumber && $fallbackNumber > 0
+            ? $fallbackNumber
+            : $this->getSemesterSequenceNumber($course->course_id, $semester->intake_id, $semester->id);
+
+        return 'Semester ' . $this->formatSemesterDisplayValue($course, $semester->name, $sequenceNumber);
+    }
+
+    private function formatSemesterDisplayValue(Course $course, $rawName, ?int $fallbackNumber = null): string
+    {
+        $rawName = trim((string) $rawName);
+        $fallbackNumber = $fallbackNumber && $fallbackNumber > 0 ? $fallbackNumber : 1;
+        $maxSemesters = (int) ($course->no_of_semesters ?? 0);
+        $numericUpperBound = $maxSemesters > 0 ? $maxSemesters : 12;
+
+        if ($course->semester_format === 'alphabetical') {
+            if (preg_match('/^[A-Za-z]$/', $rawName)) {
+                return strtoupper($rawName);
+            }
+
+            if (is_numeric($rawName)) {
+                $numeric = (int) $rawName;
+                if ($numeric < 1 || $numeric > $numericUpperBound || $numeric > 26) {
+                    $numeric = $fallbackNumber;
+                }
+
+                return $numeric >= 1 && $numeric <= 26 ? chr(64 + $numeric) : (string) $numeric;
+            }
+
+            return $fallbackNumber >= 1 && $fallbackNumber <= 26
+                ? chr(64 + $fallbackNumber)
+                : (string) $fallbackNumber;
+        }
+
+        if (is_numeric($rawName)) {
+            $numeric = (int) $rawName;
+            if ($numeric < 1 || $numeric > $numericUpperBound) {
+                $numeric = $fallbackNumber;
+            }
+
+            return (string) $numeric;
+        }
+
+        return $rawName !== '' ? $rawName : (string) $fallbackNumber;
     }
 
     /**

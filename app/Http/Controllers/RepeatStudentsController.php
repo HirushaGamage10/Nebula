@@ -345,7 +345,7 @@ class RepeatStudentsController extends Controller
                     'intake'         => $reg->intake->batch ?? '',
                     'location'       => $reg->location ?? '',
                     'semester_id'    => $reg->semester_id,
-                    'semester_name'  => $reg->semester->name ?? '',
+                    'semester_name'  => $this->getSemesterDisplayLabel($reg->course, $reg->semester),
                     'status'         => $reg->status,
                     'specialization' => $reg->specialization ?? '',
                 ];
@@ -589,26 +589,32 @@ public function updateSemesterRegistration(Request $request)
             return response()->json(['success' => false, 'message' => 'Intake not found.'], 404);
         }
 
+        $course = Course::find($courseId);
+
         // Get only semesters that match both course and intake
         $semesters = \App\Models\Semester::where('course_id', $courseId)
             ->where('intake_id', $intakeId) // only this intake's semesters
+            ->orderBy('start_date', 'asc')
             ->orderBy('id', 'asc')
-            ->get(['id', 'name', 'course_id', 'intake_id']);
+            ->get(['id', 'name', 'course_id', 'intake_id'])
+            ->values();
 
         // Append display name with intake info
         $intakeLabel = $intake->batch ?? $intake->intake_no ?? 'Unknown Intake';
-        $semesters = $semesters->map(function ($s) use ($intakeLabel) {
-            $s->display_name = "Semester {$s->name} – {$intakeLabel}";
+        $semesters = $semesters->map(function ($s, $index) use ($intakeLabel, $course) {
+            $s->display_name = $this->getSemesterDisplayLabel($course, $s, $index + 1) . " – {$intakeLabel}";
             return $s;
         });
 
         // If no semesters found for that intake, fallback to course-level semesters
         if ($semesters->isEmpty()) {
             $semesters = \App\Models\Semester::where('course_id', $courseId)
+                ->orderBy('start_date', 'asc')
                 ->orderBy('id', 'asc')
-                ->get(['id', 'name'])
-                ->map(function ($s) use ($intakeLabel) {
-                    $s->display_name = "{$s->name} – {$intakeLabel} (Course Default)";
+                ->get(['id', 'name', 'course_id', 'intake_id'])
+                ->values()
+                ->map(function ($s, $index) use ($intakeLabel, $course) {
+                    $s->display_name = $this->getSemesterDisplayLabel($course, $s, $index + 1) . " – {$intakeLabel} (Course Default)";
                     return $s;
                 });
         }
@@ -626,5 +632,75 @@ public function updateSemesterRegistration(Request $request)
         ], 500);
     }
 }
+
+    private function getSemesterSequenceNumber(int $courseId, int $intakeId, int $semesterId): int
+    {
+        $semesterIds = Semester::where('course_id', $courseId)
+            ->where('intake_id', $intakeId)
+            ->orderBy('start_date')
+            ->orderBy('id')
+            ->pluck('id')
+            ->values();
+
+        $position = $semesterIds->search($semesterId);
+
+        return $position === false ? 1 : $position + 1;
+    }
+
+    private function getSemesterDisplayLabel(?Course $course, ?Semester $semester, ?int $fallbackNumber = null): string
+    {
+        if (!$semester) {
+            return '';
+        }
+
+        $course = $course ?: Course::find($semester->course_id);
+        if (!$course) {
+            return (string) ($semester->name ?? '');
+        }
+
+        $sequenceNumber = $fallbackNumber && $fallbackNumber > 0
+            ? $fallbackNumber
+            : $this->getSemesterSequenceNumber($course->course_id, $semester->intake_id, $semester->id);
+
+        return 'Semester ' . $this->formatSemesterDisplayValue($course, $semester->name, $sequenceNumber);
+    }
+
+    private function formatSemesterDisplayValue(Course $course, $rawName, ?int $fallbackNumber = null): string
+    {
+        $rawName = trim((string) $rawName);
+        $fallbackNumber = $fallbackNumber && $fallbackNumber > 0 ? $fallbackNumber : 1;
+        $maxSemesters = (int) ($course->no_of_semesters ?? 0);
+        $numericUpperBound = $maxSemesters > 0 ? $maxSemesters : 12;
+
+        if ($course->semester_format === 'alphabetical') {
+            if (preg_match('/^[A-Za-z]$/', $rawName)) {
+                return strtoupper($rawName);
+            }
+
+            if (is_numeric($rawName)) {
+                $numeric = (int) $rawName;
+                if ($numeric < 1 || $numeric > $numericUpperBound || $numeric > 26) {
+                    $numeric = $fallbackNumber;
+                }
+
+                return $numeric >= 1 && $numeric <= 26 ? chr(64 + $numeric) : (string) $numeric;
+            }
+
+            return $fallbackNumber >= 1 && $fallbackNumber <= 26
+                ? chr(64 + $fallbackNumber)
+                : (string) $fallbackNumber;
+        }
+
+        if (is_numeric($rawName)) {
+            $numeric = (int) $rawName;
+            if ($numeric < 1 || $numeric > $numericUpperBound) {
+                $numeric = $fallbackNumber;
+            }
+
+            return (string) $numeric;
+        }
+
+        return $rawName !== '' ? $rawName : (string) $fallbackNumber;
+    }
 
 } 
