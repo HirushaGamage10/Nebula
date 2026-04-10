@@ -28,7 +28,11 @@ class StudentCounselorDashboardController extends Controller
         $dateRange = $this->getDateRange($period, $customDate);
         $previousRange = $this->getPreviousDateRange($dateRange['start'], $dateRange['end']);
 
-        $totalRegisteredStudents = CourseRegistration::where('status', 'Registered')->count();
+        // Use all-time registrations for the top KPI so the value does not decrease
+        // just because a registration status changes later.
+        $totalRegisteredStudents = CourseRegistration::count();
+        $activeRegisteredStudents = CourseRegistration::where('status', 'Registered')->count();
+        $totalUniqueStudents = CourseRegistration::distinct('student_id')->count('student_id');
         $pendingRegistrations = CourseRegistration::where('status', 'Pending')->count();
         $todayRegistrations = CourseRegistration::whereDate('registration_date', Carbon::today())->count();
         $thisWeekRegistrations = CourseRegistration::whereBetween('registration_date', [
@@ -61,12 +65,16 @@ class StudentCounselorDashboardController extends Controller
 
         return response()->json([
             'total_registered' => $totalRegisteredStudents,
+            'active_registered' => $activeRegisteredStudents,
+            'total_unique_students' => $totalUniqueStudents,
             'pending_registrations' => $pendingRegistrations,
             'today_registrations' => $todayRegistrations,
             'week_registrations' => $thisWeekRegistrations,
             'period_registrations' => $periodRegistrations,
+            'selected_period_registrations' => $periodRegistrations,
             'period_pending_registrations' => $periodPendingRegistrations,
             'today_growth_percentage' => $growthPercentage,
+            'period_growth_percentage' => $growthPercentage,
             'selected_period' => $period,
         ]);
     }

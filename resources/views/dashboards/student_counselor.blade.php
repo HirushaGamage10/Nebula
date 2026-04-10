@@ -207,12 +207,12 @@
                             <div class="avatar-initial bg-purple bg-opacity-10 text-purple">
                                 <i class="fas fa-users"></i>
                             </div>
-                            <span class="badge bg-purple bg-opacity-10 text-purple">Total</span>
+                            <span class="badge bg-purple bg-opacity-10 text-purple">All Time</span>
                         </div>
-                        <h5 class="card-title text-muted text-uppercase fs-12">Total Registered</h5>
+                        <h5 class="card-title text-muted text-uppercase fs-12">Total Registrations</h5>
                         <h2 class="fw-bold text-purple mb-1" id="totalRegistered">-</h2>
                         <div class="text-muted fs-13">
-                            <i class="fas fa-user-graduate me-1"></i> Students
+                            <i class="fas fa-user-graduate me-1"></i> All-time registration records
                         </div>
                         <div class="progress mt-3" style="height: 4px;">
                             <div class="progress-bar bg-purple" id="totalProgress" style="width: 0%"></div>
@@ -233,13 +233,13 @@
                                 <span id="todayGrowthValue" class="badge"></span>
                             </div>
                         </div>
-                        <h5 class="card-title text-muted text-uppercase fs-12">Today's Registrations</h5>
-                        <h2 class="fw-bold text-primary mb-1" id="todayRegistrations">-</h2>
-                        <div class="text-muted fs-13">
-                            <i class="fas fa-bolt me-1"></i> New today
+                        <h5 class="card-title text-muted text-uppercase fs-12" id="periodMetricTitle">This Week Registrations</h5>
+                        <h2 class="fw-bold text-primary mb-1" id="periodRegistrationsCard">-</h2>
+                        <div class="text-muted fs-13" id="periodMetricSubtext">
+                            <i class="fas fa-bolt me-1"></i> Registrations this week
                         </div>
                         <div class="progress mt-3" style="height: 4px;">
-                            <div class="progress-bar bg-primary" id="todayProgress" style="width: 0%"></div>
+                            <div class="progress-bar bg-primary" id="periodProgress" style="width: 0%"></div>
                         </div>
                     </div>
                 </div>
@@ -252,15 +252,15 @@
                             <div class="avatar-initial bg-success bg-opacity-10 text-success">
                                 <i class="fas fa-calendar-week"></i>
                             </div>
-                            <span class="badge bg-success bg-opacity-10 text-success" id="selectedPeriodBadge">Weekly</span>
+                            <span class="badge bg-success bg-opacity-10 text-success">Today</span>
                         </div>
-                        <h5 class="card-title text-muted text-uppercase fs-12" id="selectedPeriodTitle">This Week</h5>
-                        <h2 class="fw-bold text-success mb-1" id="weekRegistrations">-</h2>
-                        <div class="text-muted fs-13" id="selectedPeriodSubtext">
-                            <i class="fas fa-chart-line me-1"></i> Registrations this week
+                        <h5 class="card-title text-muted text-uppercase fs-12">Today's Registrations</h5>
+                        <h2 class="fw-bold text-success mb-1" id="todayRegistrations">-</h2>
+                        <div class="text-muted fs-13">
+                            <i class="fas fa-chart-line me-1"></i> New today
                         </div>
                         <div class="progress mt-3" style="height: 4px;">
-                            <div class="progress-bar bg-success" id="weekProgress" style="width: 0%"></div>
+                            <div class="progress-bar bg-success" id="todayProgress" style="width: 0%"></div>
                         </div>
                     </div>
                 </div>
@@ -559,7 +559,7 @@
         }
 
         function buildPeriodQuery(additionalParams = {}, period = currentTimePeriod) {
-            const params = new URLSearchParams({ ...additionalParams, period });
+            const params = new URLSearchParams({ ...additionalParams, period, _t: Date.now().toString() });
             const customDateValue = document.getElementById('customDate')?.value;
 
             if (period === 'custom' && customDateValue) {
@@ -625,28 +625,29 @@
         async function fetchOverviewMetrics() {
             try {
                 const response = await fetch(`/api/student-counselor/overview?${buildPeriodQuery()}`, {
+                    cache: 'no-store',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json'
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
                     }
                 });
                 const data = await response.json();
                 const periodMeta = getPeriodMeta();
                 
                 document.getElementById('totalRegistered').textContent = data.total_registered?.toLocaleString() || '0';
+                document.getElementById('periodRegistrationsCard').textContent = (data.selected_period_registrations ?? data.period_registrations ?? 0).toLocaleString();
                 document.getElementById('todayRegistrations').textContent = data.today_registrations?.toLocaleString() || '0';
-                document.getElementById('weekRegistrations').textContent = data.period_registrations?.toLocaleString() || '0';
                 document.getElementById('pendingRegistrations').textContent = data.period_pending_registrations?.toLocaleString() || '0';
 
-                const selectedPeriodTitle = document.getElementById('selectedPeriodTitle');
-                const selectedPeriodBadge = document.getElementById('selectedPeriodBadge');
-                const selectedPeriodSubtext = document.getElementById('selectedPeriodSubtext');
+                const periodMetricTitle = document.getElementById('periodMetricTitle');
+                const periodMetricSubtext = document.getElementById('periodMetricSubtext');
                 const pendingCardTitle = document.getElementById('pendingCardTitle');
                 const pendingCardSubtext = document.getElementById('pendingCardSubtext');
 
-                if (selectedPeriodTitle) selectedPeriodTitle.textContent = periodMeta.title;
-                if (selectedPeriodBadge) selectedPeriodBadge.textContent = periodMeta.badge;
-                if (selectedPeriodSubtext) selectedPeriodSubtext.innerHTML = `<i class="fas fa-chart-line me-1"></i> Registrations ${periodMeta.short}`;
+                if (periodMetricTitle) periodMetricTitle.textContent = `${periodMeta.title} Registrations`;
+                if (periodMetricSubtext) periodMetricSubtext.innerHTML = `<i class="fas fa-bolt me-1"></i> Registrations ${periodMeta.short}`;
                 if (pendingCardTitle) pendingCardTitle.textContent = `Pending (${periodMeta.title})`;
                 if (pendingCardSubtext) pendingCardSubtext.innerHTML = `<i class="fas fa-exclamation-circle me-1"></i> Awaiting approval ${periodMeta.short}`;
                 
@@ -655,14 +656,15 @@
                 const todayGrowth = document.getElementById('todayGrowth');
                 const todayGrowthValue = document.getElementById('todayGrowthValue');
                 const todayGrowthIcon = document.getElementById('todayGrowthIcon');
+                const growthValue = data.period_growth_percentage ?? data.today_growth_percentage ?? 0;
                 
-                if (data.today_growth_percentage && data.today_growth_percentage !== 0) {
+                if (growthValue && growthValue !== 0) {
                     todayGrowth.style.display = 'flex';
-                    const isPositive = data.today_growth_percentage > 0;
+                    const isPositive = growthValue > 0;
                     
                     todayGrowthIcon.innerHTML = `<i class="fas fa-arrow-${isPositive ? 'up' : 'down'}"></i>`;
                     todayGrowthValue.className = `badge bg-${isPositive ? 'success' : 'danger'} bg-opacity-10 text-${isPositive ? 'success' : 'danger'}`;
-                    todayGrowthValue.textContent = (isPositive ? '+' : '') + data.today_growth_percentage + '%';
+                    todayGrowthValue.textContent = (isPositive ? '+' : '') + growthValue + '%';
                 } else {
                     todayGrowth.style.display = 'none';
                 }
@@ -675,14 +677,14 @@
         }
         
         function updateProgressBars(data) {
-            const totalProgress = Math.min(((data.total_registered ?? 0) / 500) * 100, 100);
+            const totalProgress = Math.min(((data.total_registered ?? 0) / 600) * 100, 100);
+            const periodProgress = Math.min((((data.selected_period_registrations ?? data.period_registrations ?? 0)) / 200) * 100, 100);
             const todayProgress = Math.min(((data.today_registrations ?? 0) / 50) * 100, 100);
-            const weekProgress = Math.min(((data.period_registrations ?? 0) / 200) * 100, 100);
             const pendingProgress = Math.min(((data.period_pending_registrations ?? 0) / 30) * 100, 100);
             
             document.getElementById('totalProgress').style.width = `${totalProgress}%`;
+            document.getElementById('periodProgress').style.width = `${periodProgress}%`;
             document.getElementById('todayProgress').style.width = `${todayProgress}%`;
-            document.getElementById('weekProgress').style.width = `${weekProgress}%`;
             document.getElementById('pendingProgress').style.width = `${pendingProgress}%`;
         }
         
