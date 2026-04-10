@@ -23,24 +23,33 @@ class AdminL1DashboardController extends Controller
             'active_students' => DB::table('students')->where('academic_status', 'active')->count(),
             'new_students_this_period' => DB::table('students')
                 ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])->count(),
-            
+
             'total_registrations' => DB::table('course_registration')->count(),
+            'registrations_this_period' => DB::table('course_registration')
+                ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])->count(),
             'pending_registrations' => DB::table('course_registration')->where('status', 'Pending')->count(),
             'completed_registrations' => DB::table('course_registration')->where('status', 'Registered')->count(),
-            
+
             'pending_clearances' => DB::table('clearance_requests')->where('status', 'pending')->count(),
+            'clearances_this_period' => DB::table('clearance_requests')
+                ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])->count(),
             'total_courses' => DB::table('courses')->count(),
             'active_intakes' => DB::table('intakes')
                 ->where('start_date', '<=', now())
                 ->where('end_date', '>=', now())->count(),
-            
+
             'pending_payments' => DB::table('payment_details')->where('status', 'pending')->count(),
             'total_revenue_this_period' => DB::table('payment_details')
                 ->where('status', 'paid')
                 ->whereBetween('payment_date', [$dateRange['start'], $dateRange['end']])
                 ->sum('amount'),
-            
+
             'attendance_taken_today' => DB::table('attendance')->whereDate('date', today())->count(),
+            'attendance_records_this_period' => DB::table('attendance')
+                ->whereBetween('date', [
+                    $dateRange['start']->toDateString(),
+                    $dateRange['end']->toDateString(),
+                ])->count(),
             'total_users' => DB::table('users')->count(),
         ];
 
@@ -52,19 +61,32 @@ class AdminL1DashboardController extends Controller
         $period = $request->get('period', 'month');
         $dateRange = $this->getDateRange($period);
 
+        [$dateKeySql, $labelSql] = match ($period) {
+            'today' => ['DATE_FORMAT(created_at, "%Y-%m-%d %H:00:00")', 'DATE_FORMAT(created_at, "%H:00")'],
+            'week' => ['DATE(created_at)', 'DATE_FORMAT(created_at, "%a")'],
+            'year' => ['DATE_FORMAT(created_at, "%Y-%m-01")', 'DATE_FORMAT(created_at, "%b")'],
+            default => ['DATE(created_at)', 'DATE_FORMAT(created_at, "%d %b")'],
+        };
+
         $stats = [
             'by_status' => DB::table('students')
                 ->select('academic_status', DB::raw('count(*) as count'))
                 ->groupBy('academic_status')->get(),
-            
+
             'by_location' => DB::table('students')
                 ->select('institute_location', DB::raw('count(*) as count'))
                 ->groupBy('institute_location')->get(),
-            
+
             'registration_trend' => DB::table('students')
-                ->select(DB::raw('DATE_FORMAT(created_at, "%Y-%m") as month'), DB::raw('count(*) as count'))
-                ->whereBetween('created_at', [now()->subMonths(12), now()])
-                ->groupBy('month')->orderBy('month')->get(),
+                ->select(
+                    DB::raw("{$dateKeySql} as date_key"),
+                    DB::raw("{$labelSql} as month"),
+                    DB::raw('count(*) as count')
+                )
+                ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                ->groupBy('date_key', 'month')
+                ->orderBy('date_key')
+                ->get(),
         ];
 
         return response()->json($stats);
@@ -72,14 +94,19 @@ class AdminL1DashboardController extends Controller
 
     public function getCourseRegistrationStats(Request $request)
     {
+        $period = $request->get('period', 'month');
+        $dateRange = $this->getDateRange($period);
+
         $stats = [
             'by_status' => DB::table('course_registration')
                 ->select('status', DB::raw('count(*) as count'))
+                ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
                 ->groupBy('status')->get(),
-            
+
             'top_courses' => DB::table('course_registration')
                 ->join('courses', 'course_registration.course_id', '=', 'courses.course_id')
                 ->select('courses.course_name', DB::raw('count(*) as registrations'))
+                ->whereBetween('course_registration.created_at', [$dateRange['start'], $dateRange['end']])
                 ->groupBy('courses.course_id', 'courses.course_name')
                 ->orderBy('registrations', 'desc')->limit(10)->get(),
         ];
@@ -174,11 +201,16 @@ class AdminL1DashboardController extends Controller
     private function getDateRange($period)
     {
         switch ($period) {
-            case 'today': return ['start' => Carbon::today(), 'end' => Carbon::tomorrow()];
-            case 'week': return ['start' => Carbon::now()->startOfWeek(), 'end' => Carbon::now()->endOfWeek()];
-            case 'month': return ['start' => Carbon::now()->startOfMonth(), 'end' => Carbon::now()->endOfMonth()];
-            case 'year': return ['start' => Carbon::now()->startOfYear(), 'end' => Carbon::now()->endOfYear()];
-            default: return ['start' => Carbon::now()->startOfMonth(), 'end' => Carbon::now()->endOfMonth()];
+            case 'today':
+                return ['start' => Carbon::today()->startOfDay(), 'end' => Carbon::today()->endOfDay()];
+            case 'week':
+                return ['start' => Carbon::now()->startOfWeek()->startOfDay(), 'end' => Carbon::now()->endOfWeek()->endOfDay()];
+            case 'month':
+                return ['start' => Carbon::now()->startOfMonth()->startOfDay(), 'end' => Carbon::now()->endOfMonth()->endOfDay()];
+            case 'year':
+                return ['start' => Carbon::now()->startOfYear()->startOfDay(), 'end' => Carbon::now()->endOfYear()->endOfDay()];
+            default:
+                return ['start' => Carbon::now()->startOfMonth()->startOfDay(), 'end' => Carbon::now()->endOfMonth()->endOfDay()];
         }
     }
 }

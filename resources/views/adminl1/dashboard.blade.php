@@ -99,10 +99,10 @@
                 <div class="card-body py-3">
                     <div class="d-flex align-items-center flex-wrap">
                         <span class="me-3 text-muted"><i class="fas fa-calendar-alt me-1"></i> Period:</span>
-                        <button class="time-filter-btn" onclick="setTimePeriod('today')">Today</button>
-                        <button class="time-filter-btn" onclick="setTimePeriod('week')">This Week</button>
-                        <button class="time-filter-btn active" onclick="setTimePeriod('month')">This Month</button>
-                        <button class="time-filter-btn" onclick="setTimePeriod('year')">This Year</button>
+                        <button type="button" class="time-filter-btn" data-period="today" onclick="setTimePeriod('today', this)">Today</button>
+                        <button type="button" class="time-filter-btn" data-period="week" onclick="setTimePeriod('week', this)">This Week</button>
+                        <button type="button" class="time-filter-btn active" data-period="month" onclick="setTimePeriod('month', this)">This Month</button>
+                        <button type="button" class="time-filter-btn" data-period="year" onclick="setTimePeriod('year', this)">This Year</button>
                     </div>
                 </div>
             </div>
@@ -120,10 +120,10 @@
                         </div>
                         <span class="badge bg-primary">Active</span>
                     </div>
-                    <h5 class="text-muted text-uppercase fs-12 mb-2">Total Students</h5>
+                    <h5 class="text-muted text-uppercase fs-12 mb-2" id="studentsCardTitle">Total Students</h5>
                     <h2 class="fw-bold mb-1" id="totalStudents">-</h2>
-                    <div class="text-muted fs-13">
-                        <span id="activeStudents">-</span> active students
+                    <div class="text-muted fs-13" id="studentsSubtext">
+                        -
                     </div>
                 </div>
             </div>
@@ -138,10 +138,10 @@
                         </div>
                         <span class="badge bg-success">Live</span>
                     </div>
-                    <h5 class="text-muted text-uppercase fs-12 mb-2">Course Registrations</h5>
+                    <h5 class="text-muted text-uppercase fs-12 mb-2" id="registrationsCardTitle">Course Registrations</h5>
                     <h2 class="fw-bold mb-1" id="totalRegistrations">-</h2>
-                    <div class="text-muted fs-13">
-                        <span id="pendingRegistrations">-</span> pending
+                    <div class="text-muted fs-13" id="registrationsSubtext">
+                        -
                     </div>
                 </div>
             </div>
@@ -156,9 +156,9 @@
                         </div>
                         <span class="badge bg-warning">Action</span>
                     </div>
-                    <h5 class="text-muted text-uppercase fs-12 mb-2">Clearance Requests</h5>
+                    <h5 class="text-muted text-uppercase fs-12 mb-2" id="clearancesCardTitle">Clearance Requests</h5>
                     <h2 class="fw-bold mb-1" id="pendingClearances">-</h2>
-                    <div class="text-muted fs-13">
+                    <div class="text-muted fs-13" id="clearancesSubtext">
                         Pending approval
                     </div>
                 </div>
@@ -217,9 +217,9 @@
                             <i class="fas fa-calendar-check"></i>
                         </div>
                     </div>
-                    <h5 class="text-muted text-uppercase fs-12 mb-2">Attendance Today</h5>
+                    <h5 class="text-muted text-uppercase fs-12 mb-2" id="attendanceCardTitle">Attendance Today</h5>
                     <h2 class="fw-bold mb-1" id="attendanceToday">-</h2>
-                    <div class="text-muted fs-13">
+                    <div class="text-muted fs-13" id="attendanceSubtext">
                         Records taken
                     </div>
                 </div>
@@ -251,9 +251,9 @@
                             <i class="fas fa-user-plus"></i>
                         </div>
                     </div>
-                    <h5 class="text-muted text-uppercase fs-12 mb-2">New Students</h5>
+                    <h5 class="text-muted text-uppercase fs-12 mb-2" id="newStudentsCardTitle">New Students</h5>
                     <h2 class="fw-bold mb-1" id="newStudents">-</h2>
-                    <div class="text-muted fs-13">
+                    <div class="text-muted fs-13" id="newStudentsSubtext">
                         This period
                     </div>
                 </div>
@@ -269,7 +269,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <div>
                             <h5 class="card-title mb-1">📈 Registration Trend</h5>
-                            <p class="text-muted mb-0">Last 12 months</p>
+                            <p class="text-muted mb-0" id="registrationTrendSubtitle">For this month</p>
                         </div>
                     </div>
                     <div class="chart-container">
@@ -285,7 +285,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <div>
                             <h5 class="card-title mb-1">🎓 Top Courses</h5>
-                            <p class="text-muted mb-0">By registrations</p>
+                            <p class="text-muted mb-0" id="topCoursesSubtitle">By registrations in this month</p>
                         </div>
                     </div>
                     <div class="chart-container">
@@ -491,11 +491,33 @@ function loadDashboardData() {
     fetchActionItems();
 }
 
-function setTimePeriod(period) {
+function setTimePeriod(period, buttonElement = null) {
     currentPeriod = period;
-    document.querySelectorAll('.time-filter-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
+
+    document.querySelectorAll('.time-filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.period === period);
+    });
+
+    if (buttonElement) {
+        buttonElement.blur();
+    }
+
     loadDashboardData();
+}
+
+function formatMetricValue(value) {
+    return Number(value ?? 0).toLocaleString();
+}
+
+function getPeriodLabels() {
+    const labels = {
+        today: { short: 'today', title: 'Today' },
+        week: { short: 'this week', title: 'This Week' },
+        month: { short: 'this month', title: 'This Month' },
+        year: { short: 'this year', title: 'This Year' }
+    };
+
+    return labels[currentPeriod] || { short: 'this period', title: 'This Period' };
 }
 
 async function fetchOverviewMetrics() {
@@ -504,18 +526,28 @@ async function fetchOverviewMetrics() {
             headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
         });
         const data = await response.json();
-        
-        document.getElementById('totalStudents').textContent = data.total_students?.toLocaleString() || '0';
-        document.getElementById('activeStudents').textContent = data.active_students?.toLocaleString() || '0';
-        document.getElementById('totalRegistrations').textContent = data.total_registrations?.toLocaleString() || '0';
-        document.getElementById('pendingRegistrations').textContent = data.pending_registrations?.toLocaleString() || '0';
-        document.getElementById('pendingClearances').textContent = data.pending_clearances?.toLocaleString() || '0';
+        const periodLabels = getPeriodLabels();
 
-        document.getElementById('totalCourses').textContent = data.total_courses?.toLocaleString() || '0';
-        document.getElementById('activeIntakes').textContent = data.active_intakes?.toLocaleString() || '0';
-        document.getElementById('attendanceToday').textContent = data.attendance_taken_today?.toLocaleString() || '0';
-        document.getElementById('totalUsers').textContent = data.total_users?.toLocaleString() || '0';
-        document.getElementById('newStudents').textContent = data.new_students_this_period?.toLocaleString() || '0';
+        document.getElementById('totalStudents').textContent = formatMetricValue(data.total_students);
+        document.getElementById('studentsSubtext').textContent = `${formatMetricValue(data.active_students)} active • ${formatMetricValue(data.new_students_this_period)} joined ${periodLabels.short}`;
+
+        document.getElementById('registrationsCardTitle').textContent = `Course Registrations (${periodLabels.title})`;
+        document.getElementById('totalRegistrations').textContent = formatMetricValue(data.registrations_this_period);
+        document.getElementById('registrationsSubtext').textContent = `${formatMetricValue(data.pending_registrations)} pending • ${formatMetricValue(data.total_registrations)} total`;
+
+        document.getElementById('clearancesCardTitle').textContent = `Clearance Requests (${periodLabels.title})`;
+        document.getElementById('pendingClearances').textContent = formatMetricValue(data.clearances_this_period);
+        document.getElementById('clearancesSubtext').textContent = `${formatMetricValue(data.pending_clearances)} pending approval overall`;
+
+        document.getElementById('totalCourses').textContent = formatMetricValue(data.total_courses);
+        document.getElementById('activeIntakes').textContent = formatMetricValue(data.active_intakes);
+        document.getElementById('attendanceCardTitle').textContent = `Attendance ${periodLabels.title}`;
+        document.getElementById('attendanceToday').textContent = formatMetricValue(data.attendance_records_this_period);
+        document.getElementById('attendanceSubtext').textContent = currentPeriod === 'today' ? 'Records taken today' : `Records taken ${periodLabels.short}`;
+        document.getElementById('totalUsers').textContent = formatMetricValue(data.total_users);
+        document.getElementById('newStudentsCardTitle').textContent = `New Students (${periodLabels.title})`;
+        document.getElementById('newStudents').textContent = formatMetricValue(data.new_students_this_period);
+        document.getElementById('newStudentsSubtext').textContent = `Joined ${periodLabels.short}`;
     } catch (error) {
         console.error('Error fetching overview:', error);
     }
@@ -527,7 +559,13 @@ async function fetchStudentStats() {
             headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
         });
         const data = await response.json();
-        
+        const periodLabels = getPeriodLabels();
+        const trendSubtitle = document.getElementById('registrationTrendSubtitle');
+
+        if (trendSubtitle) {
+            trendSubtitle.textContent = `For ${periodLabels.short}`;
+        }
+
         if (data.registration_trend) {
             const ctx = document.getElementById('registrationTrendChart');
             if (chartInstances.registrationTrend) chartInstances.registrationTrend.destroy();
@@ -563,6 +601,12 @@ async function fetchCourseRegistrationStats() {
             headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
         });
         const data = await response.json();
+        const periodLabels = getPeriodLabels();
+        const topCoursesSubtitle = document.getElementById('topCoursesSubtitle');
+
+        if (topCoursesSubtitle) {
+            topCoursesSubtitle.textContent = `By registrations in ${periodLabels.short}`;
+        }
         
         if (data.top_courses) {
             const ctx = document.getElementById('topCoursesChart');
@@ -571,7 +615,7 @@ async function fetchCourseRegistrationStats() {
             chartInstances.topCourses = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: data.top_courses.map(item => item.course_name.substring(0, 20) + '...'),
+                    labels: data.top_courses.map(item => item.course_name.length > 20 ? item.course_name.substring(0, 20) + '...' : item.course_name),
                     datasets: [{
                         label: 'Registrations',
                         data: data.top_courses.map(item => item.registrations),
