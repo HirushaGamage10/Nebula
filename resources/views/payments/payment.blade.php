@@ -3540,27 +3540,43 @@ function submitPayment() {
 // Update payment records
 function updatePaymentRecords() {
     const updates = [];
+    const editableFields = document.querySelectorAll('#paymentRecordsTableBody [data-field]');
 
-    document.querySelectorAll('#paymentRecordsTableBody [data-field]').forEach(el => {
+    if (!editableFields.length) {
+        showWarningMessage('No editable payment fields found to update.');
+        return;
+    }
+
+    editableFields.forEach(el => {
         const idx = el.dataset.idx;
         const field = el.dataset.field;
         const value = el.value;
+        const record = window.paymentRecords?.[idx] || {};
+        const paymentId = record.payment_id || record.id;
 
-        if (!updates[idx]) updates[idx] = { id: window.paymentRecords[idx].id };
+        if (!paymentId) return;
+
+        if (!updates[idx]) updates[idx] = { id: paymentId };
         updates[idx][field] = value;
     });
 
+    const filteredUpdates = updates.filter(Boolean);
+    if (!filteredUpdates.length) {
+        showWarningMessage('No valid payment updates found.');
+        return;
+    }
+
     showSpinner(true);
 
-    fetch('/payment/update-records', {
+    fetch('/payment/update-record', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-        body: JSON.stringify({ updates })
+        body: JSON.stringify({ updates: filteredUpdates })
     })
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            showSuccessMessage('Payment records updated successfully!');
+            showSuccessMessage(data.message || 'Payment records updated successfully!');
             loadPaymentRecords();
             refreshGenerateSlipsData(); // refresh Generate Slips tab if data is loaded
         } else {

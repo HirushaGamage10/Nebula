@@ -3,6 +3,9 @@
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 
+@ini_set('expose_php', '0');
+header_remove('X-Powered-By');
+
 define('LARAVEL_START', microtime(true));
 
 /*

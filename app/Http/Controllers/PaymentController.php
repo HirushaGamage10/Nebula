@@ -1732,6 +1732,9 @@ private function buildSlipArray(\App\Models\PaymentDetail $payment, $student, $c
         'partial_payments'  => $partials,   // ✅ Always an array
         'foreign_currency_code'   => $payment->foreign_currency_code,     
         'foreign_currency_amount' => (float) $payment->foreign_currency_amount,
+        // Keys expected by the JS slip preview (franchise fee display)
+        'franchise_fee_currency' => $payment->foreign_currency_code,
+        'lkr_amount'             => (float) $payment->total_fee,
         'generated_at'      => now()->format('Y-m-d H:i:s'),
         'valid_until'       => now()->addDays(7)->format('Y-m-d'),
         'sscl_tax_amount'   => $payment->sscl_tax_amount,   // 👈 new
@@ -2053,40 +2056,112 @@ public function getPaymentRecords(Request $request)
 public function updatePaymentRecord(Request $request)
 {
     try {
-        $request->validate([
-            'id'                => 'required|exists:payment_details,id', // ✅ correct PK
-            'payment_type'      => 'required|string',
-            'amount'            => 'required|numeric|min:0',
-            'late_fee'          => 'nullable|numeric|min:0',
-            'approved_late_fee' => 'nullable|numeric|min:0',
-            'total_fee'         => 'nullable|numeric|min:0',
-            'remaining_amount'  => 'nullable|numeric|min:0',
-            'payment_method'    => 'required|string',
-            'payment_date'      => 'required|date',
-            'receipt_no'        => 'required|string',
-            'status'            => 'required|string',
-            'remarks'           => 'nullable|string',
-        ]);
+        $updates = $request->has('updates')
+            ? $request->input('updates', [])
+            : [$request->all()];
 
-        $payment = PaymentDetail::findOrFail($request->id);
+        if (!is_array($updates) || empty($updates)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No update payload provided.'
+            ], 422);
+        }
 
-        $payment->update([
-            'payment_type'      => $request->payment_type,
-            'amount'            => $request->amount,
-            'late_fee'          => $request->late_fee ?? 0,
-            'approved_late_fee' => $request->approved_late_fee ?? 0,
-            'total_fee'         => $request->total_fee ?? ($request->amount + ($request->late_fee ?? 0) - ($request->approved_late_fee ?? 0)),
-            'remaining_amount'  => $request->remaining_amount ?? $payment->remaining_amount,
-            'payment_method'    => $request->payment_method,
-            'payment_date'      => $request->payment_date,
-            'transaction_id'    => $request->receipt_no, // ✅ correct column
-            'status'            => $request->status,
-            'remarks'           => $request->remarks,
-        ]);
+        $updatedCount = 0;
+
+        foreach ($updates as $payload) {
+            if (!is_array($payload)) {
+                continue;
+            }
+
+            $validator = validator($payload, [
+                'id'                => 'required|exists:payment_details,id',
+                'payment_type'      => 'nullable|string',
+                'amount'            => 'nullable|numeric|min:0',
+                'late_fee'          => 'nullable|numeric|min:0',
+                'approved_late_fee' => 'nullable|numeric|min:0',
+                'total_fee'         => 'nullable|numeric|min:0',
+                'remaining_amount'  => 'nullable|numeric|min:0',
+                'payment_method'    => 'nullable|string',
+                'payment_date'      => 'nullable|date',
+                'receipt_no'        => 'nullable|string',
+                'status'            => 'nullable|string',
+                'remarks'           => 'nullable|string',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()->first(),
+                ], 422);
+            }
+
+            $payment = PaymentDetail::findOrFail($payload['id']);
+
+            $amount = array_key_exists('amount', $payload)
+                ? (float) $payload['amount']
+                : (float) ($payment->amount ?? 0);
+            $lateFee = array_key_exists('late_fee', $payload)
+                ? (float) $payload['late_fee']
+                : (float) ($payment->late_fee ?? 0);
+            $approvedLateFee = array_key_exists('approved_late_fee', $payload)
+                ? (float) $payload['approved_late_fee']
+                : (float) ($payment->approved_late_fee ?? 0);
+
+            $updateData = [];
+
+            if (array_key_exists('payment_type', $payload)) {
+                $updateData['payment_type'] = $payload['payment_type'];
+            }
+            if (array_key_exists('amount', $payload)) {
+                $updateData['amount'] = $amount;
+            }
+            if (array_key_exists('late_fee', $payload)) {
+                $updateData['late_fee'] = $lateFee;
+            }
+            if (array_key_exists('approved_late_fee', $payload)) {
+                $updateData['approved_late_fee'] = $approvedLateFee;
+            }
+            if (array_key_exists('total_fee', $payload)) {
+                $updateData['total_fee'] = (float) $payload['total_fee'];
+            } elseif (
+                array_key_exists('amount', $payload)
+                || array_key_exists('late_fee', $payload)
+                || array_key_exists('approved_late_fee', $payload)
+            ) {
+                $updateData['total_fee'] = $amount + $lateFee - $approvedLateFee;
+            }
+            if (array_key_exists('remaining_amount', $payload)) {
+                $updateData['remaining_amount'] = (float) $payload['remaining_amount'];
+            }
+            if (array_key_exists('payment_method', $payload)) {
+                $updateData['payment_method'] = $payload['payment_method'];
+            }
+            if (array_key_exists('payment_date', $payload)) {
+                $updateData['payment_date'] = $payload['payment_date'];
+            }
+            if (array_key_exists('receipt_no', $payload)) {
+                $updateData['transaction_id'] = $payload['receipt_no'];
+            }
+            if (array_key_exists('status', $payload)) {
+                $updateData['status'] = $payload['status'];
+            }
+            if (array_key_exists('remarks', $payload)) {
+                $updateData['remarks'] = $payload['remarks'];
+            }
+
+            if (!empty($updateData)) {
+                $payment->update($updateData);
+                $updatedCount++;
+            }
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'Payment record updated successfully.'
+            'message' => $updatedCount > 0
+                ? 'Payment record(s) updated successfully.'
+                : 'No changes detected.',
+            'updated_count' => $updatedCount,
         ], Response::HTTP_OK);
 
     } catch (\Exception $e) {
@@ -2105,7 +2180,7 @@ public function updatePaymentRecord(Request $request)
     {
         try {
             $request->validate([
-                'payment_id' => 'required|exists:payment_details,payment_id',
+                'payment_id' => 'required|exists:payment_details,id',
             ]);
 
             PaymentDetail::find($request->payment_id)->delete();
