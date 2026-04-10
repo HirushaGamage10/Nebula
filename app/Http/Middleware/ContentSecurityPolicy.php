@@ -108,6 +108,36 @@ class ContentSecurityPolicy
         // 5. Add CSP header to response
         $response->headers->set('Content-Security-Policy', $csp);
 
+        // 6. Additional security headers (fixes ZAP Low/Medium findings)
+
+        // Prevent MIME-type sniffing (Low: X-Content-Type-Options missing)
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+
+        // Anti-clickjacking belt-and-suspenders alongside CSP frame-ancestors (Medium)
+        $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
+
+        // Control referrer information sent in requests (Low: Referrer-Policy missing)
+        $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+        // Disable browser features not used by this application (Low: Permissions-Policy missing)
+        $response->headers->set(
+            'Permissions-Policy',
+            'camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()'
+        );
+
+        // Enforce HTTPS in production (Low: Strict-Transport-Security missing)
+        if (!app()->environment('local')) {
+            $response->headers->set(
+                'Strict-Transport-Security',
+                'max-age=31536000; includeSubDomains'
+            );
+        }
+
+        // 7. Strip PHP version disclosure (Low: X-Powered-By / Server information leakage)
+        header_remove('X-Powered-By');
+        $response->headers->remove('X-Powered-By');
+        $response->headers->remove('Server');
+
         return $response;
     }
 }
