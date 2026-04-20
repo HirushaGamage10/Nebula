@@ -5,7 +5,7 @@
     @endphp
     <div class="brand-logo d-flex align-items-center justify-content-center py-3 position-relative w-100">
         <!-- Mobile close button (uses the same toggler JS) -->
-          <a href="javascript:void(0)" aria-label="Close sidebar"
+          <a href="#" role="button" aria-label="Close sidebar"
               class="nav-link sidebartoggler d-xl-none position-absolute top-0 end-0 mt-1 me-3">
             <i class="ti ti-x fs-5"></i>
         </a>

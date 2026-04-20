@@ -5,6 +5,12 @@
 
     RewriteEngine On
 
+    # Force HTTPS in non-local environments to reduce transport-security findings.
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+    RewriteCond %{HTTP_HOST} !^localhost(:[0-9]+)?$ [NC]
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
@@ -13,6 +19,12 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
+
+    # Block development/test assets that can trigger scanner findings and should not be public.
+    RewriteRule ^libs/bootstrap/js/tests/ - [F,L,NC]
+    RewriteRule ^libs/bootstrap/scss/ - [F,L,NC]
+    RewriteRule ^libs/bootstrap/js/src/ - [F,L,NC]
+    RewriteRule \.map$ - [F,L,NC]
 
     # Send Requests To Front Controller...
     RewriteCond %{REQUEST_FILENAME} !-d

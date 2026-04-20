@@ -103,7 +103,9 @@ class ContentSecurityPolicy
             . "form-action 'self'; "
             . "object-src 'none'; "
             . "base-uri 'self'; "
-            . "frame-ancestors 'self' https://nebulastudentportal.slt.lk;";
+            . "frame-ancestors 'self' https://nebulastudentportal.slt.lk; "
+            . "upgrade-insecure-requests; "
+            . "block-all-mixed-content;";
 
         // 5. Add CSP header to response
         $response->headers->set('Content-Security-Policy', $csp);
