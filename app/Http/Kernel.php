@@ -72,6 +72,7 @@ class Kernel extends HttpKernel
         'prevent-back-history' => \App\Http\Middleware\PreventBackHistory::class,
         'role' => \App\Http\Middleware\CheckRole::class, // Added role middleware
         'login.throttle' => \App\Http\Middleware\LoginThrottle::class, // Added login throttle middleware
+        'restrict.debug' => \App\Http\Middleware\RestrictDebugSurfaces::class,
     ];
     
 }

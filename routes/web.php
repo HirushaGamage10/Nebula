@@ -982,18 +982,18 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     });
 
     // Developer Dashboard
-    Route::middleware(['role:Developer'])->group(function () {
+    Route::middleware(['role:Developer', 'restrict.debug'])->group(function () {
         Route::get('/developer-dashboard', [DeveloperDashboardController::class, 'index'])->name('developer.dashboard');
     });
 
     // System Diagnostics (Admin & Developer only)
-    Route::middleware(['role:Admin,Developer'])->group(function () {
+    Route::middleware(['role:Admin,Developer', 'restrict.debug'])->group(function () {
         Route::get('/diagnostics', [App\Http\Controllers\DiagnosticsController::class, 'index'])->name('diagnostics.index');
         Route::post('/diagnostics/clear-cache', [App\Http\Controllers\DiagnosticsController::class, 'clearCache'])->name('diagnostics.clear-cache');
     });
 
     // Permission Checker (Admin, Program Administrators & Developer)
-    Route::middleware(['role:Program Administrator (level 01),Program Administrator (level 02),Developer,Admin'])->group(function () {
+    Route::middleware(['role:Program Administrator (level 01),Program Administrator (level 02),Developer,Admin', 'restrict.debug'])->group(function () {
         Route::get('/permission-checker', function() {
             return view('permission_checker');
         })->name('permission.checker');
