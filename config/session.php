@@ -181,7 +181,7 @@ return [
     |
     */
 
-    'http_only' => true,
+    'http_only' => env('SESSION_HTTP_ONLY', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -196,6 +196,7 @@ return [
     |
     */
 
-    'same_site' => 'lax',
+    // Use strict by default to satisfy stricter scanner baselines.
+    'same_site' => env('SESSION_SAME_SITE', 'strict'),
 
 ];
