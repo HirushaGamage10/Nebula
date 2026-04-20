@@ -32,10 +32,19 @@ class SecurityHeaders
             'camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()'
         );
 
+        // Additional hardening headers to reduce information exposure.
+        $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
+        $response->headers->set('Cross-Origin-Resource-Policy', 'same-origin');
+        $response->headers->set('X-Permitted-Cross-Domain-Policies', 'none');
+        $response->headers->set('X-XSS-Protection', '0');
+
         // ZAP checks for HSTS even on responses that are otherwise valid.
-        $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        if ($request->isSecure()) {
+            $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        }
 
         $response->headers->remove('X-Powered-By');
+        $response->headers->remove('Server');
 
         return $response;
     }
