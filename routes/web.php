@@ -83,7 +83,7 @@ Route::redirect('/', 'login');
 // AUTHENTICATION ROUTES (Public)
 // ============================================================================
 Route::get('/login', [LoginController::class, 'showLogin'])->name('login');
-Route::post('/login', [LoginController::class, 'authenticate'])->name('login.authenticate');
+Route::post('/login', [LoginController::class, 'authenticate'])->middleware('login.throttle')->name('login.authenticate');
 
 // ============================================================================
 // SPREADSHEET SECTION (Public - No Auth Required)

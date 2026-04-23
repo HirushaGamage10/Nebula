@@ -4,12 +4,14 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
 class AuthenticationService
 {
+    private int $maxAttemptsPerEmail = 5;
+    private int $attemptDecaySeconds = 900;
+
     /**
      * Attempt to authenticate a user
      *
@@ -27,6 +29,14 @@ class AuthenticationService
                     'success' => false,
                     'message' => 'Invalid username or password.',
                     'error_type' => 'invalid_credentials'
+                ];
+            }
+
+            if ($this->isAccountLocked($credentials['email'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Too many failed login attempts. Please try again later.',
+                    'error_type' => 'account_locked'
                 ];
             }
 
@@ -50,6 +60,8 @@ class AuthenticationService
 
             // Attempt authentication
             if (Auth::attempt($credentials)) {
+                $this->clearFailedAttempts($credentials['email']);
+
                 // Log successful login
                 Log::info('User logged in successfully', [
                     'user_id' => $user->user_id,
@@ -74,6 +86,8 @@ class AuthenticationService
                 'ip' => request()->ip(),
                 'user_agent' => request()->userAgent()
             ]);
+
+            $this->incrementFailedAttempts($credentials['email']);
 
             return [
                 'success' => false,
@@ -132,9 +146,7 @@ class AuthenticationService
      */
     public function isAccountLocked(string $email): bool
     {
-        // This can be extended to implement account locking logic
-        // For now, we'll return false
-        return false;
+        return $this->getLoginAttempts($email) >= $this->maxAttemptsPerEmail;
     }
 
     /**
@@ -145,9 +157,7 @@ class AuthenticationService
      */
     public function getLoginAttempts(string $email): int
     {
-        // This can be extended to track login attempts
-        // For now, we'll return 0
-        return 0;
+        return Cache::get($this->attemptCacheKey($email), 0);
     }
 
     /**
@@ -158,8 +168,11 @@ class AuthenticationService
      */
     public function logFailedAttempt(string $email): void
     {
+        $this->incrementFailedAttempts($email);
+
         Log::warning('Failed login attempt', [
             'email' => $email,
+            'attempts' => $this->getLoginAttempts($email),
             'ip' => request()->ip(),
             'user_agent' => request()->userAgent(),
             'timestamp' => now()
@@ -174,6 +187,8 @@ class AuthenticationService
      */
     public function logSuccessfulLogin(User $user): void
     {
+        $this->clearFailedAttempts($user->email);
+
         Log::info('User logged in successfully', [
             'user_id' => $user->user_id,
             'email' => $user->email,
@@ -184,5 +199,22 @@ class AuthenticationService
             'user_agent' => request()->userAgent(),
             'timestamp' => now()
         ]);
+    }
+
+    private function attemptCacheKey(string $email): string
+    {
+        return 'auth_login_attempts_' . strtolower(trim($email));
+    }
+
+    private function incrementFailedAttempts(string $email): void
+    {
+        $key = $this->attemptCacheKey($email);
+        $attempts = Cache::get($key, 0) + 1;
+        Cache::put($key, $attempts, $this->attemptDecaySeconds);
+    }
+
+    private function clearFailedAttempts(string $email): void
+    {
+        Cache::forget($this->attemptCacheKey($email));
     }
 } 

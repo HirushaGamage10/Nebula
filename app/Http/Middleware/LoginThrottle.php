@@ -4,11 +4,17 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class LoginThrottle
 {
+    private int $maxIpAttempts = 10;
+    private int $maxEmailAttempts = 5;
+    private int $ipDecaySeconds = 300;
+    private int $emailDecaySeconds = 900;
+
     /**
      * Handle an incoming request.
      *
@@ -48,9 +54,13 @@ class LoginThrottle
         }
         
         $response = $next($request);
-        
-        // If login failed, increment counters
-        if ($request->session()->has('errors')) {
+
+        if (Auth::check()) {
+            $this->clearAttempts($ip, $email);
+            return $response;
+        }
+
+        if ($this->shouldTrackFailedLogin($request)) {
             $this->incrementFailedAttempts($ip, $email);
         }
         
@@ -65,7 +75,7 @@ class LoginThrottle
         $key = "login_attempts_ip_{$ip}";
         $attempts = Cache::get($key, 0);
         
-        return $attempts >= 10; // Block after 10 attempts
+        return $attempts >= $this->maxIpAttempts;
     }
     
     /**
@@ -76,7 +86,7 @@ class LoginThrottle
         $key = "login_attempts_email_{$email}";
         $attempts = Cache::get($key, 0);
         
-        return $attempts >= 5; // Block after 5 attempts
+        return $attempts >= $this->maxEmailAttempts;
     }
     
     /**
@@ -87,13 +97,13 @@ class LoginThrottle
         // Increment IP attempts
         $ipKey = "login_attempts_ip_{$ip}";
         $ipAttempts = Cache::get($ipKey, 0) + 1;
-        Cache::put($ipKey, $ipAttempts, 300); // 5 minutes
+        Cache::put($ipKey, $ipAttempts, $this->ipDecaySeconds);
         
         // Increment email attempts
         if ($email) {
             $emailKey = "login_attempts_email_{$email}";
             $emailAttempts = Cache::get($emailKey, 0) + 1;
-            Cache::put($emailKey, $emailAttempts, 900); // 15 minutes
+            Cache::put($emailKey, $emailAttempts, $this->emailDecaySeconds);
         }
         
         Log::warning('Failed login attempt', [
@@ -102,5 +112,35 @@ class LoginThrottle
             'ip_attempts' => $ipAttempts,
             'email_attempts' => $emailAttempts ?? 0
         ]);
+    }
+
+    /**
+     * Clear login attempt counters after a successful login.
+     */
+    private function clearAttempts(string $ip, ?string $email): void
+    {
+        Cache::forget("login_attempts_ip_{$ip}");
+
+        if ($email) {
+            Cache::forget("login_attempts_email_{$email}");
+        }
+    }
+
+    /**
+     * Track only true credential failures to avoid throttling form validation or account-state errors.
+     */
+    private function shouldTrackFailedLogin(Request $request): bool
+    {
+        if (!$request->routeIs('login.authenticate') || !$request->session()->has('errors')) {
+            return false;
+        }
+
+        $errors = $request->session()->get('errors');
+        if (!$errors) {
+            return false;
+        }
+
+        $emailError = strtolower((string) $errors->first('email'));
+        return str_contains($emailError, 'invalid username or password');
     }
 } 
