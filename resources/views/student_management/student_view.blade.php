@@ -21,7 +21,7 @@
           <select id="courseSelect" name="course_id" class="form-select">
             <option value="">All Courses</option>
             @foreach(\App\Models\Course::orderBy('course_name')->get() as $course)
-              <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
+              <option value="{{ $course->course_id }}">{{ $course->course_name }} ({{ $course->location }})</option>
             @endforeach
           </select>
         </div>
@@ -284,7 +284,7 @@ document.getElementById('student_id').addEventListener('change', async e => {
     // Reset to all courses
     document.getElementById('courseSelect').innerHTML = '<option value="">All Courses</option>';
     @foreach(\App\Models\Course::orderBy('course_name')->get() as $course)
-      document.getElementById('courseSelect').innerHTML += '<option value="{{ $course->course_id }}">{{ $course->course_name }}</option>';
+      document.getElementById('courseSelect').innerHTML += '<option value="{{ $course->course_id }}">{{ $course->course_name }} ({{ $course->location }})</option>';
     @endforeach
     return;
   }
@@ -296,7 +296,9 @@ document.getElementById('student_id').addEventListener('change', async e => {
     if (data.success && data.courses.length > 0) {
       let html = '<option value="">All Courses</option>';
       data.courses.forEach(course => {
-        html += `<option value="${escapeHtml(String(course.course_id))}">${escapeHtml(String(course.course_name))}</option>`;
+        const courseName = escapeHtml(String(course.course_name || ''));
+        const courseLocation = escapeHtml(String(course.location || '-'));
+        html += `<option value="${escapeHtml(String(course.course_id))}">${courseName} (${courseLocation})</option>`;
       });
       document.getElementById('courseSelect').innerHTML = html;
     } else {
