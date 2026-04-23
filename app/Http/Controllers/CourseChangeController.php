@@ -8,6 +8,7 @@ use App\Models\Intake;
 use App\Models\Course;
 use App\Models\Student;
 use App\Models\StudentPaymentPlan;
+use App\Models\PaymentPlan;
 use App\Models\PaymentDetail;
 use App\Models\PaymentInstallment;
 use Illuminate\Support\Facades\DB;
@@ -504,8 +505,14 @@ public function checkPaymentStatus(Request $request)
 
             Log::info('Course change logged with ID: ' . $logId);
 
-            // Create new payment plan for the selected new course/intake if needed
-            $this->createNewPaymentPlan($studentId, $newIntake->course_id, $newIntake->intake_id);
+            // Create or reuse payment plan for the selected new course/intake and
+            // settle carried paid amount from installment 1 onward.
+            $newPaymentPlanResult = $this->createNewPaymentPlan(
+                $studentId,
+                $newIntake->course_id,
+                $newIntake->intake_id,
+                (float) ($paymentProcessResult['total_paid_amount'] ?? 0)
+            );
 
             DB::commit();
 
@@ -518,7 +525,9 @@ public function checkPaymentStatus(Request $request)
                 'payment_summary' => [
                     'total_paid_amount' => $paymentProcessResult['total_paid_amount'] ?? 0,
                     'payment_records_updated' => $paymentProcessResult['records_updated'] ?? 0,
-                    'has_payments' => $paymentProcessResult['has_payments'] ?? false
+                    'has_payments' => $paymentProcessResult['has_payments'] ?? false,
+                    'carry_forward_applied' => (float) ($newPaymentPlanResult['carry_forward_applied'] ?? 0),
+                    'carry_forward_remaining' => (float) ($newPaymentPlanResult['carry_forward_remaining'] ?? 0),
                 ],
                 'new_course_info' => [
                     'course_name' => $newIntake->course->course_name ?? 'N/A',
@@ -773,30 +782,41 @@ public function checkPaymentStatus(Request $request)
     }
 
     /**
-     * Create new payment plan for new course
+     * Create or reuse payment plan for the new course/intake and settle carry-forward.
      */
-    private function createNewPaymentPlan($studentId, $newCourseId, $newIntakeId = null)
+    private function createNewPaymentPlan($studentId, $newCourseId, $newIntakeId = null, $carryForwardAmount = 0.0)
     {
+        $carryForwardAmount = max(0, (float) $carryForwardAmount);
+
         try {
-            // Check if payment plan already exists for new course
             $existingPlan = StudentPaymentPlan::where('student_id', $studentId)
                 ->where('course_id', $newCourseId)
                 ->where('status', 'active')
+                ->orderByDesc('id')
                 ->first();
 
             if ($existingPlan) {
-                Log::info('Payment plan already exists for new course: ' . $existingPlan->id);
-                return $existingPlan;
+                Log::info('Active payment plan already exists for new course', [
+                    'payment_plan_id' => $existingPlan->id,
+                    'student_id' => $studentId,
+                    'course_id' => $newCourseId,
+                ]);
+
+                $settlement = $this->applyCarryForwardToPlanInstallments($existingPlan, $carryForwardAmount);
+
+                return [
+                    'payment_plan_id' => $existingPlan->id,
+                    'created' => false,
+                    'carry_forward_applied' => $settlement['applied'],
+                    'carry_forward_remaining' => $settlement['remaining'],
+                ];
             }
 
-            // Get course details to set default amounts
             $course = Course::find($newCourseId);
             if (!$course) {
-                Log::warning('Course not found for new payment plan: ' . $newCourseId);
-                return null;
+                throw new \Exception('Course not found for new payment plan: ' . $newCourseId);
             }
 
-            // Prefer the selected intake so intake-only changes keep the correct batch
             $intake = null;
             if ($newIntakeId) {
                 $intake = Intake::where('course_id', $newCourseId)
@@ -810,31 +830,194 @@ public function checkPaymentStatus(Request $request)
                     ->first();
             }
 
-            $totalAmount = $intake ? ($intake->course_fee ?? 0) : 0;
+            $templatePlan = PaymentPlan::where('course_id', $newCourseId)
+                ->when($newIntakeId, function ($query) use ($newIntakeId) {
+                    $query->where('intake_id', $newIntakeId);
+                })
+                ->orderByDesc('id')
+                ->first();
 
-            // Create new payment plan
+            if (!$templatePlan && $intake) {
+                $templatePlan = PaymentPlan::where('course_id', $newCourseId)
+                    ->where('intake_id', $intake->intake_id)
+                    ->orderByDesc('id')
+                    ->first();
+            }
+
+            $localFee = (float) ($templatePlan->local_fee ?? ($intake->course_fee ?? 0));
+            $registrationFee = (float) ($templatePlan->registration_fee ?? ($intake->registration_fee ?? 0));
+            $totalAmount = round($localFee + $registrationFee, 2);
+            $installmentRows = $this->buildInstallmentsFromTemplate($templatePlan, $intake, $localFee);
+
             $newPaymentPlan = StudentPaymentPlan::create([
                 'student_id' => $studentId,
                 'course_id' => $newCourseId,
-                'intake_id' => $intake->intake_id ?? null,
-                'payment_plan_type' => 'installments',
+                'payment_plan_type' => ($templatePlan && $templatePlan->installment_plan) ? 'installments' : 'full',
                 'slt_loan_applied' => 'no',
                 'slt_loan_amount' => 0,
                 'total_amount' => $totalAmount,
                 'final_amount' => $totalAmount,
                 'status' => 'active',
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
-            Log::info('Created new payment plan: ' . $newPaymentPlan->id . ' for course: ' . $newCourseId);
+            foreach ($installmentRows as $index => $row) {
+                PaymentInstallment::create([
+                    'payment_plan_id' => $newPaymentPlan->id,
+                    'installment_number' => (int) ($row['installment_number'] ?? ($index + 1)),
+                    'due_date' => $row['due_date'] ?? null,
+                    'amount' => (float) ($row['amount'] ?? 0),
+                    'base_amount' => (float) ($row['base_amount'] ?? $row['amount'] ?? 0),
+                    'final_amount' => (float) ($row['final_amount'] ?? $row['amount'] ?? 0),
+                    'installment_type' => 'course_fee',
+                    'status' => 'pending',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
 
-            return $newPaymentPlan;
+            $settlement = $this->applyCarryForwardToPlanInstallments($newPaymentPlan, $carryForwardAmount);
+
+            Log::info('Created new payment plan for course change', [
+                'payment_plan_id' => $newPaymentPlan->id,
+                'student_id' => $studentId,
+                'course_id' => $newCourseId,
+                'intake_id' => $intake->intake_id ?? null,
+                'installments_created' => count($installmentRows),
+                'carry_forward_applied' => $settlement['applied'],
+                'carry_forward_remaining' => $settlement['remaining'],
+            ]);
+
+            return [
+                'payment_plan_id' => $newPaymentPlan->id,
+                'created' => true,
+                'carry_forward_applied' => $settlement['applied'],
+                'carry_forward_remaining' => $settlement['remaining'],
+            ];
 
         } catch (\Exception $e) {
             Log::error('Error creating new payment plan: ' . $e->getMessage());
-            return null;
+
+            return [
+                'payment_plan_id' => null,
+                'created' => false,
+                'carry_forward_applied' => 0.0,
+                'carry_forward_remaining' => $carryForwardAmount,
+            ];
         }
+    }
+
+    private function buildInstallmentsFromTemplate(?PaymentPlan $templatePlan, ?Intake $intake, float $localFee): array
+    {
+        $rawInstallments = [];
+
+        if ($templatePlan && is_array($templatePlan->installments)) {
+            $rawInstallments = $templatePlan->installments;
+        } elseif ($templatePlan && is_string($templatePlan->installments)) {
+            $decoded = json_decode($templatePlan->installments, true);
+            $rawInstallments = is_array($decoded) ? $decoded : [];
+        }
+
+        $rows = [];
+
+        foreach ($rawInstallments as $index => $installment) {
+            $amount = round((float) ($installment['local_amount'] ?? $installment['amount'] ?? 0), 2);
+            if ($amount <= 0) {
+                continue;
+            }
+
+            $rows[] = [
+                'installment_number' => (int) ($installment['installment_number'] ?? ($index + 1)),
+                'due_date' => $installment['due_date'] ?? optional($intake?->start_date)->toDateString(),
+                'amount' => $amount,
+                'base_amount' => $amount,
+                'final_amount' => $amount,
+            ];
+        }
+
+        if (empty($rows)) {
+            $defaultAmount = $localFee > 0 ? $localFee : (float) ($intake->course_fee ?? 0);
+            $rows[] = [
+                'installment_number' => 1,
+                'due_date' => $intake && $intake->start_date ? Carbon::parse($intake->start_date)->toDateString() : now()->addDays(7)->toDateString(),
+                'amount' => round($defaultAmount, 2),
+                'base_amount' => round($defaultAmount, 2),
+                'final_amount' => round($defaultAmount, 2),
+            ];
+        }
+
+        usort($rows, function ($a, $b) {
+            return ((int) $a['installment_number']) <=> ((int) $b['installment_number']);
+        });
+
+        return $rows;
+    }
+
+    private function applyCarryForwardToPlanInstallments(StudentPaymentPlan $plan, float $carryForwardAmount): array
+    {
+        $remainingCarry = round(max(0, $carryForwardAmount), 2);
+        $applied = 0.0;
+
+        if ($remainingCarry <= 0) {
+            return ['applied' => 0.0, 'remaining' => 0.0];
+        }
+
+        $installments = PaymentInstallment::where('payment_plan_id', $plan->id)
+            ->orderBy('installment_number')
+            ->get();
+
+        foreach ($installments as $installment) {
+            if ($remainingCarry <= 0) {
+                break;
+            }
+
+            $status = strtolower((string) ($installment->status ?? 'pending'));
+            if ($status === 'archived') {
+                continue;
+            }
+
+            $dueAmount = round((float) ($installment->final_amount ?? $installment->amount ?? 0), 2);
+            if ($dueAmount <= 0) {
+                continue;
+            }
+
+            $settledForInstallment = min($remainingCarry, $dueAmount);
+            if ($settledForInstallment <= 0) {
+                continue;
+            }
+
+            $remainingForInstallment = round($dueAmount - $settledForInstallment, 2);
+            $isFullySettled = $remainingForInstallment <= 0;
+
+            $installment->status = $isFullySettled ? 'paid' : 'pending';
+            $installment->paid_date = $isFullySettled ? now() : null;
+
+            // Keep original amount for fully settled rows; for partial settlement,
+            // store only the outstanding balance in final/amount.
+            if (!$isFullySettled) {
+                $installment->final_amount = $remainingForInstallment;
+                $installment->amount = $remainingForInstallment;
+            }
+
+            $installment->updated_at = now();
+            $installment->save();
+
+            $remainingCarry = round($remainingCarry - $settledForInstallment, 2);
+            $applied = round($applied + $settledForInstallment, 2);
+        }
+
+        Log::info('Applied carry-forward amount to new payment plan', [
+            'payment_plan_id' => $plan->id,
+            'carry_forward_total' => $carryForwardAmount,
+            'carry_forward_applied' => $applied,
+            'carry_forward_remaining' => $remainingCarry,
+        ]);
+
+        return [
+            'applied' => $applied,
+            'remaining' => $remainingCarry,
+        ];
     }
 
     /**

@@ -181,13 +181,8 @@
                                 <div class="alert alert-info">
                                     <i class="ti ti-info-circle me-2"></i>
                                     <small>
-                                        <strong>Note:</strong> All payment records for the old course will be:
-                                        <ul class="mb-0 mt-1">
-                                            <li>Amounts set to zero</li>
-                                            <li>Payment status changed to "cancelled"</li>
-                                            <li>Payment installments marked as "archived"</li>
-                                            <li>Payment plan marked as "cancelled"</li>
-                                        </ul>
+                                        <strong>Note:</strong> Old course payment records are archived. The total amount already paid is carried forward and settled from installment 1 of the new course payment plan.
+                                        The student continues with that new payment plan for the remaining balance.
                                     </small>
                                 </div>
                             </div>
@@ -1195,10 +1190,10 @@ async function submitChange() {
                         </h4>
                         <p class="mb-2">Payment records have been updated:</p>
                         <ul class="mb-3">
-                            <li>✓ All amounts set to zero</li>
-                            <li>✓ Payment status changed to "cancelled"</li>
-                            <li>✓ Payment installments marked as "archived"</li>
-                            <li>✓ Payment plan marked as "cancelled"</li>
+                            <li>✓ Old course payment records archived</li>
+                            <li>✓ Old payment statuses marked as "cancelled"</li>
+                            <li>✓ Carry-forward settled on new plan from installment 1</li>
+                            <li>✓ Student continues with remaining installments of the new plan</li>
                         </ul>
                         <p class="mb-0">
                             <i class="ti ti-info-circle me-1"></i>
