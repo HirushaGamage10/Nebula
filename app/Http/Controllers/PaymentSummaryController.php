@@ -21,13 +21,15 @@ class PaymentSummaryController extends Controller
         $paymentMethod = $request->input('payment_method');
         $status = $request->input('status');
         $studentId = $request->input('student_id');
+        $breakdownScope = $request->input('breakdown_scope', 'paid');
         
         $startDate = $this->getDateFromRange($range);
         
         return $this->generateAdvancedSummary(null, $startDate, [
             'payment_method' => $paymentMethod,
             'status' => $status,
-            'student_id' => $studentId
+            'student_id' => $studentId,
+            'breakdown_scope' => $breakdownScope
         ]);
     }
 
@@ -40,12 +42,14 @@ class PaymentSummaryController extends Controller
         $range = $request->input('range', '1y');
         $paymentMethod = $request->input('payment_method');
         $status = $request->input('status');
+        $breakdownScope = $request->input('breakdown_scope', 'paid');
 
         $startDate = $this->getDateFromRange($range);
 
         return $this->generateAdvancedSummary($studentId, $startDate, [
             'payment_method' => $paymentMethod,
-            'status' => $status
+            'status' => $status,
+            'breakdown_scope' => $breakdownScope
         ]);
     }
 
@@ -315,6 +319,7 @@ class PaymentSummaryController extends Controller
         $paymentTable = $this->getPaymentDetailsTable();
         $query = PaymentDetail::query();
         $hasStatus = $this->hasPaymentDetailColumn('status');
+        $breakdownScope = ($filters['breakdown_scope'] ?? 'paid') === 'all' ? 'all' : 'paid';
 
         // Apply student filter
         if ($studentId) {
@@ -335,6 +340,9 @@ class PaymentSummaryController extends Controller
         if (!empty($filters['payment_method'])) {
             $query->where($paymentTable . '.payment_method', $filters['payment_method']);
         }
+
+        // Keep a copy before status filtering so methods/types can use their own scope.
+        $queryBeforeStatusFilter = clone $query;
 
         // Apply status filter
         if (!empty($filters['status']) && $hasStatus) {
@@ -358,14 +366,19 @@ class PaymentSummaryController extends Controller
         $bankChargesTotal = $this->sumIfColumnExists($query, 'bank_charges');
 
         // Payment Breakdowns
-        $paymentByMethod = (clone $query)
+        $methodTypeQuery = clone $queryBeforeStatusFilter;
+        if ($hasStatus && $breakdownScope === 'paid') {
+            $methodTypeQuery->where($paymentTable . '.status', 'paid');
+        }
+
+        $paymentByMethod = (clone $methodTypeQuery)
             ->select($paymentTable . '.payment_method', 
                 DB::raw("SUM({$paymentTable}.total_fee) as total"),
                 DB::raw('COUNT(*) as count'))
             ->groupBy($paymentTable . '.payment_method')
             ->get();
 
-        $paymentByType = (clone $query)
+        $paymentByType = (clone $methodTypeQuery)
             ->select(
                 DB::raw($this->getPaymentTypeCase()),
                 DB::raw("SUM({$paymentTable}.total_fee) as total"),
@@ -456,6 +469,7 @@ class PaymentSummaryController extends Controller
                 'paymentByMethod' => $paymentByMethod,
                 'paymentByType' => $paymentByType,
                 'paymentByStatus' => $paymentByStatus,
+                'breakdownScope' => $breakdownScope,
                 'monthlyIncome' => $monthlyIncome,
                 'weeklyTrend' => $weeklyTrend,
                 'topStudents' => $topStudents,
@@ -467,7 +481,7 @@ class PaymentSummaryController extends Controller
         return view('payments.summary', compact(
             'totalCollected', 'totalPending', 'totalLateFee', 'totalDiscount',
             'totalTransactions', 'averageTransaction', 'ssclTaxTotal', 'bankChargesTotal',
-            'paymentByMethod', 'paymentByType', 'paymentByStatus', 'monthlyIncome',
+            'paymentByMethod', 'paymentByType', 'paymentByStatus', 'breakdownScope', 'monthlyIncome',
             'weeklyTrend', 'topStudents', 'recentPayments', 'districtAnalytics'
         ));
     }

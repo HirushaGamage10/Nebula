@@ -66,6 +66,13 @@
                     <label class="form-label small text-muted">Student ID</label>
                     <input type="text" class="form-control" id="studentFilter" name="student_id" placeholder="Enter Student ID">
                 </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Methods/Types Scope</label>
+                    <select class="form-select" id="breakdownScopeFilter" name="breakdown_scope">
+                        <option value="paid" {{ ($breakdownScope ?? 'paid') === 'paid' ? 'selected' : '' }}>Paid Only</option>
+                        <option value="all" {{ ($breakdownScope ?? 'paid') === 'all' ? 'selected' : '' }}>All Statuses (Audit)</option>
+                    </select>
+                </div>
             </div>
             <div class="mt-3 text-end">
                 <button class="btn btn-sm btn-primary btn-apply-filters">
@@ -288,6 +295,7 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white border-0 py-3">
                     <h6 class="fw-bold mb-0">💳 Payment Methods</h6>
+                    <small id="methodsScopeIndicator" class="text-muted d-block mt-1">Scope: Paid Only</small>
                 </div>
                 <div class="card-body">
                     <canvas id="methodChart" height="200"></canvas>
@@ -299,6 +307,7 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white border-0 py-3">
                     <h6 class="fw-bold mb-0">📋 Payment Types</h6>
+                    <small id="typesScopeIndicator" class="text-muted d-block mt-1">Scope: Paid Only</small>
                 </div>
                 <div class="card-body">
                     <canvas id="typeChart" height="200"></canvas>
@@ -464,6 +473,7 @@ function applyFilters() {
     const method = document.getElementById('methodFilter').value;
     const status = document.getElementById('statusFilter').value;
     const studentId = document.getElementById('studentFilter').value;
+    const breakdownScope = document.getElementById('breakdownScopeFilter').value;
 
     // Build query parameters
     const params = new URLSearchParams();
@@ -471,6 +481,7 @@ function applyFilters() {
     if (method) params.append('payment_method', method);
     if (status) params.append('status', status);
     if (studentId) params.append('student_id', studentId);
+    params.append('breakdown_scope', breakdownScope || 'paid');
 
     // Show loading indicator
     showLoading();
@@ -484,6 +495,7 @@ function resetFilters() {
     document.getElementById('methodFilter').value = '';
     document.getElementById('statusFilter').value = '';
     document.getElementById('studentFilter').value = '';
+    document.getElementById('breakdownScopeFilter').value = 'paid';
     
     // Redirect to clean URL
     window.location.href = '{{ route("payment.summary") }}';
@@ -493,12 +505,14 @@ function exportData() {
     const range = document.getElementById('rangeFilter').value;
     const method = document.getElementById('methodFilter').value;
     const status = document.getElementById('statusFilter').value;
+    const breakdownScope = document.getElementById('breakdownScopeFilter').value;
     
     const params = new URLSearchParams();
     params.append('format', 'csv');
     params.append('range', range);
     if (method) params.append('payment_method', method);
     if (status) params.append('status', status);
+    params.append('breakdown_scope', breakdownScope || 'paid');
     
     window.location.href = `{{ route('payment.export') }}?${params.toString()}`;
 }
@@ -514,6 +528,18 @@ function showLoading() {
 // ========== PRESERVE FILTERS ON PAGE LOAD ==========
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
+
+    function updateBreakdownScopeIndicator() {
+        const scopeSelect = document.getElementById('breakdownScopeFilter');
+        const methodsIndicator = document.getElementById('methodsScopeIndicator');
+        const typesIndicator = document.getElementById('typesScopeIndicator');
+        if (!scopeSelect || !methodsIndicator || !typesIndicator) return;
+
+        const isAll = scopeSelect.value === 'all';
+        const scopeLabel = isAll ? 'All Statuses (Audit)' : 'Paid Only';
+        methodsIndicator.textContent = 'Scope: ' + scopeLabel;
+        typesIndicator.textContent = 'Scope: ' + scopeLabel;
+    }
     
     // Restore filter values from URL
     if (urlParams.has('range')) {
@@ -528,12 +554,22 @@ document.addEventListener('DOMContentLoaded', function() {
     if (urlParams.has('student_id')) {
         document.getElementById('studentFilter').value = urlParams.get('student_id');
     }
+    if (urlParams.has('breakdown_scope')) {
+        document.getElementById('breakdownScopeFilter').value = urlParams.get('breakdown_scope');
+    }
+
+    updateBreakdownScopeIndicator();
 
     const rangeFilter = document.getElementById('rangeFilter');
     if (rangeFilter) {
         rangeFilter.addEventListener('change', function() {
             applyFilters();
         });
+    }
+
+    const breakdownScopeFilter = document.getElementById('breakdownScopeFilter');
+    if (breakdownScopeFilter) {
+        breakdownScopeFilter.addEventListener('change', updateBreakdownScopeIndicator);
     }
 });
 
