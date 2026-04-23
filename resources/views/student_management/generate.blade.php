@@ -35,7 +35,7 @@
           <select id="courseSelect" name="course_id" class="form-select">
             <option value="">All Courses</option>
             @foreach(\App\Models\Course::orderBy('course_name')->get() as $course)
-              <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
+              <option value="{{ $course->course_id }}">{{ $course->course_name }} ({{ $course->location }})</option>
             @endforeach
           </select>
         </div>
