@@ -462,7 +462,15 @@ class CourseRegistraionController extends Controller
     public function getIntakesForCourseAndLocation($courseName, $location)
     {
         try {
-            $course = \App\Models\Course::where('course_name', $courseName)->first();
+            $course = \App\Models\Course::where('course_name', $courseName)
+                ->where('location', $location)
+                ->first();
+
+            if (!$course) {
+                // Fallback for older data inconsistencies.
+                $course = \App\Models\Course::where('course_name', $courseName)->first();
+            }
+
             if ($course) {
                 $intakes = Intake::forCourse($course, $location)
                     ->orderBy('batch')
@@ -643,7 +651,15 @@ class CourseRegistraionController extends Controller
         $courseName = $request->input('course_name');
         $location = $request->input('location');
 
-        $course = \App\Models\Course::where('course_name', $courseName)->first();
+        $course = \App\Models\Course::where('course_name', $courseName)
+            ->where('location', $location)
+            ->first();
+
+        if (!$course) {
+            // Fallback for older data inconsistencies.
+            $course = \App\Models\Course::where('course_name', $courseName)->first();
+        }
+
         if ($course) {
             $intakes = \App\Models\Intake::forCourse($course, $location)
                 ->orderBy('start_date', 'asc')

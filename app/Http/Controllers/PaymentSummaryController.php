@@ -17,7 +17,7 @@ class PaymentSummaryController extends Controller
     public function index(Request $request)
     {
         // Get all filter parameters from request
-        $range = $request->input('range', '1y');
+        $range = $request->input('range', '10y');
         $paymentMethod = $request->input('payment_method');
         $status = $request->input('status');
         $studentId = $request->input('student_id');
@@ -39,7 +39,7 @@ class PaymentSummaryController extends Controller
     public function filter(Request $request)
     {
         $studentId = $request->input('student_id');
-        $range = $request->input('range', '1y');
+        $range = $request->input('range', '10y');
         $paymentMethod = $request->input('payment_method');
         $status = $request->input('status');
         $breakdownScope = $request->input('breakdown_scope', 'paid');

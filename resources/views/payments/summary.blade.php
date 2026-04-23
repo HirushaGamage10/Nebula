@@ -36,10 +36,10 @@
                         <option value="1m">Last Month</option>
                         <option value="3m">Last 3 Months</option>
                         <option value="6m">Last 6 Months</option>
-                        <option value="1y" selected>Last Year</option>
+                        <option value="1y">Last Year</option>
                         <option value="2y">Last 2 Years</option>
                         <option value="5y">Last 5 Years</option>
-                        <option value="10y">All Time</option>
+                        <option value="10y" selected>All Time</option>
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -491,7 +491,7 @@ function applyFilters() {
 }
 
 function resetFilters() {
-    document.getElementById('rangeFilter').value = '1y';
+    document.getElementById('rangeFilter').value = '10y';
     document.getElementById('methodFilter').value = '';
     document.getElementById('statusFilter').value = '';
     document.getElementById('studentFilter').value = '';
