@@ -159,13 +159,6 @@
         </div>
 
         <div class="d-flex align-items-center gap-2">
-            <div class="input-group input-group-sm" style="width: 240px;">
-                <input type="text" class="form-control" placeholder="Search recent registrations..." id="searchStudents">
-                <button class="btn btn-outline-secondary" type="button" id="searchStudentsButton" onclick="applyStudentSearch()" title="Search recent registrations">
-                    <i class="fas fa-search"></i>
-                </button>
-            </div>
-
             <button class="btn btn-outline-primary btn-sm" onclick="refreshAllData()">
                 <i class="fas fa-sync-alt me-1"></i> Refresh
             </button>
@@ -453,7 +446,6 @@
         let totalPages = 1;
         let currentTimePeriod = 'week';
         let currentFilter = 'all';
-        let currentSearchQuery = '';
         let chartInstances = {};
         
         // Initialize dashboard
@@ -472,19 +464,6 @@
             document.getElementById('customDate').addEventListener('change', function() {
                 if (this.value) {
                     setTimePeriod('custom');
-                }
-            });
-            
-            // Search functionality
-            document.getElementById('searchStudents').addEventListener('input', function(e) {
-                currentSearchQuery = e.target.value.trim();
-                searchRegistrations(currentSearchQuery);
-            });
-
-            document.getElementById('searchStudents').addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    applyStudentSearch();
                 }
             });
             
@@ -569,11 +548,6 @@
             return params.toString();
         }
 
-        function applyStudentSearch() {
-            currentSearchQuery = document.getElementById('searchStudents')?.value.trim() || '';
-            fetchRecentRegistrations(1);
-        }
-        
         function filterRegistrations(filter, buttonElement = null) {
             currentFilter = filter;
             
@@ -992,7 +966,7 @@
             `;
             
             try {
-                const response = await fetch(`/api/student-counselor/recent-registrations?${buildPeriodQuery({ page, filter: currentFilter, search: currentSearchQuery })}`, {
+                const response = await fetch(`/api/student-counselor/recent-registrations?${buildPeriodQuery({ page, filter: currentFilter })}`, {
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
@@ -1113,29 +1087,8 @@
             });
             
             container.innerHTML = html;
-            searchRegistrations(currentSearchQuery);
-        }
-        
-        function searchRegistrations(query) {
-            const normalizedQuery = (query || '').toLowerCase();
-            const rows = document.querySelectorAll('#recentRegistrationsContainer tr');
-            let visibleRows = 0;
-
-            rows.forEach(row => {
-                if (row.cells.length > 1) {
-                    const text = row.textContent.toLowerCase();
-                    const isVisible = normalizedQuery === '' || text.includes(normalizedQuery);
-                    row.style.display = isVisible ? '' : 'none';
-
-                    if (isVisible) {
-                        visibleRows += 1;
-                    }
-                }
-            });
-
-            document.getElementById('registrationsCount').textContent = normalizedQuery
-                ? `Showing ${visibleRows} matching registration${visibleRows === 1 ? '' : 's'}`
-                : `Showing ${visibleRows} student registration${visibleRows === 1 ? '' : 's'}`;
+            document.getElementById('registrationsCount').textContent =
+                `Showing ${data.length} student registration${data.length === 1 ? '' : 's'}`;
         }
         
         function previousPage() {
