@@ -430,22 +430,6 @@ class PaymentSummaryController extends Controller
             ->take(12)
             ->get();
 
-        // Top Students
-        $topStudents = (clone $query)
-            ->select($paymentTable . '.student_id', 
-                DB::raw("SUM({$paymentTable}.total_fee) as total"),
-                DB::raw('COUNT(*) as payment_count'))
-            ->groupBy($paymentTable . '.student_id')
-            ->orderByDesc('total')
-            ->take(10)
-            ->get();
-
-        // Recent Activity
-        $recentPayments = (clone $query)
-            ->orderByDesc($paymentTable . '.created_at')
-            ->take(15)
-            ->get();
-
         $districtAnalytics = Student::query()
             ->select(
                 DB::raw("COALESCE(NULLIF(TRIM(district), ''), 'Unknown') as district"),
@@ -472,8 +456,6 @@ class PaymentSummaryController extends Controller
                 'breakdownScope' => $breakdownScope,
                 'monthlyIncome' => $monthlyIncome,
                 'weeklyTrend' => $weeklyTrend,
-                'topStudents' => $topStudents,
-                'recentPayments' => $recentPayments,
                 'districtAnalytics' => $districtAnalytics,
             ]);
         }
@@ -482,7 +464,7 @@ class PaymentSummaryController extends Controller
             'totalCollected', 'totalPending', 'totalLateFee', 'totalDiscount',
             'totalTransactions', 'averageTransaction', 'ssclTaxTotal', 'bankChargesTotal',
             'paymentByMethod', 'paymentByType', 'paymentByStatus', 'breakdownScope', 'monthlyIncome',
-            'weeklyTrend', 'topStudents', 'recentPayments', 'districtAnalytics'
+            'weeklyTrend', 'districtAnalytics'
         ));
     }
 
