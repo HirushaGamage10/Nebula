@@ -324,11 +324,21 @@ public function checkPaymentStatus(Request $request)
 
         if (!$paymentPlan) {
             Log::info('No active payment plan found');
+
+            $paymentDetails = PaymentDetail::where('student_id', $registration->student_id)
+                ->where('course_registration_id', $registration->id)
+                ->orderByDesc('created_at')
+                ->get();
+
+            $paymentHistory = $this->buildPaymentHistoryPreview($paymentDetails);
+
             return response()->json([
                 'status' => 'success',
                 'has_payment_plan' => false,
                 'has_payments' => false,
                 'total_paid_amount' => 0,
+                'payment_history_count' => count($paymentHistory),
+                'payment_history' => $paymentHistory,
                 'message' => 'No active payment plan found for this course.'
             ]);
         }
@@ -342,7 +352,10 @@ public function checkPaymentStatus(Request $request)
         // Check payment details
         $paymentDetails = PaymentDetail::where('student_id', $registration->student_id)
             ->where('course_registration_id', $registration->id)
+            ->orderByDesc('created_at')
             ->get();
+
+        $paymentHistory = $this->buildPaymentHistoryPreview($paymentDetails);
 
         Log::info('Found ' . $paymentDetails->count() . ' payment details');
 
@@ -385,6 +398,8 @@ public function checkPaymentStatus(Request $request)
             'total_paid_amount' => $totalPaidAmount,
             'payment_plan_id' => $paymentPlan->id,
             'student_id' => $registration->student_id,
+            'payment_history_count' => count($paymentHistory),
+            'payment_history' => $paymentHistory,
             'debug_info' => [
                 'registration_id' => $registration->id,
                 'payment_details_count' => $paymentDetails->count()
@@ -413,6 +428,33 @@ public function checkPaymentStatus(Request $request)
             ]
         ], 500);
     }
+}
+
+private function buildPaymentHistoryPreview($paymentDetails): array
+{
+    return $paymentDetails
+        ->map(function ($paymentDetail) {
+            $paidAmount = $this->getPaidAmountFromDetail($paymentDetail);
+
+            return [
+                'payment_id' => (int) $paymentDetail->id,
+                'payment_type' => $paymentDetail->payment_type ?? $paymentDetail->installment_type ?? 'course_fee',
+                'installment_number' => $paymentDetail->installment_number,
+                'receipt_no' => $paymentDetail->transaction_id,
+                'payment_method' => $paymentDetail->payment_method,
+                'payment_date' => optional($paymentDetail->payment_date ?? $paymentDetail->created_at)->format('Y-m-d'),
+                'status' => $paymentDetail->status,
+                'amount' => (float) ($paymentDetail->amount ?? 0),
+                'paid_amount' => (float) $paidAmount,
+                'total_fee' => (float) ($paymentDetail->total_fee ?? 0),
+                'remaining_amount' => (float) ($paymentDetail->remaining_amount ?? 0),
+                'sscl_tax_amount' => (float) ($paymentDetail->sscl_tax_amount ?? 0),
+                'bank_charges' => (float) ($paymentDetail->bank_charges ?? 0),
+                'remarks' => $paymentDetail->remarks,
+            ];
+        })
+        ->values()
+        ->all();
 }
 
     /**

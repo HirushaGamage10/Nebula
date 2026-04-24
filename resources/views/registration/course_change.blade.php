@@ -231,6 +231,35 @@
                 </div>
             </div>
 
+            <!-- Payment History Preview Modal -->
+            <div class="modal fade" id="paymentHistoryPreviewModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header bg-info text-white">
+                            <h5 class="modal-title">
+                                <i class="ti ti-history me-2"></i> Current Payment History
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="paymentHistoryPreviewContent">
+                                <div class="text-center py-3">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2">Loading payment history...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="ti ti-x me-2"></i> Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Cancelled Payments Remarks Modal -->
             <div class="modal fade" id="cancelledPaymentsModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-lg">
@@ -393,6 +422,83 @@ function showToast(message, type = 'success') {
     
     const toast = bootstrap.Toast.getOrCreateInstance(toastEl);
     toast.show();
+}
+
+function getPaymentTypeLabel(type) {
+    const labels = {
+        course_fee: 'Course Fee',
+        franchise_fee: 'Franchise Fee',
+        registration_fee: 'Registration Fee',
+        other: 'Other'
+    };
+
+    return labels[type] || type || '-';
+}
+
+function showPaymentHistoryPreview(data) {
+    const content = document.getElementById('paymentHistoryPreviewContent');
+    if (!content) {
+        return;
+    }
+
+    const history = Array.isArray(data?.payment_history) ? data.payment_history : [];
+    const totalPaid = Number(data?.total_paid_amount || 0);
+
+    if (history.length === 0) {
+        content.innerHTML = `
+            <div class="alert alert-info mb-0">
+                <i class="ti ti-info-circle me-2"></i>
+                No payment records found for this registration.
+            </div>
+        `;
+    } else {
+        const rows = history.map(item => {
+            const status = (item.status || 'pending').toLowerCase();
+            const statusClass = status === 'paid' ? 'success' : (status === 'cancelled' ? 'secondary' : 'warning');
+
+            return `
+                <tr>
+                    <td>${item.payment_date || '-'}</td>
+                    <td>${getPaymentTypeLabel(item.payment_type)}</td>
+                    <td>${item.installment_number ?? '-'}</td>
+                    <td>${item.receipt_no || '-'}</td>
+                    <td>${Number(item.total_fee || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td>${Number(item.paid_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td>${Number(item.remaining_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td><span class="badge bg-${statusClass}">${item.status || '-'}</span></td>
+                    <td>${item.payment_method || '-'}</td>
+                </tr>
+            `;
+        }).join('');
+
+        content.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">Payment Records (${history.length})</h6>
+                <span class="badge bg-primary p-2">Total Paid: LKR ${totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Payment Date</th>
+                            <th>Type</th>
+                            <th>Installment</th>
+                            <th>Receipt</th>
+                            <th>Total Fee</th>
+                            <th>Paid</th>
+                            <th>Remaining</th>
+                            <th>Status</th>
+                            <th>Method</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    const previewModal = new bootstrap.Modal(document.getElementById('paymentHistoryPreviewModal'));
+    previewModal.show();
 }
 
 function showPaymentPlanPanel(totalPaidAmount) {
@@ -843,6 +949,8 @@ async function checkPaymentStatus(registrationId) {
                 message = `Payment plan found with LKR ${data.total_paid_amount.toLocaleString()} paid.`;
                 alertType = 'warning';
             }
+
+            showPaymentHistoryPreview(data);
             
             showAlert(message, alertType);
         } else {
