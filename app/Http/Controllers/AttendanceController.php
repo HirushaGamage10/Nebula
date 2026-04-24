@@ -700,6 +700,7 @@ class AttendanceController extends Controller
                     ->where('status', true)
                     ->count();
                 $attendanceData[] = [
+                    'student_id' => $reg->student_id,
                     'registration_number' => $reg->course_registration_id,
                     'name_with_initials' => $reg->student->name_with_initials,
                     'total_sessions' => $totalSessions,
@@ -707,10 +708,58 @@ class AttendanceController extends Controller
                     'percentage' => $totalSessions > 0 ? round(($attendedSessions / $totalSessions) * 100, 2) : 0
                 ];
             }
+
+            $attendanceRecords = \App\Models\Attendance::where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->where('location', $location)
+                ->whereNull('semester')
+                ->whereNull('module_id')
+                ->get(['date', 'student_id', 'status']);
+
+            $matrixDates = $attendanceRecords
+                ->pluck('date')
+                ->map(fn ($date) => Carbon::parse($date)->toDateString())
+                ->unique()
+                ->sort()
+                ->values();
+
+            $statusByStudentAndDate = [];
+            foreach ($attendanceRecords as $record) {
+                $dateKey = Carbon::parse($record->date)->toDateString();
+                $statusByStudentAndDate[$record->student_id][$dateKey] = (bool) $record->status;
+            }
+
+            $matrixStudents = collect($attendanceData)
+                ->map(fn ($item) => [
+                    'student_id' => $item['student_id'],
+                    'registration_number' => $item['registration_number'],
+                    'name_with_initials' => $item['name_with_initials'],
+                ])
+                ->values();
+
+            $matrixRows = $matrixDates->map(function ($date) use ($matrixStudents, $statusByStudentAndDate) {
+                $statuses = [];
+                foreach ($matrixStudents as $student) {
+                    $studentId = $student['student_id'];
+                    $studentStatusMap = $statusByStudentAndDate[$studentId] ?? [];
+                    $statuses[$studentId] = array_key_exists($date, $studentStatusMap)
+                        ? $studentStatusMap[$date]
+                        : null;
+                }
+
+                return [
+                    'date' => $date,
+                    'statuses' => $statuses,
+                ];
+            })->values();
             
             return response()->json([
                 'success' => true,
-                'attendance' => $attendanceData
+                'attendance' => $attendanceData,
+                'matrix' => [
+                    'students' => $matrixStudents,
+                    'rows' => $matrixRows,
+                ],
             ]);
         }
 
@@ -776,6 +825,7 @@ class AttendanceController extends Controller
                 ->where('status', true)
                 ->count();
             $attendanceData[] = [
+                'student_id' => $reg->student_id,
                 'registration_number' => $courseReg ? $courseReg->course_registration_id : '',
                 'name_with_initials' => $reg->student->name_with_initials,
                 'total_sessions' => $totalSessions,
@@ -783,9 +833,58 @@ class AttendanceController extends Controller
                 'percentage' => $totalSessions > 0 ? round(($attendedSessions / $totalSessions) * 100, 2) : 0
             ];
         }
+
+        $attendanceRecords = \App\Models\Attendance::where('course_id', $courseId)
+            ->where('intake_id', $intakeId)
+            ->where('location', $location)
+            ->where('semester', $semester->name)
+            ->where('module_id', $moduleId)
+            ->get(['date', 'student_id', 'status']);
+
+        $matrixDates = $attendanceRecords
+            ->pluck('date')
+            ->map(fn ($date) => Carbon::parse($date)->toDateString())
+            ->unique()
+            ->sort()
+            ->values();
+
+        $statusByStudentAndDate = [];
+        foreach ($attendanceRecords as $record) {
+            $dateKey = Carbon::parse($record->date)->toDateString();
+            $statusByStudentAndDate[$record->student_id][$dateKey] = (bool) $record->status;
+        }
+
+        $matrixStudents = collect($attendanceData)
+            ->map(fn ($item) => [
+                'student_id' => $item['student_id'],
+                'registration_number' => $item['registration_number'],
+                'name_with_initials' => $item['name_with_initials'],
+            ])
+            ->values();
+
+        $matrixRows = $matrixDates->map(function ($date) use ($matrixStudents, $statusByStudentAndDate) {
+            $statuses = [];
+            foreach ($matrixStudents as $student) {
+                $studentId = $student['student_id'];
+                $studentStatusMap = $statusByStudentAndDate[$studentId] ?? [];
+                $statuses[$studentId] = array_key_exists($date, $studentStatusMap)
+                    ? $studentStatusMap[$date]
+                    : null;
+            }
+
+            return [
+                'date' => $date,
+                'statuses' => $statuses,
+            ];
+        })->values();
+
         return response()->json([
             'success' => true,
-            'attendance' => $attendanceData
+            'attendance' => $attendanceData,
+            'matrix' => [
+                'students' => $matrixStudents,
+                'rows' => $matrixRows,
+            ],
         ]);
     }
 

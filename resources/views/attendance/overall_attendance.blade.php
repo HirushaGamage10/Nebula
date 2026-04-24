@@ -94,22 +94,48 @@
                                 </button>
                             </div>
                         </div>
-                        <h4 class="text-center mb-3">Attendance Summary</h4>
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="degreeAttendanceTable">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Registration Number</th>
-                                        <th>Student Name</th>
-                                        <th>Total Sessions</th>
-                                        <th>Attended Sessions</th>
-                                        <th>Attendance (%)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="degreeOverallAttendanceTableBody">
-                                    <!-- Rows will be added here dynamically -->
-                                </tbody>
-                            </table>
+                        <ul class="nav nav-tabs mb-3" id="degreeResultTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="degree-summary-tab" data-bs-toggle="tab" data-bs-target="#degree-summary-panel" type="button" role="tab">Summary</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="degree-matrix-tab" data-bs-toggle="tab" data-bs-target="#degree-matrix-panel" type="button" role="tab">Date x Students</button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content" id="degreeResultTabContent">
+                            <div class="tab-pane fade show active" id="degree-summary-panel" role="tabpanel">
+                                <h4 class="text-center mb-3">Attendance Summary</h4>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered" id="degreeAttendanceTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Registration Number</th>
+                                                <th>Student Name</th>
+                                                <th>Total Sessions</th>
+                                                <th>Attended Sessions</th>
+                                                <th>Attendance (%)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="degreeOverallAttendanceTableBody">
+                                            <!-- Rows will be added here dynamically -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="degree-matrix-panel" role="tabpanel">
+                                <h4 class="text-center mb-3">Attendance Matrix (Dates x Students)</h4>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm" id="degreeAttendanceMatrixTable">
+                                        <thead class="table-light" id="degreeMatrixHead">
+                                            <!-- Dynamic head -->
+                                        </thead>
+                                        <tbody id="degreeMatrixBody">
+                                            <!-- Dynamic body -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -162,22 +188,48 @@
                                 </button>
                             </div>
                         </div>
-                        <h4 class="text-center mb-3">Attendance Summary</h4>
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="certAttendanceTable">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Registration Number</th>
-                                        <th>Student Name</th>
-                                        <th>Total Sessions</th>
-                                        <th>Attended Sessions</th>
-                                        <th>Attendance (%)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="certOverallAttendanceTableBody">
-                                    <!-- Rows will be added here dynamically -->
-                                </tbody>
-                            </table>
+                        <ul class="nav nav-tabs mb-3" id="certResultTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="cert-summary-tab" data-bs-toggle="tab" data-bs-target="#cert-summary-panel" type="button" role="tab">Summary</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="cert-matrix-tab" data-bs-toggle="tab" data-bs-target="#cert-matrix-panel" type="button" role="tab">Date x Students</button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content" id="certResultTabContent">
+                            <div class="tab-pane fade show active" id="cert-summary-panel" role="tabpanel">
+                                <h4 class="text-center mb-3">Attendance Summary</h4>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered" id="certAttendanceTable">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Registration Number</th>
+                                                <th>Student Name</th>
+                                                <th>Total Sessions</th>
+                                                <th>Attended Sessions</th>
+                                                <th>Attendance (%)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="certOverallAttendanceTableBody">
+                                            <!-- Rows will be added here dynamically -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="cert-matrix-panel" role="tabpanel">
+                                <h4 class="text-center mb-3">Attendance Matrix (Dates x Students)</h4>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm" id="certAttendanceMatrixTable">
+                                        <thead class="table-light" id="certMatrixHead">
+                                            <!-- Dynamic head -->
+                                        </thead>
+                                        <tbody id="certMatrixBody">
+                                            <!-- Dynamic body -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -204,6 +256,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const degreeModule = document.getElementById('degree_module');
     const degreeTableBody = document.getElementById('degreeOverallAttendanceTableBody');
     const degreeSection = document.getElementById('degreeOverallAttendanceSection');
+    const degreeMatrixHead = document.getElementById('degreeMatrixHead');
+    const degreeMatrixBody = document.getElementById('degreeMatrixBody');
     
     // Certificate Tab Elements
     const certLocation = document.getElementById('cert_location');
@@ -211,6 +265,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const certIntake = document.getElementById('cert_intake');
     const certTableBody = document.getElementById('certOverallAttendanceTableBody');
     const certSection = document.getElementById('certOverallAttendanceSection');
+    const certMatrixHead = document.getElementById('certMatrixHead');
+    const certMatrixBody = document.getElementById('certMatrixBody');
     
     // Tab event listeners
     const degreeTabBtn = document.getElementById('degree-tab');
@@ -554,6 +610,8 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 degreeTableBody.innerHTML = '<tr><td colspan="5" class="text-center">No data found.</td></tr>';
             }
+
+            renderAttendanceMatrix(data.matrix, degreeMatrixHead, degreeMatrixBody);
         });
     }
 
@@ -622,6 +680,48 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 certTableBody.innerHTML = '<tr><td colspan="5" class="text-center">No data found.</td></tr>';
             }
+
+            renderAttendanceMatrix(data.matrix, certMatrixHead, certMatrixBody);
+        });
+    }
+
+    function renderAttendanceMatrix(matrix, headEl, bodyEl) {
+        if (!headEl || !bodyEl) return;
+
+        const students = matrix && Array.isArray(matrix.students) ? matrix.students : [];
+        const rows = matrix && Array.isArray(matrix.rows) ? matrix.rows : [];
+
+        if (!students.length || !rows.length) {
+            headEl.innerHTML = '<tr><th>Date</th></tr>';
+            bodyEl.innerHTML = '<tr><td class="text-center">No date-wise attendance data found.</td></tr>';
+            return;
+        }
+
+        let headHtml = '<tr><th>Date</th>';
+        students.forEach(student => {
+            const studentLabel = `${student.name_with_initials || ''} (${student.registration_number || '-'})`;
+            headHtml += `<th>${escapeHtml(studentLabel)}</th>`;
+        });
+        headHtml += '</tr>';
+        headEl.innerHTML = headHtml;
+
+        bodyEl.innerHTML = '';
+        rows.forEach(row => {
+            let rowHtml = `<tr><td>${escapeHtml(row.date || '')}</td>`;
+            students.forEach(student => {
+                const key = String(student.student_id);
+                const status = row.statuses ? row.statuses[key] : null;
+
+                if (status === true) {
+                    rowHtml += '<td class="text-center"><span class="badge bg-success">P</span></td>';
+                } else if (status === false) {
+                    rowHtml += '<td class="text-center"><span class="badge bg-danger">A</span></td>';
+                } else {
+                    rowHtml += '<td class="text-center text-muted">-</td>';
+                }
+            });
+            rowHtml += '</tr>';
+            bodyEl.insertAdjacentHTML('beforeend', rowHtml);
         });
     }
 
