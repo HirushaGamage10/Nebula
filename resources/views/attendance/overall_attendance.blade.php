@@ -125,8 +125,13 @@
                             </div>
                             <div class="tab-pane fade" id="degree-matrix-panel" role="tabpanel">
                                 <h4 class="text-center mb-3">Attendance Matrix (Dates x Students)</h4>
-                                <div class="table-responsive">
-                                    <table class="table table-bordered table-sm" id="degreeAttendanceMatrixTable">
+                                <div class="attendance-matrix-legend mb-2 d-flex gap-3 justify-content-end small">
+                                    <span><span class="badge bg-success">P</span> Present</span>
+                                    <span><span class="badge bg-danger">A</span> Absent</span>
+                                    <span><span class="badge bg-secondary">-</span> No Record</span>
+                                </div>
+                                <div class="table-responsive attendance-matrix-wrap">
+                                    <table class="table table-bordered table-sm attendance-matrix-table" id="degreeAttendanceMatrixTable">
                                         <thead class="table-light" id="degreeMatrixHead">
                                             <!-- Dynamic head -->
                                         </thead>
@@ -219,8 +224,13 @@
                             </div>
                             <div class="tab-pane fade" id="cert-matrix-panel" role="tabpanel">
                                 <h4 class="text-center mb-3">Attendance Matrix (Dates x Students)</h4>
-                                <div class="table-responsive">
-                                    <table class="table table-bordered table-sm" id="certAttendanceMatrixTable">
+                                <div class="attendance-matrix-legend mb-2 d-flex gap-3 justify-content-end small">
+                                    <span><span class="badge bg-success">P</span> Present</span>
+                                    <span><span class="badge bg-danger">A</span> Absent</span>
+                                    <span><span class="badge bg-secondary">-</span> No Record</span>
+                                </div>
+                                <div class="table-responsive attendance-matrix-wrap">
+                                    <table class="table table-bordered table-sm attendance-matrix-table" id="certAttendanceMatrixTable">
                                         <thead class="table-light" id="certMatrixHead">
                                             <!-- Dynamic head -->
                                         </thead>
@@ -699,8 +709,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         let headHtml = '<tr><th>Date</th>';
         students.forEach(student => {
-            const studentLabel = `${student.name_with_initials || ''} (${student.registration_number || '-'})`;
-            headHtml += `<th>${escapeHtml(studentLabel)}</th>`;
+            const studentName = student.name_with_initials || '-';
+            const regNo = student.registration_number || '-';
+            headHtml += `<th><div class="matrix-student-header"><span class="matrix-student-name">${escapeHtml(studentName)}</span><span class="matrix-student-reg">${escapeHtml(String(regNo))}</span></div></th>`;
         });
         headHtml += '</tr>';
         headEl.innerHTML = headHtml;
@@ -735,4 +746,64 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+<style nonce="{{ $cspNonce }}">
+.attendance-matrix-wrap {
+    max-height: 65vh;
+    overflow: auto;
+}
+
+.attendance-matrix-table {
+    min-width: max-content;
+}
+
+.attendance-matrix-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #f8f9fa;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.2;
+    min-width: 120px;
+    max-width: 160px;
+    padding: 0.45rem 0.4rem;
+    vertical-align: bottom;
+    white-space: normal;
+}
+
+.attendance-matrix-table th:first-child,
+.attendance-matrix-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #ffffff;
+    white-space: nowrap;
+    min-width: 110px;
+}
+
+.attendance-matrix-table thead th:first-child {
+    z-index: 4;
+    background: #f8f9fa;
+}
+
+.attendance-matrix-legend .badge {
+    min-width: 1.5rem;
+}
+
+.matrix-student-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.matrix-student-name {
+    color: #212529;
+    word-break: break-word;
+}
+
+.matrix-student-reg {
+    color: #6c757d;
+    font-size: 0.72rem;
+}
+</style>
 @endsection 
