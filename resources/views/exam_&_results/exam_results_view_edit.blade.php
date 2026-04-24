@@ -606,6 +606,55 @@ document.addEventListener('DOMContentLoaded', function() {
         toast.addEventListener('hidden.bs.toast', () => toast.remove());
     }
 
+    function toDateSafe(dateText) {
+        if (!dateText) {
+            return null;
+        }
+
+        const normalized = String(dateText).replace(' ', 'T');
+        const date = new Date(normalized);
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    function isResultPassed(result) {
+        const grade = String(result?.grade ?? '').trim().toUpperCase();
+        if (grade) {
+            return !['F', 'FAIL', 'AB', 'ABSENT'].includes(grade);
+        }
+
+        const marks = Number(result?.marks);
+        return Number.isFinite(marks) && marks >= 40;
+    }
+
+    function updateStatistics(activeTab, results) {
+        const totalStudentsId = activeTab === 'degree' ? 'degreeTotalStudents' : 'certTotalStudents';
+        const averageMarksId = activeTab === 'degree' ? 'degreeAverageMarks' : 'certAverageMarks';
+        const passRateId = activeTab === 'degree' ? 'degreePassRate' : 'certPassRate';
+        const lastUpdatedId = activeTab === 'degree' ? 'degreeLastUpdated' : 'certLastUpdated';
+
+        const totalStudents = results.length;
+        const marksList = results
+            .map(r => Number(r?.marks))
+            .filter(m => Number.isFinite(m));
+        const marksTotal = marksList.reduce((sum, value) => sum + value, 0);
+        const averageMarks = marksList.length > 0 ? (marksTotal / marksList.length) : 0;
+
+        const passedCount = results.filter(isResultPassed).length;
+        const passRate = totalStudents > 0 ? ((passedCount / totalStudents) * 100) : 0;
+
+        const latestDate = results
+            .map(r => toDateSafe(r?.updated_at))
+            .filter(Boolean)
+            .sort((a, b) => b - a)[0] || null;
+
+        document.getElementById(totalStudentsId).textContent = String(totalStudents);
+        document.getElementById(averageMarksId).textContent = averageMarks.toFixed(1);
+        document.getElementById(passRateId).textContent = `${passRate.toFixed(0)}%`;
+        document.getElementById(lastUpdatedId).textContent = latestDate
+            ? latestDate.toLocaleString()
+            : '-';
+    }
+
     window.updateResultMark = function(index, value) {
         const results = getCurrentResults();
         if (results[index]) {
@@ -785,8 +834,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 statusAlert.style.display = 'block';
 
                 // Update statistics
-                const totalStudentsId = activeTab === 'degree' ? 'degreeTotalStudents' : 'certTotalStudents';
-                document.getElementById(totalStudentsId).textContent = data.results.length;
+                updateStatistics(activeTab, data.results);
                 
                 statisticsCards.style.display = 'flex';
 
