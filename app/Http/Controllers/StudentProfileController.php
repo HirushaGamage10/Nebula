@@ -710,10 +710,21 @@ class StudentProfileController extends Controller
 
                     $detailedPayments = [];
                     foreach ($data['payments'] as $payment) {
+                        $rowTotalAmount = (float) $data['total'];
+                        $rowPaidAmount = (float) ($payment->amount ?? 0);
+                        $rowOutstanding = max(0, $rowTotalAmount - $rowPaidAmount);
+
+                        if ($type === 'franchise_fee') {
+                            $franchiseCharges = (float) ($payment->sscl_tax_amount ?? 0) + (float) ($payment->bank_charges ?? 0);
+                            $rowTotalAmount = round(((float) ($payment->total_fee ?? $payment->amount ?? 0)) + $franchiseCharges, 2);
+                            $rowPaidAmount = round(((float) ($payment->amount ?? 0)) + $franchiseCharges, 2);
+                            $rowOutstanding = round((float) ($payment->remaining_amount ?? $rowTotalAmount), 2);
+                        }
+
                         $detailedPayments[] = [
-                            'total_amount' => $data['total'],
-                            'paid_amount' => $payment->amount,
-                            'outstanding' => $data['total'] - $data['paid'],
+                            'total_amount' => $rowTotalAmount,
+                            'paid_amount' => $rowPaidAmount,
+                            'outstanding' => $rowOutstanding,
                             'payment_date' => $payment->created_at->format('Y-m-d'),
                             'due_date' => $payment->due_date ? $payment->due_date->format('Y-m-d') : null,
                             'receipt_no' => $payment->transaction_id,

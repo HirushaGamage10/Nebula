@@ -1563,8 +1563,14 @@ public function generatePaymentSlip(Request $request)
             }
         }
 
-        // 🔹 Total Fee = base fee + late fee - approved late fee
-        $totalFee = $courseFee + $franchiseFee + $registrationFee + $lateFee - $approvedLateFee;
+        // 🔹 Total Fee = base fee + late fee - approved late fee.
+        // For franchise fees, include SSCL + bank charges in total fee so
+        // amount/total/remaining stay consistent in payment management tables.
+        if ($paymentType === 'franchise_fee') {
+            $totalFee = round($remainingAmount + $lateFee - $approvedLateFee, 2);
+        } else {
+            $totalFee = $courseFee + $franchiseFee + $registrationFee + $lateFee - $approvedLateFee;
+        }
 
         // --- Prevent duplicate pending and paid slips ---
 $existingPayment = \App\Models\PaymentDetail::where('student_id', $student->student_id)
@@ -2005,17 +2011,36 @@ public function getPaymentRecords(Request $request)
             ->where('course_registration_id', $registration->id)
             ->get()
             ->map(function ($payment) use ($student) {
+    $paymentType = $payment->payment_type ?? $payment->installment_type ?? 'course_fee';
+    $baseAmount = (float) ($payment->amount ?? 0);
+    $lateFee = (float) ($payment->late_fee ?? 0);
+    $approvedLateFee = (float) ($payment->approved_late_fee ?? 0);
+    $storedTotalFee = (float) ($payment->total_fee ?? 0);
+    $remainingAmount = (float) ($payment->remaining_amount ?? 0);
+    $ssclTaxAmount = (float) ($payment->sscl_tax_amount ?? 0);
+    $bankCharges = (float) ($payment->bank_charges ?? 0);
+
+    // Normalize legacy franchise rows where total_fee/amount were saved without
+    // SSCL + bank charges while remaining_amount already included them.
+    if ($paymentType === 'franchise_fee') {
+        $convertedWithCharges = round($baseAmount + $ssclTaxAmount + $bankCharges, 2);
+        if ($convertedWithCharges > 0) {
+            $baseAmount = $convertedWithCharges;
+            $storedTotalFee = round($convertedWithCharges + $lateFee - $approvedLateFee, 2);
+        }
+    }
+
     return [
         'payment_id'         => $payment->id,
         'student_id'         => $student->student_id,
         'student_name'       => $student->full_name,
-        'payment_type'       => $payment->payment_type ?? $payment->installment_type ?? 'course_fee',
+        'payment_type'       => $paymentType,
         'installment_number' => $payment->installment_number,
-        'amount'             => (float) $payment->amount,
-        'late_fee'           => (float) ($payment->late_fee ?? 0),
-        'approved_late_fee'  => (float) ($payment->approved_late_fee ?? 0),
-        'total_fee'          => (float) ($payment->total_fee ?? 0),
-        'remaining_amount'   => (float) ($payment->remaining_amount ?? 0),
+        'amount'             => $baseAmount,
+        'late_fee'           => $lateFee,
+        'approved_late_fee'  => $approvedLateFee,
+        'total_fee'          => $storedTotalFee,
+        'remaining_amount'   => $remainingAmount,
 
         // ✅ always return array instead of raw JSON string
         'partial_payments' => $payment->partial_payments 
