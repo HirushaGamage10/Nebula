@@ -2067,10 +2067,16 @@ function bootstrapNewPlan(studentNic, courseId) {
         final_amount: Number(i.final_amount ?? i.amount ?? 0),
         status: i.status || 'pending'
       }));
-      // Do not display here, wait for plan type selection
+            // Re-render preview using currently selected plan type once base installments are ready.
+            if (typeof showInstallmentPreview === 'function') {
+                showInstallmentPreview();
+            }
     } else {
       // Fallback: no base installments
       window.baseInstallments = null;
+            if (typeof showInstallmentPreview === 'function') {
+                showInstallmentPreview();
+            }
     }
   })
   .catch(() => {
@@ -2638,8 +2644,10 @@ function calculateInstallments() {
         return;
     }
 
-    // Load installments from payment plan
-    loadExistingPaymentPlans(window.currentStudentData.student_nic, window.currentStudentData.course_id);
+    // Plan type change should immediately reflect in preview using already-loaded data.
+    if (typeof showInstallmentPreview === 'function') {
+        showInstallmentPreview();
+    }
 }
 
 // Create payment plan
