@@ -2993,10 +2993,6 @@ async function generatePaymentSlip() {
     return showErrorMessage('Cannot generate slip for an already paid installment.');
   }
 
-  if (row.is_payable === false) {
-    return showErrorMessage(row.blocked_reason || 'Please complete the previous installment first.');
-  }
-
   // Payable amount we rendered (backend will recompute/validate anyway)
   const rawAmount     = Number(row.amount || 0);
   const installmentNo = row.installment_number ?? null;
@@ -4766,11 +4762,10 @@ function renderPaymentDetailsTable(rows, paymentType) {
   // ✅ Build table rows
   normalized.forEach((p, idx) => {
     const isPaid = p.status && p.status.toLowerCase() === 'paid';
-    const isBlockedByOrder = !isPaid && p.is_payable === false;
-    const disabled = (isPaid || isBlockedByOrder) ? 'disabled' : '';
+        const disabled = isPaid ? 'disabled' : '';
     const rowStyle = isPaid
       ? 'style="opacity: 0.6; background-color: #f8f9fa;"'
-      : (isBlockedByOrder ? 'style="background-color: #fff8e1;"' : '');
+            : '';
     const amountText = `${p.currency} ${money(p.amount)}`;
 
     // LKR column for franchise
@@ -4835,11 +4830,7 @@ function renderPaymentDetailsTable(rows, paymentType) {
       <tr ${rowStyle}>
         <td class="text-center">
           <input type="radio" name="selectedPayment" value="${idx}" ${disabled}>
-          ${isPaid
-            ? '<br><small class="text-danger">Cannot generate new slip</small>'
-            : (isBlockedByOrder
-                ? `<br><small class="text-warning">${p.blocked_reason || 'Pay the previous installment first.'}</small>`
-                : '')}
+                    ${isPaid ? '<br><small class="text-danger">Cannot generate new slip</small>' : ''}
         </td>
         <td>${p.installment_number ?? '-'}</td>
         <td>${dstr(p.due_date)}</td>
