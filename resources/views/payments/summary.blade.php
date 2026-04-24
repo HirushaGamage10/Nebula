@@ -67,6 +67,32 @@
                     <input type="text" class="form-control" id="studentFilter" name="student_id" placeholder="Enter Student ID or NIC">
                 </div>
                 <div class="col-md-3">
+                    <label class="form-label small text-muted">From Due Date</label>
+                    <input type="date" class="form-control" id="startDateFilter" name="start_date">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">To Due Date</label>
+                    <input type="date" class="form-control" id="endDateFilter" name="end_date">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Location</label>
+                    <select class="form-select" id="locationFilter" name="location">
+                        <option value="">All Locations</option>
+                        <option value="Welisara">Welisara</option>
+                        <option value="Moratuwa">Moratuwa</option>
+                        <option value="Peradeniya">Peradeniya</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Course</label>
+                    <select class="form-select" id="courseFilter" name="course_id">
+                        <option value="">All Courses</option>
+                        @foreach(($courses ?? []) as $course)
+                            <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
                     <label class="form-label small text-muted">Methods/Types Scope</label>
                     <select class="form-select" id="breakdownScopeFilter" name="breakdown_scope">
                         <option value="paid" {{ ($breakdownScope ?? 'paid') === 'paid' ? 'selected' : '' }}>Paid Only</option>
@@ -350,6 +376,10 @@ function applyFilters() {
     const method = document.getElementById('methodFilter').value;
     const status = document.getElementById('statusFilter').value;
     const studentId = document.getElementById('studentFilter').value;
+    const startDate = document.getElementById('startDateFilter').value;
+    const endDate = document.getElementById('endDateFilter').value;
+    const location = document.getElementById('locationFilter').value;
+    const courseId = document.getElementById('courseFilter').value;
     const breakdownScope = document.getElementById('breakdownScopeFilter').value;
 
     // Build query parameters
@@ -358,6 +388,10 @@ function applyFilters() {
     if (method) params.append('payment_method', method);
     if (status) params.append('status', status);
     if (studentId) params.append('student_id', studentId);
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    if (location) params.append('location', location);
+    if (courseId) params.append('course_id', courseId);
     params.append('breakdown_scope', breakdownScope || 'paid');
 
     // Show loading indicator
@@ -372,6 +406,10 @@ function resetFilters() {
     document.getElementById('methodFilter').value = '';
     document.getElementById('statusFilter').value = '';
     document.getElementById('studentFilter').value = '';
+    document.getElementById('startDateFilter').value = '';
+    document.getElementById('endDateFilter').value = '';
+    document.getElementById('locationFilter').value = '';
+    document.getElementById('courseFilter').value = '';
     document.getElementById('breakdownScopeFilter').value = 'paid';
     
     // Redirect to clean URL
@@ -382,6 +420,10 @@ function exportData() {
     const range = document.getElementById('rangeFilter').value;
     const method = document.getElementById('methodFilter').value;
     const status = document.getElementById('statusFilter').value;
+    const startDate = document.getElementById('startDateFilter').value;
+    const endDate = document.getElementById('endDateFilter').value;
+    const location = document.getElementById('locationFilter').value;
+    const courseId = document.getElementById('courseFilter').value;
     const breakdownScope = document.getElementById('breakdownScopeFilter').value;
     
     const params = new URLSearchParams();
@@ -389,6 +431,10 @@ function exportData() {
     params.append('range', range);
     if (method) params.append('payment_method', method);
     if (status) params.append('status', status);
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    if (location) params.append('location', location);
+    if (courseId) params.append('course_id', courseId);
     params.append('breakdown_scope', breakdownScope || 'paid');
     
     window.location.href = `{{ route('payment.export') }}?${params.toString()}`;
@@ -427,6 +473,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (urlParams.has('status')) {
         document.getElementById('statusFilter').value = urlParams.get('status');
+    }
+    if (urlParams.has('start_date')) {
+        document.getElementById('startDateFilter').value = urlParams.get('start_date');
+    }
+    if (urlParams.has('end_date')) {
+        document.getElementById('endDateFilter').value = urlParams.get('end_date');
+    }
+    if (urlParams.has('location')) {
+        document.getElementById('locationFilter').value = urlParams.get('location');
+    }
+    if (urlParams.has('course_id')) {
+        document.getElementById('courseFilter').value = urlParams.get('course_id');
     }
     if (urlParams.has('breakdown_scope')) {
         document.getElementById('breakdownScopeFilter').value = urlParams.get('breakdown_scope');

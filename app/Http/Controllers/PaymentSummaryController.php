@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\PaymentDetail;
 use App\Models\Student;
+use App\Models\Course;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
@@ -21,6 +22,10 @@ class PaymentSummaryController extends Controller
         $paymentMethod = $request->input('payment_method');
         $status = $request->input('status');
         $studentId = $request->input('student_id');
+        $location = $request->input('location');
+        $courseId = $request->input('course_id');
+        $startDateInput = $request->input('start_date');
+        $endDateInput = $request->input('end_date');
         $breakdownScope = $request->input('breakdown_scope', 'paid');
         
         $startDate = $this->getDateFromRange($range);
@@ -29,6 +34,10 @@ class PaymentSummaryController extends Controller
             'payment_method' => $paymentMethod,
             'status' => $status,
             'student_id' => $studentId,
+            'location' => $location,
+            'course_id' => $courseId,
+            'start_date' => $startDateInput,
+            'end_date' => $endDateInput,
             'breakdown_scope' => $breakdownScope
         ]);
     }
@@ -42,6 +51,10 @@ class PaymentSummaryController extends Controller
         $range = $request->input('range', '10y');
         $paymentMethod = $request->input('payment_method');
         $status = $request->input('status');
+        $location = $request->input('location');
+        $courseId = $request->input('course_id');
+        $startDateInput = $request->input('start_date');
+        $endDateInput = $request->input('end_date');
         $breakdownScope = $request->input('breakdown_scope', 'paid');
 
         $startDate = $this->getDateFromRange($range);
@@ -49,6 +62,10 @@ class PaymentSummaryController extends Controller
         return $this->generateAdvancedSummary($studentId, $startDate, [
             'payment_method' => $paymentMethod,
             'status' => $status,
+            'location' => $location,
+            'course_id' => $courseId,
+            'start_date' => $startDateInput,
+            'end_date' => $endDateInput,
             'breakdown_scope' => $breakdownScope
         ]);
     }
@@ -317,6 +334,7 @@ class PaymentSummaryController extends Controller
     private function generateAdvancedSummary($studentId = null, $startDate = null, $filters = [])
     {
         $paymentTable = $this->getPaymentDetailsTable();
+        $dashboardDateExpr = $this->getDashboardDateSqlExpression($paymentTable);
         $query = PaymentDetail::query();
         $hasStatus = $this->hasPaymentDetailColumn('status');
         $breakdownScope = ($filters['breakdown_scope'] ?? 'paid') === 'all' ? 'all' : 'paid';
@@ -339,8 +357,33 @@ class PaymentSummaryController extends Controller
         }
 
         // Apply date range filter
-        if ($startDate) {
-            $query->where($paymentTable . '.created_at', '>=', $startDate);
+        $startDateInput = !empty($filters['start_date']) ? Carbon::parse($filters['start_date'])->toDateString() : null;
+        $endDateInput = !empty($filters['end_date']) ? Carbon::parse($filters['end_date'])->toDateString() : null;
+
+        if ($startDateInput || $endDateInput) {
+            if ($startDateInput) {
+                $query->whereRaw("DATE({$dashboardDateExpr}) >= ?", [$startDateInput]);
+            }
+
+            if ($endDateInput) {
+                $query->whereRaw("DATE({$dashboardDateExpr}) <= ?", [$endDateInput]);
+            }
+        } elseif ($startDate) {
+            $query->whereRaw("DATE({$dashboardDateExpr}) >= ?", [$startDate->toDateString()]);
+        }
+
+        // Apply location filter via registration context
+        if (!empty($filters['location'])) {
+            $query->whereHas('registration', function ($q) use ($filters) {
+                $q->where('location', $filters['location']);
+            });
+        }
+
+        // Apply course filter via registration context
+        if (!empty($filters['course_id'])) {
+            $query->whereHas('registration', function ($q) use ($filters) {
+                $q->where('course_id', (int) $filters['course_id']);
+            });
         }
 
         // Apply payment method filter
@@ -407,7 +450,7 @@ class PaymentSummaryController extends Controller
         $monthlyIncome = $hasStatus
             ? (clone $query)
                 ->select(
-                    DB::raw("DATE_FORMAT({$paymentTable}.created_at, '%Y-%m') as month"),
+                    DB::raw("DATE_FORMAT({$dashboardDateExpr}, '%Y-%m') as month"),
                     DB::raw("SUM(CASE WHEN {$paymentTable}.status = 'paid' THEN {$paymentTable}.total_fee ELSE 0 END) as paid"),
                     DB::raw("SUM(CASE WHEN {$paymentTable}.status = 'pending' THEN {$paymentTable}.total_fee ELSE 0 END) as pending")
                 )
@@ -416,7 +459,7 @@ class PaymentSummaryController extends Controller
                 ->get()
             : (clone $query)
                 ->select(
-                    DB::raw("DATE_FORMAT({$paymentTable}.created_at, '%Y-%m') as month"),
+                    DB::raw("DATE_FORMAT({$dashboardDateExpr}, '%Y-%m') as month"),
                     DB::raw("SUM({$paymentTable}.total_fee) as paid"),
                     DB::raw('0 as pending')
                 )
@@ -426,7 +469,7 @@ class PaymentSummaryController extends Controller
 
         $weeklyTrend = (clone $query)
             ->select(
-                DB::raw("YEARWEEK({$paymentTable}.created_at) as week"),
+                DB::raw("YEARWEEK({$dashboardDateExpr}) as week"),
                 DB::raw("SUM({$paymentTable}.total_fee) as total")
             )
             ->when($hasStatus, function ($q) {
@@ -467,11 +510,16 @@ class PaymentSummaryController extends Controller
             ]);
         }
 
+        $courses = Course::query()
+            ->select('course_id', 'course_name')
+            ->orderBy('course_name')
+            ->get();
+
         return view('payments.summary', compact(
             'totalCollected', 'totalPending', 'totalLateFee', 'totalDiscount',
             'totalTransactions', 'averageTransaction', 'ssclTaxTotal', 'bankChargesTotal',
             'paymentByMethod', 'paymentByType', 'paymentByStatus', 'breakdownScope', 'monthlyIncome',
-            'weeklyTrend', 'districtAnalytics'
+            'weeklyTrend', 'districtAnalytics', 'courses'
         ));
     }
 
@@ -563,6 +611,28 @@ class PaymentSummaryController extends Controller
     private function hasPaymentDetailColumn(string $column): bool
     {
         return Schema::hasColumn($this->getPaymentDetailsTable(), $column);
+    }
+
+    private function getDashboardDateSqlExpression(string $table): string
+    {
+        $dateColumns = [];
+
+        if ($this->hasPaymentDetailColumn('due_date')) {
+            $dateColumns[] = "{$table}.due_date";
+        }
+
+        if ($this->hasPaymentDetailColumn('payment_effective_date')) {
+            $dateColumns[] = "{$table}.payment_effective_date";
+        }
+
+        if ($this->hasPaymentDetailColumn('payment_date')) {
+            $dateColumns[] = "{$table}.payment_date";
+        }
+
+        // Final fallback so old rows still participate in reports.
+        $dateColumns[] = "{$table}.created_at";
+
+        return 'COALESCE(' . implode(', ', $dateColumns) . ')';
     }
 
     /**
