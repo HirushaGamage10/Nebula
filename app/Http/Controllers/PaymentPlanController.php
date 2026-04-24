@@ -511,7 +511,7 @@ public function update(Request $request, $id)
                     'registration_fee_discount_applied' => $installment['registration_fee_discount_applied'],
                     'registration_fee_discount_note' => $installment['registration_fee_discount_note'],
                     'final_amount' => $installment['final_amount'],
-                    'installment_type' => 'course_fee',
+                    'installment_type' => 'local',
                     'status' => $existing?->status ?? $installment['status'],
                     'paid_date' => $existing?->paid_date,
                     'approved_late_fee' => $existing?->approved_late_fee ?? 0,

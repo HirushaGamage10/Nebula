@@ -912,7 +912,7 @@ private function buildPaymentHistoryPreview($paymentDetails): array
                     'amount' => (float) ($row['amount'] ?? 0),
                     'base_amount' => (float) ($row['base_amount'] ?? $row['amount'] ?? 0),
                     'final_amount' => (float) ($row['final_amount'] ?? $row['amount'] ?? 0),
-                    'installment_type' => 'course_fee',
+                    'installment_type' => 'local',
                     'status' => 'pending',
                     'created_at' => now(),
                     'updated_at' => now(),

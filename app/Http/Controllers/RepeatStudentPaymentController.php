@@ -160,7 +160,7 @@ public function saveNewPaymentPlan(Request $request)
             // Determine installment type based on amounts
             $installmentType = 'local'; // default
             if ($intl > 0 && $local > 0) {
-                $installmentType = 'both';
+                $installmentType = 'mixed';
             } elseif ($intl > 0) {
                 $installmentType = 'international';
             }
