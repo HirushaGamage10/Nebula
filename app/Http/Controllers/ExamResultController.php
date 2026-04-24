@@ -95,6 +95,8 @@ class ExamResultController extends Controller
             
             // Check if this is a certificate course
             $isCertificate = $request->course_type === 'certificate';
+            $certificateSemesterValue = $this->getCertificateSemesterStorageValue();
+            $certificateModuleId = null;
             
             if ($isCertificate) {
                 $validatedData = $request->validate([
@@ -147,6 +149,13 @@ class ExamResultController extends Controller
                 ], 404);
             }
 
+            if ($isCertificate) {
+                $certificateModuleId = $this->resolveCertificateModuleId(
+                    (int) $validatedData['course_id'],
+                    (int) $validatedData['intake_id']
+                );
+            }
+
             // Resolve the semester value that should be stored in exam_results.
             $semesterName = null;
             $semesterLookupValues = [];
@@ -186,7 +195,7 @@ class ExamResultController extends Controller
                     ->where('location', $validatedData['location']);
                 
                 if ($isCertificate) {
-                    $existingQuery->whereNull('semester')->whereNull('module_id');
+                    $this->applyCertificateExamResultScope($existingQuery, $certificateModuleId);
                 } else {
                     $existingQuery->whereIn('semester', $semesterLookupValues)
                                   ->where('module_id', $validatedData['module_id']);
@@ -217,8 +226,8 @@ class ExamResultController extends Controller
                     ];
                     
                     if ($isCertificate) {
-                        $resultData['semester'] = null;
-                        $resultData['module_id'] = null;
+                        $resultData['semester'] = $certificateSemesterValue;
+                        $resultData['module_id'] = $certificateModuleId;
                     } else {
                         $resultData['semester'] = $semesterName;
                         $resultData['module_id'] = $validatedData['module_id'];
@@ -525,6 +534,46 @@ class ExamResultController extends Controller
             ->all();
     }
 
+    private function getCertificateSemesterStorageValue(): string
+    {
+        return '1';
+    }
+
+    private function resolveCertificateModuleId(int $courseId, int $intakeId): ?int
+    {
+        $moduleId = DB::table('intake_modules')
+            ->where('intake_id', $intakeId)
+            ->orderBy('module_id')
+            ->value('module_id');
+
+        if ($moduleId === null) {
+            $moduleId = DB::table('course_module')
+                ->where('course_id', $courseId)
+                ->orderBy('module_id')
+                ->value('module_id');
+        }
+
+        return $moduleId !== null ? (int) $moduleId : null;
+    }
+
+    private function applyCertificateExamResultScope($query, ?int $moduleId = null): void
+    {
+        $certificateSemester = $this->getCertificateSemesterStorageValue();
+
+        $query->where(function ($semesterQuery) use ($certificateSemester) {
+            $semesterQuery->whereNull('semester')
+                ->orWhere('semester', $certificateSemester);
+        });
+
+        $query->where(function ($moduleQuery) use ($moduleId) {
+            $moduleQuery->whereNull('module_id');
+
+            if ($moduleId !== null) {
+                $moduleQuery->orWhere('module_id', $moduleId);
+            }
+        });
+    }
+
     public function getStudentsForExamResult(Request $request)
     {
         // Check if this is a certificate course (no semester or module required)
@@ -552,16 +601,19 @@ class ExamResultController extends Controller
         $location = $request->location;
         $semesterId = $request->semester;
         $moduleId = $request->module_id;
+        $certificateModuleId = null;
 
         // For certificate courses, get all enrolled students
         if ($isCertificate) {
+            $certificateModuleId = $this->resolveCertificateModuleId((int) $courseId, (int) $intakeId);
+
             // Check if exam results already exist for this intake
             $existingResults = ExamResult::where('course_id', $courseId)
                 ->where('intake_id', $intakeId)
-                ->where('location', $location)
-                ->whereNull('semester')
-                ->whereNull('module_id')
-                ->exists();
+                ->where('location', $location);
+
+            $this->applyCertificateExamResultScope($existingResults, $certificateModuleId);
+            $existingResults = $existingResults->exists();
 
             // Get students enrolled in the certificate course
             $students = \App\Models\CourseRegistration::where('course_id', $courseId)
@@ -582,10 +634,10 @@ class ExamResultController extends Controller
                         $existingResult = ExamResult::where('course_id', $courseId)
                             ->where('intake_id', $intakeId)
                             ->where('location', $location)
-                            ->whereNull('semester')
-                            ->whereNull('module_id')
-                            ->where('student_id', $reg->student->student_id)
-                            ->first();
+                            ->where('student_id', $reg->student->student_id);
+
+                        $this->applyCertificateExamResultScope($existingResult, $certificateModuleId);
+                        $existingResult = $existingResult->first();
 
                         if ($existingResult) {
                             $studentData['marks'] = $existingResult->marks;
@@ -771,7 +823,11 @@ class ExamResultController extends Controller
             ->where('location', $validatedBase['location']);
 
         if ($course->course_type === 'certificate') {
-            $resultsQuery->whereNull('semester')->whereNull('module_id');
+            $certificateModuleId = $this->resolveCertificateModuleId(
+                (int) $validatedBase['course_id'],
+                (int) $validatedBase['intake_id']
+            );
+            $this->applyCertificateExamResultScope($resultsQuery, $certificateModuleId);
         } else {
             $validatedDegree = $request->validate([
                 'semester' => 'required|integer|exists:semesters,id',
