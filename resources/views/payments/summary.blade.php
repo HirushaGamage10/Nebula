@@ -63,8 +63,8 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small text-muted">Student ID</label>
-                    <input type="text" class="form-control" id="studentFilter" name="student_id" placeholder="Enter Student ID">
+                    <label class="form-label small text-muted">Student ID / NIC</label>
+                    <input type="text" class="form-control" id="studentFilter" name="student_id" placeholder="Enter Student ID or NIC">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small text-muted">Methods/Types Scope</label>
@@ -418,7 +418,7 @@ document.addEventListener('DOMContentLoaded', function() {
         typesIndicator.textContent = 'Scope: ' + scopeLabel;
     }
     
-    // Restore filter values from URL
+    // Restore filter values from URL (except student_id)
     if (urlParams.has('range')) {
         document.getElementById('rangeFilter').value = urlParams.get('range');
     }
@@ -427,9 +427,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (urlParams.has('status')) {
         document.getElementById('statusFilter').value = urlParams.get('status');
-    }
-    if (urlParams.has('student_id')) {
-        document.getElementById('studentFilter').value = urlParams.get('student_id');
     }
     if (urlParams.has('breakdown_scope')) {
         document.getElementById('breakdownScopeFilter').value = urlParams.get('breakdown_scope');

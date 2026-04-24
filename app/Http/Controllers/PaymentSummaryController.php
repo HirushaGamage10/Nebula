@@ -321,14 +321,21 @@ class PaymentSummaryController extends Controller
         $hasStatus = $this->hasPaymentDetailColumn('status');
         $breakdownScope = ($filters['breakdown_scope'] ?? 'paid') === 'all' ? 'all' : 'paid';
 
-        // Apply student filter
-        if ($studentId) {
-            $query->where($paymentTable . '.student_id', $studentId);
-        }
+        // Apply student filter (supports internal student_id and NIC/id_value)
+        $studentSearch = trim((string) ($filters['student_id'] ?? $studentId ?? ''));
+        if ($studentSearch !== '') {
+            $matchingStudentIds = Student::query()
+                ->where('id_value', $studentSearch)
+                ->orWhere('student_id', $studentSearch)
+                ->pluck('student_id')
+                ->unique()
+                ->values();
 
-        // Apply student filter from filters array
-        if (!empty($filters['student_id'])) {
-            $query->where($paymentTable . '.student_id', $filters['student_id']);
+            if ($matchingStudentIds->isEmpty()) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->whereIn($paymentTable . '.student_id', $matchingStudentIds->all());
+            }
         }
 
         // Apply date range filter
