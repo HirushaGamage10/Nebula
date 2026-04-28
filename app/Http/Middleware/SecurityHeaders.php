@@ -62,6 +62,12 @@ class SecurityHeaders
                     $response->headers->set('Location', $sanitized);
                 }
             }
+
+            // Redirect responses do not need an HTML body and scanners treat large
+            // redirect bodies as potential sensitive-information leaks.
+            $response->setContent('');
+            $response->headers->remove('Content-Type');
+            $response->headers->set('Content-Length', '0');
         }
 
         // Enforce cookie security flags on all outgoing cookies to satisfy scanner baselines.
