@@ -9,7 +9,8 @@
     RewriteCond %{HTTPS} !=on
     RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
     RewriteCond %{HTTP_HOST} !^localhost(:[0-9]+)?$ [NC]
-    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301,QSD]
+    # Explicit trailing '?' drops original query string even on setups where QSD is ignored.
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI}? [L,R=301]
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
@@ -42,5 +43,11 @@
     Header always set X-Permitted-Cross-Domain-Policies "none"
     Header always set X-XSS-Protection "0"
     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" "expr=%{REQUEST_SCHEME} == 'https'"
+
+    # Force secure cookie attributes for any upstream/app cookies missing them.
+    Header always edit Set-Cookie "(?i)^((?:(?!;\s?HttpOnly).)*)$" "$1; HttpOnly"
+    Header always edit Set-Cookie "(?i)^((?:(?!;\s?Secure).)*)$" "$1; Secure"
+    Header always edit Set-Cookie "(?i)^((?:(?!;\s?SameSite=).)*)$" "$1; SameSite=Strict"
+
     Header always unset X-Powered-By
 </IfModule>
