@@ -12,7 +12,7 @@ class RestrictDebugSurfaces
      */
     public function handle(Request $request, Closure $next)
     {
-        if (!app()->environment(['local', 'development', 'staging'])) {
+        if (!app()->environment(['local', 'development'])) {
             abort(404);
         }
 

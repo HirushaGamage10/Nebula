@@ -9,12 +9,8 @@ class ContentSecurityPolicy
 {
     public function handle($request, Closure $next)
     {
-        // 1. Use session-based nonce for consistency across requests
-        // This prevents CSP violations when pages are cached
-        if (!session()->has('csp_nonce')) {
-            session(['csp_nonce' => base64_encode(random_bytes(16))]);
-        }
-        $nonce = session('csp_nonce');
+        // Use a per-response nonce to avoid nonce reuse across requests.
+        $nonce = base64_encode(random_bytes(16));
 
         // 2. Share it with all Blade views
         View::share('cspNonce', $nonce);
@@ -128,7 +124,7 @@ class ContentSecurityPolicy
         );
 
         // Enforce HTTPS in production (Low: Strict-Transport-Security missing)
-        if (!app()->environment('local')) {
+        if (!app()->environment('local') && $request->isSecure()) {
             $response->headers->set(
                 'Strict-Transport-Security',
                 'max-age=31536000; includeSubDomains'

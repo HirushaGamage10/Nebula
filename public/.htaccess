@@ -41,6 +41,6 @@
     Header always set Cross-Origin-Resource-Policy "same-origin"
     Header always set X-Permitted-Cross-Domain-Policies "none"
     Header always set X-XSS-Protection "0"
-    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" "expr=%{REQUEST_SCHEME} == 'https'"
     Header always unset X-Powered-By
 </IfModule>
