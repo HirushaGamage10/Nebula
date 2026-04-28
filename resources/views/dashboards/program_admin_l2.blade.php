@@ -213,10 +213,10 @@
                         <div class="d-flex flex-wrap align-items-center">
                             <span class="me-3 text-muted"><i class="fas fa-calendar-alt me-1"></i> Time Period:</span>
                             <div class="d-flex flex-wrap">
-                                <button class="time-filter-btn active" onclick="setTimePeriod('today')">Today</button>
-                                <button class="time-filter-btn" onclick="setTimePeriod('week')">This Week</button>
-                                <button class="time-filter-btn" onclick="setTimePeriod('month')">This Month</button>
-                                <button class="time-filter-btn" onclick="setTimePeriod('quarter')">Last 3 Months</button>
+                                <button type="button" class="time-filter-btn active" data-period="today" onclick="setTimePeriod('today', this)">Today</button>
+                                <button type="button" class="time-filter-btn" data-period="week" onclick="setTimePeriod('week', this)">This Week</button>
+                                <button type="button" class="time-filter-btn" data-period="month" onclick="setTimePeriod('month', this)">This Month</button>
+                                <button type="button" class="time-filter-btn" data-period="quarter" onclick="setTimePeriod('quarter', this)">Last 3 Months</button>
                             </div>
                         </div>
                     </div>
@@ -927,14 +927,17 @@
             }, 1000);
         }
         
-        function setTimePeriod(period) {
+        function setTimePeriod(period, buttonElement = null) {
             currentTimePeriod = period;
             
             // Update active button
             document.querySelectorAll('.time-filter-btn').forEach(btn => {
-                btn.classList.remove('active');
+                btn.classList.toggle('active', btn.dataset.period === period);
             });
-            event.target.classList.add('active');
+
+            if (buttonElement) {
+                buttonElement.blur();
+            }
             
             // Refresh data
             refreshAllData();
