@@ -155,14 +155,16 @@ class AllClearanceController extends Controller
 
             $createdCount = 0;
             foreach ($students as $registration) {
-                // Check if clearance request already exists
-                $existingRequest = ClearanceRequest::where('student_id', $registration->student_id)
+                // Only block if there is already a pending request for the same scope.
+                // Approved/rejected requests can be re-requested and will create a new pending row.
+                $existingPendingRequest = ClearanceRequest::where('student_id', $registration->student_id)
                     ->where('clearance_type', $request->type)
                     ->where('course_id', $request->course_id)
                     ->where('intake_id', $request->intake_id)
+                    ->where('status', ClearanceRequest::STATUS_PENDING)
                     ->first();
 
-                if (!$existingRequest) {
+                if (!$existingPendingRequest) {
                     ClearanceRequest::create([
                         'clearance_type' => $request->type,
                         'location' => $request->location,
@@ -176,10 +178,11 @@ class AllClearanceController extends Controller
                 }
             }
 
-            $scope = $request->filled('student_id') ? 'student' : 'students';
+            $totalCount = $students->count();
+            $skippedCount = $totalCount - $createdCount;
             return response()->json([
                 'success' => true,
-                'message' => "Clearance request(s) sent successfully! {$createdCount} {$scope} notified."
+                'message' => "Clearance request(s) processed. Sent: {$createdCount}. Skipped (already pending): {$skippedCount}."
             ]);
         } catch (\Exception $e) {
             return response()->json([

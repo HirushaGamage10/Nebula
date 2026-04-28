@@ -37,11 +37,8 @@
                         <div class="mb-3 row align-items-center mx-3">
                             <label for="courseDropdown" class="col-sm-3 col-form-label fw-bold">Course<span class="text-danger">*</span></label>
                             <div class="col-sm-9">
-                                <select id="courseDropdown" class="form-select" required>
+                                <select id="courseDropdown" class="form-select" required disabled>
                                     <option selected disabled value="">Select Course</option>
-                                    @foreach($courses as $course)
-                                        <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
-                                    @endforeach
                                 </select>
                             </div>
                         </div>
@@ -135,11 +132,8 @@
                         <div class="mb-3 row align-items-center mx-3">
                             <label for="ind_courseDropdown" class="col-sm-3 col-form-label fw-bold">Course<span class="text-danger">*</span></label>
                             <div class="col-sm-9">
-                                <select id="ind_courseDropdown" class="form-select" required>
+                                <select id="ind_courseDropdown" class="form-select" required disabled>
                                     <option selected disabled value="">Select Course</option>
-                                    @foreach($courses as $course)
-                                        <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
-                                    @endforeach
                                 </select>
                             </div>
                         </div>
@@ -433,11 +427,52 @@
 @push('scripts')
 <script nonce="{{ $cspNonce }}">
 $(document).ready(function() {
-    // Intake dropdown population
-    $('#courseDropdown, #locationDropdown').on('change', function() {
-        $('#intakeDropdown').val('').prop('disabled', true);
+    function loadCoursesByLocation(location, $courseDropdown) {
+        $courseDropdown.empty().append('<option selected disabled value="">Loading courses...</option>').prop('disabled', true);
+
+        $.ajax({
+            url: '{{ route('exam.results.courses.by.location') }}',
+            method: 'GET',
+            data: {
+                location: location
+            },
+            success: function(response) {
+                $courseDropdown.empty().append('<option selected disabled value="">Select Course</option>');
+                if (response && response.success && Array.isArray(response.courses) && response.courses.length) {
+                    response.courses.forEach(function(course) {
+                        $courseDropdown.append(`<option value="${course.course_id}">${course.course_name}</option>`);
+                    });
+                    $courseDropdown.prop('disabled', false);
+                    return;
+                }
+
+                $courseDropdown.empty().append('<option selected disabled value="">No courses found for selected location</option>').prop('disabled', true);
+            },
+            error: function() {
+                $courseDropdown.empty().append('<option selected disabled value="">Failed to load courses</option>').prop('disabled', true);
+            }
+        });
+    }
+
+    // Location change -> reload course list by location
+    $('#locationDropdown').on('change', function() {
+        $('#courseDropdown').empty().append('<option selected disabled value="">Select Course</option>').prop('disabled', true);
+        $('#intakeDropdown').empty().append('<option selected disabled value="">Select Intake</option>').prop('disabled', true);
         $('#clearanceTableSection').hide();
         $('#studentListSection').hide();
+
+        const location = $('#locationDropdown').val();
+        if (location) {
+            loadCoursesByLocation(location, $('#courseDropdown'));
+        }
+    });
+
+    // Intake dropdown population
+    $('#courseDropdown').on('change', function() {
+        $('#intakeDropdown').empty().append('<option selected disabled value="">Select Intake</option>').prop('disabled', true);
+        $('#clearanceTableSection').hide();
+        $('#studentListSection').hide();
+
         if($('#courseDropdown').val() && $('#locationDropdown').val()) {
             // AJAX to get intakes for course/location
             $.ajax({
@@ -640,14 +675,50 @@ $(document).ready(function() {
 <script nonce="{{ $cspNonce }}">
 // --- Individual Clearance tab dynamic population ---
 $(function(){
+    function loadIndividualCoursesByLocation(location) {
+        const $course = $('#ind_courseDropdown');
+        $course.empty().append('<option selected disabled value="">Loading courses...</option>').prop('disabled', true);
+
+        $.ajax({
+            url: '{{ route('exam.results.courses.by.location') }}',
+            method: 'GET',
+            data: {
+                location: location
+            },
+            success: function(res) {
+                $course.empty().append('<option selected disabled value="">Select Course</option>');
+                if (res && res.success && Array.isArray(res.courses) && res.courses.length) {
+                    res.courses.forEach(function(course) {
+                        $course.append(`<option value="${course.course_id}">${course.course_name}</option>`);
+                    });
+                    $course.prop('disabled', false);
+                    return;
+                }
+
+                $course.empty().append('<option selected disabled value="">No courses found for selected location</option>').prop('disabled', true);
+            },
+            error: function() {
+                $course.empty().append('<option selected disabled value="">Failed to load courses</option>').prop('disabled', true);
+            }
+        });
+    }
+
     function resetIndividual(selectors){
         $('#ind_intakeDropdown').empty().append('<option selected disabled value="">Select Intake</option>').prop('disabled', true);
         $('#ind_studentDropdown').empty().append('<option selected disabled value="">Select Student</option>').prop('disabled', true);
         $('#individualClearanceTableSection').hide();
     }
 
-    // Load intakes when course or location changes
-    $('#ind_courseDropdown, #ind_locationDropdown').on('change', function(){
+    $('#ind_locationDropdown').on('change', function(){
+        const location = $('#ind_locationDropdown').val();
+        $('#ind_courseDropdown').empty().append('<option selected disabled value="">Select Course</option>').prop('disabled', true);
+        resetIndividual();
+        if(!location) return;
+        loadIndividualCoursesByLocation(location);
+    });
+
+    // Load intakes when course changes
+    $('#ind_courseDropdown').on('change', function(){
         resetIndividual();
         const courseId = $('#ind_courseDropdown').val();
         const location = $('#ind_locationDropdown').val();
