@@ -251,6 +251,12 @@
                                     <option value="">All Intakes</option>
                                 </select>
                             </div>
+                            <div>
+                                <label for="analyticsModuleFilter" class="form-label mb-1 text-muted">Module (Attendance)</label>
+                                <select id="analyticsModuleFilter" class="form-select form-select-sm" style="min-width: 240px;" disabled>
+                                    <option value="">All Modules</option>
+                                </select>
+                            </div>
                             <div class="d-flex gap-2">
                                 <button type="button" class="btn btn-primary btn-sm" id="applyAnalyticsFiltersBtn">
                                     <i class="fas fa-filter me-1"></i> Apply
@@ -876,7 +882,8 @@
         let analyticsFilters = {
             location: '',
             course_id: '',
-            intake_id: ''
+            intake_id: '',
+            module_id: ''
         };
         
         // Initialize dashboard
@@ -995,10 +1002,11 @@
             const locationDropdown = document.getElementById('analyticsLocationFilter');
             const courseDropdown = document.getElementById('analyticsCourseFilter');
             const intakeDropdown = document.getElementById('analyticsIntakeFilter');
+            const moduleDropdown = document.getElementById('analyticsModuleFilter');
             const applyButton = document.getElementById('applyAnalyticsFiltersBtn');
             const clearButton = document.getElementById('clearAnalyticsFiltersBtn');
 
-            if (!locationDropdown || !courseDropdown || !intakeDropdown || !applyButton || !clearButton) {
+            if (!locationDropdown || !courseDropdown || !intakeDropdown || !moduleDropdown || !applyButton || !clearButton) {
                 return;
             }
 
@@ -1007,6 +1015,8 @@
                 courseDropdown.disabled = true;
                 intakeDropdown.innerHTML = '<option value="">All Intakes</option>';
                 intakeDropdown.disabled = true;
+                moduleDropdown.innerHTML = '<option value="">All Modules</option>';
+                moduleDropdown.disabled = true;
 
                 if (!this.value) {
                     return;
@@ -1018,19 +1028,25 @@
             courseDropdown.addEventListener('change', async function () {
                 intakeDropdown.innerHTML = '<option value="">All Intakes</option>';
                 intakeDropdown.disabled = true;
+                moduleDropdown.innerHTML = '<option value="">All Modules</option>';
+                moduleDropdown.disabled = true;
 
                 const selectedLocation = locationDropdown.value;
                 if (!selectedLocation || !this.value) {
                     return;
                 }
 
-                await loadIntakesForAnalyticsFilter(selectedLocation, this.value);
+                await Promise.all([
+                    loadIntakesForAnalyticsFilter(selectedLocation, this.value),
+                    loadModulesForAnalyticsFilter(this.value)
+                ]);
             });
 
             applyButton.addEventListener('click', function () {
                 analyticsFilters.location = locationDropdown.value || '';
                 analyticsFilters.course_id = courseDropdown.value || '';
                 analyticsFilters.intake_id = intakeDropdown.value || '';
+                analyticsFilters.module_id = moduleDropdown.value || '';
 
                 fetchAcademicPerformance();
                 fetchAttendanceOverview();
@@ -1043,8 +1059,10 @@
                 courseDropdown.disabled = true;
                 intakeDropdown.innerHTML = '<option value="">All Intakes</option>';
                 intakeDropdown.disabled = true;
+                moduleDropdown.innerHTML = '<option value="">All Modules</option>';
+                moduleDropdown.disabled = true;
 
-                analyticsFilters = { location: '', course_id: '', intake_id: '' };
+                analyticsFilters = { location: '', course_id: '', intake_id: '', module_id: '' };
 
                 fetchAcademicPerformance();
                 fetchAttendanceOverview();
@@ -1134,7 +1152,45 @@
             }
         }
 
-        function buildAnalyticsFilterParams() {
+        async function loadModulesForAnalyticsFilter(courseId) {
+            const moduleDropdown = document.getElementById('analyticsModuleFilter');
+            if (!moduleDropdown) {
+                return;
+            }
+
+            moduleDropdown.innerHTML = '<option value="">Loading modules...</option>';
+            moduleDropdown.disabled = true;
+
+            try {
+                const response = await fetch(`{{ route('api.program.admin.l2.modules.by.course') }}?course_id=${encodeURIComponent(courseId)}`, {
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    }
+                });
+                const payload = await response.json();
+
+                moduleDropdown.innerHTML = '<option value="">All Modules</option>';
+
+                if (payload.success && Array.isArray(payload.data) && payload.data.length > 0) {
+                    payload.data.forEach(module => {
+                        const option = document.createElement('option');
+                        option.value = module.module_id;
+                        option.textContent = module.display_name || module.module_name;
+                        moduleDropdown.appendChild(option);
+                    });
+                    moduleDropdown.disabled = false;
+                    return;
+                }
+
+                moduleDropdown.innerHTML = '<option value="">No modules found</option>';
+            } catch (error) {
+                console.error('Error loading modules for analytics filter:', error);
+                moduleDropdown.innerHTML = '<option value="">Failed to load modules</option>';
+            }
+        }
+
+        function buildAnalyticsFilterParams(includeModule = false) {
             const params = new URLSearchParams();
 
             if (analyticsFilters.location) {
@@ -1145,6 +1201,9 @@
             }
             if (analyticsFilters.intake_id) {
                 params.append('intake_id', analyticsFilters.intake_id);
+            }
+            if (includeModule && analyticsFilters.module_id) {
+                params.append('module_id', analyticsFilters.module_id);
             }
 
             return params;
@@ -1427,7 +1486,7 @@
         async function fetchAcademicPerformance(chartType = null) {
             try {
                 const selectedChartType = chartType || document.getElementById('gradeChartType')?.value || 'bar';
-                const params = buildAnalyticsFilterParams();
+                const params = buildAnalyticsFilterParams(false);
                 const response = await fetch(`/api/program-admin-l2/academic-performance?${params.toString()}`, {
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
@@ -1532,7 +1591,7 @@
         // Attendance Overview
         async function fetchAttendanceOverview() {
             try {
-                const params = buildAnalyticsFilterParams();
+                const params = buildAnalyticsFilterParams(true);
                 params.append('period', currentTimePeriod);
 
                 const response = await fetch(`/api/program-admin-l2/attendance-overview?${params.toString()}`, {

@@ -15,6 +15,7 @@ use App\Models\ClearanceRequest;
 use App\Models\ExamResult;
 use App\Models\Attendance;
 use App\Models\PaymentDetail;
+use App\Models\Module;
 
 class ProgramAdminL2DashboardController extends Controller
 {
@@ -240,6 +241,46 @@ class ProgramAdminL2DashboardController extends Controller
     }
 
     /**
+     * Get modules for a selected course
+     */
+    public function getModulesByCourse(Request $request)
+    {
+        $request->validate([
+            'course_id' => 'required|exists:courses,course_id',
+        ]);
+
+        try {
+            $courseId = (int) $request->get('course_id');
+
+            $modules = Module::query()
+                ->whereHas('courses', function ($query) use ($courseId) {
+                    $query->where('courses.course_id', $courseId);
+                })
+                ->select('module_id', 'module_name', 'module_code')
+                ->orderBy('module_name')
+                ->get()
+                ->map(function ($module) {
+                    return [
+                        'module_id' => $module->module_id,
+                        'module_name' => $module->module_name,
+                        'module_code' => $module->module_code,
+                        'display_name' => trim(($module->module_code ? $module->module_code . ' - ' : '') . $module->module_name),
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $modules,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load modules',
+            ], 500);
+        }
+    }
+
+    /**
      * Get student academic performance
      */
     public function getAcademicPerformance(Request $request)
@@ -337,6 +378,7 @@ class ProgramAdminL2DashboardController extends Controller
             'location' => 'nullable|in:Welisara,Moratuwa,Peradeniya',
             'course_id' => 'nullable|exists:courses,course_id',
             'intake_id' => 'nullable|exists:intakes,intake_id',
+            'module_id' => 'nullable|exists:modules,module_id',
             'period' => 'nullable|in:today,week,month,quarter',
         ]);
 
@@ -347,6 +389,7 @@ class ProgramAdminL2DashboardController extends Controller
         $location = $request->filled('location') ? $request->location : $defaultLocation;
         $courseId = $request->get('course_id');
         $intakeId = $request->get('intake_id');
+        $moduleId = $request->get('module_id');
         
         $period = $request->get('period', 'month');
         $endDate = Carbon::now();
@@ -376,6 +419,9 @@ class ProgramAdminL2DashboardController extends Controller
                 })
                 ->when($intakeId, function ($query) use ($intakeId) {
                     $query->where('intake_id', $intakeId);
+                })
+                ->when($moduleId, function ($query) use ($moduleId) {
+                    $query->where('module_id', $moduleId);
                 });
 
             // Daily attendance rate
@@ -428,6 +474,7 @@ class ProgramAdminL2DashboardController extends Controller
                         'location' => $location,
                         'course_id' => $courseId,
                         'intake_id' => $intakeId,
+                        'module_id' => $moduleId,
                     ]
                 ]
             ]);
