@@ -123,13 +123,7 @@ class ContentSecurityPolicy
             'camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()'
         );
 
-        // Enforce HTTPS in production (Low: Strict-Transport-Security missing)
-        if (!app()->environment('local') && $request->isSecure()) {
-            $response->headers->set(
-                'Strict-Transport-Security',
-                'max-age=31536000; includeSubDomains'
-            );
-        }
+        // HSTS is emitted at web-server layer to avoid duplicate header entries.
 
         // 7. Strip PHP version disclosure (Low: X-Powered-By / Server information leakage)
         header_remove('X-Powered-By');

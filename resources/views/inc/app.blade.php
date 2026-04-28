@@ -13,7 +13,7 @@
     <!-- Tabler Icons CSS -->
     <link nonce="{{ $cspNonce }}" rel="stylesheet" href="{{ asset('css/icons/tabler-icons/tabler-icons.css') }}">
     <!-- Bootstrap Icons (CDN) -->
-    <link nonce="{{ $cspNonce }}" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link nonce="{{ $cspNonce }}" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" integrity="sha384-Ay26V7L8bsJTsX9Sxclnvsn+hkdiwRnrjZJXqKmkIDobPgIIWBOVguEcQQLDuhfN" crossorigin="anonymous">
 
     <!-- CSS -->
     <link nonce="{{ $cspNonce }}" href="{{ asset('css/styles.min.css') }}" rel="stylesheet">

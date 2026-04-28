@@ -338,22 +338,22 @@
         </div>
 
     <!-- FullCalendar v5 (modern build) -->
-    <link nonce="{{ $cspNonce }}" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" />
+    <link nonce="{{ $cspNonce }}" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet" integrity="sha384-39yVKLsD9lMelmY+ij49KZgE+Mfk6hjdUPNE8yKHqdMPceLXzhlCJAK81xlD5jDj" crossorigin="anonymous" />
 
     <!-- jQuery (kept for other UI code) -->
-    <script nonce="{{ $cspNonce }}" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script nonce="{{ $cspNonce }}" src="{{ asset('js/jquery-3.6.0.min.js') }}"></script>
 
     <!-- Moment.js (used in other parts of this page) -->
-    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js" integrity="sha384-7KgQsgOQcPx/h229ZkRapUfz10fU0/935MgiP+t/ZMnkslf5HHmoRu0yAj8BkhoT" crossorigin="anonymous"></script>
 
     <!-- FullCalendar v5 bundle -->
-    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js" integrity="sha384-5/vsv56401Wf+RP3yE5/aIKW4wutk4nLY3HjueTXN0rA+DmweMtrYaN6RSjdv31b" crossorigin="anonymous"></script>
 
     <!-- jsPDF for PDF export -->
-    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script>
 
     <!-- html2canvas (needed to snapshot table) -->
-    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
 
 @push('scripts')
     <script nonce="{{ $cspNonce }}">

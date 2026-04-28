@@ -38,10 +38,7 @@ class SecurityHeaders
         $response->headers->set('X-Permitted-Cross-Domain-Policies', 'none');
         $response->headers->set('X-XSS-Protection', '0');
 
-        // ZAP checks for HSTS even on responses that are otherwise valid.
-        if ($request->isSecure()) {
-            $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-        }
+        // HSTS is set at the web-server layer to avoid duplicate header entries.
 
         $response->headers->remove('X-Powered-By');
         $response->headers->remove('Server');
