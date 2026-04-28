@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Cookie;
 
 class SecurityHeaders
 {
@@ -42,6 +43,42 @@ class SecurityHeaders
 
         $response->headers->remove('X-Powered-By');
         $response->headers->remove('Server');
+
+        // Enforce cookie security flags on all outgoing cookies to satisfy scanner baselines.
+        // This protects against weak env/runtime values in hosted deployments.
+        $cookies = $response->headers->getCookies();
+        if (!empty($cookies)) {
+            $response->headers->remove('Set-Cookie');
+
+            $host = strtolower((string) $request->getHost());
+            $isLocalHost = in_array($host, ['localhost', '127.0.0.1'], true)
+                || str_ends_with($host, '.test');
+
+            $forceSecure = !$isLocalHost;
+            $defaultSameSite = config('session.same_site', 'strict') ?: 'strict';
+
+            foreach ($cookies as $cookie) {
+                $secure = $forceSecure ? true : $cookie->isSecure();
+                $sameSite = $cookie->getSameSite() ?: $defaultSameSite;
+
+                // SameSite=None requires Secure=true in modern browsers.
+                if (strtolower((string) $sameSite) === 'none') {
+                    $secure = true;
+                }
+
+                $response->headers->setCookie(new Cookie(
+                    $cookie->getName(),
+                    $cookie->getValue(),
+                    $cookie->getExpiresTime(),
+                    $cookie->getPath(),
+                    $cookie->getDomain(),
+                    $secure,
+                    true,
+                    $cookie->isRaw(),
+                    $sameSite
+                ));
+            }
+        }
 
         return $response;
     }
