@@ -1761,12 +1761,28 @@ function normalizeDueDate(raw, installmentNumber = 1, useFallback = true) {
     return toYmd(fallback);
 }
 
+function formatDateDmy(input) {
+    if (!input) {
+        return '-';
+    }
+
+    const dt = input instanceof Date ? input : new Date(input);
+    if (Number.isNaN(dt.getTime())) {
+        return '-';
+    }
+
+    const day = String(dt.getDate()).padStart(2, '0');
+    const month = String(dt.getMonth() + 1).padStart(2, '0');
+    const year = dt.getFullYear();
+    return `${day}/${month}/${year}`;
+}
+
 function formatDueDateForTable(raw, installmentNumber = 1) {
     const ymd = normalizeDueDate(raw, installmentNumber, true);
     if (!ymd) {
         return '-';
     }
-    return new Date(`${ymd}T00:00:00`).toLocaleDateString();
+    return formatDateDmy(`${ymd}T00:00:00`);
 }
 
 
@@ -4668,7 +4684,7 @@ function savePaymentRecordFromUpdate() {
 // ---------- helpers ----------
 const money = (n) =>
   (Number(n || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const dstr  = (d) => d ? new Date(d).toLocaleDateString() : '-';
+const dstr  = (d) => formatDateDmy(d);
 
 // Re-render when user changes FX rate for franchise fee
 function recalculateLKRAmounts() {
