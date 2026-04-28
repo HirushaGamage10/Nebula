@@ -6,7 +6,7 @@
     RewriteEngine On
 
     # Redirect the site root before Laravel boots so crawlers do not receive app session behavior on '/'.
-    RewriteRule ^$ login [R=302,L]
+    RewriteRule ^$ /login [R=302,L]
 
     # Force HTTPS in non-local environments to reduce transport-security findings.
     RewriteCond %{HTTPS} !=on

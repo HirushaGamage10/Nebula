@@ -35,9 +35,11 @@ class LoginThrottle
                 'user_agent' => $request->userAgent()
             ]);
             
-            return back()
-                ->withErrors(['email' => 'Too many login attempts. Please try again later.'])
-                ->withInput();
+            return $this->failedLoginResponse(
+                $email,
+                'Too many login attempts. Please try again later.',
+                429
+            );
         }
         
         // Check if this email is blocked
@@ -48,9 +50,11 @@ class LoginThrottle
                 'user_agent' => $request->userAgent()
             ]);
             
-            return back()
-                ->withErrors(['email' => 'Too many login attempts for this account. Please try again later.'])
-                ->withInput();
+            return $this->failedLoginResponse(
+                $email,
+                'Too many login attempts for this account. Please try again later.',
+                429
+            );
         }
         
         $response = $next($request);
@@ -142,5 +146,14 @@ class LoginThrottle
 
         $emailError = strtolower((string) $errors->first('email'));
         return str_contains($emailError, 'invalid username or password');
+    }
+
+    private function failedLoginResponse(?string $email, string $message, int $status)
+    {
+        return response()->view('login', [
+            'loginErrors' => ['email' => $message],
+            'submittedEmail' => $email,
+            'popup' => true,
+        ], $status);
     }
 } 

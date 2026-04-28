@@ -37,10 +37,16 @@
                                 <img src="{{ asset('images/logos/nebula.png') }}" alt="Nebula" class="img-fluid" loading="lazy">
                             </a>
 
-                            @if (($errors ?? collect())->any())
+                            @php
+                                $inlineErrors = collect($loginErrors ?? [])->filter();
+                                $frameworkErrors = ($errors ?? collect())->any() ? collect($errors->all()) : collect();
+                                $allErrors = $inlineErrors->values()->merge($frameworkErrors)->unique();
+                            @endphp
+
+                            @if ($allErrors->isNotEmpty())
                                 <div class="alert alert-danger">
                                     <ul class="mb-0">
-                                        @foreach ($errors->all() as $error)
+                                        @foreach ($allErrors as $error)
                                             <li>{{ $error }}</li>
                                         @endforeach
                                     </ul>
@@ -57,7 +63,7 @@
                                         name="email"
                                         class="form-control form-control-lg @error('email') is-invalid @enderror"
                                         placeholder="Enter your username"
-                                        value="{{ old('email') }}"
+                                        value="{{ $submittedEmail ?? old('email') }}"
                                         autocomplete="email"
                                         required>
 

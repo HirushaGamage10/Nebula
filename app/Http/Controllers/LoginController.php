@@ -29,19 +29,17 @@ class LoginController extends Controller
             $validation = $this->authenticationService->validateCredentials($credentials);
 
             if (!$validation['valid']) {
-                return back()
-                    ->withErrors($validation['errors'])
-                    ->withInput()
-                    ->with('popup', true);
+                return $this->failedLoginResponse($credentials, $validation['errors'], 422);
             }
 
             $result = $this->authenticationService->attemptLogin($credentials);
 
             if (!($result['success'] ?? false)) {
-                return back()
-                    ->withErrors(['email' => $result['message'] ?? 'Invalid username or password.'])
-                    ->withInput()
-                    ->with('popup', true);
+                return $this->failedLoginResponse(
+                    $credentials,
+                    ['email' => $result['message'] ?? 'Invalid username or password.'],
+                    422
+                );
             }
 
             $request->session()->regenerate();
@@ -49,17 +47,26 @@ class LoginController extends Controller
             return redirect()->intended(route('dashboard'));
 
         } catch (\Exception $e) {
-            // Handle any other exceptions
             Log::error('Login error: ' . $e->getMessage(), [
                 'email' => $request->email,
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent()
             ]);
 
-            return back()
-                ->withErrors(['email' => 'An error occurred during login. Please try again.'])
-                ->withInput()
-                ->with('popup', true);
+            return $this->failedLoginResponse(
+                $credentials ?? ['email' => $request->email],
+                ['email' => 'An error occurred during login. Please try again.'],
+                500
+            );
         }
+    }
+
+    private function failedLoginResponse(array $credentials, array $errors, int $status)
+    {
+        return response()->view('login', [
+            'loginErrors' => $errors,
+            'submittedEmail' => $credentials['email'] ?? null,
+            'popup' => true,
+        ], $status);
     }
 }
