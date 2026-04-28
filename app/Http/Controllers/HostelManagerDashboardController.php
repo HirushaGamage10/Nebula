@@ -12,12 +12,76 @@ use Illuminate\Support\Facades\Auth;
 
 class HostelManagerDashboardController extends Controller
 {
+    private function normalizeLocation(?string $location): string
+    {
+        $location = $location ?? 'Welisara';
+        $location = str_replace([
+            'Nebula Institute of Technology – ',
+            'Nebula Institute of Technology - '
+        ], '', $location);
+
+        return trim($location);
+    }
+
+    private function applyLocationScope($query)
+    {
+        // Match clearance pages: filter by clearance type/status only, no location restriction.
+        return $query;
+    }
+
     public function showDashboard()
     {
-        $courses = Course::all();
-        $intakes = Intake::all();
+        $courses = Course::orderBy('course_name')->get();
+
+        $intakes = Intake::orderByDesc('intake_id')->get();
+
+        $pendingCount = $this->applyLocationScope(
+            ClearanceRequest::where('clearance_type', 'hostel')
+        )
+            ->where('status', 'pending')
+            ->count();
+
+        $approvedCount = $this->applyLocationScope(
+            ClearanceRequest::where('clearance_type', 'hostel')
+        )
+            ->where('status', 'approved')
+            ->whereMonth('approved_at', now()->month)
+            ->whereYear('approved_at', now()->year)
+            ->count();
+
+        $rejectedCount = $this->applyLocationScope(
+            ClearanceRequest::where('clearance_type', 'hostel')
+        )
+            ->where('status', 'rejected')
+            ->whereMonth('approved_at', now()->month)
+            ->whereYear('approved_at', now()->year)
+            ->count();
+
+        $pendingList = $this->applyLocationScope(
+            ClearanceRequest::with(['student', 'course', 'intake'])
+                ->where('clearance_type', 'hostel')
+        )
+            ->where('status', 'pending')
+            ->orderBy('requested_at', 'asc')
+            ->get();
+
+        $recent = $this->applyLocationScope(
+            ClearanceRequest::with(['student', 'course', 'intake'])
+                ->where('clearance_type', 'hostel')
+        )
+            ->orderBy('updated_at', 'desc')
+            ->limit(10)
+            ->get();
         
-        return view('dashboards.hostel_manager', compact('courses', 'intakes'));
+        return view('dashboards.hostel_manager', compact(
+            'courses',
+            'intakes',
+            'pendingCount',
+            'approvedCount',
+            'rejectedCount',
+            'pendingList',
+            'recent'
+        ));
     }
 
     public function getOverviewMetrics(Request $request)
@@ -30,7 +94,9 @@ class HostelManagerDashboardController extends Controller
         list($startDate, $endDate) = $this->getDateRange($range, $year, $month, $request);
         
         // Build query for filtered period
-        $filteredQuery = ClearanceRequest::where('clearance_type', 'hostel');
+        $filteredQuery = $this->applyLocationScope(
+            ClearanceRequest::where('clearance_type', 'hostel')
+        );
         
         // Apply date filter based on range
         if ($range === 'custom' && $request->startDate && $request->endDate) {
@@ -65,7 +131,9 @@ class HostelManagerDashboardController extends Controller
         $rejectedChange = $this->calculatePercentageChange($filteredRejected, $previousPeriodData['rejected']);
         
         // Get total pending (all time) for totalPending
-        $totalPending = ClearanceRequest::where('clearance_type', 'hostel')
+        $totalPending = $this->applyLocationScope(
+            ClearanceRequest::where('clearance_type', 'hostel')
+        )
             ->where('status', 'pending')->count();
         
         // Trends data for chart - based on filtered period
@@ -79,7 +147,8 @@ class HostelManagerDashboardController extends Controller
         ];
 
         return response()->json([
-            'totalPending' => $totalPending, // Keep for compatibility
+            'totalPending' => $filteredPending,
+            'allTimePending' => $totalPending,
             'monthly' => [ // Frontend expects 'monthly' key
                 'pending' => $filteredPending,
                 'approved' => $filteredApproved,
@@ -110,7 +179,9 @@ class HostelManagerDashboardController extends Controller
         list($startDate, $endDate) = $this->getDateRange($range, $year, $month, $request);
         
         // Build query for filtered period
-        $query = ClearanceRequest::where('clearance_type', 'hostel')
+        $query = $this->applyLocationScope(
+            ClearanceRequest::where('clearance_type', 'hostel')
+        )
             ->whereBetween('requested_at', [$startDate, $endDate]);
         
         // Average processing time (in hours) - only for approved requests
@@ -129,7 +200,9 @@ class HostelManagerDashboardController extends Controller
             : 0;
             
         // Active requests (last 7 days) - this is always last 7 days regardless of filter
-        $activeRequests = ClearanceRequest::where('clearance_type', 'hostel')
+        $activeRequests = $this->applyLocationScope(
+            ClearanceRequest::where('clearance_type', 'hostel')
+        )
             ->where('status', 'pending')
             ->where('requested_at', '>=', now()->subDays(7))
             ->count();
@@ -152,7 +225,9 @@ class HostelManagerDashboardController extends Controller
     public function getActionList(Request $request)
     {
         $perPage = 15;
-        $query = ClearanceRequest::where('clearance_type', 'hostel')
+        $query = $this->applyLocationScope(
+            ClearanceRequest::where('clearance_type', 'hostel')
+        )
             ->with(['student', 'course', 'intake']);
             
         // Apply filters
@@ -234,7 +309,9 @@ class HostelManagerDashboardController extends Controller
 
     public function getRecentHostelClearances()
     {
-        $requests = ClearanceRequest::where('clearance_type', 'hostel')
+        $requests = $this->applyLocationScope(
+            ClearanceRequest::where('clearance_type', 'hostel')
+        )
             ->with(['student', 'course'])
             ->latest()
             ->take(10)
@@ -252,7 +329,9 @@ class HostelManagerDashboardController extends Controller
 
     public function filterRequests(Request $request)
     {
-        $query = ClearanceRequest::where('clearance_type', 'hostel')
+        $query = $this->applyLocationScope(
+            ClearanceRequest::where('clearance_type', 'hostel')
+        )
             ->with(['student', 'course', 'intake']);
 
         if ($request->course_id) $query->where('course_id', $request->course_id);
@@ -279,7 +358,9 @@ class HostelManagerDashboardController extends Controller
 
     public function searchRequests(Request $request)
     {
-        $requests = ClearanceRequest::where('clearance_type', 'hostel')
+        $requests = $this->applyLocationScope(
+            ClearanceRequest::where('clearance_type', 'hostel')
+        )
             ->with(['student', 'course', 'intake'])
             ->whereHas('student', function($q) use ($request) {
                 $q->where('full_name', 'like', "%{$request->search}%")
@@ -298,7 +379,9 @@ class HostelManagerDashboardController extends Controller
 
     public function listByStatus(Request $request)
     {
-        $query = ClearanceRequest::where('clearance_type', 'hostel')
+        $query = $this->applyLocationScope(
+            ClearanceRequest::where('clearance_type', 'hostel')
+        )
             ->where('status', $request->status)
             ->with(['student', 'course', 'intake']);
             
@@ -432,7 +515,9 @@ class HostelManagerDashboardController extends Controller
     
     public function exportData(Request $request)
     {
-        $query = ClearanceRequest::where('clearance_type', 'hostel')
+        $query = $this->applyLocationScope(
+            ClearanceRequest::where('clearance_type', 'hostel')
+        )
             ->with(['student', 'course', 'intake']);
         
         // Apply filters
@@ -553,7 +638,9 @@ class HostelManagerDashboardController extends Controller
     
     private function getPreviousPeriodData($range, $year, $month, $request)
     {
-        $query = ClearanceRequest::where('clearance_type', 'hostel');
+        $query = $this->applyLocationScope(
+            ClearanceRequest::where('clearance_type', 'hostel')
+        );
         
         switch ($range) {
             case 'month':
@@ -616,7 +703,9 @@ class HostelManagerDashboardController extends Controller
         
         if ($daysDiff <= 31) {
             // Daily trends
-            $trends = ClearanceRequest::where('clearance_type', 'hostel')
+            $trends = $this->applyLocationScope(
+                ClearanceRequest::where('clearance_type', 'hostel')
+            )
                 ->whereBetween('requested_at', [$startDate, $endDate])
                 ->selectRaw('DATE(requested_at) as date, COUNT(*) as count')
                 ->groupBy('date')
@@ -638,7 +727,9 @@ class HostelManagerDashboardController extends Controller
             }
         } else {
             // Monthly trends
-            $trends = ClearanceRequest::where('clearance_type', 'hostel')
+            $trends = $this->applyLocationScope(
+                ClearanceRequest::where('clearance_type', 'hostel')
+            )
                 ->whereBetween('requested_at', [$startDate, $endDate])
                 ->selectRaw('YEAR(requested_at) as year, MONTH(requested_at) as month, COUNT(*) as count')
                 ->groupBy('year', 'month')

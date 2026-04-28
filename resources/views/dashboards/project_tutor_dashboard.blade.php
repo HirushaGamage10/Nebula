@@ -22,7 +22,7 @@
         padding: 5px 12px;
         border-radius: 8px;
         font-size: 12px;
-        font-weight: bold;
+        font-weight: 600;
         text-transform: capitalize;
     }
     .badge-pending { background: #0d6efd; color: white; }
@@ -91,13 +91,13 @@
                             <td>{{ $req->student->full_name }}</td>
                             <td><code>{{ $req->student->student_id }}</code></td>
                             <td>{{ $req->course->course_name }}</td>
-                            <td>{{ $req->intake->intake_name }}</td>
+                            <td>{{ $req->intake->intake_name ?? $req->intake->batch ?? '-' }}</td>
                             <td>{{ $req->requested_at?->format('Y-m-d') }}</td>
                             <td>
                                 <span class="badge-status badge-pending">{{ $req->status }}</span>
                             </td>
                             <td>
-                                <a href="{{ route('project.clearance.management', $req->id) }}"
+                                          <a href="{{ route('project.clearance.management') }}"
                                    class="btn btn-sm btn-primary">
                                    Review
                                 </a>
@@ -129,7 +129,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($recent as $req)
+                        @forelse($recent as $req)
                         <tr>
                             <td>{{ $req->student->full_name }}</td>
                             <td><code>{{ $req->student->student_id }}</code></td>
@@ -141,7 +141,11 @@
                             </td>
                             <td>{{ $req->updated_at?->format('Y-m-d H:i') }}</td>
                         </tr>
-                        @endforeach
+                        @empty
+                        <tr>
+                            <td colspan="5" class="text-muted py-3">No recent project updates</td>
+                        </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
