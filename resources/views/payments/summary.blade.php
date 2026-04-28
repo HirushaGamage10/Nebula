@@ -93,6 +93,15 @@
                     </select>
                 </div>
                 <div class="col-md-3">
+                    <label class="form-label small text-muted">Intake</label>
+                    <select class="form-select" id="intakeFilter" name="intake_id">
+                        <option value="">All Intakes</option>
+                        @foreach(($intakes ?? []) as $intake)
+                            <option value="{{ $intake->intake_id }}">{{ $intake->batch }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
                     <label class="form-label small text-muted">Methods/Types Scope</label>
                     <select class="form-select" id="breakdownScopeFilter" name="breakdown_scope">
                         <option value="paid" {{ ($breakdownScope ?? 'paid') === 'paid' ? 'selected' : '' }}>Paid Only</option>
@@ -380,6 +389,7 @@ function applyFilters() {
     const endDate = document.getElementById('endDateFilter').value;
     const location = document.getElementById('locationFilter').value;
     const courseId = document.getElementById('courseFilter').value;
+    const intakeId = document.getElementById('intakeFilter').value;
     const breakdownScope = document.getElementById('breakdownScopeFilter').value;
 
     // Build query parameters
@@ -392,6 +402,7 @@ function applyFilters() {
     if (endDate) params.append('end_date', endDate);
     if (location) params.append('location', location);
     if (courseId) params.append('course_id', courseId);
+    if (intakeId) params.append('intake_id', intakeId);
     params.append('breakdown_scope', breakdownScope || 'paid');
 
     // Show loading indicator
@@ -410,6 +421,7 @@ function resetFilters() {
     document.getElementById('endDateFilter').value = '';
     document.getElementById('locationFilter').value = '';
     document.getElementById('courseFilter').value = '';
+    document.getElementById('intakeFilter').value = '';
     document.getElementById('breakdownScopeFilter').value = 'paid';
     
     // Redirect to clean URL
@@ -424,6 +436,7 @@ function exportData() {
     const endDate = document.getElementById('endDateFilter').value;
     const location = document.getElementById('locationFilter').value;
     const courseId = document.getElementById('courseFilter').value;
+    const intakeId = document.getElementById('intakeFilter').value;
     const breakdownScope = document.getElementById('breakdownScopeFilter').value;
     
     const params = new URLSearchParams();
@@ -435,6 +448,7 @@ function exportData() {
     if (endDate) params.append('end_date', endDate);
     if (location) params.append('location', location);
     if (courseId) params.append('course_id', courseId);
+    if (intakeId) params.append('intake_id', intakeId);
     params.append('breakdown_scope', breakdownScope || 'paid');
     
     window.location.href = `{{ route('payment.export') }}?${params.toString()}`;
@@ -451,6 +465,87 @@ function showLoading() {
 // ========== PRESERVE FILTERS ON PAGE LOAD ==========
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
+    const locationFilter = document.getElementById('locationFilter');
+    const courseFilter = document.getElementById('courseFilter');
+    const intakeFilter = document.getElementById('intakeFilter');
+    const initialCourseOptions = courseFilter ? courseFilter.innerHTML : '<option value="">All Courses</option>';
+    const initialIntakeOptions = intakeFilter ? intakeFilter.innerHTML : '<option value="">All Intakes</option>';
+
+    async function loadCoursesByLocation(location, selectedCourseId = '') {
+        if (!courseFilter) return;
+
+        courseFilter.innerHTML = '<option value="">Loading courses...</option>';
+        courseFilter.disabled = true;
+
+        if (!intakeFilter) return;
+        intakeFilter.innerHTML = '<option value="">All Intakes</option>';
+        intakeFilter.disabled = true;
+
+        if (!location) {
+            courseFilter.innerHTML = initialCourseOptions;
+            courseFilter.disabled = false;
+            return;
+        }
+
+        try {
+            const response = await fetch(`{{ route('payment.summary.courses.by.location') }}?location=${encodeURIComponent(location)}`);
+            const payload = await response.json();
+
+            courseFilter.innerHTML = '<option value="">All Courses</option>';
+            if (payload.success && Array.isArray(payload.data)) {
+                payload.data.forEach(course => {
+                    const option = document.createElement('option');
+                    option.value = String(course.course_id);
+                    option.textContent = course.course_name;
+                    if (selectedCourseId && String(course.course_id) === String(selectedCourseId)) {
+                        option.selected = true;
+                    }
+                    courseFilter.appendChild(option);
+                });
+            }
+            courseFilter.disabled = false;
+        } catch (error) {
+            console.error('Failed to load courses by location:', error);
+            courseFilter.innerHTML = '<option value="">All Courses</option>';
+            courseFilter.disabled = false;
+        }
+    }
+
+    async function loadIntakesByLocationAndCourse(location, courseId, selectedIntakeId = '') {
+        if (!intakeFilter) return;
+
+        intakeFilter.innerHTML = '<option value="">Loading intakes...</option>';
+        intakeFilter.disabled = true;
+
+        if (!location || !courseId) {
+            intakeFilter.innerHTML = initialIntakeOptions;
+            intakeFilter.disabled = false;
+            return;
+        }
+
+        try {
+            const response = await fetch(`{{ route('payment.summary.intakes.by.location.course') }}?location=${encodeURIComponent(location)}&course_id=${encodeURIComponent(courseId)}`);
+            const payload = await response.json();
+
+            intakeFilter.innerHTML = '<option value="">All Intakes</option>';
+            if (payload.success && Array.isArray(payload.data)) {
+                payload.data.forEach(intake => {
+                    const option = document.createElement('option');
+                    option.value = String(intake.intake_id);
+                    option.textContent = intake.intake_name;
+                    if (selectedIntakeId && String(intake.intake_id) === String(selectedIntakeId)) {
+                        option.selected = true;
+                    }
+                    intakeFilter.appendChild(option);
+                });
+            }
+            intakeFilter.disabled = false;
+        } catch (error) {
+            console.error('Failed to load intakes by location and course:', error);
+            intakeFilter.innerHTML = '<option value="">All Intakes</option>';
+            intakeFilter.disabled = false;
+        }
+    }
 
     function updateBreakdownScopeIndicator() {
         const scopeSelect = document.getElementById('breakdownScopeFilter');
@@ -483,11 +578,39 @@ document.addEventListener('DOMContentLoaded', function() {
     if (urlParams.has('location')) {
         document.getElementById('locationFilter').value = urlParams.get('location');
     }
-    if (urlParams.has('course_id')) {
-        document.getElementById('courseFilter').value = urlParams.get('course_id');
-    }
+    const selectedCourseId = urlParams.get('course_id') || '';
+    const selectedIntakeId = urlParams.get('intake_id') || '';
     if (urlParams.has('breakdown_scope')) {
         document.getElementById('breakdownScopeFilter').value = urlParams.get('breakdown_scope');
+    }
+
+    (async function initializeDependentFilters() {
+        const selectedLocation = locationFilter ? locationFilter.value : '';
+        if (selectedLocation) {
+            await loadCoursesByLocation(selectedLocation, selectedCourseId);
+        } else if (selectedCourseId && courseFilter) {
+            courseFilter.value = selectedCourseId;
+        }
+
+        if (selectedLocation && (selectedCourseId || (courseFilter && courseFilter.value))) {
+            const courseValue = selectedCourseId || (courseFilter ? courseFilter.value : '');
+            await loadIntakesByLocationAndCourse(selectedLocation, courseValue, selectedIntakeId);
+        } else if (selectedIntakeId && intakeFilter) {
+            intakeFilter.value = selectedIntakeId;
+        }
+    })();
+
+    if (locationFilter) {
+        locationFilter.addEventListener('change', async function() {
+            await loadCoursesByLocation(this.value);
+        });
+    }
+
+    if (courseFilter) {
+        courseFilter.addEventListener('change', async function() {
+            const location = locationFilter ? locationFilter.value : '';
+            await loadIntakesByLocationAndCourse(location, this.value);
+        });
     }
 
     updateBreakdownScopeIndicator();

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\PaymentDetail;
 use App\Models\Student;
 use App\Models\Course;
+use App\Models\Intake;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
@@ -24,6 +25,7 @@ class PaymentSummaryController extends Controller
         $studentId = $request->input('student_id');
         $location = $request->input('location');
         $courseId = $request->input('course_id');
+        $intakeId = $request->input('intake_id');
         $startDateInput = $request->input('start_date');
         $endDateInput = $request->input('end_date');
         $breakdownScope = $request->input('breakdown_scope', 'paid');
@@ -36,6 +38,7 @@ class PaymentSummaryController extends Controller
             'student_id' => $studentId,
             'location' => $location,
             'course_id' => $courseId,
+            'intake_id' => $intakeId,
             'start_date' => $startDateInput,
             'end_date' => $endDateInput,
             'breakdown_scope' => $breakdownScope
@@ -53,6 +56,7 @@ class PaymentSummaryController extends Controller
         $status = $request->input('status');
         $location = $request->input('location');
         $courseId = $request->input('course_id');
+        $intakeId = $request->input('intake_id');
         $startDateInput = $request->input('start_date');
         $endDateInput = $request->input('end_date');
         $breakdownScope = $request->input('breakdown_scope', 'paid');
@@ -64,9 +68,60 @@ class PaymentSummaryController extends Controller
             'status' => $status,
             'location' => $location,
             'course_id' => $courseId,
+            'intake_id' => $intakeId,
             'start_date' => $startDateInput,
             'end_date' => $endDateInput,
             'breakdown_scope' => $breakdownScope
+        ]);
+    }
+
+    /**
+     * Get courses by location for dependent dashboard filters
+     */
+    public function getCoursesByLocation(Request $request)
+    {
+        $request->validate([
+            'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
+        ]);
+
+        $courses = Course::query()
+            ->where('location', $request->input('location'))
+            ->select('course_id', 'course_name')
+            ->orderBy('course_name')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $courses,
+        ]);
+    }
+
+    /**
+     * Get intakes by location and course for dependent dashboard filters
+     */
+    public function getIntakesByLocationAndCourse(Request $request)
+    {
+        $request->validate([
+            'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
+            'course_id' => 'required|exists:courses,course_id',
+        ]);
+
+        $intakes = Intake::query()
+            ->where('location', $request->input('location'))
+            ->where('course_id', (int) $request->input('course_id'))
+            ->select('intake_id', 'batch')
+            ->orderBy('batch')
+            ->get()
+            ->map(function ($intake) {
+                return [
+                    'intake_id' => $intake->intake_id,
+                    'intake_name' => $intake->batch,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $intakes,
         ]);
     }
 
@@ -386,6 +441,13 @@ class PaymentSummaryController extends Controller
             });
         }
 
+        // Apply intake filter via registration context
+        if (!empty($filters['intake_id'])) {
+            $query->whereHas('registration', function ($q) use ($filters) {
+                $q->where('intake_id', (int) $filters['intake_id']);
+            });
+        }
+
         // Apply payment method filter
         if (!empty($filters['payment_method'])) {
             $query->where($paymentTable . '.payment_method', $filters['payment_method']);
@@ -510,16 +572,33 @@ class PaymentSummaryController extends Controller
             ]);
         }
 
+        $selectedLocation = !empty($filters['location']) ? $filters['location'] : null;
+        $selectedCourseId = !empty($filters['course_id']) ? (int) $filters['course_id'] : null;
+
         $courses = Course::query()
             ->select('course_id', 'course_name')
+            ->when($selectedLocation, function ($q) use ($selectedLocation) {
+                $q->where('location', $selectedLocation);
+            })
             ->orderBy('course_name')
+            ->get();
+
+        $intakes = Intake::query()
+            ->select('intake_id', 'batch')
+            ->when($selectedLocation, function ($q) use ($selectedLocation) {
+                $q->where('location', $selectedLocation);
+            })
+            ->when($selectedCourseId, function ($q) use ($selectedCourseId) {
+                $q->where('course_id', $selectedCourseId);
+            })
+            ->orderBy('batch')
             ->get();
 
         return view('payments.summary', compact(
             'totalCollected', 'totalPending', 'totalLateFee', 'totalDiscount',
             'totalTransactions', 'averageTransaction', 'ssclTaxTotal', 'bankChargesTotal',
             'paymentByMethod', 'paymentByType', 'paymentByStatus', 'breakdownScope', 'monthlyIncome',
-            'weeklyTrend', 'districtAnalytics', 'courses'
+            'weeklyTrend', 'districtAnalytics', 'courses', 'intakes'
         ));
     }
 

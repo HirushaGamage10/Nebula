@@ -728,6 +728,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     Route::middleware(['auth', 'role:DGM,Bursar,Marketing Manager,Developer,Student Counselor,Program Administrator (level 01),Program Administrator (level 02)'])->group(function () {
         Route::get('/payments/summary', [PaymentSummaryController::class, 'index'])->name('payment.summary');
         Route::get('/payments/summary/filter', [PaymentSummaryController::class, 'filter'])->name('payment.summary.filter');
+        Route::get('/payments/summary/courses-by-location', [PaymentSummaryController::class, 'getCoursesByLocation'])->name('payment.summary.courses.by.location');
+        Route::get('/payments/summary/intakes-by-location-course', [PaymentSummaryController::class, 'getIntakesByLocationAndCourse'])->name('payment.summary.intakes.by.location.course');
         Route::get('/payments/summary/student/{studentId}', [PaymentSummaryController::class, 'studentSummary'])->name('payment.summary.student');
         Route::get('/payments/analytics', [PaymentSummaryController::class, 'analytics'])->name('payment.analytics');
         Route::get('/payments/comparison', [PaymentSummaryController::class, 'comparison'])->name('payment.comparison');
