@@ -244,20 +244,38 @@ class ProgramAdminL2DashboardController extends Controller
      */
     public function getAcademicPerformance(Request $request)
     {
-        $location = auth()->user()->user_location ?? 'Welisara';
-        $location = str_replace('Nebula Institute of Technology – ', '', $location);
-        $location = str_replace('Nebula Institute of Technology - ', '', $location);
+        $request->validate([
+            'location' => 'nullable|in:Welisara,Moratuwa,Peradeniya',
+            'course_id' => 'nullable|exists:courses,course_id',
+            'intake_id' => 'nullable|exists:intakes,intake_id',
+        ]);
+
+        $defaultLocation = auth()->user()->user_location ?? 'Welisara';
+        $defaultLocation = str_replace('Nebula Institute of Technology – ', '', $defaultLocation);
+        $defaultLocation = str_replace('Nebula Institute of Technology - ', '', $defaultLocation);
+
+        $location = $request->filled('location') ? $request->location : $defaultLocation;
+        $courseId = $request->get('course_id');
+        $intakeId = $request->get('intake_id');
         
         try {
+            $baseQuery = ExamResult::where('location', $location)
+                ->when($courseId, function ($query) use ($courseId) {
+                    $query->where('course_id', $courseId);
+                })
+                ->when($intakeId, function ($query) use ($intakeId) {
+                    $query->where('intake_id', $intakeId);
+                });
+
             // Get exam results with grades
-            $performanceData = ExamResult::where('location', $location)
+            $performanceData = (clone $baseQuery)
                 ->select('grade', DB::raw('COUNT(*) as count'))
                 ->whereNotNull('grade')
                 ->groupBy('grade')
                 ->get();
             
             // Get course-wise pass rates
-            $coursePerformance = ExamResult::where('location', $location)
+            $coursePerformance = (clone $baseQuery)
                 ->select('course_id', 
                     DB::raw('COUNT(*) as total'),
                     DB::raw('SUM(CASE WHEN marks >= 40 OR grade IN ("A", "B", "C", "D") THEN 1 ELSE 0 END) as passed')
@@ -278,7 +296,7 @@ class ProgramAdminL2DashboardController extends Controller
                 ->values();
             
             // Get repeat students (failed in exam)
-            $repeatStudents = ExamResult::where('location', $location)
+            $repeatStudents = (clone $baseQuery)
                 ->where(function ($query) {
                     $query->where('marks', '<', 40)
                         ->orWhere('grade', 'F')
@@ -293,7 +311,12 @@ class ProgramAdminL2DashboardController extends Controller
                 'data' => [
                     'grade_distribution' => $performanceData,
                     'course_performance' => $coursePerformance,
-                    'repeat_students' => $repeatStudents
+                    'repeat_students' => $repeatStudents,
+                    'filters' => [
+                        'location' => $location,
+                        'course_id' => $courseId,
+                        'intake_id' => $intakeId,
+                    ]
                 ]
             ]);
             
@@ -310,14 +333,28 @@ class ProgramAdminL2DashboardController extends Controller
      */
     public function getAttendanceOverview(Request $request)
     {
-        $location = auth()->user()->user_location ?? 'Welisara';
-        $location = str_replace('Nebula Institute of Technology – ', '', $location);
-        $location = str_replace('Nebula Institute of Technology - ', '', $location);
+        $request->validate([
+            'location' => 'nullable|in:Welisara,Moratuwa,Peradeniya',
+            'course_id' => 'nullable|exists:courses,course_id',
+            'intake_id' => 'nullable|exists:intakes,intake_id',
+            'period' => 'nullable|in:today,week,month,quarter',
+        ]);
+
+        $defaultLocation = auth()->user()->user_location ?? 'Welisara';
+        $defaultLocation = str_replace('Nebula Institute of Technology – ', '', $defaultLocation);
+        $defaultLocation = str_replace('Nebula Institute of Technology - ', '', $defaultLocation);
+
+        $location = $request->filled('location') ? $request->location : $defaultLocation;
+        $courseId = $request->get('course_id');
+        $intakeId = $request->get('intake_id');
         
         $period = $request->get('period', 'month');
         $endDate = Carbon::now();
         
         switch ($period) {
+            case 'today':
+                $startDate = Carbon::today();
+                break;
             case 'week':
                 $startDate = Carbon::now()->subWeek();
                 break;
@@ -332,9 +369,17 @@ class ProgramAdminL2DashboardController extends Controller
         }
         
         try {
-            // Daily attendance rate
-            $dailyAttendance = Attendance::where('location', $location)
+            $baseQuery = Attendance::where('location', $location)
                 ->whereBetween('date', [$startDate, $endDate])
+                ->when($courseId, function ($query) use ($courseId) {
+                    $query->where('course_id', $courseId);
+                })
+                ->when($intakeId, function ($query) use ($intakeId) {
+                    $query->where('intake_id', $intakeId);
+                });
+
+            // Daily attendance rate
+            $dailyAttendance = (clone $baseQuery)
                 ->select(
                     DB::raw('DATE(date) as attendance_date'),
                     DB::raw('AVG(status) * 100 as attendance_rate'),
@@ -345,8 +390,7 @@ class ProgramAdminL2DashboardController extends Controller
                 ->get();
             
             // Course-wise attendance
-            $courseAttendance = Attendance::where('location', $location)
-                ->whereBetween('date', [$startDate, $endDate])
+            $courseAttendance = (clone $baseQuery)
                 ->select('course_id',
                     DB::raw('AVG(status) * 100 as attendance_rate'),
                     DB::raw('COUNT(*) as total_records')
@@ -365,8 +409,7 @@ class ProgramAdminL2DashboardController extends Controller
                 ->values();
             
             // Overall statistics
-            $overallStats = Attendance::where('location', $location)
-                ->whereBetween('date', [$startDate, $endDate])
+            $overallStats = (clone $baseQuery)
                 ->select(
                     DB::raw('COUNT(*) as total'),
                     DB::raw('SUM(status) as present'),
@@ -380,7 +423,12 @@ class ProgramAdminL2DashboardController extends Controller
                     'daily_attendance' => $dailyAttendance,
                     'course_attendance' => $courseAttendance,
                     'overall_stats' => $overallStats,
-                    'period' => $period
+                    'period' => $period,
+                    'filters' => [
+                        'location' => $location,
+                        'course_id' => $courseId,
+                        'intake_id' => $intakeId,
+                    ]
                 ]
             ]);
             

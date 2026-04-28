@@ -224,6 +224,48 @@
             </div>
         </div>
 
+        <!-- Academic & Attendance Filters -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body py-3">
+                        <div class="d-flex flex-wrap align-items-end gap-3">
+                            <div>
+                                <label for="analyticsLocationFilter" class="form-label mb-1 text-muted">Location</label>
+                                <select id="analyticsLocationFilter" class="form-select form-select-sm" style="min-width: 220px;">
+                                    <option value="">Default Location</option>
+                                    <option value="Welisara">Nebula Institute of Technology - Welisara</option>
+                                    <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
+                                    <option value="Peradeniya">Nebula Institute of Technology - Peradeniya</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="analyticsCourseFilter" class="form-label mb-1 text-muted">Course</label>
+                                <select id="analyticsCourseFilter" class="form-select form-select-sm" style="min-width: 220px;" disabled>
+                                    <option value="">All Courses</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="analyticsIntakeFilter" class="form-label mb-1 text-muted">Intake</label>
+                                <select id="analyticsIntakeFilter" class="form-select form-select-sm" style="min-width: 220px;" disabled>
+                                    <option value="">All Intakes</option>
+                                </select>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-primary btn-sm" id="applyAnalyticsFiltersBtn">
+                                    <i class="fas fa-filter me-1"></i> Apply
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="clearAnalyticsFiltersBtn">
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+                        <div class="small text-muted mt-2">Applies to Academic Performance and Attendance tabs.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Dashboard Tabs -->
         <div class="row mb-4">
             <div class="col-12">
@@ -831,9 +873,15 @@
         let currentTimePeriod = 'month';
         let currentRejectId = null;
         let chartInstances = {};
+        let analyticsFilters = {
+            location: '',
+            course_id: '',
+            intake_id: ''
+        };
         
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
+            initializeAnalyticsFilters();
             loadDashboardData();
             
             // Load data for active tab
@@ -941,6 +989,165 @@
             
             // Refresh data
             refreshAllData();
+        }
+
+        function initializeAnalyticsFilters() {
+            const locationDropdown = document.getElementById('analyticsLocationFilter');
+            const courseDropdown = document.getElementById('analyticsCourseFilter');
+            const intakeDropdown = document.getElementById('analyticsIntakeFilter');
+            const applyButton = document.getElementById('applyAnalyticsFiltersBtn');
+            const clearButton = document.getElementById('clearAnalyticsFiltersBtn');
+
+            if (!locationDropdown || !courseDropdown || !intakeDropdown || !applyButton || !clearButton) {
+                return;
+            }
+
+            locationDropdown.addEventListener('change', async function () {
+                courseDropdown.innerHTML = '<option value="">All Courses</option>';
+                courseDropdown.disabled = true;
+                intakeDropdown.innerHTML = '<option value="">All Intakes</option>';
+                intakeDropdown.disabled = true;
+
+                if (!this.value) {
+                    return;
+                }
+
+                await loadCoursesForAnalyticsFilter(this.value);
+            });
+
+            courseDropdown.addEventListener('change', async function () {
+                intakeDropdown.innerHTML = '<option value="">All Intakes</option>';
+                intakeDropdown.disabled = true;
+
+                const selectedLocation = locationDropdown.value;
+                if (!selectedLocation || !this.value) {
+                    return;
+                }
+
+                await loadIntakesForAnalyticsFilter(selectedLocation, this.value);
+            });
+
+            applyButton.addEventListener('click', function () {
+                analyticsFilters.location = locationDropdown.value || '';
+                analyticsFilters.course_id = courseDropdown.value || '';
+                analyticsFilters.intake_id = intakeDropdown.value || '';
+
+                fetchAcademicPerformance();
+                fetchAttendanceOverview();
+                showToast('Academic and attendance filters applied', 'success');
+            });
+
+            clearButton.addEventListener('click', function () {
+                locationDropdown.value = '';
+                courseDropdown.innerHTML = '<option value="">All Courses</option>';
+                courseDropdown.disabled = true;
+                intakeDropdown.innerHTML = '<option value="">All Intakes</option>';
+                intakeDropdown.disabled = true;
+
+                analyticsFilters = { location: '', course_id: '', intake_id: '' };
+
+                fetchAcademicPerformance();
+                fetchAttendanceOverview();
+                showToast('Academic and attendance filters cleared', 'info');
+            });
+        }
+
+        async function loadCoursesForAnalyticsFilter(location) {
+            const courseDropdown = document.getElementById('analyticsCourseFilter');
+            if (!courseDropdown) {
+                return;
+            }
+
+            courseDropdown.innerHTML = '<option value="">Loading courses...</option>';
+            courseDropdown.disabled = true;
+
+            try {
+                const response = await fetch(`{{ route('exam.results.courses.by.location') }}?location=${encodeURIComponent(location)}`, {
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    }
+                });
+                const payload = await response.json();
+
+                courseDropdown.innerHTML = '<option value="">All Courses</option>';
+
+                if (payload.success && Array.isArray(payload.courses) && payload.courses.length > 0) {
+                    payload.courses.forEach(course => {
+                        const option = document.createElement('option');
+                        option.value = course.course_id;
+                        option.textContent = course.course_name;
+                        courseDropdown.appendChild(option);
+                    });
+                    courseDropdown.disabled = false;
+                    return;
+                }
+
+                courseDropdown.innerHTML = '<option value="">No courses found</option>';
+            } catch (error) {
+                console.error('Error loading courses for analytics filter:', error);
+                courseDropdown.innerHTML = '<option value="">Failed to load courses</option>';
+            }
+        }
+
+        async function loadIntakesForAnalyticsFilter(location, courseId) {
+            const intakeDropdown = document.getElementById('analyticsIntakeFilter');
+            if (!intakeDropdown) {
+                return;
+            }
+
+            intakeDropdown.innerHTML = '<option value="">Loading intakes...</option>';
+            intakeDropdown.disabled = true;
+
+            try {
+                const response = await fetch(`{{ route('module.management.getIntakes') }}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        location: location,
+                        course_id: courseId
+                    })
+                });
+                const payload = await response.json();
+
+                intakeDropdown.innerHTML = '<option value="">All Intakes</option>';
+
+                if (payload.success && Array.isArray(payload.data) && payload.data.length > 0) {
+                    payload.data.forEach(intake => {
+                        const option = document.createElement('option');
+                        option.value = intake.intake_id;
+                        option.textContent = intake.intake_name;
+                        intakeDropdown.appendChild(option);
+                    });
+                    intakeDropdown.disabled = false;
+                    return;
+                }
+
+                intakeDropdown.innerHTML = '<option value="">No intakes found</option>';
+            } catch (error) {
+                console.error('Error loading intakes for analytics filter:', error);
+                intakeDropdown.innerHTML = '<option value="">Failed to load intakes</option>';
+            }
+        }
+
+        function buildAnalyticsFilterParams() {
+            const params = new URLSearchParams();
+
+            if (analyticsFilters.location) {
+                params.append('location', analyticsFilters.location);
+            }
+            if (analyticsFilters.course_id) {
+                params.append('course_id', analyticsFilters.course_id);
+            }
+            if (analyticsFilters.intake_id) {
+                params.append('intake_id', analyticsFilters.intake_id);
+            }
+
+            return params;
         }
         
         function showToast(message, type = 'info') {
@@ -1217,9 +1424,11 @@
         }
         
         // Academic Performance
-        async function fetchAcademicPerformance(chartType = 'bar') {
+        async function fetchAcademicPerformance(chartType = null) {
             try {
-                const response = await fetch(`/api/program-admin-l2/academic-performance`, {
+                const selectedChartType = chartType || document.getElementById('gradeChartType')?.value || 'bar';
+                const params = buildAnalyticsFilterParams();
+                const response = await fetch(`/api/program-admin-l2/academic-performance?${params.toString()}`, {
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
@@ -1229,7 +1438,7 @@
                 
                 if (data.success) {
                     // Update grade distribution chart
-                    updateGradeDistributionChart(data.data.grade_distribution, chartType);
+                    updateGradeDistributionChart(data.data.grade_distribution, selectedChartType);
                     
                     // Update course performance list
                     updateCoursePerformanceList(data.data.course_performance);
@@ -1323,7 +1532,10 @@
         // Attendance Overview
         async function fetchAttendanceOverview() {
             try {
-                const response = await fetch(`/api/program-admin-l2/attendance-overview?period=${currentTimePeriod}`, {
+                const params = buildAnalyticsFilterParams();
+                params.append('period', currentTimePeriod);
+
+                const response = await fetch(`/api/program-admin-l2/attendance-overview?${params.toString()}`, {
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
