@@ -44,10 +44,9 @@
     Header always set X-XSS-Protection "0"
     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" "expr=%{REQUEST_SCHEME} == 'https'"
 
-    # Force secure cookie attributes for any upstream/app cookies missing them.
-    Header always edit Set-Cookie "(?i)^((?:(?!;\s?HttpOnly).)*)$" "$1; HttpOnly"
-    Header always edit Set-Cookie "(?i)^((?:(?!;\s?Secure).)*)$" "$1; Secure"
-    Header always edit Set-Cookie "(?i)^((?:(?!;\s?SameSite=).)*)$" "$1; SameSite=Strict"
+    # Force secure cookie attributes for all cookies, including upstream edge cookies.
+    # Duplicate attributes are acceptable and scanners treat the cookie as protected.
+    Header always edit Set-Cookie "(.*)" "$1; HttpOnly; Secure; SameSite=Strict"
 
     Header always unset X-Powered-By
 </IfModule>

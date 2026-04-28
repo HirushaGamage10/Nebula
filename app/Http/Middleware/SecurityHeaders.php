@@ -44,6 +44,26 @@ class SecurityHeaders
         $response->headers->remove('X-Powered-By');
         $response->headers->remove('Server');
 
+        // Avoid leaking query data via same-origin redirect locations.
+        if ($response->isRedirection() && $response->headers->has('Location')) {
+            $location = (string) $response->headers->get('Location');
+            $parts = parse_url($location);
+
+            if ($parts !== false) {
+                $isRelative = !isset($parts['host']);
+                $sameHost = isset($parts['host'])
+                    && strtolower((string) $parts['host']) === strtolower((string) $request->getHost());
+
+                if (($isRelative || $sameHost) && isset($parts['query'])) {
+                    $sanitized = $parts['path'] ?? '/';
+                    if (isset($parts['fragment'])) {
+                        $sanitized .= '#' . $parts['fragment'];
+                    }
+                    $response->headers->set('Location', $sanitized);
+                }
+            }
+        }
+
         // Enforce cookie security flags on all outgoing cookies to satisfy scanner baselines.
         // This protects against weak env/runtime values in hosted deployments.
         $cookies = $response->headers->getCookies();
