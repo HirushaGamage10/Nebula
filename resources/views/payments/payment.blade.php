@@ -1730,26 +1730,51 @@ const toYmd = (dateObj) => {
 function normalizeDueDate(raw, installmentNumber = 1, useFallback = true) {
     const value = String(raw || '').trim();
 
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        return value;
+    // Handle YYYY-MM-DD (ISO format from backend)
+    const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+        return isoMatch[0]; // Return as-is
     }
 
+    // Handle DD/MM/YYYY or MM/DD/YYYY slash format
     const slashMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (slashMatch) {
-        const month = Number(slashMatch[1]);
-        const day = Number(slashMatch[2]);
+        const part1 = Number(slashMatch[1]);
+        const part2 = Number(slashMatch[2]);
         const year = Number(slashMatch[3]);
+        
+        // Determine if DD/MM or MM/DD by context
+        // Assume DD/MM since most of the world uses this format
+        // But check if part1 > 12 (must be day, not month)
+        let day, month;
+        if (part1 > 12) {
+            day = part1;
+            month = part2;
+        } else if (part2 > 12) {
+            month = part1;
+            day = part2;
+        } else {
+            // Both could be valid, assume DD/MM (first is day)
+            day = part1;
+            month = part2;
+        }
+        
         if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-            const parsed = new Date(year, month - 1, day);
+            // Use UTC date to avoid timezone issues
+            const ymdStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            return ymdStr;
+        }
+    }
+
+    // For any other format, try parsing but use UTC-safe method
+    if (value.length > 0) {
+        // Try ISO date parsing for strings like "2026-05-15T00:00:00Z"
+        if (value.includes('T') || value.includes(' ')) {
+            const parsed = new Date(value);
             if (!Number.isNaN(parsed.getTime())) {
                 return toYmd(parsed);
             }
         }
-    }
-
-    const parsed = new Date(value);
-    if (!Number.isNaN(parsed.getTime())) {
-        return toYmd(parsed);
     }
 
     if (!useFallback) {
@@ -1766,15 +1791,42 @@ function formatDateDmy(input) {
         return '-';
     }
 
-    const dt = input instanceof Date ? input : new Date(input);
-    if (Number.isNaN(dt.getTime())) {
+    let day, month, year;
+    
+    // Handle string input
+    if (typeof input === 'string') {
+        const str = input.trim();
+        
+        // Handle YYYY-MM-DD format (ISO format from backend)
+        const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) {
+            year = Number(isoMatch[1]);
+            month = Number(isoMatch[2]);
+            day = Number(isoMatch[3]);
+        } else {
+            // Try to parse as Date object after extraction
+            const dt = new Date(str);
+            if (!Number.isNaN(dt.getTime())) {
+                day = dt.getDate();
+                month = dt.getMonth() + 1;
+                year = dt.getFullYear();
+            } else {
+                return '-';
+            }
+        }
+    } else if (input instanceof Date) {
+        day = input.getDate();
+        month = input.getMonth() + 1;
+        year = input.getFullYear();
+    } else {
         return '-';
     }
 
-    const day = String(dt.getDate()).padStart(2, '0');
-    const month = String(dt.getMonth() + 1).padStart(2, '0');
-    const year = dt.getFullYear();
-    return `${day}/${month}/${year}`;
+    if (Number.isNaN(day) || Number.isNaN(month) || Number.isNaN(year)) {
+        return '-';
+    }
+
+    return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
 }
 
 function formatDueDateForTable(raw, installmentNumber = 1) {
@@ -2449,7 +2501,7 @@ function showInstallmentPreview() {
         tbody.innerHTML = `
             <tr>
                 <td>1</td>
-                <td>${new Date().toLocaleDateString()}</td>
+                <td>${formatDateDmy(new Date())}</td>
                 <td>LKR ${totalAmount.toLocaleString()}</td>
                 <td>LKR ${totalDiscountAmount.toLocaleString()}</td>
                 <td>LKR ${sltLoanAmount.toLocaleString()}</td>
@@ -3125,8 +3177,8 @@ const payload = {
 
 
     setText('slip-installment-display',  installmentNo ?? '-');
-    setText('slip-due-date-display',     dueDate ? new Date(dueDate).toLocaleDateString() : '-');
-    setText('slip-date-display',         s.payment_date ? new Date(s.payment_date).toLocaleDateString() : '');
+    setText('slip-due-date-display',     dueDate ? formatDateDmy(dueDate) : '-');
+    setText('slip-date-display',         s.payment_date ? formatDateDmy(s.payment_date) : '');
     setText('slip-receipt-no-display',   s.receipt_no || '');
 
     // Amount text (FX + LKR for franchise; LKR for others)
@@ -3150,10 +3202,10 @@ const payload = {
     setText('print-course', s.course_name);
     setText('print-intake', s.intake);
     setText('print-location', s.location);
-    setText('print-registration-date', s.registration_date ? new Date(s.registration_date).toLocaleDateString() : 'N/A');
+    setText('print-registration-date', s.registration_date ? formatDateDmy(s.registration_date) : 'N/A');
     setText('print-payment-type', s.payment_type_display || s.payment_type);
     setText('print-installment', installmentNo ?? '-');
-    setText('print-due-date', dueDate ? new Date(dueDate).toLocaleDateString() : '-');
+    setText('print-due-date', dueDate ? formatDateDmy(dueDate) : '-');
 
     if (paymentType === 'franchise_fee' && s.franchise_fee_currency) {
       setText('print-amount', `${s.franchise_fee_currency} ${Number(s.amount||0).toLocaleString()}`);
@@ -3162,7 +3214,7 @@ const payload = {
     }
 
     setText('print-receipt-no', s.receipt_no);
-    setText('print-valid-until', s.valid_until ? new Date(s.valid_until).toLocaleDateString() : 'N/A');
+    setText('print-valid-until', s.valid_until ? formatDateDmy(s.valid_until) : 'N/A');
 
     // Breakdown rows (as returned by backend)
     setText('print-course-fee',       Number(s.course_fee || 0).toLocaleString());
@@ -3243,16 +3295,16 @@ function printPaymentSlip() {
   const s = window.currentSlipData;
   if (!s) return showErrorMessage('No slip data available for printing.');
 
-  setText('print-generated-date', new Date().toLocaleDateString());
+  setText('print-generated-date', formatDateDmy(new Date()));
   setText('print-student-id', s.student_id);
   setText('print-student-name', s.student_name);
   setText('print-course', s.course_name);
   setText('print-intake', s.intake);
   setText('print-location', s.location);
-  setText('print-registration-date', s.registration_date ? new Date(s.registration_date).toLocaleDateString() : 'N/A');
+  setText('print-registration-date', s.registration_date ? formatDateDmy(s.registration_date) : 'N/A');
   setText('print-payment-type', s.payment_type_display || s.payment_type);
   setText('print-installment', s.installment_number || 'N/A');
-  setText('print-due-date', s.due_date ? new Date(s.due_date).toLocaleDateString() : 'N/A');
+  setText('print-due-date', s.due_date ? formatDateDmy(s.due_date) : 'N/A');
 
   if (s.payment_type === 'franchise_fee' && s.franchise_fee_currency) {
     setText('print-amount', `${s.franchise_fee_currency} ${Number(s.amount||0).toLocaleString()}`);
@@ -3261,7 +3313,7 @@ function printPaymentSlip() {
   }
 
   setText('print-receipt-no', s.receipt_no);
-  setText('print-valid-until', s.valid_until ? new Date(s.valid_until).toLocaleDateString() : 'N/A');
+  setText('print-valid-until', s.valid_until ? formatDateDmy(s.valid_until) : 'N/A');
 
   setText('print-course-fee',       Number(s.course_fee || 0).toLocaleString() + '.00');
   setText('print-franchise-fee',    Number(s.franchise_fee || 0).toLocaleString() + '.00');
@@ -4299,10 +4351,10 @@ function displayPaymentDetails(paymentDetails) {
                     <input type="radio" name="selectedPayment" value="${index}" class="payment-radio" ${isPaid ? 'disabled title="Already Paid"' : ''}>
                 </td>
                 <td>${payment.installment_number || '-'}</td>
-                <td>${payment.due_date ? new Date(payment.due_date).toLocaleDateString() : '-'}</td>
+                <td>${payment.due_date ? formatDateDmy(payment.due_date) : '-'}</td>
                 <td>${currency} ${amount.toLocaleString()}</td>
                 ${paymentType === 'franchise_fee' ? `<td>${lkrAmount}</td>` : ''}
-                <td>${payment.paid_date ? new Date(payment.paid_date).toLocaleDateString() : '-'}</td>
+                <td>${payment.paid_date ? formatDateDmy(payment.paid_date) : '-'}</td>
                 <td>
                     <span class="badge bg-${getPaymentStatusBadgeColor(payment.status)}">
                         ${payment.status}
