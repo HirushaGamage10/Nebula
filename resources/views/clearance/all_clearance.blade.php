@@ -63,7 +63,7 @@
                                 <tr>
                                     <td>Payment</td>
                                     <td>
-                                        @if(auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Developer']))
+                                        @if(auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Program Administrator (level 02)', 'Developer']))
                                             <button class="btn px-4 send-clearance-btn" data-type="payment" style="background-color: #5D9CFF; color: white;">Send</button>
                                         @endif
                                     </td>
@@ -71,7 +71,7 @@
                                 <tr>
                                     <td>Library</td>
                                     <td>
-                                        @if(auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Developer']))
+                                        @if(auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Program Administrator (level 02)', 'Developer']))
                                             <button class="btn px-4 send-clearance-btn" data-type="library" style="background-color: #5D9CFF; color: white;">Send</button>
                                         @endif
                                     </td>
@@ -79,7 +79,7 @@
                                 <tr>
                                     <td>Hostel</td>
                                     <td>
-                                        @if(auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Developer']))
+                                        @if(auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Program Administrator (level 02)', 'Developer']))
                                             <button class="btn px-4 send-clearance-btn" data-type="hostel" style="background-color: #5D9CFF; color: white;">Send</button>
                                         @endif
                                     </td>
@@ -87,7 +87,7 @@
                                 <tr>
                                     <td>Project Tutor</td>
                                     <td>
-                                        @if(auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Developer']))
+                                        @if(auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Program Administrator (level 02)', 'Developer']))
                                             <button class="btn px-4 send-clearance-btn" data-type="project" style="background-color: #5D9CFF; color: white;">Send</button>
                                         @endif
                                     </td>
@@ -166,7 +166,7 @@
                 <tr>
                     <td>Payment</td>
                                     <td>
-                                        @if(auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Developer']))
+                                        @if(auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Program Administrator (level 02)', 'Developer']))
                                             <button class="btn px-4 send-individual-clearance-btn" data-type="payment" style="background-color: #5D9CFF; color: white;">Send</button>
                                         @endif
                                     </td>
@@ -174,7 +174,7 @@
                 <tr>
                     <td>Library</td>
                                     <td>
-                                        @if(auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Developer']))
+                                        @if(auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Program Administrator (level 02)', 'Developer']))
                                             <button class="btn px-4 send-individual-clearance-btn" data-type="library" style="background-color: #5D9CFF; color: white;">Send</button>
                                         @endif
                                     </td>
@@ -182,7 +182,7 @@
                 <tr>
                     <td>Hostel</td>
                                     <td>
-                                        @if(auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Developer']))
+                                        @if(auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Program Administrator (level 02)', 'Developer']))
                                             <button class="btn px-4 send-individual-clearance-btn" data-type="hostel" style="background-color: #5D9CFF; color: white;">Send</button>
                                         @endif
                                     </td>
@@ -190,7 +190,7 @@
                 <tr>
                     <td>Project Tutor</td>
                                     <td>
-                                        @if(auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Developer']))
+                                        @if(auth()->user()->hasAnyRole(['Program Administrator (level 01)', 'Program Administrator (level 02)', 'Developer']))
                                             <button class="btn px-4 send-individual-clearance-btn" data-type="project" style="background-color: #5D9CFF; color: white;">Send</button>
                                         @endif
                                     </td>
