@@ -203,6 +203,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/api/student-details-by-nic', [StudentProfileController::class, 'getStudentDetailsByNic']);
         Route::get('/api/student/{studentId}/courses', [StudentProfileController::class, 'getRegisteredCourses']);
         Route::get('/api/student/{studentId}/course/{courseId}/semesters', [StudentProfileController::class, 'getSemesters']);
+        Route::get('/api/student/{studentId}/course/{courseId}/attendance-semesters', [StudentProfileController::class, 'getAttendanceSemesters']);
         Route::get('/api/student/{studentId}/course/{courseId}/semester/{semester}/results', [StudentProfileController::class, 'getModuleResults']);
         Route::get('/api/student/{studentId}/course/{courseId}/payment-summary', [StudentProfileController::class, 'getPaymentSummary']);
         Route::get('/api/student/{studentId}/course/{courseId}/semester/{semester}/attendance', [StudentProfileController::class, 'getAttendance']);

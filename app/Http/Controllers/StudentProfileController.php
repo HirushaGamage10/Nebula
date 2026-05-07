@@ -576,13 +576,33 @@ class StudentProfileController extends Controller
 
     public function getSemesters($studentId, $courseId)
     {
-        $semesters = \App\Models\ExamResult::where('student_id', $studentId)
+        // Get semesters from both ExamResult and Attendance tables to ensure we have all available semesters
+        $examSemesters = \App\Models\ExamResult::where('student_id', $studentId)
             ->where('course_id', $courseId)
             ->pluck('semester')
+            ->toArray();
+
+        $attendanceSemesters = \App\Models\Attendance::where('student_id', $studentId)
+            ->where('course_id', $courseId)
+            ->pluck('semester')
+            ->toArray();
+
+        // Merge and get unique values
+        $allSemesters = collect(array_merge($examSemesters, $attendanceSemesters))
+            ->filter() // Remove nulls
             ->unique()
             ->sort()
             ->values();
-        return response()->json(['success' => true, 'semesters' => $semesters]);
+
+        \Log::debug('getSemesters result', [
+            'student_id' => $studentId,
+            'course_id' => $courseId,
+            'exam_semesters' => $examSemesters,
+            'attendance_semesters' => $attendanceSemesters,
+            'all_semesters' => $allSemesters->toArray()
+        ]);
+
+        return response()->json(['success' => true, 'semesters' => $allSemesters]);
     }
 
     public function getModuleResults($studentId, $courseId, $semester)
@@ -808,28 +828,122 @@ class StudentProfileController extends Controller
     // API: Get attendance records for a specific student, course, and semester
     public function getAttendance($studentId, $courseId, $semester)
     {
-        $attendance = \App\Models\Attendance::where('student_id', $studentId)
-            ->where('course_id', $courseId)
-            ->where('semester', $semester)
-            ->with('module')
-            ->get()
-            ->groupBy('module_id')
-            ->map(function ($records, $moduleId) {
-                $moduleName = $records->first()->module->module_name ?? 'N/A';
-                $totalDays = $records->count();
-                $presentDays = $records->where('status', true)->count();
-                $absentDays = $records->where('status', false)->count();
-                $attendancePercent = $totalDays > 0 ? round(($presentDays / $totalDays) * 100, 2) : 0;
-                return [
-                    'module_name' => $moduleName,
-                    'total_days' => $totalDays,
-                    'present_days' => $presentDays,
-                    'absent_days' => $absentDays,
-                    'attendance_percent' => $attendancePercent
-                ];
-            })->values();
+        try {
+            // Log the incoming parameters for debugging
+            \Log::debug('getAttendance called with', [
+                'student_id' => $studentId,
+                'course_id' => $courseId,
+                'semester' => $semester,
+                'types' => [
+                    'student_id_type' => gettype($studentId),
+                    'course_id_type' => gettype($courseId),
+                    'semester_type' => gettype($semester)
+                ]
+            ]);
 
-        return response()->json(['success' => true, 'attendance' => $attendance]);
+            // Build the query to fetch attendance records
+            $query = \App\Models\Attendance::where('student_id', (int)$studentId)
+                ->where('course_id', (int)$courseId)
+                ->where('semester', (string)$semester)
+                ->with('module');
+
+            $attendanceRecords = $query->get();
+            
+            \Log::debug('Attendance records found', [
+                'count' => $attendanceRecords->count(),
+                'first_record' => $attendanceRecords->first()?->toArray()
+            ]);
+
+            if ($attendanceRecords->isEmpty()) {
+                return response()->json(['success' => true, 'attendance' => []]);
+            }
+
+            // Group by module_id and transform the data
+            $attendance = $attendanceRecords
+                ->groupBy('module_id')
+                ->map(function ($records, $moduleId) {
+                    $firstRecord = $records->first();
+                    
+                    // Safely access module relationship
+                    $moduleName = optional($firstRecord->module)->module_name ?? 'N/A';
+                    $totalDays = $records->count();
+                    
+                    // Count present (status = 1 or true) and absent (status = 0 or false)
+                    $presentDays = 0;
+                    $absentDays = 0;
+                    
+                    foreach ($records as $record) {
+                        // Handle both integer (0/1) and boolean representations
+                        $status = $record->status;
+                        if ($status === true || $status == 1 || $status === '1') {
+                            $presentDays++;
+                        } elseif ($status === false || $status == 0 || $status === '0') {
+                            $absentDays++;
+                        }
+                    }
+                    
+                    $attendancePercent = $totalDays > 0 ? round(($presentDays / $totalDays) * 100, 2) : 0;
+                    
+                    return [
+                        'module_name' => $moduleName,
+                        'total_days' => $totalDays,
+                        'present_days' => $presentDays,
+                        'absent_days' => $absentDays,
+                        'attendance_percent' => $attendancePercent
+                    ];
+                })
+                ->values();
+
+            return response()->json(['success' => true, 'attendance' => $attendance]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching attendance', [
+                'student_id' => $studentId,
+                'course_id' => $courseId,
+                'semester' => $semester,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'success' => false, 
+                'message' => 'Failed to fetch attendance records: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // API: Get attendance semesters for a student and course (diagnostic method)
+    public function getAttendanceSemesters($studentId, $courseId)
+    {
+        try {
+            $semesters = \App\Models\Attendance::where('student_id', (int)$studentId)
+                ->where('course_id', (int)$courseId)
+                ->distinct('semester')
+                ->pluck('semester')
+                ->filter()
+                ->sort()
+                ->values();
+
+            $count = \App\Models\Attendance::where('student_id', (int)$studentId)
+                ->where('course_id', (int)$courseId)
+                ->count();
+
+            \Log::debug('getAttendanceSemesters', [
+                'student_id' => $studentId,
+                'course_id' => $courseId,
+                'semesters' => $semesters->toArray(),
+                'total_records' => $count
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'semesters' => $semesters,
+                'total_records' => $count
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch attendance semesters: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function getStudentClearances($studentId)
