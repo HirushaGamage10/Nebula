@@ -1837,19 +1837,25 @@ $(function(){
     const sid=getStudentId(); if(!sid) return;
     $.get('/api/student/'+sid+'/courses', res=>{
       const $s=$('#attendanceCourseSelect').empty().append('<option value="">Select a course</option>');
-      if(res.success && res.courses.length){ res.courses.forEach(c=>$s.append(`<option value="${c.course_id}">${c.course_name}</option>`)); }
+      if(res.success && res.courses && res.courses.length){ 
+        res.courses.forEach(c=>$s.append(`<option value="${c.course_id}">${c.course_name}</option>`)); 
+      }
+    }).fail(function(err){
+      console.error('Failed to load courses for attendance', err);
+      showErrorMessage('Failed to load courses');
     });
   }
+  
   function fetchAttendanceSemesters(courseId){
     const sid=getStudentId(); if(!sid||!courseId) return;
     const $s = $('#attendanceSemesterSelect');
     // reset and show loading state
-    $s.empty().append('<option value="">Select a semester</option>');
+    $s.empty().append('<option value="">Loading semesters...</option>');
     $s.prop('disabled', true).attr('aria-busy', 'true');
 
     $.get('/api/student/'+sid+'/course/'+courseId+'/semesters', res=>{
       // DEBUG: show raw response in console to aid troubleshooting
-      try{ if(window && window.location && window.location.hostname && !window.location.hostname.includes('your-production-hostname')) console.debug('fetchAttendanceSemesters response:', res); }catch(e){}
+      console.log('fetchAttendanceSemesters response:', res);
 
       // Normalize many possible API shapes: res.semesters, res.data.semesters, res.data (array), res (array)
       let semesters = [];
@@ -1875,19 +1881,36 @@ $(function(){
         $s.empty().append('<option value="">No semesters registered for this course</option>');
         $s.prop('disabled', true).attr('disabled', 'disabled').attr('aria-busy', 'false');
       }
-    }).fail(function(){
-      console.error('Failed to load semesters for course', courseId);
+    }).fail(function(err){
+      console.error('Failed to load attendance semesters for course', courseId, err);
       $s.empty().append('<option value="">Failed to load semesters</option>').prop('disabled', true).attr('disabled','disabled').attr('aria-busy','false');
+      showErrorMessage('Failed to load semesters');
     });
   }
+  
   function fetchAttendanceTable(courseId, sem){
     const sid=getStudentId(); if(!sid||!courseId||!sem) return;
+    
+    console.log('Fetching attendance for:', {sid, courseId, sem});
+    
     $.get('/api/student/'+sid+'/course/'+courseId+'/semester/'+sem+'/attendance', res=>{
+      console.log('Attendance response:', res);
       const $tb=$('#attendanceTableBody').empty();
-      if(res.success && res.attendance.length){
+      
+      // Check if response is successful and has attendance data
+      if(res.success && res.attendance && Array.isArray(res.attendance) && res.attendance.length > 0){
         res.attendance.forEach(a=>$tb.append(`<tr><td>${a.module_name}</td><td>${a.total_days}</td><td>${a.present_days}</td><td>${a.absent_days}</td><td>${a.attendance_percent}</td></tr>`));
-      }else{ $tb.append('<tr><td colspan="5" class="text-center">No attendance data found.</td></tr>'); }
+        showSuccessMessage('Attendance data loaded successfully');
+      }else{ 
+        $tb.append('<tr><td colspan="5" class="text-center text-muted">No attendance data found for this selection.</td></tr>'); 
+      }
       $('#attendanceTableWrapper').show();
+    }).fail(function(err){
+      console.error('Failed to load attendance table', err);
+      const $tb=$('#attendanceTableBody').empty();
+      $tb.append('<tr><td colspan="5" class="text-center text-danger">Error loading attendance data</td></tr>');
+      $('#attendanceTableWrapper').show();
+      showErrorMessage('Failed to load attendance data: ' + (err.responseJSON?.message || err.statusText));
     });
   }
   $('a[data-bs-toggle="tab"][href="#attendance"]').on('shown.bs.tab', function(){ fetchAttendanceCourses(); $('#attendanceSemesterSelect').empty().append('<option value="">Select a semester</option>').prop('disabled',true); $('#attendanceTableWrapper').hide(); });
