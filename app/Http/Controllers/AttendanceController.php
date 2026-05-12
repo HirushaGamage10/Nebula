@@ -48,7 +48,7 @@ class AttendanceController extends Controller
             return response()->json(['success' => false, 'message' => 'Location and Course Type are required.']);
         }
         try {
-            //First, let's check what records are available for this location in the database.
+            // First, let's see what's actually in the database for this location
             $allCoursesAtLocation = Course::where('location', $location)
                 ->select('course_id', 'course_name', 'course_type')
                 ->get();
@@ -195,7 +195,7 @@ class AttendanceController extends Controller
         $intakeId = $request->input('intake_id');
         $semesterId = $request->input('semester');
         
-        // Check whether this course is a certificate course
+        // Check if this is a certificate course
         $course = Course::find($courseId);
         if (!$course) {
             return response()->json(['error' => 'Course not found.'], 404);
@@ -210,7 +210,7 @@ class AttendanceController extends Controller
             return response()->json(['modules' => $modules]);
         }
 
-        // For degree/diploma: Get the semester details using the semester ID.
+        // For degree/diploma: Get the semester by ID
         $semester = \App\Models\Semester::where('course_id', $courseId)
             ->where('intake_id', $intakeId)
             ->where('id', $semesterId)
