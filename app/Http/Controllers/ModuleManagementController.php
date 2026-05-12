@@ -168,7 +168,6 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
 
     /**
      * Get current module assignments for students
-     * Includes specialization path for elective modules
      */
     public function getModuleAssignments(Request $request)
     {
@@ -192,8 +191,7 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
                                                  'student_id' => $assignment->student->student_id,
                                                  'student_name' => $assignment->student->first_name . ' ' . $assignment->student->last_name,
                                                  'module_id' => $assignment->module->module_id,
-                                                 'module_name' => $assignment->module->module_name,
-                                                 'specialization' => $assignment->specialization // Specialization path (Cyber Security, Network, etc.)
+                                                 'module_name' => $assignment->module->module_name
                                              ];
                                          });
 
@@ -272,7 +270,6 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
 
     /**
      * Get current elective module registrations
-     * Includes specialization path (e.g., Cyber Security, Network, etc.)
      */
     public function getElectiveRegistrations(Request $request)
     {
@@ -308,8 +305,7 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
                                                    'student_id' => $registration->student->student_id,
                                                    'student_name' => $registration->student->first_name . ' ' . $registration->student->last_name,
                                                    'module_id' => $registration->module->module_id,
-                                                   'module_name' => $registration->module->module_name,
-                                                   'specialization' => $registration->specialization // Include specialization path (Cyber Security, Network, etc.)
+                                                   'module_name' => $registration->module->module_name
                                                ];
                                            });
 
@@ -448,7 +444,6 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
 
     /**
      * Get eligible students for elective module registration
-     * These students can then be assigned to specialization paths (Cyber Security, Network, etc.)
      */
     public function getElectiveStudents(Request $request)
     {
@@ -547,9 +542,7 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
     }
 
     /**
-     * Register students for elective modules with specialization path
-     * Specialization path example: Cyber Security, Network, etc.
-     * Each student can be registered for specific specialization track
+     * Register students for elective modules
      */
     public function registerElectiveModules(Request $request)
     {
@@ -568,7 +561,7 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
             'intake_id' => 'required|exists:intakes,intake_id',
             'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
             'module_id' => 'required|exists:modules,module_id',
-            'specialization' => 'nullable|string|max:255' // Specialization path (e.g., Cyber Security, Network, etc.)
+            'specialization' => 'nullable|string|max:255'
         ]);
 
         try {
@@ -604,7 +597,7 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
                         'intake_id' => $request->intake_id,
                         'course_id' => $request->course_id,
                         'location' => $request->location,
-                        'specialization' => $request->specialization, // Stores specialization path (Cyber Security, Network, etc.)
+                        'specialization' => $request->specialization,
                         'semester' => $semester->name,
                         'created_at' => now(),
                         'updated_at' => now()
