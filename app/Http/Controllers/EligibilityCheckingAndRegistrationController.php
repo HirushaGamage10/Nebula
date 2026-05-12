@@ -487,7 +487,7 @@ class EligibilityCheckingAndRegistrationController extends Controller
             'nic' => 'required',
             'course_id' => 'required|exists:courses,course_id',
             'special_approval_document' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120', // 5MB max
-            'remarks' => 'nullable|string|max:10000',
+            'remarks' => 'nullable|string|max:1000',
         ]);
 
         $student = \App\Models\Student::where('id_value', $request->nic)->first();
@@ -622,7 +622,7 @@ class EligibilityCheckingAndRegistrationController extends Controller
     {
         $request->validate([
             'registration_id' => 'required|exists:course_registration,id',
-            'dgm_comment' => 'nullable|string|max:10000',
+            'dgm_comment' => 'nullable|string|max:1000',
         ]);
 
         $registration = CourseRegistration::find($request->registration_id);
