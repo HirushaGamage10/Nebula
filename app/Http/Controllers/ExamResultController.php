@@ -880,18 +880,36 @@ class ExamResultController extends Controller
     public function updateResult(Request $request)
     {
         try {
-            $validatedData = $request->validate([
+            $validationRules = [
                 'course_id' => 'required|exists:courses,course_id',
                 'intake_id' => 'required|exists:intakes,intake_id',
                 'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
-                'semester' => 'required',
-                'module_id' => 'required|exists:modules,module_id',
+                'course_type' => 'nullable|string',
                 'results' => 'required|array|min:1',
                 'results.*.id' => 'required|exists:exam_results,id',
                 'results.*.marks' => 'nullable|integer|min:0|max:100',
                 'results.*.grade' => 'nullable|string|max:5',
                 'results.*.remarks' => 'nullable|string|max:255',
-            ]);
+            ];
+
+            $validatedData = $request->validate($validationRules);
+
+            $course = Course::find($validatedData['course_id']);
+            if (!$course) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Course not found.'
+                ], 404);
+            }
+
+            $isCertificate = ($validatedData['course_type'] ?? $course->course_type) === 'certificate';
+
+            if (!$isCertificate) {
+                $request->validate([
+                    'semester' => 'required',
+                    'module_id' => 'required|exists:modules,module_id',
+                ]);
+            }
 
             // Additional validation: ensure at least one of marks, grade, or remarks is provided for each result
             foreach ($validatedData['results'] as $index => $result) {
@@ -907,13 +925,14 @@ class ExamResultController extends Controller
                 }
             }
 
-            // Get the semester to convert ID to name
-            $semester = \App\Models\Semester::find($validatedData['semester']);
-            if (!$semester) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Semester not found.'
-                ], 404);
+            if (!$isCertificate) {
+                $semester = \App\Models\Semester::find($request->input('semester'));
+                if (!$semester) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Semester not found.'
+                    ], 404);
+                }
             }
 
             DB::beginTransaction();
