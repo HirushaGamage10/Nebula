@@ -570,7 +570,7 @@ class StudentProfileController extends Controller
         $courses = \App\Models\Course::whereIn(
             'course_id',
             \App\Models\CourseRegistration::where('student_id', $studentId)->pluck('course_id')
-        )->get(['course_id', 'course_name']);
+        )->get(['course_id', 'course_name', 'course_type']);
         return response()->json(['success' => true, 'courses' => $courses]);
     }
 
@@ -942,6 +942,82 @@ class StudentProfileController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch attendance semesters: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // API: Get attendance records for certificate courses (no semester)
+    public function getAttendanceForCertificate($studentId, $courseId)
+    {
+        try {
+            // Log the incoming parameters for debugging
+            \Log::debug('getAttendanceForCertificate called with', [
+                'student_id' => $studentId,
+                'course_id' => $courseId,
+                'types' => [
+                    'student_id_type' => gettype($studentId),
+                    'course_id_type' => gettype($courseId)
+                ]
+            ]);
+
+            // Build the query to fetch attendance records for certificate courses (semester is null or empty)
+            $query = \App\Models\Attendance::where('student_id', (int)$studentId)
+                ->where('course_id', (int)$courseId)
+                ->where(function($q) {
+                    $q->whereNull('semester')
+                      ->orWhere('semester', '');
+                })
+                ->with('module');
+
+            $attendanceRecords = $query->get();
+            
+            \Log::debug('Certificate attendance records found', [
+                'count' => $attendanceRecords->count(),
+                'first_record' => $attendanceRecords->first()?->toArray()
+            ]);
+
+            if ($attendanceRecords->isEmpty()) {
+                return response()->json(['success' => true, 'attendance' => []]);
+            }
+
+            // Group by module_id and transform the data
+            $attendance = $attendanceRecords
+                ->groupBy('module_id')
+                ->map(function ($records, $moduleId) {
+                    $firstRecord = $records->first();
+                    
+                    // Safely access module relationship
+                    $moduleName = optional($firstRecord->module)->module_name ?? 'N/A';
+                    $totalDays = $records->count();
+                    $presentDays = $records->where('status', 'present')->count();
+                    $absentDays = $records->where('status', 'absent')->count();
+                    
+                    $attendancePercent = $totalDays > 0 ? round(($presentDays / $totalDays) * 100, 2) : 0;
+                    
+                    return [
+                        'module_name' => $moduleName,
+                        'total_days' => $totalDays,
+                        'present_days' => $presentDays,
+                        'absent_days' => $absentDays,
+                        'attendance_percent' => $attendancePercent . '%'
+                    ];
+                })
+                ->values();
+
+            return response()->json([
+                'success' => true,
+                'attendance' => $attendance
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in getAttendanceForCertificate', [
+                'student_id' => $studentId,
+                'course_id' => $courseId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'success' => false, 
+                'message' => 'Failed to fetch attendance records: ' . $e->getMessage()
             ], 500);
         }
     }

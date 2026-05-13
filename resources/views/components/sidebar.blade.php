@@ -74,7 +74,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link {{ Route::currentRouteName() == 'student_management.other.information' ? 'active' : '' }}" href="{{ route('student_management.other.information') }}">
                         <span><i class="ti ti-layout"></i></span>
-                        <span class="hide-menu">Student Other Information</span>
+                        <span class="hide-menu">Student Other Info</span>
                     </a>
                 </li>
             @endif
