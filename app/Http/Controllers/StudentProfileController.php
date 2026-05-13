@@ -396,6 +396,7 @@ class StudentProfileController extends Controller
                     'intake_id' => $registration->intake_id,
                     'location' => $registration->location ?? null,
                     'status' => $statusToSet,
+                    'full_grade' => $validated['full_grade'] ?? null,
                     'registration_date' => $registration->created_at ?? now(),
                 ]);
             }
