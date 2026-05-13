@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\DB;
 
 class CourseManagementController extends Controller
 {
+    /**
+     * Display the course management page with all courses and modules.
+     */
     public function showCourseManagement()
     {
         $courses = Course::with('modules')->orderBy('course_name', 'asc')->get();
@@ -19,6 +22,12 @@ class CourseManagementController extends Controller
         return view('courses_&_modules.course_management', compact('courses', 'modules'));
     }
 
+    /**
+     * Store a new course record.
+     *
+     * Validates request data, normalizes duration and training values,
+     * and saves the course in a transaction.
+     */
     public function storeCourseData(Request $request)
     {
         $validatedData = $request->validate([
@@ -57,7 +66,7 @@ class CourseManagementController extends Controller
         try {
             $courseData = $request->except('modules');
 
-            // Combine duration
+            // Normalize duration fields into a single stored string.
             $courseData['duration'] = $request->duration_years . '-' . $request->duration_months . '-' . $request->duration_days;
             unset($courseData['duration_years'], $courseData['duration_months'], $courseData['duration_days']);
 
@@ -76,8 +85,8 @@ class CourseManagementController extends Controller
                 $courseData['min_credits'] = null;
             }
 
-            // Handle specializations for degree only
-            if ($request->course_type === 'degree') {
+            // Handle specializations for degree and diploma courses
+            if (in_array($request->course_type, ['degree', 'diploma'], true)) {
                 $specializations = $request->input('specializations', []);
                 $courseData['specializations'] = !empty($specializations)
                     ? json_encode(array_filter($specializations))
@@ -115,6 +124,11 @@ class CourseManagementController extends Controller
         }
     }
 
+    /**
+     * Retrieve a course by ID and return its structured data.
+     *
+     * This converts stored duration and training period strings back into arrays.
+     */
     public function getCourseById($id)
     {
         $course = Course::with(['modules'])->find($id);
@@ -140,6 +154,9 @@ class CourseManagementController extends Controller
         return response()->json(['success' => false, 'message' => 'Course not found'], 404);
     }
 
+    /**
+     * Delete a course and detach its related modules.
+     */
     public function deleteCourse($id)
     {
         $course = Course::find($id);
@@ -156,6 +173,9 @@ class CourseManagementController extends Controller
         return response()->json(['success' => false, 'message' => 'Course not found'], 404);
     }
 
+    /**
+     * Update an existing course and keep related intake names in sync.
+     */
     public function updateCourseData(Request $request, $id)
     {
         $course = Course::find($id);
@@ -215,7 +235,7 @@ class CourseManagementController extends Controller
                 $courseData['min_credits'] = null;
             }
 
-            if ($request->course_type === 'degree') {
+            if (in_array($request->course_type, ['degree', 'diploma'], true)) {
                 $specializations = $request->input('specializations', []);
                 $courseData['specializations'] = !empty($specializations)
                     ? json_encode(array_filter($specializations))

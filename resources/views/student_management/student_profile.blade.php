@@ -633,7 +633,7 @@
                   <label for="attendanceCourseSelect" class="form-label fw-bold">Select Course</label>
                   <select id="attendanceCourseSelect" class="form-select"><option value="">Select a course</option></select>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-6" id="semesterSelectContainer" style="display:none;">
                   <label for="attendanceSemesterSelect" class="form-label fw-bold">Select Semester</label>
                   <!-- Start not disabled in markup; JS will control enabled/disabled state -->
                   <select id="attendanceSemesterSelect" class="form-select"><option value="">Select a semester</option></select>
@@ -1838,7 +1838,7 @@ $(function(){
     $.get('/api/student/'+sid+'/courses', res=>{
       const $s=$('#attendanceCourseSelect').empty().append('<option value="">Select a course</option>');
       if(res.success && res.courses && res.courses.length){ 
-        res.courses.forEach(c=>$s.append(`<option value="${c.course_id}">${c.course_name}</option>`)); 
+        res.courses.forEach(c=>$s.append(`<option value="${c.course_id}" data-course-type="${c.course_type}">${c.course_name}</option>`)); 
       }
     }).fail(function(err){
       console.error('Failed to load courses for attendance', err);
@@ -1913,8 +1913,53 @@ $(function(){
       showErrorMessage('Failed to load attendance data: ' + (err.responseJSON?.message || err.statusText));
     });
   }
-  $('a[data-bs-toggle="tab"][href="#attendance"]').on('shown.bs.tab', function(){ fetchAttendanceCourses(); $('#attendanceSemesterSelect').empty().append('<option value="">Select a semester</option>').prop('disabled',true); $('#attendanceTableWrapper').hide(); });
-  $('#attendanceCourseSelect').on('change', function(){ const c=$(this).val(); if(c){ fetchAttendanceSemesters(c); $('#attendanceTableWrapper').hide(); } else { $('#attendanceSemesterSelect').empty().append('<option value="">Select a semester</option>').prop('disabled',true); $('#attendanceTableWrapper').hide(); }});
+  
+  function fetchAttendanceTableForCertificate(courseId){
+    const sid=getStudentId(); if(!sid||!courseId) return;
+    
+    console.log('Fetching certificate attendance for:', {sid, courseId});
+    
+    $.get('/api/student/'+sid+'/course/'+courseId+'/attendance', res=>{
+      console.log('Certificate attendance response:', res);
+      const $tb=$('#attendanceTableBody').empty();
+      
+      // Check if response is successful and has attendance data
+      if(res.success && res.attendance && Array.isArray(res.attendance) && res.attendance.length > 0){
+        res.attendance.forEach(a=>$tb.append(`<tr><td>${a.module_name}</td><td>${a.total_days}</td><td>${a.present_days}</td><td>${a.absent_days}</td><td>${a.attendance_percent}</td></tr>`));
+        showSuccessMessage('Attendance data loaded successfully');
+      }else{ 
+        $tb.append('<tr><td colspan="5" class="text-center text-muted">No attendance data found for this course.</td></tr>'); 
+      }
+      $('#attendanceTableWrapper').show();
+    }).fail(function(err){
+      console.error('Failed to load certificate attendance table', err);
+      const $tb=$('#attendanceTableBody').empty();
+      $tb.append('<tr><td colspan="5" class="text-center text-danger">Error loading attendance data</td></tr>');
+      $('#attendanceTableWrapper').show();
+      showErrorMessage('Failed to load attendance data: ' + (err.responseJSON?.message || err.statusText));
+    });
+  }
+  
+  $('a[data-bs-toggle="tab"][href="#attendance"]').on('shown.bs.tab', function(){ fetchAttendanceCourses(); $('#attendanceSemesterSelect').empty().append('<option value="">Select a semester</option>').prop('disabled',true); $('#semesterSelectContainer').hide(); $('#attendanceTableWrapper').hide(); });
+  $('#attendanceCourseSelect').on('change', function(){
+    const c=$(this).val();
+    const courseType = $(this).find('option:selected').data('course-type');
+    if(c){
+      if(courseType === 'certificate'){
+        // For certificate courses, hide semester select and fetch attendance directly
+        $('#semesterSelectContainer').hide();
+        fetchAttendanceTableForCertificate(c);
+      } else {
+        // For degree courses, show semester select and fetch semesters
+        $('#semesterSelectContainer').show();
+        fetchAttendanceSemesters(c);
+      }
+      $('#attendanceTableWrapper').hide();
+    } else {
+      $('#semesterSelectContainer').hide();
+      $('#attendanceTableWrapper').hide();
+    }
+  });
   $('#attendanceSemesterSelect').on('change', function(){ const c=$('#attendanceCourseSelect').val(), s=$(this).val(); if(c&&s){ fetchAttendanceTable(c,s); } else { $('#attendanceTableWrapper').hide(); }});
 
   // ----- Payment tab -----

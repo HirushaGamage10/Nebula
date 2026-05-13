@@ -19,7 +19,7 @@
             </div>
             <hr>
             
-            <!-- Search and Filter Section -->
+            <!-- Filter Section -->
             <div class="row mb-4">
                 <div class="col-md-4">
                     <div class="input-group">
@@ -215,7 +215,7 @@
     </div>
 </div>
 
-<!-- Semester Detail Modals -->
+<!-- Detail Modals -->
 @foreach($semesters as $semester)
 <div class="modal fade" id="semesterModal{{ $semester->id }}" tabindex="-1" aria-labelledby="semesterModalLabel{{ $semester->id }}" aria-hidden="true">
     <div class="modal-dialog modal-lg">
