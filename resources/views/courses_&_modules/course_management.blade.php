@@ -869,7 +869,7 @@ $(document).ready(function() {
                     setSelectValue('#course_type', course.course_type);
                     $('#course_type').trigger('change');
 
-                    if (course.course_type === 'degree') {
+                    if (course.course_type === 'degree' || course.course_type === 'diploma') {
                         $('#course_name').val(course.course_name);
                         $('#duration_years').val(course.duration.years);
                         $('#duration_months').val(course.duration.months);
@@ -887,12 +887,38 @@ $(document).ready(function() {
                         }
 
                         $('#no_of_semesters').val(course.no_of_semesters).trigger('input');
-                        $('#training_years').val(course.training_period.years);
-                        $('#training_months').val(course.training_period.months);
-                        $('#training_days').val(course.training_period.days);
+                        $('#training_years').val(course.training_period?.years ?? 0);
+                        $('#training_months').val(course.training_period?.months ?? 0);
+                        $('#training_days').val(course.training_period?.days ?? 0);
                         $('#min_credits').val(course.min_credits);
                         $('#entry_qualification').val(course.entry_qualification);
                         setSelectValue('#semester_format', course.semester_format || 'numerical');
+
+                        if (course.specializations && course.specializations.length) {
+                            $('#specializationYes').prop('checked', true);
+                            $('#specializationNo').prop('checked', false);
+                            $('#specializationFields').show();
+
+                            const specs = Array.isArray(course.specializations) ? course.specializations : JSON.parse(course.specializations || '[]');
+                            const filteredSpecs = specs.filter(spec => spec && spec.trim() !== '');
+                            const specializationHtml = filteredSpecs.map((spec, index) => `
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control specialization-input" name="specializations[]" value="${spec}" placeholder="Enter specialization name">
+                                    <button type="button" class="btn btn-outline-secondary remove-specialization" ${filteredSpecs.length > 1 ? '' : 'style="display:none;"'}>Remove</button>
+                                </div>
+                            `).join('');
+                            $('#specializationInputs').html(specializationHtml || `
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control specialization-input" name="specializations[]" placeholder="Enter specialization name">
+                                    <button type="button" class="btn btn-outline-secondary remove-specialization" style="display:none;">Remove</button>
+                                </div>
+                            `);
+                            updateRemoveButtons();
+                        } else {
+                            $('#specializationNo').prop('checked', true);
+                            $('#specializationYes').prop('checked', false);
+                            $('#specializationFields').hide();
+                        }
                     } else if (course.course_type === 'certificate') {
                         $('#cert_course_name').val(course.course_name);
                         $('#cert_duration_years').val(course.duration.years);

@@ -85,8 +85,8 @@ class CourseManagementController extends Controller
                 $courseData['min_credits'] = null;
             }
 
-            // Handle specializations for degree only
-            if ($request->course_type === 'degree') {
+            // Handle specializations for degree and diploma courses
+            if (in_array($request->course_type, ['degree', 'diploma'], true)) {
                 $specializations = $request->input('specializations', []);
                 $courseData['specializations'] = !empty($specializations)
                     ? json_encode(array_filter($specializations))
@@ -235,7 +235,7 @@ class CourseManagementController extends Controller
                 $courseData['min_credits'] = null;
             }
 
-            if ($request->course_type === 'degree') {
+            if (in_array($request->course_type, ['degree', 'diploma'], true)) {
                 $specializations = $request->input('specializations', []);
                 $courseData['specializations'] = !empty($specializations)
                     ? json_encode(array_filter($specializations))
