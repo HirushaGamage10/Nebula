@@ -8,13 +8,22 @@ use Carbon\Carbon;
 
 class AdminL1DashboardController extends Controller
 {
+    /**
+     * Show the Level 1 admin dashboard view.
+     */
     public function showDashboard()
     {
         return view('dashboards.admin_l1');
     }
 
+    /**
+     * Return overview dashboard metrics for the requested period.
+     *
+     * Available period values: today, week, month, year.
+     */
     public function getOverviewMetrics(Request $request)
     {
+        // Resolve the date range for the requested period.
         $period = $request->get('period', 'month');
         $dateRange = $this->getDateRange($period);
 
@@ -56,11 +65,17 @@ class AdminL1DashboardController extends Controller
         return response()->json($metrics);
     }
 
+    /**
+     * Return student statistics for dashboard visualizations.
+     *
+     * Includes academic status counts, institute location counts, and registration trends.
+     */
     public function getStudentStats(Request $request)
     {
         $period = $request->get('period', 'month');
         $dateRange = $this->getDateRange($period);
 
+        // Choose grouping and label SQL expressions based on the selected period.
         [$dateKeySql, $labelSql] = match ($period) {
             'today' => ['DATE_FORMAT(created_at, "%Y-%m-%d %H:00:00")', 'DATE_FORMAT(created_at, "%H:00")'],
             'week' => ['DATE(created_at)', 'DATE_FORMAT(created_at, "%a")'],
@@ -92,6 +107,11 @@ class AdminL1DashboardController extends Controller
         return response()->json($stats);
     }
 
+    /**
+     * Return course registration statistics for the dashboard.
+     *
+     * Includes registration status counts and the top courses by registration volume.
+     */
     public function getCourseRegistrationStats(Request $request)
     {
         $period = $request->get('period', 'month');
@@ -114,6 +134,9 @@ class AdminL1DashboardController extends Controller
         return response()->json($stats);
     }
 
+    /**
+     * Return clearance-related metrics and pending clearance requests.
+     */
     public function getClearanceStats()
     {
         $stats = [
@@ -132,6 +155,9 @@ class AdminL1DashboardController extends Controller
         return response()->json($stats);
     }
 
+    /**
+     * Return financial dashboard data, including revenue summary and overdue payments.
+     */
     public function getFinancialStats(Request $request)
     {
         $dateRange = $this->getDateRange($request->get('period', 'month'));
@@ -156,6 +182,11 @@ class AdminL1DashboardController extends Controller
         return response()->json($stats);
     }
 
+    /**
+     * Return recent dashboard activity entries.
+     *
+     * Combines student registrations and course registration activity.
+     */
     public function getRecentActivities(Request $request)
     {
         $limit = $request->get('limit', 50);
@@ -180,6 +211,11 @@ class AdminL1DashboardController extends Controller
         return response()->json($activities);
     }
 
+    /**
+     * Return actionable items for admin follow-up.
+     *
+     * Includes pending course registrations and pending clearances.
+     */
     public function getActionItems()
     {
         $actions = [
@@ -198,6 +234,11 @@ class AdminL1DashboardController extends Controller
         return response()->json($actions);
     }
 
+    /**
+     * Resolve the date range to use for period-based queries.
+     *
+     * Defaults to the current month for unsupported period values.
+     */
     private function getDateRange($period)
     {
         switch ($period) {
