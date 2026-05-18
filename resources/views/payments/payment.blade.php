@@ -4338,18 +4338,11 @@ function displayPaymentDetails(paymentDetails) {
 
         // Calculate LKR amount for franchise fees
         let lkrAmount = '';
-        const effectiveRate = payment.conversion_rate || conversionRate;
-        if (paymentType === 'franchise_fee') {
-            if (payment.lkr_amount !== undefined && payment.lkr_amount !== null) {
-                lkrAmount = `LKR ${money(payment.lkr_amount)}`;
-            } else if (effectiveRate > 0) {
-                const lkrBase = amount * effectiveRate;
-                const ssclAmount = (lkrBase * Number(payment.sscl_tax || 0)) / 100;
-                const bankCharges = Number(payment.bank_charges || 0);
-                lkrAmount = `LKR ${money(lkrBase + ssclAmount + bankCharges)}`;
-            } else {
-                lkrAmount = 'Enter conversion rate';
-            }
+        if (paymentType === 'franchise_fee' && conversionRate > 0) {
+            const currencyFrom = document.getElementById('currency-from').value;
+            lkrAmount = `LKR ${(amount * conversionRate).toLocaleString()}`;
+        } else if (paymentType === 'franchise_fee' && conversionRate <= 0) {
+            lkrAmount = 'Enter conversion rate';
         }
 
         const row = `
@@ -4522,36 +4515,32 @@ function updateLKRAmountsInTable(conversionRate) {
     const rows = tbody.querySelectorAll('tr');
 
     rows.forEach((row, index) => {
-        const payment = window.paymentDetailsData[index];
-        if (!payment || payment.conversion_rate || (payment.lkr_amount !== undefined && payment.lkr_amount !== null)) {
-            return;
-        }
-
         const lkrCell = row.querySelector('td:nth-child(5)'); // LKR amount column
-        if (!lkrCell) {
-            return;
-        }
+        if (lkrCell && window.paymentDetailsData[index]) {
+            const payment = window.paymentDetailsData[index];
+            const amount = parseFloat(payment.amount || 0);
+            const ssclTax = parseFloat(payment.sscl_tax || 0);
+            const bankCharges = parseFloat(payment.bank_charges || 0);
+            if (conversionRate > 0) {
+                const lkrBase = amount * conversionRate;
+                const ssclAmount = (lkrBase * ssclTax) / 100;
+                const lkrFinal = lkrBase + ssclAmount + bankCharges;
 
-        const amount = parseFloat(payment.amount || 0);
-        const ssclTax = parseFloat(payment.sscl_tax || 0);
-        const bankCharges = parseFloat(payment.bank_charges || 0);
-        if (conversionRate > 0) {
-            const lkrBase = amount * conversionRate;
-            const ssclAmount = (lkrBase * ssclTax) / 100;
-            const lkrFinal = lkrBase + ssclAmount + bankCharges;
+                // Add a brief highlight effect to show the update
+                lkrCell.style.backgroundColor = '#fff3cd';
+                lkrCell.innerHTML = `
+                    <div>LKR ${money(lkrFinal)}</div>
+                    <small class="text-muted">Base: LKR ${money(lkrBase)} | SSCL: LKR ${money(ssclAmount)} | Bank: LKR ${money(bankCharges)}</small>
+                `;
 
-            lkrCell.style.backgroundColor = '#fff3cd';
-            lkrCell.innerHTML = `
-                <div>LKR ${money(lkrFinal)}</div>
-                <small class="text-muted">Base: LKR ${money(lkrBase)} | SSCL: LKR ${money(ssclAmount)} | Bank: LKR ${money(bankCharges)}</small>
-            `;
-
-            setTimeout(() => {
+                // Remove highlight after a short delay
+                setTimeout(() => {
+                    lkrCell.style.backgroundColor = '';
+                }, 300);
+            } else {
+                lkrCell.textContent = 'Enter conversion rate';
                 lkrCell.style.backgroundColor = '';
-            }, 300);
-        } else {
-            lkrCell.textContent = 'Enter conversion rate';
-            lkrCell.style.backgroundColor = '';
+            }
         }
     });
 }
