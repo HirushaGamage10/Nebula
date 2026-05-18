@@ -647,21 +647,62 @@ class StudentProfileController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            // Get student-specific payment plan (with discounts and loans applied)
+            // Build registration fee amount and payment plan installments
+            $baseRegistrationFee = $registration->intake->registration_fee ?? 0;
             $studentPaymentPlan = \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
                 ->where('course_id', $registration->course_id)
-                ->with(['installments', 'discounts'])
+                ->with(['installments', 'discounts.discount'])
                 ->first();
 
-            // Calculate course fees from student payment plan
+            $registrationFee = $this->calculateRegistrationFeeAmount($baseRegistrationFee, $studentPaymentPlan);
+            $courseInstallmentRows = [];
+            $franchiseInstallmentRows = [];
             $courseFee = 0;
             $franchiseFee = 0;
-            $registrationFee = $registration->intake->registration_fee ?? 0;
 
-            if ($studentPaymentPlan) {
-                $totalCourseAmount = $studentPaymentPlan->final_amount;
-                foreach ($studentPaymentPlan->installments as $installment) {
-                    $courseFee += $installment->final_amount ?? $installment->amount ?? 0;
+            if ($studentPaymentPlan && $studentPaymentPlan->installments->isNotEmpty()) {
+                foreach ($studentPaymentPlan->installments->sortBy('installment_number') as $installment) {
+                    $installmentNumber = $installment->installment_number;
+                    $dueDate = optional($installment->due_date)->format('Y-m-d');
+                    $isFranchise = !is_null($installment->international_amount) && (float) $installment->international_amount > 0;
+                    $totalAmount = $isFranchise
+                        ? (float) ($installment->international_amount ?? 0)
+                        : (float) ($installment->final_amount ?? $installment->amount ?? $installment->local_amount ?? 0);
+
+                    if ($totalAmount <= 0) {
+                        continue;
+                    }
+
+                    $paymentsForInstallment = $payments->filter(function ($payment) use ($installmentNumber, $isFranchise) {
+                        return $this->categorizePaymentType($payment->installment_type ?? $payment->payment_type ?? '') === ($isFranchise ? 'franchise_fee' : 'course_fee')
+                            && $payment->installment_number == $installmentNumber;
+                    });
+
+                    $paidAmount = (float) $paymentsForInstallment->sum('amount');
+                    $outstanding = max($totalAmount - $paidAmount, 0);
+                    $latestPayment = $paymentsForInstallment->sortByDesc(function ($payment) {
+                        return $payment->payment_effective_date ? $payment->payment_effective_date->timestamp : $payment->created_at->timestamp;
+                    })->first();
+                    $paymentDate = $latestPayment ? ($latestPayment->payment_effective_date ? $latestPayment->payment_effective_date->format('Y-m-d') : $latestPayment->created_at->format('Y-m-d')) : null;
+
+                    $row = [
+                        'total_amount' => $totalAmount,
+                        'paid_amount' => $paidAmount,
+                        'outstanding' => $outstanding,
+                        'payment_date' => $paymentDate,
+                        'due_date' => $dueDate,
+                        'receipt_no' => $latestPayment->transaction_id ?? null,
+                        'uploaded_receipt' => $latestPayment && $latestPayment->paid_slip_path ? asset('storage/' . $latestPayment->paid_slip_path) : null,
+                        'installment_number' => $installmentNumber,
+                    ];
+
+                    if ($isFranchise) {
+                        $franchiseFee += $totalAmount;
+                        $franchiseInstallmentRows[] = $row;
+                    } else {
+                        $courseFee += $totalAmount;
+                        $courseInstallmentRows[] = $row;
+                    }
                 }
             } else {
                 $paymentPlan = \App\Models\PaymentPlan::where('course_id', $registration->course_id)
@@ -674,103 +715,128 @@ class StudentProfileController extends Controller
                     }
                     if (is_array($installmentsData)) {
                         foreach ($installmentsData as $installment) {
-                            $courseFee += $installment['local_amount'] ?? 0;
-                            $franchiseFee += $installment['international_amount'] ?? 0;
+                            $installmentNumber = $installment['installment_number'] ?? null;
+                            $internationalAmount = (float) ($installment['international_amount'] ?? 0);
+                            $localAmount = (float) ($installment['local_amount'] ?? $installment['amount'] ?? 0);
+                            $isFranchise = $internationalAmount > 0;
+                            $totalAmount = $isFranchise ? $internationalAmount : $localAmount;
+                            if ($totalAmount <= 0) {
+                                continue;
+                            }
+
+                            $paymentsForInstallment = $payments->filter(function ($payment) use ($installmentNumber, $isFranchise) {
+                                return $this->categorizePaymentType($payment->installment_type ?? $payment->payment_type ?? '') === ($isFranchise ? 'franchise_fee' : 'course_fee')
+                                    && (!is_null($installmentNumber) ? $payment->installment_number == $installmentNumber : true);
+                            });
+
+                            $paidAmount = (float) $paymentsForInstallment->sum('amount');
+                            $outstanding = max($totalAmount - $paidAmount, 0);
+                            $latestPayment = $paymentsForInstallment->sortByDesc(function ($payment) {
+                                return $payment->payment_effective_date ? $payment->payment_effective_date->timestamp : $payment->created_at->timestamp;
+                            })->first();
+                            $paymentDate = $latestPayment ? ($latestPayment->payment_effective_date ? $latestPayment->payment_effective_date->format('Y-m-d') : $latestPayment->created_at->format('Y-m-d')) : null;
+                            $dueDate = $installment['due_date'] ?? null;
+
+                            $row = [
+                                'total_amount' => $totalAmount,
+                                'paid_amount' => $paidAmount,
+                                'outstanding' => $outstanding,
+                                'payment_date' => $paymentDate,
+                                'due_date' => $dueDate,
+                                'receipt_no' => $latestPayment->transaction_id ?? null,
+                                'uploaded_receipt' => $latestPayment && $latestPayment->paid_slip_path ? asset('storage/' . $latestPayment->paid_slip_path) : null,
+                                'installment_number' => $installmentNumber,
+                            ];
+
+                            if ($isFranchise) {
+                                $franchiseFee += $totalAmount;
+                                $franchiseInstallmentRows[] = $row;
+                            } else {
+                                $courseFee += $totalAmount;
+                                $courseInstallmentRows[] = $row;
+                            }
                         }
                     }
                 }
-                $totalCourseAmount = $courseFee + $franchiseFee + $registrationFee;
             }
 
-            // Group payments by type
+            if (empty($courseInstallmentRows)) {
+                $courseInstallmentRows = $this->buildPaymentRowsFromDetails($payments, 'course_fee');
+                $courseFee = collect($courseInstallmentRows)->sum('total_amount');
+            }
+            if (empty($franchiseInstallmentRows)) {
+                $franchiseInstallmentRows = $this->buildPaymentRowsFromDetails($payments, 'franchise_fee');
+                $franchiseFee = collect($franchiseInstallmentRows)->sum('total_amount');
+            }
+
+            $registrationPayments = $payments->filter(function ($payment) {
+                return $this->categorizePaymentType($payment->installment_type ?? $payment->payment_type ?? '') === 'registration_fee';
+            });
+            $registrationPaid = (float) $registrationPayments->sum('amount');
+            $registrationOutstanding = max($registrationFee - $registrationPaid, 0);
+            $latestRegistrationPayment = $registrationPayments->sortByDesc(function ($payment) {
+                return $payment->payment_effective_date ? $payment->payment_effective_date->timestamp : $payment->created_at->timestamp;
+            })->first();
+            $registrationRows = [[
+                'total_amount' => $registrationFee,
+                'paid_amount' => $registrationPaid,
+                'outstanding' => $registrationOutstanding,
+                'payment_date' => $latestRegistrationPayment ? ($latestRegistrationPayment->payment_effective_date ? $latestRegistrationPayment->payment_effective_date->format('Y-m-d') : $latestRegistrationPayment->created_at->format('Y-m-d')) : null,
+                'due_date' => optional($registration->registration_date)->format('Y-m-d'),
+                'receipt_no' => $latestRegistrationPayment->transaction_id ?? null,
+                'uploaded_receipt' => $latestRegistrationPayment && $latestRegistrationPayment->paid_slip_path ? asset('storage/' . $latestRegistrationPayment->paid_slip_path) : null,
+                'installment_number' => 1,
+            ]];
+
+            $libraryRows = $this->buildPaymentRowsFromDetails($payments, 'library_fee');
+            $hostelRows = $this->buildPaymentRowsFromDetails($payments, 'hostel_fee');
+            $otherRows = $this->buildPaymentRowsFromDetails($payments, 'other');
+
             $paymentTypes = [
-                'course_fee' => ['name' => 'Course Fee', 'total' => $courseFee, 'paid' => 0, 'payments' => []],
-                'franchise_fee' => ['name' => 'Franchise Fee', 'total' => $franchiseFee, 'paid' => 0, 'payments' => []],
-                'registration_fee' => ['name' => 'Registration Fee', 'total' => $registrationFee, 'paid' => 0, 'payments' => []],
-                'library_fee' => ['name' => 'Library Fee', 'total' => 0, 'paid' => 0, 'payments' => []],
-                'hostel_fee' => ['name' => 'Hostel Fee', 'total' => 0, 'paid' => 0, 'payments' => []],
-                'other' => ['name' => 'Other', 'total' => 0, 'paid' => 0, 'payments' => []],
+                'course_fee' => ['payments' => $courseInstallmentRows, 'total' => $courseFee, 'paid' => collect($courseInstallmentRows)->sum('paid_amount')],
+                'franchise_fee' => ['payments' => $franchiseInstallmentRows, 'total' => $franchiseFee, 'paid' => collect($franchiseInstallmentRows)->sum('paid_amount')],
+                'registration_fee' => ['payments' => $registrationRows, 'total' => $registrationFee, 'paid' => $registrationPaid],
+                'library_fee' => ['payments' => $libraryRows, 'total' => collect($libraryRows)->sum('total_amount'), 'paid' => collect($libraryRows)->sum('paid_amount')],
+                'hostel_fee' => ['payments' => $hostelRows, 'total' => collect($hostelRows)->sum('total_amount'), 'paid' => collect($hostelRows)->sum('paid_amount')],
+                'other' => ['payments' => $otherRows, 'total' => collect($otherRows)->sum('total_amount'), 'paid' => collect($otherRows)->sum('paid_amount')],
             ];
 
-            // Process payments
-            $totalPaid = 0;
-            $paymentHistory = [];
-            foreach ($payments as $payment) {
-                $paymentType = $payment->payment_type ?? 'course_fee';
-                $amount = $payment->amount;
-                $categorizedType = $this->categorizePaymentType($paymentType);
-                if (isset($paymentTypes[$categorizedType])) {
-                    $paymentTypes[$categorizedType]['paid'] += $amount;
-                    $paymentTypes[$categorizedType]['payments'][] = $payment;
-                } else {
-                    $paymentTypes['other']['paid'] += $amount;
-                    $paymentTypes['other']['payments'][] = $payment;
-                }
-                $totalPaid += $amount;
-                $paymentHistory[] = [
-                    'payment_date' => $payment->created_at->format('Y-m-d'),
-                    'payment_type' => $this->getPaymentTypeDisplay($paymentType),
-                    'amount' => $amount,
-                    'payment_method' => $payment->payment_method,
-                    'receipt_no' => $payment->transaction_id,
-                    'status' => $payment->status === 'paid' ? 'Paid' : 'Pending'
-                ];
-            }
-
-            // Calculate summary for each payment type
             $paymentDetails = [];
             foreach ($paymentTypes as $type => $data) {
-                if ($data['total'] > 0 || $data['paid'] > 0) {
-                    $outstanding = $data['total'] - $data['paid'];
+                if ($data['total'] > 0 || $data['paid'] > 0 || count($data['payments']) > 0) {
+                    $outstanding = max(0, $data['total'] - $data['paid']);
                     $paymentRate = $data['total'] > 0 ? round(($data['paid'] / $data['total']) * 100, 2) : 0;
-                    $installmentCount = count(array_filter($data['payments'], function($p) {
-                        return !empty($p->installment_number);
-                    }));
-                    $lastPayment = collect($data['payments'])->sortByDesc('created_at')->first();
-                    $lastPaymentDate = $lastPayment ? $lastPayment->created_at->format('Y-m-d') : null;
-
-                    $detailedPayments = [];
-                    foreach ($data['payments'] as $payment) {
-                        $rowTotalAmount = (float) $data['total'];
-                        $rowPaidAmount = (float) ($payment->amount ?? 0);
-                        $rowOutstanding = max(0, $rowTotalAmount - $rowPaidAmount);
-
-                        if ($type === 'franchise_fee') {
-                            $franchiseCharges = (float) ($payment->sscl_tax_amount ?? 0) + (float) ($payment->bank_charges ?? 0);
-                            $rowTotalAmount = round(((float) ($payment->total_fee ?? $payment->amount ?? 0)) + $franchiseCharges, 2);
-                            $rowPaidAmount = round(((float) ($payment->amount ?? 0)) + $franchiseCharges, 2);
-                            $rowOutstanding = round((float) ($payment->remaining_amount ?? $rowTotalAmount), 2);
-                        }
-
-                        $detailedPayments[] = [
-                            'total_amount' => $rowTotalAmount,
-                            'paid_amount' => $rowPaidAmount,
-                            'outstanding' => $rowOutstanding,
-                            'payment_date' => $payment->created_at->format('Y-m-d'),
-                            'due_date' => $payment->due_date ? $payment->due_date->format('Y-m-d') : null,
-                            'receipt_no' => $payment->transaction_id,
-                            'uploaded_receipt' => $payment->paid_slip_path ? asset('storage/' . $payment->paid_slip_path) : null,
-                            'installment_number' => $payment->installment_number,
-                            'payment_method' => $payment->payment_method,
-                            'status' => $payment->status === 'paid' ? 'Paid' : 'Pending'
-                        ];
-                    }
+                    $lastPayment = collect($data['payments'])->sortByDesc('payment_date')->first();
+                    $lastPaymentDate = $lastPayment ? $lastPayment['payment_date'] : null;
 
                     $paymentDetails[] = [
-                        'payment_type' => strtolower($type),
+                        'payment_type' => $type,
                         'total_amount' => $data['total'],
                         'paid_amount' => $data['paid'],
                         'outstanding' => $outstanding,
                         'payment_rate' => $paymentRate,
-                        'installment_count' => $installmentCount,
+                        'installment_count' => count($data['payments']),
                         'last_payment_date' => $lastPaymentDate,
-                        'payments' => $detailedPayments
+                        'payments' => $data['payments'],
                     ];
                 }
             }
 
-            $totalOutstanding = $totalCourseAmount - $totalPaid;
+            $totalPaid = collect($paymentDetails)->sum('paid_amount');
+            $totalOutstanding = collect($paymentDetails)->sum('outstanding');
+            $totalCourseAmount = $courseFee + $franchiseFee + $registrationFee;
             $overallPaymentRate = $totalCourseAmount > 0 ? round(($totalPaid / $totalCourseAmount) * 100, 2) : 0;
+
+            $paymentHistory = $payments->map(function ($payment) {
+                return [
+                    'payment_date' => $payment->payment_effective_date ? $payment->payment_effective_date->format('Y-m-d') : $payment->created_at->format('Y-m-d'),
+                    'payment_type' => $this->getPaymentTypeDisplay($payment->installment_type ?? $payment->payment_type ?? 'course_fee'),
+                    'amount' => (float) $payment->amount,
+                    'payment_method' => $payment->payment_method,
+                    'receipt_no' => $payment->transaction_id,
+                    'status' => $payment->status === 'paid' ? 'Paid' : 'Pending'
+                ];
+            })->toArray();
 
             $summary = [
                 'student' => [
@@ -795,6 +861,66 @@ class StudentProfileController extends Controller
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()], 500);
         }
+    }
+
+    private function calculateRegistrationFeeAmount($baseRegistrationFee, $studentPaymentPlan)
+    {
+        if (!$studentPaymentPlan) {
+            return (float) $baseRegistrationFee;
+        }
+
+        $discountRecord = \App\Models\PaymentPlanDiscount::where('payment_plan_id', $studentPaymentPlan->id)
+            ->whereHas('discount', function ($query) {
+                $query->where('discount_category', 'registration_fee');
+            })
+            ->with('discount')
+            ->first();
+
+        if (!$discountRecord || !$discountRecord->discount) {
+            return (float) $baseRegistrationFee;
+        }
+
+        $discount = $discountRecord->discount;
+        $discountAmount = 0;
+
+        if ($discount->type === 'percentage') {
+            $discountAmount = ($baseRegistrationFee * $discount->value) / 100;
+        } else {
+            $discountAmount = min((float) $discount->value, (float) $baseRegistrationFee);
+        }
+
+        return max(0, (float) $baseRegistrationFee - $discountAmount);
+    }
+
+    private function buildPaymentRowsFromDetails($payments, $type)
+    {
+        $rows = [];
+
+        $payments->filter(function ($payment) use ($type) {
+            return $this->categorizePaymentType($payment->installment_type ?? $payment->payment_type ?? '') === $type;
+        })->each(function ($payment) use (&$rows) {
+            $totalAmount = (float) ($payment->total_fee ?? $payment->amount ?? 0);
+            $paidAmount = (float) ($payment->amount ?? 0);
+            $outstanding = $payment->remaining_amount !== null
+                ? (float) $payment->remaining_amount
+                : max($totalAmount - $paidAmount, 0);
+            $paymentDate = $payment->payment_effective_date
+                ? $payment->payment_effective_date->format('Y-m-d')
+                : $payment->created_at->format('Y-m-d');
+
+            $rows[] = [
+                'total_amount' => $totalAmount,
+                'paid_amount' => $paidAmount,
+                'outstanding' => $outstanding,
+                'payment_date' => $paymentDate,
+                'due_date' => $payment->due_date ? $payment->due_date->format('Y-m-d') : null,
+                'receipt_no' => $payment->transaction_id,
+                'uploaded_receipt' => $payment->paid_slip_path ? asset('storage/' . $payment->paid_slip_path) : null,
+                'installment_number' => $payment->installment_number,
+            ];
+        });
+
+        return $rows;
     }
 
     // Helper: categorize payment type

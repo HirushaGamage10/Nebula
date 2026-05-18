@@ -1,6 +1,6 @@
 @extends('inc.app')
 
-@section('title', 'NEBULA | Payment Management')
+@section('title', 'NEBULA | Student Payment Plan')
 
 @section('content')
 
