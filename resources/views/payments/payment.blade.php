@@ -1338,7 +1338,7 @@ document.addEventListener('change', function(e) {
         const index = e.target.dataset.planIndex;
         const value = e.target.value;
         updatePaymentPlan(index, value);
-    } else if (e.target.classList.contains('payment-radio')) {
+    } else if (e.target.classList.contains('payment-checkbox')) {
         enableGenerateButton();
     }
 });
@@ -1350,6 +1350,9 @@ document.getElementById('slip-student-id')?.addEventListener('change', function(
 
 document.getElementById('slip-course')?.addEventListener('change', function() {
     loadIntakesForCourse();
+    if (document.getElementById('slip-payment-type')?.value) {
+        loadPaymentDetails();
+    }
 });
 
 document.getElementById('slip-payment-type')?.addEventListener('change', function() {
@@ -4145,6 +4148,11 @@ function checkStudentAndCourse() {
             if (data.courses.length === 1) {
                 courseSelect.value = data.courses[0].course_id;
                 loadIntakesForCourse(); // Automatically trigger the next step
+
+                // If payment type already selected, refresh details immediately
+                if (document.getElementById('slip-payment-type')?.value) {
+                    loadPaymentDetails();
+                }
             }
 
             courseSelect.disabled = false;
@@ -4348,7 +4356,7 @@ function displayPaymentDetails(paymentDetails) {
         const row = `
             <tr ${isPaid ? 'style="opacity: 0.6;"' : ''}>
                 <td>
-                    <input type="radio" name="selectedPayment" value="${index}" class="payment-radio" ${isPaid ? 'disabled title="Already Paid"' : ''}>
+                    <input type="checkbox" name="selectedPayment" value="${index}" class="payment-checkbox" ${isPaid ? 'disabled title="Already Paid"' : ''}>
                 </td>
                 <td>${payment.installment_number || '-'}</td>
                 <td>${payment.due_date ? formatDateDmy(payment.due_date) : '-'}</td>
@@ -4905,7 +4913,7 @@ function renderPaymentDetailsTable(rows, paymentType) {
     const row = `
       <tr ${rowStyle}>
         <td class="text-center">
-          <input type="radio" name="selectedPayment" value="${idx}" ${disabled}>
+          <input type="checkbox" name="selectedPayment" value="${idx}" class="payment-checkbox" ${disabled}>
                     ${isPaid ? '<br><small class="text-danger">Cannot generate new slip</small>' : ''}
         </td>
         <td>${p.installment_number ?? '-'}</td>
@@ -4927,19 +4935,21 @@ function renderPaymentDetailsTable(rows, paymentType) {
   // enable "Generate" only when a selection is made
   tbody.querySelectorAll('input[name="selectedPayment"]').forEach(r =>
         r.addEventListener('change', () => {
-            generateBtn.disabled = false;
-            syncFranchiseChargeInputsToSelection();
+            if (r.checked) {
+                tbody.querySelectorAll('input[name="selectedPayment"]').forEach(other => {
+                    if (other !== r) other.checked = false;
+                });
+                generateBtn.disabled = false;
+                syncFranchiseChargeInputsToSelection();
+            } else {
+                const selectedAny = tbody.querySelector('input[name="selectedPayment"]:checked');
+                generateBtn.disabled = !selectedAny;
+                if (selectedAny) syncFranchiseChargeInputsToSelection();
+            }
         })
   );
 
-  const firstAvailable = tbody.querySelector('input[name="selectedPayment"]:not(:disabled)');
-  if (firstAvailable) {
-    firstAvailable.checked = true;
-    generateBtn.disabled = false;
-    syncFranchiseChargeInputsToSelection();
-  }
-}
-
+  // Require the user to tick the desired installment explicitly.
 // If user changes FX inputs, recompute the LKR column live
 document.getElementById('currency-conversion-rate')?.addEventListener('input', recalculateLKRAmounts);
 document.getElementById('currency-from')?.addEventListener('change', recalculateLKRAmounts);
