@@ -36,7 +36,6 @@ class PaymentDetail extends Model
         'updated_at',
         'foreign_currency_code',
         'foreign_currency_amount',
-        'conversion_rate',
         'installment_type',
         'sscl_tax_amount',
         'bank_charges',
@@ -52,7 +51,6 @@ class PaymentDetail extends Model
         'due_date' => 'date',
         'partial_payments' => 'array',
         'remaining_amount' => 'decimal:2',
-        'conversion_rate' => 'decimal:6',
         'payment_effective_date' => 'date',
     ];
 
