@@ -188,6 +188,7 @@ class PaymentController extends Controller
                         }
 
                         $rows[] = [
+<<<<<<< HEAD
                             'installment_number'   => $ins->installment_number,
                             'due_date'             => optional($ins->due_date)->toDateString(),
                             'amount'               => $storedForeignAmount,
@@ -201,6 +202,19 @@ class PaymentController extends Controller
                             'apply_tax'            => false,
                             'sscl_tax'             => $storedSsclPercent,
                             'bank_charges'         => $storedBankCharges,
+=======
+                            'installment_number' => $ins->installment_number,
+                            'due_date'           => optional($ins->due_date)->toDateString(),
+                            'amount'             => (float) $ins->international_amount,
+                            'base_amount'        => (float) $ins->international_amount,
+                            'status'             => $status,
+                            'paid_date'          => $paidDate,
+                            'receipt_no'         => $receiptNo,
+                            'currency'           => $ins->international_currency ?: 'USD',
+                            'apply_tax'          => false,
+                            'sscl_tax'           => $franchiseSsclTax,
+                            'bank_charges'       => $franchiseBankCharges,
+>>>>>>> fd0fb653e757437bc2dc0607dfde3998a6f36885
                         ];
                     }
 
@@ -248,6 +262,7 @@ class PaymentController extends Controller
                         }
 
                         $rows[] = [
+<<<<<<< HEAD
                             'installment_number'   => $item['installment_number'] ?? null,
                             'due_date'             => $item['due_date'] ?? null,
                             'amount'               => $storedForeignAmount,
@@ -261,6 +276,19 @@ class PaymentController extends Controller
                             'apply_tax'            => (bool)($item['apply_tax'] ?? false),
                             'sscl_tax'             => $storedSsclPercent,
                             'bank_charges'         => $storedBankCharges,
+=======
+                            'installment_number' => $item['installment_number'] ?? null,
+                            'due_date'           => $item['due_date'] ?? null,
+                            'amount'             => $fx,
+                            'base_amount'        => $fx,
+                            'status'             => $status,
+                            'paid_date'          => $paidDate,
+                            'receipt_no'         => $receiptNo,
+                            'currency'           => $plan->international_currency ?: 'USD',
+                            'apply_tax'          => (bool)($item['apply_tax'] ?? false),
+                            'sscl_tax'           => (float)($plan->sscl_tax ?? 0),
+                            'bank_charges'       => (float)($plan->bank_charges ?? 0),
+>>>>>>> fd0fb653e757437bc2dc0607dfde3998a6f36885
                         ];
                     }
                 }
@@ -1556,7 +1584,11 @@ if ($existingPayment) {
     $paidSoFar = collect($existingPayment->partial_payments ?? [])->sum('amount');
     $remaining = max(($totalFee - $paidSoFar), 0);
 
+<<<<<<< HEAD
     $updatePayload = [
+=======
+    $existingPayment->update([
+>>>>>>> fd0fb653e757437bc2dc0607dfde3998a6f36885
         'late_fee'               => $lateFee,
         'approved_late_fee'      => $approvedLateFee,
         'total_fee'              => $totalFee,
@@ -1634,7 +1666,10 @@ if ($existingPayment) {
             'partial_payments'  => json_encode([]), // ensures proper JSON
             'foreign_currency_code'  => $foreignCurrency,
             'foreign_currency_amount'=> $foreignAmount,
+<<<<<<< HEAD
             'conversion_rate'        => $conversionRate,
+=======
+>>>>>>> fd0fb653e757437bc2dc0607dfde3998a6f36885
             'installment_type'           => $installmentType,
             // Actual payment date supplied by staff; drives late-fee calculations
             'payment_effective_date'     => $request->payment_effective_date ?: null,
@@ -2615,6 +2650,7 @@ private function buildSlipDataFromPaymentDetail(\App\Models\PaymentDetail $payme
 
     // FX (for franchise): if a rate is provided via overrides, compute LKR too
     $currencyFrom = $overrides['currency_from'] ?? null;
+<<<<<<< HEAD
     $convRate     = isset($overrides['conversion_rate'])
         ? (float)$overrides['conversion_rate']
         : ((float)($payment->conversion_rate ?? 0) ?: null);
@@ -2624,6 +2660,10 @@ private function buildSlipDataFromPaymentDetail(\App\Models\PaymentDetail $payme
     $lkrAmount    = ($type === 'franchise_fee' && $convRate)
         ? round($foreignAmount * $convRate, 2)
         : null;
+=======
+    $convRate     = isset($overrides['conversion_rate']) ? (float)$overrides['conversion_rate'] : null;
+    $lkrAmount    = ($type === 'franchise_fee' && $convRate) ? round(((float)$payment->amount) * $convRate, 2) : null;
+>>>>>>> fd0fb653e757437bc2dc0607dfde3998a6f36885
 
     // currency to display for franchise (fallback to intake’s currency fields if you have them)
     $fxCurrency   = $overrides['franchise_fee_currency']
@@ -2651,7 +2691,7 @@ private function buildSlipDataFromPaymentDetail(\App\Models\PaymentDetail $payme
         'payment_type_display'   => $this->getPaymentTypeDisplay($type),
 
         // amount is ALWAYS numeric; Blade formats it
-        'amount'                 => $type === 'franchise_fee' ? $foreignAmount : (float)$payment->amount,
+        'amount'                 => (float)$payment->amount,
 
         // franchise extras (null for non-franchise)
         'currency_from'          => $currencyFrom,

@@ -4997,7 +4997,10 @@ function renderPaymentDetailsTable(rows, paymentType) {
         r.addEventListener('change', () => {
             generateBtn.disabled = false;
             syncFranchiseChargeInputsToSelection();
+<<<<<<< HEAD
             updateSelectedRowLKRAmount(rate);
+=======
+>>>>>>> fd0fb653e757437bc2dc0607dfde3998a6f36885
         })
   );
 
@@ -5006,7 +5009,10 @@ function renderPaymentDetailsTable(rows, paymentType) {
     firstAvailable.checked = true;
     generateBtn.disabled = false;
     syncFranchiseChargeInputsToSelection();
+<<<<<<< HEAD
     updateSelectedRowLKRAmount(rate);
+=======
+>>>>>>> fd0fb653e757437bc2dc0607dfde3998a6f36885
   }
 }
 
