@@ -691,8 +691,10 @@
                         </div>
                         <div class="col-md-6">
                           <p><strong>Registration Date:</strong> <span id="summary-registration-date"></span></p>
-                          <p><strong>Total Course Fee:</strong> <span id="summary-total-course-fee"></span></p>
-                          <p><strong>Total Paid:</strong> <span id="summary-total-paid"></span></p>
+                          <p><strong>Total Local + Registration Fee (LKR):</strong> <span id="summary-total-local-fee"></span></p>
+                          <p><strong>Total Franchise Fee:</strong> <span id="summary-total-franchise-fee"></span></p>
+                          <p><strong>Total Paid (LKR):</strong> <span id="summary-total-local-paid"></span></p>
+                          <p><strong>Total Paid (Franchise):</strong> <span id="summary-total-franchise-paid"></span></p>
                         </div>
                       </div>
                     </div>
@@ -702,34 +704,42 @@
                     <div class="col-md-3">
                       <div class="card bg-primary text-white">
                         <div class="card-body text-center">
-                          <h5>Total Amount</h5>
-                          <h3 id="total-amount">Rs. 0</h3>
+                          <h5>Total Local + Registration (LKR)</h5>
+                          <h3 id="total-local-amount">Rs. 0</h3>
                         </div>
                       </div>
                     </div>
                     <div class="col-md-3">
                       <div class="card bg-success text-white">
                         <div class="card-body text-center">
-                          <h5>Total Paid</h5>
-                          <h3 id="total-paid">Rs. 0</h3>
+                          <h5>Total Franchise</h5>
+                          <h3 id="total-franchise-amount">USD 0</h3>
                         </div>
                       </div>
                     </div>
                     <div class="col-md-3">
                       <div class="card bg-warning text-white">
                         <div class="card-body text-center">
-                          <h5>Outstanding</h5>
-                          <h3 id="total-outstanding">Rs. 0</h3>
+                          <h5>Total Paid (LKR)</h5>
+                          <h3 id="total-local-paid">Rs. 0</h3>
                         </div>
                       </div>
                     </div>
                     <div class="col-md-3">
                       <div class="card bg-info text-white">
                         <div class="card-body text-center">
-                          <h5>Payment Rate</h5>
-                          <h3 id="payment-rate">0%</h3>
+                          <h5>Total Paid (Franchise)</h5>
+                          <h3 id="total-franchise-paid">USD 0</h3>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                  <div class="row mb-4">
+                    <div class="col-md-6">
+                      <p><strong>Outstanding (LKR):</strong> <span id="total-local-outstanding">Rs. 0</span></p>
+                    </div>
+                    <div class="col-md-6">
+                      <p><strong>Payment Rate:</strong> <span id="payment-rate">0%</span></p>
                     </div>
                   </div>
                   <!-- Payment Details Table -->
@@ -774,7 +784,11 @@
                           <table class="table table-bordered table-sm">
                             <thead class="table-light">
                               <tr>
-                                <th>Total Amount</th>
+                                <th>Amount</th>
+                                <th>Currency</th>
+                                <th>SSCL Tax</th>
+                                <th>Bank Charges</th>
+                                <th>Total (LKR)</th>
                                 <th>Paid Amount</th>
                                 <th>Outstanding</th>
                                 <th>Paid Date</th>
@@ -785,7 +799,7 @@
                               </tr>
                             </thead>
                             <tbody id="franchiseFeeTableBody">
-                              <tr><td colspan="8" class="text-center text-muted">No franchise fee data available</td></tr>
+                              <tr><td colspan="12" class="text-center text-muted">No franchise fee data available</td></tr>
                             </tbody>
                           </table>
                         </div>
@@ -2091,11 +2105,15 @@ $(function(){
         $('#summary-student-name').text(summary.student.student_name || '');
         $('#summary-course-name').text(summary.student.course_name || '');
         $('#summary-registration-date').text(summary.student.registration_date || '');
-        $('#summary-total-course-fee').text('Rs. ' + (summary.student.total_amount || 0));
-        $('#summary-total-paid').text('Rs. ' + (summary.total_paid || 0));
-        $('#total-amount').text('Rs. ' + (summary.total_amount || 0));
-        $('#total-paid').text('Rs. ' + (summary.total_paid || 0));
-        $('#total-outstanding').text('Rs. ' + (summary.total_outstanding || 0));
+        $('#summary-total-local-fee').text('Rs. ' + (summary.total_local_amount || 0));
+        $('#summary-total-franchise-fee').text((summary.total_franchise_amount || 0) + ' ' + (summary.franchise_currency || 'USD'));
+        $('#summary-total-local-paid').text('Rs. ' + (summary.local_paid || 0));
+        $('#summary-total-franchise-paid').text((summary.franchise_paid || 0) + ' ' + (summary.franchise_currency || 'USD'));
+        $('#total-local-amount').text('Rs. ' + (summary.total_local_amount || 0));
+        $('#total-franchise-amount').text((summary.total_franchise_amount || 0) + ' ' + (summary.franchise_currency || 'USD'));
+        $('#total-local-paid').text('Rs. ' + (summary.local_paid || 0));
+        $('#total-franchise-paid').text((summary.franchise_paid || 0) + ' ' + (summary.franchise_currency || 'USD'));
+        $('#total-local-outstanding').text('Rs. ' + (summary.local_outstanding || 0));
         $('#payment-rate').text((summary.payment_rate || 0) + '%');
 
         // Helper to fill tables by payment type
@@ -2104,19 +2122,37 @@ $(function(){
           const $tb = $(tableId).empty();
           if (details && details.payments && details.payments.length) {
             details.payments.forEach(row => {
-              $tb.append(`<tr>
-                <td>Rs. ${row.total_amount || '-'}</td>
-                <td>Rs. ${row.paid_amount || '-'}</td>
-                <td>Rs. ${row.outstanding || '-'}</td>
-                <td>${row.payment_date || '-'}</td>
-                <td>${row.due_date || '-'}</td>
-                <td>${row.receipt_no || '-'}</td>
-                <td>${row.uploaded_receipt ? `<a href="${row.uploaded_receipt}" target="_blank">View</a>` : '-'}</td>
-                <td>${row.installment_number || '-'}</td>
-              </tr>`);
+              if (detailsType === 'franchise') {
+                $tb.append(`<tr>
+                  <td>${row.amount_currency !== undefined ? row.amount_currency : '-'}</td>
+                  <td>${row.currency || '-'}</td>
+                  <td>${row.sscl_tax !== undefined ? 'Rs. ' + row.sscl_tax : '-'}</td>
+                  <td>${row.bank_charges !== undefined ? 'Rs. ' + row.bank_charges : '-'}</td>
+                  <td>${row.total_amount_lkr !== undefined ? 'Rs. ' + row.total_amount_lkr : '-'}</td>
+                  <td>Rs. ${row.paid_amount || '-'}</td>
+                  <td>Rs. ${row.outstanding || '-'}</td>
+                  <td>${row.payment_date || '-'}</td>
+                  <td>${row.due_date || '-'}</td>
+                  <td>${row.receipt_no || '-'}</td>
+                  <td>${row.uploaded_receipt ? `<a href="${row.uploaded_receipt}" target="_blank">View</a>` : '-'}</td>
+                  <td>${row.installment_number || '-'}</td>
+                </tr>`);
+              } else {
+                $tb.append(`<tr>
+                  <td>Rs. ${row.total_amount || '-'}</td>
+                  <td>Rs. ${row.paid_amount || '-'}</td>
+                  <td>Rs. ${row.outstanding || '-'}</td>
+                  <td>${row.payment_date || '-'}</td>
+                  <td>${row.due_date || '-'}</td>
+                  <td>${row.receipt_no || '-'}</td>
+                  <td>${row.uploaded_receipt ? `<a href="${row.uploaded_receipt}" target="_blank">View</a>` : '-'}</td>
+                  <td>${row.installment_number || '-'}</td>
+                </tr>`);
+              }
             });
           } else {
-            $tb.append(`<tr><td colspan="8" class="text-center text-muted">No data available</td></tr>`);
+            const colspan = detailsType === 'franchise' ? 12 : 8;
+            $tb.append(`<tr><td colspan="${colspan}" class="text-center text-muted">No data available</td></tr>`);
           }
         }
         fillTable('#courseFeeTableBody', 'course');

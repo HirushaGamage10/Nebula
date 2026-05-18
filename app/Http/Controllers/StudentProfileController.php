@@ -655,6 +655,10 @@ class StudentProfileController extends Controller
                 ->first();
 
             $registrationFee = $this->calculateRegistrationFeeAmount($baseRegistrationFee, $studentPaymentPlan);
+            $franchiseCurrency = $registration->intake->international_currency ?? 'USD';
+            if ($studentPaymentPlan && !empty($studentPaymentPlan->international_currency)) {
+                $franchiseCurrency = $studentPaymentPlan->international_currency;
+            }
             $courseInstallmentRows = [];
             $franchiseInstallmentRows = [];
             $courseFee = 0;
@@ -697,6 +701,11 @@ class StudentProfileController extends Controller
                     ];
 
                     if ($isFranchise) {
+                        $row['amount_currency'] = $totalAmount;
+                        $row['currency'] = $franchiseCurrency;
+                        $row['sscl_tax'] = $latestPayment ? (float) ($latestPayment->sscl_tax_amount ?? 0) : 0;
+                        $row['bank_charges'] = $latestPayment ? (float) ($latestPayment->bank_charges ?? 0) : 0;
+                        $row['total_amount_lkr'] = $latestPayment ? (float) ($latestPayment->total_fee ?? $totalAmount) : $totalAmount;
                         $franchiseFee += $totalAmount;
                         $franchiseInstallmentRows[] = $row;
                     } else {
@@ -708,6 +717,9 @@ class StudentProfileController extends Controller
                 $paymentPlan = \App\Models\PaymentPlan::where('course_id', $registration->course_id)
                     ->where('intake_id', $registration->intake_id)
                     ->first();
+                if ($paymentPlan && !empty($paymentPlan->international_currency)) {
+                    $franchiseCurrency = $paymentPlan->international_currency;
+                }
                 if ($paymentPlan && $paymentPlan->installments) {
                     $installmentsData = $paymentPlan->installments;
                     if (is_string($installmentsData)) {
@@ -749,6 +761,11 @@ class StudentProfileController extends Controller
                             ];
 
                             if ($isFranchise) {
+                                $row['amount_currency'] = $totalAmount;
+                                $row['currency'] = $franchiseCurrency;
+                                $row['sscl_tax'] = $latestPayment ? (float) ($latestPayment->sscl_tax_amount ?? 0) : 0;
+                                $row['bank_charges'] = $latestPayment ? (float) ($latestPayment->bank_charges ?? 0) : 0;
+                                $row['total_amount_lkr'] = $latestPayment ? (float) ($latestPayment->total_fee ?? $totalAmount) : $totalAmount;
                                 $franchiseFee += $totalAmount;
                                 $franchiseInstallmentRows[] = $row;
                             } else {
@@ -838,6 +855,8 @@ class StudentProfileController extends Controller
                 ];
             })->toArray();
 
+            $localPaid = collect($courseInstallmentRows)->sum('paid_amount') + $registrationPaid;
+            $franchisePaid = collect($franchiseInstallmentRows)->sum('paid_amount');
             $summary = [
                 'student' => [
                     'student_id' => $student->student_id,
@@ -850,6 +869,12 @@ class StudentProfileController extends Controller
                 'total_paid' => $totalPaid,
                 'total_outstanding' => $totalOutstanding,
                 'payment_rate' => $overallPaymentRate,
+                'total_local_amount' => $courseFee + $registrationFee,
+                'total_franchise_amount' => $franchiseFee,
+                'local_paid' => $localPaid,
+                'franchise_paid' => $franchisePaid,
+                'local_outstanding' => max(0, ($courseFee + $registrationFee) - $localPaid),
+                'franchise_currency' => $franchiseCurrency,
                 'payment_details' => $paymentDetails,
                 'payment_history' => $paymentHistory
             ];
@@ -898,7 +923,7 @@ class StudentProfileController extends Controller
 
         $payments->filter(function ($payment) use ($type) {
             return $this->categorizePaymentType($payment->installment_type ?? $payment->payment_type ?? '') === $type;
-        })->each(function ($payment) use (&$rows) {
+        })->each(function ($payment) use (&$rows, $type) {
             $totalAmount = (float) ($payment->total_fee ?? $payment->amount ?? 0);
             $paidAmount = (float) ($payment->amount ?? 0);
             $outstanding = $payment->remaining_amount !== null
@@ -908,7 +933,7 @@ class StudentProfileController extends Controller
                 ? $payment->payment_effective_date->format('Y-m-d')
                 : $payment->created_at->format('Y-m-d');
 
-            $rows[] = [
+            $row = [
                 'total_amount' => $totalAmount,
                 'paid_amount' => $paidAmount,
                 'outstanding' => $outstanding,
@@ -918,6 +943,16 @@ class StudentProfileController extends Controller
                 'uploaded_receipt' => $payment->paid_slip_path ? asset('storage/' . $payment->paid_slip_path) : null,
                 'installment_number' => $payment->installment_number,
             ];
+
+            if ($type === 'franchise_fee') {
+                $row['amount_currency'] = (float) ($payment->foreign_currency_amount ?? $payment->amount ?? 0);
+                $row['currency'] = $payment->foreign_currency_code ?? 'USD';
+                $row['sscl_tax'] = (float) ($payment->sscl_tax_amount ?? 0);
+                $row['bank_charges'] = (float) ($payment->bank_charges ?? 0);
+                $row['total_amount_lkr'] = (float) ($payment->total_fee ?? $payment->amount ?? 0);
+            }
+
+            $rows[] = $row;
         });
 
         return $rows;
