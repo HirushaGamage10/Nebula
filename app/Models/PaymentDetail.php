@@ -48,11 +48,12 @@ class PaymentDetail extends Model
         'student_id' => 'int',
         'course_registration_id' => 'int',
         'amount' => 'decimal:2',
+        'foreign_currency_amount' => 'decimal:2',
+        'conversion_rate' => 'decimal:4',
         'installment_number' => 'int',
         'due_date' => 'date',
         'partial_payments' => 'array',
         'remaining_amount' => 'decimal:2',
-        'conversion_rate' => 'decimal:6',
         'payment_effective_date' => 'date',
     ];
 

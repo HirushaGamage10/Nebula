@@ -1338,7 +1338,7 @@ document.addEventListener('change', function(e) {
         const index = e.target.dataset.planIndex;
         const value = e.target.value;
         updatePaymentPlan(index, value);
-    } else if (e.target.classList.contains('payment-checkbox')) {
+    } else if (e.target.classList.contains('payment-radio')) {
         enableGenerateButton();
     }
 });
@@ -1350,9 +1350,6 @@ document.getElementById('slip-student-id')?.addEventListener('change', function(
 
 document.getElementById('slip-course')?.addEventListener('change', function() {
     loadIntakesForCourse();
-    if (document.getElementById('slip-payment-type')?.value) {
-        loadPaymentDetails();
-    }
 });
 
 document.getElementById('slip-payment-type')?.addEventListener('change', function() {
@@ -4148,11 +4145,6 @@ function checkStudentAndCourse() {
             if (data.courses.length === 1) {
                 courseSelect.value = data.courses[0].course_id;
                 loadIntakesForCourse(); // Automatically trigger the next step
-
-                // If payment type already selected, refresh details immediately
-                if (document.getElementById('slip-payment-type')?.value) {
-                    loadPaymentDetails();
-                }
             }
 
             courseSelect.disabled = false;
@@ -4251,19 +4243,27 @@ async function loadPaymentDetails() {
     }
 
     // Map backend rows to table format
-    const details = (data.payment_details || []).map(d => ({
-      installment_number: d.installment_number ?? null,
-      due_date:           d.due_date ?? null,
-      final_amount:       (d.final_amount != null) ? Number(d.final_amount) : Number(d.amount || 0),
-      amount:             Number(d.amount || 0),
-      status:             d.status || 'pending',
-      paid_date:          d.paid_date || null,
-      receipt_no:         d.receipt_no || null,
-            currency:           d.currency || 'LKR',
-            sscl_tax:           Number(d.sscl_tax || 0),
-            bank_charges:       Number(d.bank_charges || 0),
-            apply_tax:          Boolean(d.apply_tax)
-    }));
+    const details = (data.payment_details || []).map(d => {
+      const foreignAmount = d.foreign_currency_amount !== undefined
+        ? Number(d.foreign_currency_amount)
+        : Number(d.amount || 0);
+
+      return {
+        installment_number: d.installment_number ?? null,
+        due_date:           d.due_date ?? null,
+        final_amount:       (d.final_amount != null) ? Number(d.final_amount) : Number(d.amount || 0),
+        amount:             foreignAmount,
+        foreign_currency_amount: foreignAmount,
+        conversion_rate:    d.conversion_rate ?? null,
+        status:             d.status || 'pending',
+        paid_date:          d.paid_date || null,
+        receipt_no:         d.receipt_no || null,
+        currency:           d.currency || 'LKR',
+        sscl_tax:           Number(d.sscl_tax || 0),
+        bank_charges:       Number(d.bank_charges || 0),
+        apply_tax:          Boolean(d.apply_tax)
+      };
+    });
 
     renderPaymentDetailsTable(details, paymentType);
 
@@ -4346,24 +4346,17 @@ function displayPaymentDetails(paymentDetails) {
 
         // Calculate LKR amount for franchise fees
         let lkrAmount = '';
-        const effectiveRate = payment.conversion_rate || conversionRate;
-        if (paymentType === 'franchise_fee') {
-            if (payment.lkr_amount !== undefined && payment.lkr_amount !== null) {
-                lkrAmount = `LKR ${money(payment.lkr_amount)}`;
-            } else if (effectiveRate > 0) {
-                const lkrBase = amount * effectiveRate;
-                const ssclAmount = (lkrBase * Number(payment.sscl_tax || 0)) / 100;
-                const bankCharges = Number(payment.bank_charges || 0);
-                lkrAmount = `LKR ${money(lkrBase + ssclAmount + bankCharges)}`;
-            } else {
-                lkrAmount = 'Enter conversion rate';
-            }
+        if (paymentType === 'franchise_fee' && conversionRate > 0) {
+            const currencyFrom = document.getElementById('currency-from').value;
+            lkrAmount = `LKR ${(amount * conversionRate).toLocaleString()}`;
+        } else if (paymentType === 'franchise_fee' && conversionRate <= 0) {
+            lkrAmount = 'Enter conversion rate';
         }
 
         const row = `
             <tr ${isPaid ? 'style="opacity: 0.6;"' : ''}>
                 <td>
-                    <input type="checkbox" name="selectedPayment" value="${index}" class="payment-checkbox" ${isPaid ? 'disabled title="Already Paid"' : ''}>
+                    <input type="radio" name="selectedPayment" value="${index}" class="payment-radio" ${isPaid ? 'disabled title="Already Paid"' : ''}>
                 </td>
                 <td>${payment.installment_number || '-'}</td>
                 <td>${payment.due_date ? formatDateDmy(payment.due_date) : '-'}</td>
@@ -4480,8 +4473,8 @@ function recalculateLKRAmounts() {
     // Only recalculate if we have payment data and it's franchise fee
     if (paymentType === 'franchise_fee' && window.paymentDetailsData) {
         syncFranchiseChargeInputsToSelection();
-        // Update only the LKR amounts in the existing table rows
-        updateLKRAmountsInTable(conversionRate);
+        // Update only the selected row's LKR value, not all installments
+        updateSelectedRowLKRAmount(conversionRate);
     }
 }
 
@@ -4510,7 +4503,18 @@ function syncFranchiseChargeInputsToSelection() {
     const row = (window.paymentDetailsData || [])[Number(selected.value)];
     if (!row) return;
 
-    const conversionRate = Number(document.getElementById('currency-conversion-rate')?.value || 0);
+    const conversionRateInput = document.getElementById('currency-conversion-rate');
+    const currencySelect = document.getElementById('currency-from');
+    const rowConversionRate = Number(row.conversion_rate || 0);
+
+    if (conversionRateInput && rowConversionRate > 0) {
+        conversionRateInput.value = rowConversionRate;
+    }
+    if (currencySelect && row.currency) {
+        currencySelect.value = row.currency;
+    }
+
+    const conversionRate = Number(conversionRateInput?.value || 0);
     const ssclTypeEl = document.getElementById('sscl-type');
     const ssclValueEl = document.getElementById('sscl-value');
     const ssclAmountEl = document.getElementById('sscl-tax-amount');
@@ -4530,38 +4534,81 @@ function updateLKRAmountsInTable(conversionRate) {
     const rows = tbody.querySelectorAll('tr');
 
     rows.forEach((row, index) => {
-        const payment = window.paymentDetailsData[index];
-        if (!payment || payment.conversion_rate || (payment.lkr_amount !== undefined && payment.lkr_amount !== null)) {
-            return;
-        }
-
         const lkrCell = row.querySelector('td:nth-child(5)'); // LKR amount column
-        if (!lkrCell) {
-            return;
-        }
+        if (lkrCell && window.paymentDetailsData[index]) {
+            const payment = window.paymentDetailsData[index];
+            const amount = parseFloat(payment.amount || 0);
+            const ssclTax = parseFloat(payment.sscl_tax || 0);
+            const bankCharges = parseFloat(payment.bank_charges || 0);
+            if (conversionRate > 0) {
+                const lkrBase = amount * conversionRate;
+                const ssclAmount = (lkrBase * ssclTax) / 100;
+                const lkrFinal = lkrBase + ssclAmount + bankCharges;
 
-        const amount = parseFloat(payment.amount || 0);
-        const ssclTax = parseFloat(payment.sscl_tax || 0);
-        const bankCharges = parseFloat(payment.bank_charges || 0);
-        if (conversionRate > 0) {
-            const lkrBase = amount * conversionRate;
-            const ssclAmount = (lkrBase * ssclTax) / 100;
-            const lkrFinal = lkrBase + ssclAmount + bankCharges;
+                // Add a brief highlight effect to show the update
+                lkrCell.style.backgroundColor = '#fff3cd';
+                lkrCell.innerHTML = `
+                    <div>LKR ${money(lkrFinal)}</div>
+                    <small class="text-muted">Base: LKR ${money(lkrBase)} | SSCL: LKR ${money(ssclAmount)} | Bank: LKR ${money(bankCharges)}</small>
+                `;
 
-            lkrCell.style.backgroundColor = '#fff3cd';
-            lkrCell.innerHTML = `
-                <div>LKR ${money(lkrFinal)}</div>
-                <small class="text-muted">Base: LKR ${money(lkrBase)} | SSCL: LKR ${money(ssclAmount)} | Bank: LKR ${money(bankCharges)}</small>
-            `;
-
-            setTimeout(() => {
+                // Remove highlight after a short delay
+                setTimeout(() => {
+                    lkrCell.style.backgroundColor = '';
+                }, 300);
+            } else {
+                lkrCell.textContent = 'Enter conversion rate';
                 lkrCell.style.backgroundColor = '';
-            }, 300);
-        } else {
-            lkrCell.textContent = 'Enter conversion rate';
-            lkrCell.style.backgroundColor = '';
+            }
         }
     });
+}
+
+function updateSelectedRowLKRAmount(conversionRate) {
+    const selected = document.querySelector('input[name="selectedPayment"]:checked');
+    if (!selected || !window.paymentDetailsData) {
+        return;
+    }
+
+    const rowIndex = Number(selected.value);
+    const payment = window.paymentDetailsData[rowIndex];
+    if (!payment) {
+        return;
+    }
+
+    const tbody = document.getElementById('paymentDetailsTableBody');
+    const tableRow = tbody?.querySelectorAll('tr')[rowIndex];
+    if (!tableRow) {
+        return;
+    }
+
+    const lkrCell = tableRow.querySelector('td:nth-child(5)');
+    if (!lkrCell) {
+        return;
+    }
+
+    const amount = parseFloat(payment.amount || 0);
+    const ssclTax = parseFloat(payment.sscl_tax || 0);
+    const bankCharges = parseFloat(payment.bank_charges || 0);
+
+    if (conversionRate > 0) {
+        const lkrBase = amount * conversionRate;
+        const ssclAmount = (lkrBase * ssclTax) / 100;
+        const lkrFinal = lkrBase + ssclAmount + bankCharges;
+
+        lkrCell.style.backgroundColor = '#fff3cd';
+        lkrCell.innerHTML = `
+            <div>LKR ${money(lkrFinal)}</div>
+            <small class="text-muted">Base: LKR ${money(lkrBase)} | SSCL: LKR ${money(ssclAmount)} | Bank: LKR ${money(bankCharges)}</small>
+        `;
+
+        setTimeout(() => {
+            lkrCell.style.backgroundColor = '';
+        }, 300);
+    } else {
+        lkrCell.textContent = 'Enter conversion rate';
+        lkrCell.style.backgroundColor = '';
+    }
 }
 
 // Get badge color for payment status
@@ -4866,8 +4913,10 @@ function renderPaymentDetailsTable(rows, paymentType) {
     // LKR column for franchise
     let lkrCell = '';
     if (showLkr) {
-      if (rate && rate > 0) {
-                const lkrBase = p.amount * rate;
+      const rowRate = p.conversion_rate && p.conversion_rate > 0 ? p.conversion_rate : null;
+      const effectiveRate = rowRate || null;
+      if (effectiveRate) {
+                const lkrBase = p.amount * effectiveRate;
                 const ssclAmount = (lkrBase * p.sscl_tax) / 100;
                 const lkrFinal = lkrBase + ssclAmount + p.bank_charges;
                 lkrCell = `<td>
@@ -4924,7 +4973,7 @@ function renderPaymentDetailsTable(rows, paymentType) {
     const row = `
       <tr ${rowStyle}>
         <td class="text-center">
-          <input type="checkbox" name="selectedPayment" value="${idx}" class="payment-checkbox" ${disabled}>
+          <input type="radio" name="selectedPayment" value="${idx}" ${disabled}>
                     ${isPaid ? '<br><small class="text-danger">Cannot generate new slip</small>' : ''}
         </td>
         <td>${p.installment_number ?? '-'}</td>
@@ -4946,21 +4995,21 @@ function renderPaymentDetailsTable(rows, paymentType) {
   // enable "Generate" only when a selection is made
   tbody.querySelectorAll('input[name="selectedPayment"]').forEach(r =>
         r.addEventListener('change', () => {
-            if (r.checked) {
-                tbody.querySelectorAll('input[name="selectedPayment"]').forEach(other => {
-                    if (other !== r) other.checked = false;
-                });
-                generateBtn.disabled = false;
-                syncFranchiseChargeInputsToSelection();
-            } else {
-                const selectedAny = tbody.querySelector('input[name="selectedPayment"]:checked');
-                generateBtn.disabled = !selectedAny;
-                if (selectedAny) syncFranchiseChargeInputsToSelection();
-            }
+            generateBtn.disabled = false;
+            syncFranchiseChargeInputsToSelection();
+            updateSelectedRowLKRAmount(rate);
         })
   );
 
-  // Require the user to tick the desired installment explicitly.
+  const firstAvailable = tbody.querySelector('input[name="selectedPayment"]:not(:disabled)');
+  if (firstAvailable) {
+    firstAvailable.checked = true;
+    generateBtn.disabled = false;
+    syncFranchiseChargeInputsToSelection();
+    updateSelectedRowLKRAmount(rate);
+  }
+}
+
 // If user changes FX inputs, recompute the LKR column live
 document.getElementById('currency-conversion-rate')?.addEventListener('input', recalculateLKRAmounts);
 document.getElementById('currency-from')?.addEventListener('change', recalculateLKRAmounts);
