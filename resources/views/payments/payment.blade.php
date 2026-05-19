@@ -4946,29 +4946,6 @@ function renderPaymentDetailsTable(rows, paymentType) {
   // enable "Generate" only when a selection is made
   tbody.querySelectorAll('input[name="selectedPayment"]').forEach(r =>
         r.addEventListener('change', () => {
-<<<<<<< HEAD
-            generateBtn.disabled = false;
-            syncFranchiseChargeInputsToSelection();
-<<<<<<< HEAD
-            updateSelectedRowLKRAmount(rate);
-=======
->>>>>>> fd0fb653e757437bc2dc0607dfde3998a6f36885
-        })
-  );
-
-  const firstAvailable = tbody.querySelector('input[name="selectedPayment"]:not(:disabled)');
-  if (firstAvailable) {
-    firstAvailable.checked = true;
-    generateBtn.disabled = false;
-    syncFranchiseChargeInputsToSelection();
-<<<<<<< HEAD
-    updateSelectedRowLKRAmount(rate);
-=======
->>>>>>> fd0fb653e757437bc2dc0607dfde3998a6f36885
-  }
-}
-
-=======
             if (r.checked) {
                 tbody.querySelectorAll('input[name="selectedPayment"]').forEach(other => {
                     if (other !== r) other.checked = false;
@@ -4983,8 +4960,13 @@ function renderPaymentDetailsTable(rows, paymentType) {
         })
   );
 
-  // Require the user to tick the desired installment explicitly.
->>>>>>> parent of edcfd16 (testing 2)
+  const firstAvailable = tbody.querySelector('input[name="selectedPayment"]:not(:disabled)');
+  if (firstAvailable) {
+    firstAvailable.checked = true;
+    generateBtn.disabled = false;
+    syncFranchiseChargeInputsToSelection();
+  }
+}
 // If user changes FX inputs, recompute the LKR column live
 document.getElementById('currency-conversion-rate')?.addEventListener('input', recalculateLKRAmounts);
 document.getElementById('currency-from')?.addEventListener('change', recalculateLKRAmounts);
