@@ -179,50 +179,21 @@ class PaymentController extends Controller
                         $receiptNo = $paymentDetail ? $paymentDetail->transaction_id : null;
 
                         $rows[] = [
-<<<<<<< HEAD
-<<<<<<< HEAD
-                            'installment_number'   => $ins->installment_number,
-                            'due_date'             => optional($ins->due_date)->toDateString(),
-                            'amount'               => $storedForeignAmount,
-                            'foreign_currency_amount' => $storedForeignAmount,
-                            'conversion_rate'      => $storedConversionRate,
-                            'base_amount'          => (float) $ins->international_amount,
-                            'status'               => $status,
-                            'paid_date'            => $paidDate,
-                            'receipt_no'           => $receiptNo,
-                            'currency'             => $ins->international_currency ?: 'USD',
-                            'apply_tax'            => false,
-                            'sscl_tax'             => $storedSsclPercent,
-                            'bank_charges'         => $storedBankCharges,
-=======
-                            'installment_number' => $ins->installment_number,
-                            'due_date'           => optional($ins->due_date)->toDateString(),
-                            'amount'             => (float) $ins->international_amount,
-=======
                             'installment_number' => $ins->installment_number,
                             'due_date'           => optional($ins->due_date)->toDateString(),
                             'amount'             => $paymentDetail && $paymentDetail->foreign_currency_amount !== null
                                 ? (float) $paymentDetail->foreign_currency_amount
                                 : (float) $ins->international_amount,
->>>>>>> parent of edcfd16 (testing 2)
                             'base_amount'        => (float) $ins->international_amount,
                             'status'             => $status,
                             'paid_date'          => $paidDate,
                             'receipt_no'         => $receiptNo,
-<<<<<<< HEAD
-                            'currency'           => $ins->international_currency ?: 'USD',
-                            'apply_tax'          => false,
-                            'sscl_tax'           => $franchiseSsclTax,
-                            'bank_charges'       => $franchiseBankCharges,
->>>>>>> fd0fb653e757437bc2dc0607dfde3998a6f36885
-=======
                             'currency'           => $paymentDetail->foreign_currency_code ?? $ins->international_currency ?: 'USD',
                             'conversion_rate'    => $paymentDetail ? (float) $paymentDetail->conversion_rate : null,
                             'lkr_amount'         => $paymentDetail ? (float) $paymentDetail->amount : null,
                             'apply_tax'          => false,
                             'sscl_tax'           => $paymentDetail ? (float) $paymentDetail->sscl_tax_amount : $franchiseSsclTax,
                             'bank_charges'       => $paymentDetail ? (float) $paymentDetail->bank_charges : $franchiseBankCharges,
->>>>>>> parent of edcfd16 (testing 2)
                         ];
                     }
 
@@ -261,50 +232,21 @@ class PaymentController extends Controller
                         $receiptNo = $paymentDetail ? $paymentDetail->transaction_id : null;
 
                         $rows[] = [
-<<<<<<< HEAD
-<<<<<<< HEAD
-                            'installment_number'   => $item['installment_number'] ?? null,
-                            'due_date'             => $item['due_date'] ?? null,
-                            'amount'               => $storedForeignAmount,
-                            'foreign_currency_amount' => $storedForeignAmount,
-                            'conversion_rate'      => $storedConversionRate,
-                            'base_amount'          => $fx,
-                            'status'               => $status,
-                            'paid_date'            => $paidDate,
-                            'receipt_no'           => $receiptNo,
-                            'currency'             => $plan->international_currency ?: 'USD',
-                            'apply_tax'            => (bool)($item['apply_tax'] ?? false),
-                            'sscl_tax'             => $storedSsclPercent,
-                            'bank_charges'         => $storedBankCharges,
-=======
-                            'installment_number' => $item['installment_number'] ?? null,
-                            'due_date'           => $item['due_date'] ?? null,
-                            'amount'             => $fx,
-=======
                             'installment_number' => $item['installment_number'] ?? null,
                             'due_date'           => $item['due_date'] ?? null,
                             'amount'             => $paymentDetail && $paymentDetail->foreign_currency_amount !== null
                                 ? (float) $paymentDetail->foreign_currency_amount
                                 : $fx,
->>>>>>> parent of edcfd16 (testing 2)
                             'base_amount'        => $fx,
                             'status'             => $status,
                             'paid_date'          => $paidDate,
                             'receipt_no'         => $receiptNo,
-<<<<<<< HEAD
-                            'currency'           => $plan->international_currency ?: 'USD',
-                            'apply_tax'          => (bool)($item['apply_tax'] ?? false),
-                            'sscl_tax'           => (float)($plan->sscl_tax ?? 0),
-                            'bank_charges'       => (float)($plan->bank_charges ?? 0),
->>>>>>> fd0fb653e757437bc2dc0607dfde3998a6f36885
-=======
                             'currency'           => $paymentDetail->foreign_currency_code ?? $plan->international_currency ?: 'USD',
                             'conversion_rate'    => $paymentDetail ? (float) $paymentDetail->conversion_rate : null,
                             'lkr_amount'         => $paymentDetail ? (float) $paymentDetail->amount : null,
                             'apply_tax'          => (bool)($item['apply_tax'] ?? false),
                             'sscl_tax'           => $paymentDetail ? (float) $paymentDetail->sscl_tax_amount : (float)($plan->sscl_tax ?? 0),
                             'bank_charges'       => $paymentDetail ? (float) $paymentDetail->bank_charges : (float)($plan->bank_charges ?? 0),
->>>>>>> parent of edcfd16 (testing 2)
                         ];
                     }
                 }
@@ -1601,19 +1543,11 @@ if ($existingPayment) {
     $paidSoFar = collect($existingPayment->partial_payments ?? [])->sum('amount');
     $remaining = max(($totalFee - $paidSoFar), 0);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-    $updatePayload = [
-=======
-    $existingPayment->update([
->>>>>>> fd0fb653e757437bc2dc0607dfde3998a6f36885
-=======
     $existingPayment->update([
         'amount'                 => $amount,
         'foreign_currency_amount'=> $foreignAmount,
         'foreign_currency_code'  => $foreignCurrency,
         'conversion_rate'        => $paymentType === 'franchise_fee' ? ($conversionRate > 0 ? $conversionRate : $existingPayment->conversion_rate) : null,
->>>>>>> parent of edcfd16 (testing 2)
         'late_fee'               => $lateFee,
         'approved_late_fee'      => $approvedLateFee,
         'total_fee'              => $totalFee,
@@ -1682,14 +1616,7 @@ if ($existingPayment) {
             'partial_payments'  => json_encode([]), // ensures proper JSON
             'foreign_currency_code'  => $foreignCurrency,
             'foreign_currency_amount'=> $foreignAmount,
-<<<<<<< HEAD
-<<<<<<< HEAD
-            'conversion_rate'        => $conversionRate,
-=======
->>>>>>> fd0fb653e757437bc2dc0607dfde3998a6f36885
-=======
             'conversion_rate'        => $paymentType === 'franchise_fee' ? $conversionRate : null,
->>>>>>> parent of edcfd16 (testing 2)
             'installment_type'           => $installmentType,
             // Actual payment date supplied by staff; drives late-fee calculations
             'payment_effective_date'     => $request->payment_effective_date ?: null,
@@ -2667,14 +2594,8 @@ private function buildSlipDataFromPaymentDetail(\App\Models\PaymentDetail $payme
     // what type was this? if not stored, guess "course_fee" and let UI text override
     $type = $overrides['payment_type'] ?? ($payment->payment_type ?? 'course_fee');
 
-<<<<<<< HEAD
-    // FX (for franchise): if a rate is provided via overrides, compute LKR too
-    $currencyFrom = $overrides['currency_from'] ?? null;
-<<<<<<< HEAD
-=======
     // FX (for franchise): prefer stored payment conversion rate, otherwise use override.
     $currencyFrom = $overrides['currency_from'] ?? ($payment->foreign_currency_code ?? null);
->>>>>>> parent of edcfd16 (testing 2)
     $convRate     = isset($overrides['conversion_rate'])
         ? (float)$overrides['conversion_rate']
         : ($payment->conversion_rate ?? null);
@@ -2682,15 +2603,6 @@ private function buildSlipDataFromPaymentDetail(\App\Models\PaymentDetail $payme
     $foreignAmount = $payment->foreign_currency_amount !== null
         ? (float)$payment->foreign_currency_amount
         : (float)$payment->amount;
-<<<<<<< HEAD
-    $lkrAmount    = ($type === 'franchise_fee' && $convRate)
-        ? round($foreignAmount * $convRate, 2)
-        : null;
-=======
-    $convRate     = isset($overrides['conversion_rate']) ? (float)$overrides['conversion_rate'] : null;
-    $lkrAmount    = ($type === 'franchise_fee' && $convRate) ? round(((float)$payment->amount) * $convRate, 2) : null;
->>>>>>> fd0fb653e757437bc2dc0607dfde3998a6f36885
-=======
 
     $lkrAmount = null;
     if ($type === 'franchise_fee') {
@@ -2700,7 +2612,6 @@ private function buildSlipDataFromPaymentDetail(\App\Models\PaymentDetail $payme
             $lkrAmount = round($foreignAmount * $convRate, 2);
         }
     }
->>>>>>> parent of edcfd16 (testing 2)
 
     // currency to display for franchise (fallback to intake’s currency fields if you have them)
     $fxCurrency   = $overrides['franchise_fee_currency']
