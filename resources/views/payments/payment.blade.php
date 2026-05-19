@@ -4947,7 +4947,6 @@ function renderPaymentDetailsTable(rows, paymentType) {
   tbody.querySelectorAll('input[name="selectedPayment"]').forEach(r =>
         r.addEventListener('change', () => {
 <<<<<<< HEAD
-<<<<<<< HEAD
             generateBtn.disabled = false;
             syncFranchiseChargeInputsToSelection();
 <<<<<<< HEAD
@@ -4969,23 +4968,6 @@ function renderPaymentDetailsTable(rows, paymentType) {
   }
 }
 
-=======
-            if (r.checked) {
-                tbody.querySelectorAll('input[name="selectedPayment"]').forEach(other => {
-                    if (other !== r) other.checked = false;
-                });
-                generateBtn.disabled = false;
-                syncFranchiseChargeInputsToSelection();
-            } else {
-                const selectedAny = tbody.querySelector('input[name="selectedPayment"]:checked');
-                generateBtn.disabled = !selectedAny;
-                if (selectedAny) syncFranchiseChargeInputsToSelection();
-            }
-        })
-  );
-
-  // Require the user to tick the desired installment explicitly.
->>>>>>> parent of edcfd16 (testing 2)
 =======
             if (r.checked) {
                 tbody.querySelectorAll('input[name="selectedPayment"]').forEach(other => {
