@@ -642,13 +642,16 @@ class ExamResultController extends Controller
                         if ($existingResult) {
                             $studentData['marks'] = $existingResult->marks;
                             $studentData['grade'] = $existingResult->grade;
+                            $studentData['remarks'] = $existingResult->remarks;
                         } else {
                             $studentData['marks'] = '';
                             $studentData['grade'] = '';
+                            $studentData['remarks'] = '';
                         }
                     } else {
                         $studentData['marks'] = '';
                         $studentData['grade'] = '';
+                        $studentData['remarks'] = '';
                     }
 
                     return $studentData;
@@ -724,13 +727,16 @@ class ExamResultController extends Controller
                         if ($existingResult) {
                             $studentData['marks'] = $existingResult->marks;
                             $studentData['grade'] = $existingResult->grade;
+                            $studentData['remarks'] = $existingResult->remarks;
                         } else {
                             $studentData['marks'] = '';
                             $studentData['grade'] = '';
+                            $studentData['remarks'] = '';
                         }
                     } else {
                         $studentData['marks'] = '';
                         $studentData['grade'] = '';
+                        $studentData['remarks'] = '';
                     }
 
                     return $studentData;
@@ -771,13 +777,16 @@ class ExamResultController extends Controller
                         if ($existingResult) {
                             $studentData['marks'] = $existingResult->marks;
                             $studentData['grade'] = $existingResult->grade;
+                            $studentData['remarks'] = $existingResult->remarks;
                         } else {
                             $studentData['marks'] = '';
                             $studentData['grade'] = '';
+                            $studentData['remarks'] = '';
                         }
                     } else {
                         $studentData['marks'] = '';
                         $studentData['grade'] = '';
+                        $studentData['remarks'] = '';
                     }
 
                     return $studentData;
@@ -862,6 +871,7 @@ class ExamResultController extends Controller
                     'student_name' => $result->student->full_name,
                     'marks' => $result->marks,
                     'grade' => $result->grade,
+                    'remarks' => $result->remarks,
                     'created_at' => $result->created_at->format('Y-m-d H:i:s'),
                     'updated_at' => $result->updated_at->format('Y-m-d H:i:s'),
                 ];
