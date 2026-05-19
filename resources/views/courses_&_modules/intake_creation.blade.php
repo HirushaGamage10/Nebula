@@ -105,7 +105,7 @@
                             <label for="franchise_payment" class="col-sm-3 col-form-label fw-bold">Franchise Payment <span class="text-danger">*</span></label>
                             <div class="col-sm-9">
                                 <div class="input-group">
-                                    <select class="form-select" id="franchise_payment_currency" name="franchise_payment_currency" style="max-width:90px; flex-shrink:0;">
+                                    <select class="form-select currency-highlight" id="franchise_payment_currency" name="franchise_payment_currency" style="max-width:90px; flex-shrink:0;">
                                         <option value="LKR">LKR</option>
                                         <option value="USD">USD</option>
                                         <option value="GBP">GBP</option>
@@ -113,6 +113,7 @@
                                     </select>
                                     <input type="number" class="form-control" id="franchise_payment" name="franchise_payment" placeholder="e.g., 10000.00" step="0.01" min="0">
                                 </div>
+                                <small class="form-text text-muted d-block mt-1"><em>(Please select the currency type first)</em></small>
                             </div>
                         </div>
                         <div class="mb-3 row mx-3">
@@ -441,7 +442,7 @@
                         <label for="edit_franchise_payment" class="col-sm-3 col-form-label">Franchise Payment <span class="text-danger">*</span></label>
                         <div class="col-sm-9">
                             <div class="input-group">
-                                <select class="form-select" id="edit_franchise_payment_currency" name="franchise_payment_currency" style="max-width:90px;">
+                                <select class="form-select currency-highlight" id="edit_franchise_payment_currency" name="franchise_payment_currency" style="max-width:90px;">
                                     <option value="LKR">LKR</option>
                                     <option value="USD">USD</option>
                                     <option value="GBP">GBP</option>
@@ -449,6 +450,7 @@
                                 </select>
                                 <input type="number" class="form-control" id="edit_franchise_payment" name="franchise_payment" step="0.01" min="0" required>
                             </div>
+                            <small class="form-text text-muted d-block mt-1"><em>(Please select the currency type first)</em></small>
                         </div>
                     </div>
                     
@@ -1442,6 +1444,27 @@ window.addEventListener('DOMContentLoaded', function() {
 
 
 <style nonce="{{ $cspNonce }}">
+/* Currency Type Highlighting */
+.currency-highlight {
+    background: linear-gradient(135deg, #fff3cd 0%, #fffacd 100%) !important;
+    border: 2px solid #ffc107 !important;
+    color: #856404 !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 4px rgba(255, 193, 7, 0.2) !important;
+}
+
+.currency-highlight option {
+    background: white;
+    color: #333;
+    font-weight: normal;
+}
+
+.currency-highlight:focus {
+    background: linear-gradient(135deg, #fff3cd 0%, #fffacd 100%) !important;
+    border-color: #ff9800 !important;
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25) !important;
+}
+
 .table th {
     font-size: 0.95rem !important;
     font-weight: 600;
