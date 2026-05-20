@@ -91,25 +91,63 @@ class SemesterCreationController extends Controller
             // Handle modules if present - update semester_module table
             $modules = $request->modules;
             if (is_array($modules)) {
-                // Delete existing modules
-                \DB::table('semester_module')->where('semester_id', $semester->id)->delete();
-                
-                // Insert new modules
-                if (!empty($modules)) {
-                    $semesterModuleData = [];
-                    foreach ($modules as $module) {
-                        if (isset($module['module_id'])) {
-                            $semesterModuleData[] = [
-                                'semester_id' => $semester->id,
-                                'module_id' => $module['module_id'],
-                                'specialization' => $module['specialization'] ?? null
-                            ];
-                        }
+                $existingModuleRows = \DB::table('semester_module')
+                    ->where('semester_id', $semester->id)
+                    ->get();
+
+                $existingModules = [];
+                foreach ($existingModuleRows as $row) {
+                    $existingModules[] = [
+                        'module_id' => (string) $row->module_id,
+                        'specialization' => $row->specialization ?? null,
+                    ];
+                }
+
+                $desiredModules = [];
+                foreach ($modules as $module) {
+                    if (!isset($module['module_id'])) {
+                        continue;
                     }
-                    
+                    $desiredModules[] = [
+                        'module_id' => (string) $module['module_id'],
+                        'specialization' => $module['specialization'] ?? null,
+                    ];
+                }
+
+                $toDelete = array_filter($existingModules, function ($existing) use ($desiredModules) {
+                    return !in_array($existing, $desiredModules, true);
+                });
+                $toInsert = array_filter($desiredModules, function ($desired) use ($existingModules) {
+                    return !in_array($desired, $existingModules, true);
+                });
+
+                foreach ($toDelete as $deleteRow) {
+                    $query = \DB::table('semester_module')
+                        ->where('semester_id', $semester->id)
+                        ->where('module_id', $deleteRow['module_id']);
+
+                    if ($deleteRow['specialization'] === null) {
+                        $query->whereNull('specialization');
+                    } else {
+                        $query->where('specialization', $deleteRow['specialization']);
+                    }
+
+                    $query->delete();
+                }
+
+                if (!empty($toInsert)) {
+                    $semesterModuleData = [];
+                    foreach ($toInsert as $module) {
+                        $semesterModuleData[] = [
+                            'semester_id' => $semester->id,
+                            'module_id' => $module['module_id'],
+                            'specialization' => $module['specialization'] ?? null,
+                        ];
+                    }
+
                     if (!empty($semesterModuleData)) {
                         \DB::table('semester_module')->insert($semesterModuleData);
-                        \Log::info('Modules updated in semester_module table:', ['count' => count($semesterModuleData)]);
+                        \Log::info('Modules updated in semester_module table:', ['inserted' => count($semesterModuleData)]);
                     }
                 }
             }

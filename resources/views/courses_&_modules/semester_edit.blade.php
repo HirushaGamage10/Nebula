@@ -276,6 +276,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const th = document.createElement('th');
             th.textContent = 'Specialization';
             headerRow.insertBefore(th, headerRow.children[1]);
+
+            // Ensure existing rows also include the specialization cell
+            modulesTableBody.querySelectorAll('tr').forEach(row => {
+                if (row.children.length === 5) {
+                    const specialization = row.dataset.specialization || '-';
+                    const td = document.createElement('td');
+                    td.textContent = specialization !== '' ? specialization : '-';
+                    row.insertBefore(td, row.children[1]);
+                }
+            });
         }
     }
 
@@ -451,35 +461,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Gather modules with specialization
         const modules = [];
         document.querySelectorAll('#modules_table tbody tr').forEach(row => {
-            const cells = row.querySelectorAll('td');
-            if (cells.length >= 5) {
-                const semester = cells[0].textContent.trim();
-                let specialization = null;
-                let moduleName, moduleType, credits;
-                if (courseSpecializations.length > 0) {
-                    specialization = cells[1].textContent.trim();
-                    moduleName = cells[2].textContent.trim();
-                    moduleType = cells[3].textContent.trim();
-                    credits = cells[4].textContent.trim();
-                } else {
-                    moduleName = cells[1].textContent.trim();
-                    moduleType = cells[2].textContent.trim();
-                    credits = cells[3].textContent.trim();
-                }
-                
-                let moduleId = null;
-                document.querySelectorAll('#module_select option').forEach(opt => {
-                    if (opt.textContent.trim() === moduleName) {
-                        moduleId = opt.value;
-                    }
-                });
-                if (moduleId) {
-                    modules.push({
-                        module_id: moduleId,
-                        specialization: specialization && specialization !== '-' ? specialization : null
-                    });
-                }
-            }
+            const moduleId = row.dataset.moduleId;
+            const specialization = row.dataset.specialization || null;
+            if (!moduleId) return;
+
+            modules.push({
+                module_id: moduleId,
+                specialization: specialization && specialization !== '-' ? specialization : null
+            });
         });
         
         formData.modules = modules;
