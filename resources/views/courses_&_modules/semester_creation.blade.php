@@ -279,6 +279,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (specializations.length > 0) {
                             courseSpecializations = specializations;
                             let options = '<option value="" selected disabled>Select Specialization</option>';
+                            // Add a common option to allow modules that apply to all specializations
+                            options += `<option value="__COMMON__">Common (No Specialization)</option>`;
                             courseSpecializations.forEach(spec => {
                                 options += `<option value="${escapeHtml(String(spec))}">${escapeHtml(String(spec))}</option>`;
                             });
@@ -478,11 +480,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Normalize specialization for internal comparison: treat common option as null
+        const normalizedSpec = (specialization === '__COMMON__' || specialization === '') ? null : specialization;
+
         // Prevent duplicate (same module, semester, specialization)
         if (addedModules.some(m =>
             m.moduleId === moduleId &&
             m.semester === semester &&
-            m.specialization === specialization
+            (m.specialization === normalizedSpec)
         )) {
             window.showToast('This module with the selected specialization is already added.', 'warning');
             return;
@@ -495,14 +500,14 @@ document.addEventListener('DOMContentLoaded', function() {
             moduleType,
             moduleCredits,
             semester,
-            specialization
+            specialization: normalizedSpec
         });
 
         // Build table row
         const row = document.createElement('tr');
         let rowHtml = `<td>${semesterSelect.options[semesterSelect.selectedIndex].text}</td>`;
         if (courseSpecializations.length > 0) {
-            rowHtml += `<td>${specialization ? specialization : '-'}</td>`;
+            rowHtml += `<td>${normalizedSpec ? normalizedSpec : '-'}</td>`;
         }
         rowHtml += `
             <td>${moduleName}</td>
@@ -513,7 +518,8 @@ document.addEventListener('DOMContentLoaded', function() {
         row.innerHTML = rowHtml;
         row.dataset.moduleId = moduleId;
         row.dataset.semester = semester;
-        row.dataset.specialization = specialization;
+        // store empty string for common/null so form builder can convert to null
+        row.dataset.specialization = normalizedSpec || '';
 
         modulesTableBody.appendChild(row);
     });

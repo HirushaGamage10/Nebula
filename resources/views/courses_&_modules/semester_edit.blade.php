@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     moduleType: module.module_type,
                     moduleCredits: module.credits,
                     semester: {{ $semester->id }},
-                    specialization: semesterModule.specialization || ''
+                    specialization: (semesterModule.specialization === null || semesterModule.specialization === '' ? null : semesterModule.specialization)
                 };
                 
                 addedModules.push(moduleData);
@@ -257,7 +257,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 row.innerHTML = rowHtml;
                 row.dataset.moduleId = moduleData.moduleId;
                 row.dataset.semester = moduleData.semester;
-                row.dataset.specialization = moduleData.specialization;
+                    // store empty string for null so form builder will convert to null
+                    row.dataset.specialization = moduleData.specialization || '';
                 modulesTableBody.appendChild(row);
             }
         });
@@ -314,6 +315,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (specializations.length > 0) {
                         courseSpecializations = specializations;
                         let options = '<option value="" selected disabled>Select Specialization</option>';
+                        // allow modules that are common to all specializations
+                        options += `<option value="__COMMON__">Common (No Specialization)</option>`;
                         courseSpecializations.forEach(spec => {
                             options += `<option value="${spec}">${spec}</option>`;
                         });
@@ -391,12 +394,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (document.getElementById('specializationRow').style.display !== 'none') {
             specialization = document.getElementById('specialization_select').value || '';
         }
+        // normalize common/empty to null for internal comparisons
+        const normalizedSpec = (specialization === '__COMMON__' || specialization === '') ? null : specialization;
         if (!moduleId || !moduleName || !semester) return;
         
         // Prevent duplicate - allow same module for different specializations
-        if (addedModules.some(m => m.moduleId === moduleId && m.semester === semester && m.specialization === specialization)) return;
+        if (addedModules.some(m => m.moduleId === moduleId && m.semester === semester && (m.specialization === normalizedSpec))) return;
         
-        addedModules.push({moduleId, moduleName, moduleType, moduleCredits, semester, specialization});
+        addedModules.push({moduleId, moduleName, moduleType, moduleCredits, semester, specialization: normalizedSpec});
         const row = document.createElement('tr');
         let rowHtml = `<td>{{ semester_label($semester->name) }}</td>`;
         if (courseSpecializations.length > 0) {
@@ -411,7 +416,7 @@ document.addEventListener('DOMContentLoaded', function() {
         row.innerHTML = rowHtml;
         row.dataset.moduleId = moduleId;
         row.dataset.semester = semester;
-        row.dataset.specialization = specialization;
+        row.dataset.specialization = normalizedSpec || '';
         modulesTableBody.appendChild(row);
     });
 
