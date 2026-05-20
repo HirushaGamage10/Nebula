@@ -379,8 +379,35 @@ class StudentProfileController extends Controller
                 }
 
                 if (!$semester) {
-                    // No semester found - cannot create semester_registration because semester_id is required
-                    throw new \Exception('No semester found for the course/intake to persist specialization.');
+                    // No semester found - for certificate courses we don't require a semester_registration.
+                    $course = \App\Models\Course::find($registration->course_id);
+                    if ($course && strtolower($course->course_type) === 'certificate') {
+                        // If specialization present in request, persist it on the course_registration row only if the column exists
+                        if (array_key_exists('specialization', $validated)) {
+                            $newSpec = $validated['specialization'] !== '' ? $validated['specialization'] : ($registration->specialization ?? null);
+                            if (\Illuminate\Support\Facades\Schema::hasColumn('course_registration', 'specialization')) {
+                                \Illuminate\Support\Facades\DB::table('course_registration')
+                                    ->where('id', $registration->id)
+                                    ->update(['specialization' => $newSpec, 'updated_at' => now()]);
+                                // Read authoritative value from DB
+                                $finalSpec = \Illuminate\Support\Facades\DB::table('course_registration')->where('id', $registration->id)->value('specialization');
+                            } else {
+                                // Column not present; log and return the intended specialization value without DB write
+                                \Illuminate\Support\Facades\Log::warning('course_registration.specialization column missing; skipping persist', ['registration_id' => $registration->id]);
+                                $finalSpec = $newSpec;
+                            }
+                        } else {
+                            $finalSpec = $registration->specialization ?? null;
+                        }
+
+                        // Commit and return authoritative specialization
+                        \Illuminate\Support\Facades\DB::commit();
+                        return response()->json([ 'success' => true, 'specialization' => $finalSpec ]);
+                    }
+                    // fallback: most recent semester for the course (if any)
+                    $semester = \App\Models\Semester::where('course_id', $registration->course_id)
+                        ->orderBy('start_date', 'desc')
+                        ->first();
                 }
 
                 // Normalize status to allowed enum values
