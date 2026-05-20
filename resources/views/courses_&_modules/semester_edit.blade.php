@@ -258,6 +258,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 row.dataset.moduleId = moduleData.moduleId;
                 row.dataset.semester = moduleData.semester;
                 row.dataset.specialization = moduleData.specialization;
+                row.dataset.moduleType = module.module_type;
                 modulesTableBody.appendChild(row);
             }
         });
@@ -402,6 +403,7 @@ document.addEventListener('DOMContentLoaded', function() {
         row.dataset.moduleId = moduleId;
         row.dataset.semester = semester;
         row.dataset.specialization = specialization;
+        row.dataset.moduleType = moduleType;
         modulesTableBody.appendChild(row);
     });
 
@@ -451,34 +453,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // Gather modules with specialization
         const modules = [];
         document.querySelectorAll('#modules_table tbody tr').forEach(row => {
-            const cells = row.querySelectorAll('td');
-            if (cells.length >= 5) {
-                const semester = cells[0].textContent.trim();
-                let specialization = null;
-                let moduleName, moduleType, credits;
-                if (courseSpecializations.length > 0) {
-                    specialization = cells[1].textContent.trim();
-                    moduleName = cells[2].textContent.trim();
-                    moduleType = cells[3].textContent.trim();
-                    credits = cells[4].textContent.trim();
-                } else {
-                    moduleName = cells[1].textContent.trim();
-                    moduleType = cells[2].textContent.trim();
-                    credits = cells[3].textContent.trim();
-                }
-                
-                let moduleId = null;
-                document.querySelectorAll('#module_select option').forEach(opt => {
-                    if (opt.textContent.trim() === moduleName) {
-                        moduleId = opt.value;
-                    }
+            const moduleId = row.dataset.moduleId;
+            const specialization = row.dataset.specialization || null;
+            
+            // Use moduleId from row dataset (stored when row was created)
+            if (moduleId) {
+                modules.push({
+                    module_id: moduleId,
+                    specialization: specialization && specialization !== '-' && specialization !== '' ? specialization : null
                 });
-                if (moduleId) {
-                    modules.push({
-                        module_id: moduleId,
-                        specialization: specialization && specialization !== '-' ? specialization : null
-                    });
-                }
             }
         });
         
