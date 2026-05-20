@@ -4259,10 +4259,12 @@ async function loadPaymentDetails() {
       status:             d.status || 'pending',
       paid_date:          d.paid_date || null,
       receipt_no:         d.receipt_no || null,
-            currency:           d.currency || 'LKR',
-            sscl_tax:           Number(d.sscl_tax || 0),
-            bank_charges:       Number(d.bank_charges || 0),
-            apply_tax:          Boolean(d.apply_tax)
+      currency:           d.currency || 'LKR',
+      sscl_tax:           Number(d.sscl_tax || 0),
+      bank_charges:       Number(d.bank_charges || 0),
+      apply_tax:          Boolean(d.apply_tax),
+      conversion_rate:    d.conversion_rate ? Number(d.conversion_rate) : null,
+      lkr_amount:         d.lkr_amount ? Number(d.lkr_amount) : null
     }));
 
     renderPaymentDetailsTable(details, paymentType);
@@ -4866,7 +4868,13 @@ function renderPaymentDetailsTable(rows, paymentType) {
     // LKR column for franchise
     let lkrCell = '';
     if (showLkr) {
-      if (rate && rate > 0) {
+      // ✅ If payment has a locked conversion_rate (slip already generated), show locked amount
+      if (p.conversion_rate && p.conversion_rate > 0 && p.lkr_amount !== null && p.lkr_amount !== undefined) {
+        lkrCell = `<td style="background-color: #f0f0f0;">
+                    <div>LKR ${money(p.lkr_amount)}</div>
+                    <small class="text-muted">Locked rate: ${p.conversion_rate}</small>
+                </td>`;
+      } else if (rate && rate > 0) {
                 const lkrBase = p.amount * rate;
                 const ssclAmount = (lkrBase * p.sscl_tax) / 100;
                 const lkrFinal = lkrBase + ssclAmount + p.bank_charges;
