@@ -3486,8 +3486,12 @@ function renderPaymentRecords() {
       'other': 'Other'
     }[r.payment_type] || r.payment_type || 'N/A';
 
+    const isPaid = String(r.status || '').toLowerCase() === 'paid';
+    const remaining = Number(r.remaining_amount ?? 0);
+    const payDisabled = isPaid || remaining <= 0;
+
     const row = `
-      <tr>
+      <tr ${isPaid ? 'class="table-secondary"' : ''}>
                 <td>${r.student_id ?? '-'}</td>
         <td>${r.student_name}</td>
         <td>${paymentTypeDisplay}</td>
@@ -3496,16 +3500,17 @@ function renderPaymentRecords() {
                 <td>${Number(r.late_fee ?? 0).toLocaleString()}</td>
                 <td>${Number(r.approved_late_fee ?? 0).toLocaleString()}</td>
                 <td>${Number(r.total_fee ?? 0).toLocaleString()}</td>
-                <td>${Number(r.remaining_amount ?? 0).toLocaleString()}</td>
+                <td>${remaining.toLocaleString()}</td>
         <td>${r.payment_method ?? '-'}</td>
         <td>${r.payment_date ?? '-'}</td>
         <td>${r.receipt_no}</td>
         <td>${r.status}</td>
         <td>
-          <button class="btn btn-sm btn-success btn-open-pay-modal"
+          <button class="btn btn-sm btn-success btn-open-pay-modal" 
                   data-payment-id="${r.payment_id}"
-                  data-remaining-amount="${r.remaining_amount ?? 0}">
-            <i class="ti ti-cash me-1"></i>Pay
+                  data-remaining-amount="${remaining}"
+                  ${payDisabled ? 'disabled' : ''}>
+            <i class="ti ti-cash me-1"></i>${payDisabled ? 'Pay Disabled' : 'Pay'}
           </button>
           <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#${modalId}">
             <i class="ti ti-history me-1"></i>History
@@ -3556,8 +3561,18 @@ function renderHistoryList(payments) {
 
 
 function openPayModal(paymentId, remaining) {
-  document.getElementById('pay-payment-id').value = paymentId;  // ✅ correct
-  document.getElementById('pay-amount').value = remaining > 0 ? remaining : '';
+  if (!remaining || Number(remaining) <= 0) {
+    showWarningMessage('This installment is already paid or has no remaining balance.');
+    return;
+  }
+
+  document.getElementById('pay-payment-id').value = paymentId;
+  const payAmountInput = document.getElementById('pay-amount');
+  payAmountInput.value = Number(remaining).toFixed(2);
+  payAmountInput.min = Number(remaining).toFixed(2);
+  payAmountInput.max = Number(remaining).toFixed(2);
+  payAmountInput.step = '0.01';
+  payAmountInput.readOnly = true;
   document.getElementById('pay-date').value = new Date().toISOString().split('T')[0];
 
   const modal = new bootstrap.Modal(document.getElementById('payModal'));
@@ -3573,8 +3588,15 @@ function submitPayment() {
   const remarks   = document.getElementById('pay-remarks').value;
   const slipFile  = document.getElementById('pay-slip').files[0]; // optional file
 
+  const remaining = parseFloat(document.getElementById('pay-amount').max || 0);
+
   if (!amount || amount <= 0) {
     showErrorMessage("Enter a valid payment amount.");
+    return;
+  }
+
+  if (!remaining || amount !== remaining) {
+    showErrorMessage('Payment amount must match the remaining installment amount.');
     return;
   }
 

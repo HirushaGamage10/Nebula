@@ -2194,6 +2194,14 @@ public function makePayment(Request $request)
         ]);
 
         $payment = PaymentDetail::findOrFail($request->payment_id);
+
+        if (strtolower($payment->status ?? '') === 'paid' || ($payment->remaining_amount !== null && (float)$payment->remaining_amount <= 0)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This installment is already fully paid and cannot accept additional payments.'
+            ], 422);
+        }
+
         $paymentType = $payment->installment_type ?? null;
 
         // Decode existing partial payments (JSON field)
@@ -2206,6 +2214,17 @@ public function makePayment(Request $request)
         $slipPath = null;
         if ($request->hasFile('slip')) {
             $slipPath = $request->file('slip')->store('payment_slips', 'public');
+        }
+
+        $remainingAmount = $payment->remaining_amount !== null
+            ? (float) $payment->remaining_amount
+            : max((float)$payment->total_fee - collect($partials)->sum('amount'), 0);
+
+        if (abs($remainingAmount - (float)$request->amount) > 0.009) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment amount must equal the remaining installment amount.'
+            ], 422);
         }
 
         // Add new partial payment entry
