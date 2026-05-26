@@ -870,7 +870,10 @@ public function createPaymentPlan(Request $request)
                 $base = round((float)$r['amount'], 2);
                 $Ai   = round($discountedBases[$i], 2);
                 $isLast = ($i === $lastIdx);
-
+                // SLT loan proration distributes the loan amount proportionally across
+                // installments based on each installment's share of the post-discount total.
+                // The last installment absorbs any rounding drift to ensure the sum of all
+                // final amounts equals the exact target (T = total after discounts minus loan).
                 if (!$isLast) {
                     $Fi = ($sumAfterDiscounts > 0)
                         ? round(($Ai / $sumAfterDiscounts) * $T, 2)
