@@ -1541,6 +1541,12 @@ public function generatePaymentSlip(Request $request)
         // 🔹 Total Fee = base fee + late fee - approved late fee.
         // For franchise fees, include SSCL + bank charges in total fee so
         // amount/total/remaining stay consistent in payment management tables.
+        /**
+         * Franchise fee totals must include SSCL tax and bank charges so that
+         * amount, total_fee, and remaining_amount stay internally consistent
+         * across the payment management tables. Plain course/registration fees
+         * skip this block and use only the base amount plus any late fee.
+         */
         if ($paymentType === 'franchise_fee') {
             $totalFee = round($remainingAmount + $lateFee - $approvedLateFee, 2);
         } else {
