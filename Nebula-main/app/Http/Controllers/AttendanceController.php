@@ -459,7 +459,10 @@ class AttendanceController extends Controller
                 if ($hasAttendanceTypeColumn) {
                     $deleteQuery->where('attendance_type', $attendanceType);
                 }
-
+                // Delete-then-insert strategy is used instead of upsert to handle cases where
+                // the number of students in a session changes (e.g. late registrations or drops).
+                // All records for the given date, course, intake, and attendance type are wiped
+                // before the fresh batch is inserted within the same transaction.
                 $deleteQuery->delete();
 
                 // Insert new attendance records
