@@ -134,7 +134,11 @@ class AttendanceController extends Controller
             
         return response()->json(['semesters' => $semesters, 'is_certificate' => false]);
     }
-
+    /**
+     * Converts a raw semester name (numeric or alphabetical) into a consistent
+     * display value based on the course's semester_format setting. Falls back
+     * to the positional index if the stored name is invalid or out of range.
+     */
     private function formatSemesterDisplayValue(Course $course, $rawName, ?int $fallbackNumber = null): string
     {
         $rawName = trim((string) $rawName);
