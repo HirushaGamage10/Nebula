@@ -1592,6 +1592,10 @@ if ($existingPayment) {
 
 
         // --- Generate New Receipt Number ---
+        // Receipt numbers follow the format RCP{YYYYMMDD}{0001}.
+        // The sequence resets daily — the counter is derived from the highest
+        // receipt number matching today's date prefix, so no separate counter
+        // table is needed and gaps from deleted records are acceptable.
         $today      = date('Ymd');
         $latest     = \App\Models\PaymentDetail::where('transaction_id', 'like', "RCP{$today}%")
                         ->orderBy('transaction_id', 'desc')->first();
