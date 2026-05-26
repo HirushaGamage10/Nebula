@@ -313,6 +313,11 @@ class AttendanceController extends Controller
         }
 
         // Check if this is a core module (assigned to semester) or elective module
+        /**
+         * Resolves whether a module is core or elective by checking the semester_module
+         * pivot table. Core modules are assigned to an entire semester, while elective
+         * modules require individual student registration via module_management.
+         */
         $isCoreModule = DB::table('semester_module')
             ->where('semester_id', $semesterId)
             ->where('module_id', $moduleId)
@@ -647,6 +652,11 @@ class AttendanceController extends Controller
     public function getOverallAttendance(Request $request)
     {
         // Check if this is a certificate course (semester and module_id will be null)
+        /**
+         * Certificate courses bypass the semester/module structure entirely.
+         * Attendance is tracked at the course-intake level with null semester
+         * and module_id values to distinguish from degree/diploma records.
+         */
         $isCertificate = empty($request->semester) && empty($request->module_id);
         
         $rules = [
