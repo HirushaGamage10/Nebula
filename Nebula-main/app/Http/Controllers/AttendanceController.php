@@ -1329,7 +1329,11 @@ class AttendanceController extends Controller
             // so check the schema first and fall back to student_id
             try {
                 $student = null;
-
+                // Student resolution during import follows a priority chain:
+                // 1. Match by course_registration_id (most reliable)
+                // 2. Match by registration_id column if it exists on the students table
+                // 3. Fallback to student_id primary key
+                // 4. Last resort: fuzzy match on name_with_initials
                 if ($courseRegId) {
                     $courseReg = \App\Models\CourseRegistration::where('course_registration_id', $courseRegId)
                         ->first();
