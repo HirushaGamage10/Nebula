@@ -1326,6 +1326,13 @@ public function generatePaymentSlip(Request $request)
         $bankCharges = 0;
         $remainingAmount = 0;
 
+        /**
+         * Franchise fee totals must include SSCL tax and bank charges so that
+         * amount, total_fee, and remaining_amount stay internally consistent
+         * across the payment management tables. Plain course/registration fees
+         * skip this block and use only the base amount plus any late fee.
+         */
+
         if ($paymentType === 'franchise_fee') {
             $conversionRate = (float) ($request->conversion_rate ?? 0);
             $foreignCurrency = $request->currency_from ?? 'USD';
