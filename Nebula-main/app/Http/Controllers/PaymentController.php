@@ -2252,6 +2252,10 @@ public function makePayment(Request $request)
         ];
 
         // Calculate totals
+        // Partial payment history is stored as a JSON array on the payment_details row
+        // rather than in a separate table. Each entry records the amount, method, date,
+        // and optional remarks. The remaining_amount is recalculated on every partial
+        // payment by summing the history, and status flips to 'paid' when it hits zero.
         $paidSoFar  = collect($partials)->sum('amount');
         $remaining  = max(($payment->total_fee - $paidSoFar), 0);
 
