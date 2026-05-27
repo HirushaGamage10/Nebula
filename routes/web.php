@@ -943,6 +943,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/api/program-admin-l2/payment-overview', [ProgramAdminL2DashboardController::class, 'getPaymentOverview'])->name('api.program.admin.l2.payment.overview');
         Route::post('/api/program-admin-l2/approve-registration/{id}', [ProgramAdminL2DashboardController::class, 'approveRegistration'])->name('api.program.admin.l2.approve.registration');
         Route::post('/api/program-admin-l2/reject-registration/{id}', [ProgramAdminL2DashboardController::class, 'rejectRegistration'])->name('api.program.admin.l2.reject.registration');
+        Route::get('/api/program-admin-l2/payment-overview', [ProgramAdminL2DashboardController::class, 'getPaymentOverview']);
     });
 
     // Admin L2 Trainee Dashboard
@@ -1029,3 +1030,5 @@ Route::middleware('web')->group(function () {
         return response()->json(['success' => true]);
     })->name('log.js.error');
 });
+
+

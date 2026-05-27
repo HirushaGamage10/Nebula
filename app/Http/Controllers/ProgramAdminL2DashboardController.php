@@ -35,31 +35,33 @@ class ProgramAdminL2DashboardController extends Controller
         $location = auth()->user()->user_location ?? 'Welisara';
         $location = str_replace('Nebula Institute of Technology – ', '', $location);
         $location = str_replace('Nebula Institute of Technology - ', '', $location);
-        
+
         try {
             // Total Active Students (based on course registration status 'Registered')
             $totalActiveStudents = CourseRegistration::where('location', $location)
                 ->where('status', 'Registered')
                 ->distinct('student_id')
                 ->count('student_id');
-            
+
             // Active Batches (Intakes with registered students)
             $activeBatches = Intake::where('location', $location)
                 ->whereHas('courseRegistrations', function ($query) {
                     $query->where('status', 'Registered');
                 })
                 ->count();
-            
+
             // Pending Registration Approvals (course registrations pending approval)
             $pendingApprovals = CourseRegistration::where('location', $location)
                 ->where('status', 'Pending')
                 ->count();
-            
+
             // Student Count by Batch/Intake
             $studentCountByBatch = Intake::where('location', $location)
-                ->withCount(['courseRegistrations' => function ($query) {
-                    $query->where('status', 'Registered');
-                }])
+                ->withCount([
+                    'courseRegistrations' => function ($query) {
+                        $query->where('status', 'Registered');
+                    }
+                ])
                 ->orderBy('course_registrations_count', 'desc')
                 ->limit(10)
                 ->get()
@@ -70,41 +72,41 @@ class ProgramAdminL2DashboardController extends Controller
                         'count' => $intake->course_registrations_count
                     ];
                 });
-            
+
             // Today's new registrations
             $todayRegistrations = CourseRegistration::where('location', $location)
                 ->whereDate('registration_date', Carbon::today())
                 ->where('status', 'Registered')
                 ->count();
-            
+
             // Yesterday's registrations for growth calculation
             $yesterdayRegistrations = CourseRegistration::where('location', $location)
                 ->whereDate('registration_date', Carbon::yesterday())
                 ->where('status', 'Registered')
                 ->count();
-            
+
             // Calculate growth percentage
             $growthPercentage = 0;
             if ($yesterdayRegistrations > 0) {
                 $growthPercentage = (($todayRegistrations - $yesterdayRegistrations) / $yesterdayRegistrations) * 100;
             }
-            
+
             // Pending clearance requests
             $pendingClearances = ClearanceRequest::where('location', $location)
                 ->where('status', 'pending')
                 ->count();
-            
+
             // Students needing special approval
             $specialApprovalNeeded = CourseRegistration::where('location', $location)
                 ->where('status', 'Special approval required')
                 ->count();
-            
+
             // Average attendance rate
             $avgAttendance = Attendance::where('location', $location)
                 ->selectRaw('AVG(status) as avg_attendance')
                 ->first();
             $avgAttendanceRate = $avgAttendance ? round($avgAttendance->avg_attendance * 100, 1) : 0;
-            
+
             // Pass rate from exam results
             $totalExamResults = ExamResult::where('location', $location)->count();
             $passResults = ExamResult::where('location', $location)
@@ -120,13 +122,13 @@ class ProgramAdminL2DashboardController extends Controller
                 })
                 ->count();
             $passRate = $totalExamResults > 0 ? round(($passResults / $totalExamResults) * 100, 1) : 0;
-            
+
             // Semester registrations this month
             $monthSemesterReg = SemesterRegistration::where('location', $location)
                 ->whereMonth('registration_date', Carbon::now()->month)
                 ->whereYear('registration_date', Carbon::now()->year)
                 ->count();
-            
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -144,7 +146,7 @@ class ProgramAdminL2DashboardController extends Controller
                     'location' => $location
                 ]
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -162,7 +164,7 @@ class ProgramAdminL2DashboardController extends Controller
         $location = auth()->user()->user_location ?? 'Welisara';
         $location = str_replace('Nebula Institute of Technology – ', '', $location);
         $location = str_replace('Nebula Institute of Technology - ', '', $location);
-        
+
         try {
             $pendingApprovals = CourseRegistration::where('location', $location)
                 ->where('status', 'Pending')
@@ -183,12 +185,12 @@ class ProgramAdminL2DashboardController extends Controller
                         'created_at' => $registration->created_at->format('Y-m-d H:i:s')
                     ];
                 });
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $pendingApprovals
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -205,15 +207,18 @@ class ProgramAdminL2DashboardController extends Controller
         $location = auth()->user()->user_location ?? 'Welisara';
         $location = str_replace('Nebula Institute of Technology – ', '', $location);
         $location = str_replace('Nebula Institute of Technology - ', '', $location);
-        
+
         try {
             $activeSemesters = Semester::whereHas('course', function ($query) use ($location) {
-                    $query->where('location', $location);
-                })
+                $query->where('location', $location);
+            })
                 ->where('status', 'active')
-                ->with(['course', 'semesterRegistrations' => function ($query) {
-                    $query->where('status', 'registered');
-                }])
+                ->with([
+                    'course',
+                    'semesterRegistrations' => function ($query) {
+                        $query->where('status', 'registered');
+                    }
+                ])
                 ->get()
                 ->map(function ($semester) {
                     return [
@@ -226,12 +231,12 @@ class ProgramAdminL2DashboardController extends Controller
                         'status' => $semester->status
                     ];
                 });
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $activeSemesters
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -243,30 +248,51 @@ class ProgramAdminL2DashboardController extends Controller
     /**
      * Get modules for a selected course
      */
+
+
     public function getModulesByCourse(Request $request)
     {
         $request->validate([
             'course_id' => 'required|exists:courses,course_id',
+            'intake_id' => 'nullable|exists:intakes,intake_id',
         ]);
 
         try {
             $courseId = (int) $request->get('course_id');
+            $intakeId = $request->get('intake_id');
 
-            $modules = Module::query()
-                ->whereHas('courses', function ($query) use ($courseId) {
-                    $query->where('courses.course_id', $courseId);
-                })
-                ->select('module_id', 'module_name', 'module_code')
-                ->orderBy('module_name')
-                ->get()
-                ->map(function ($module) {
-                    return [
-                        'module_id' => $module->module_id,
-                        'module_name' => $module->module_name,
-                        'module_code' => $module->module_code,
-                        'display_name' => trim(($module->module_code ? $module->module_code . ' - ' : '') . $module->module_name),
-                    ];
-                });
+            // If intake_id is provided and not empty, fetch ONLY modules from that intake
+            if (!empty($intakeId)) {
+                $modules = DB::table('intake_modules')
+                    ->join('modules', 'intake_modules.module_id', '=', 'modules.module_id')
+                    ->where('intake_modules.intake_id', $intakeId)
+                    ->select('modules.module_id', 'modules.module_name', 'modules.module_code')
+                    ->orderBy('modules.module_name')
+                    ->get()
+                    ->map(function ($module) {
+                        return [
+                            'module_id' => $module->module_id,
+                            'module_name' => $module->module_name,
+                            'module_code' => $module->module_code,
+                            'display_name' => trim(($module->module_code ? $module->module_code . ' - ' : '') . $module->module_name),
+                        ];
+                    });
+            } else {
+                // Only if no intake specified, fetch course modules
+                $modules = Course::find($courseId)
+                    ->modules()
+                    ->select('modules.module_id', 'modules.module_name', 'modules.module_code')
+                    ->orderBy('modules.module_name')
+                    ->get()
+                    ->map(function ($module) {
+                        return [
+                            'module_id' => $module->module_id,
+                            'module_name' => $module->module_name,
+                            'module_code' => $module->module_code,
+                            'display_name' => trim(($module->module_code ? $module->module_code . ' - ' : '') . $module->module_name),
+                        ];
+                    });
+            }
 
             return response()->json([
                 'success' => true,
@@ -275,7 +301,7 @@ class ProgramAdminL2DashboardController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load modules',
+                'message' => 'Failed to load modules: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -298,7 +324,7 @@ class ProgramAdminL2DashboardController extends Controller
         $location = $request->filled('location') ? $request->location : $defaultLocation;
         $courseId = $request->get('course_id');
         $intakeId = $request->get('intake_id');
-        
+
         try {
             $baseQuery = ExamResult::where('location', $location)
                 ->when($courseId, function ($query) use ($courseId) {
@@ -314,10 +340,11 @@ class ProgramAdminL2DashboardController extends Controller
                 ->whereNotNull('grade')
                 ->groupBy('grade')
                 ->get();
-            
+
             // Get course-wise pass rates
             $coursePerformance = (clone $baseQuery)
-                ->select('course_id', 
+                ->select(
+                    'course_id',
                     DB::raw('COUNT(*) as total'),
                     DB::raw('SUM(CASE WHEN marks >= 40 OR grade IN ("A", "B", "C", "D") THEN 1 ELSE 0 END) as passed')
                 )
@@ -335,7 +362,7 @@ class ProgramAdminL2DashboardController extends Controller
                 })
                 ->sortByDesc('pass_rate')
                 ->values();
-            
+
             // Get repeat students (failed in exam)
             $repeatStudents = (clone $baseQuery)
                 ->where(function ($query) {
@@ -346,7 +373,7 @@ class ProgramAdminL2DashboardController extends Controller
                 })
                 ->distinct('student_id')
                 ->count('student_id');
-            
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -360,7 +387,7 @@ class ProgramAdminL2DashboardController extends Controller
                     ]
                 ]
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -390,10 +417,10 @@ class ProgramAdminL2DashboardController extends Controller
         $courseId = $request->get('course_id');
         $intakeId = $request->get('intake_id');
         $moduleId = $request->get('module_id');
-        
+
         $period = $request->get('period', 'month');
         $endDate = Carbon::now();
-        
+
         switch ($period) {
             case 'today':
                 $startDate = Carbon::today();
@@ -410,7 +437,7 @@ class ProgramAdminL2DashboardController extends Controller
             default:
                 $startDate = Carbon::now()->subMonth();
         }
-        
+
         try {
             $baseQuery = Attendance::where('location', $location)
                 ->whereBetween('date', [$startDate, $endDate])
@@ -434,10 +461,11 @@ class ProgramAdminL2DashboardController extends Controller
                 ->groupBy(DB::raw('DATE(date)'))
                 ->orderBy('attendance_date', 'asc')
                 ->get();
-            
+
             // Course-wise attendance
             $courseAttendance = (clone $baseQuery)
-                ->select('course_id',
+                ->select(
+                    'course_id',
                     DB::raw('AVG(status) * 100 as attendance_rate'),
                     DB::raw('COUNT(*) as total_records')
                 )
@@ -453,7 +481,7 @@ class ProgramAdminL2DashboardController extends Controller
                 })
                 ->sortByDesc('attendance_rate')
                 ->values();
-            
+
             // Overall statistics
             $overallStats = (clone $baseQuery)
                 ->select(
@@ -462,7 +490,7 @@ class ProgramAdminL2DashboardController extends Controller
                     DB::raw('AVG(status) * 100 as overall_rate')
                 )
                 ->first();
-            
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -478,7 +506,7 @@ class ProgramAdminL2DashboardController extends Controller
                     ]
                 ]
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -495,7 +523,7 @@ class ProgramAdminL2DashboardController extends Controller
         $location = auth()->user()->user_location ?? 'Welisara';
         $location = str_replace('Nebula Institute of Technology – ', '', $location);
         $location = str_replace('Nebula Institute of Technology - ', '', $location);
-        
+
         try {
             $clearanceStats = ClearanceRequest::where('location', $location)
                 ->select(
@@ -505,7 +533,7 @@ class ProgramAdminL2DashboardController extends Controller
                 )
                 ->groupBy('clearance_type', 'status')
                 ->get();
-            
+
             // Group by clearance type
             $clearanceByType = [];
             foreach ($clearanceStats as $stat) {
@@ -520,7 +548,7 @@ class ProgramAdminL2DashboardController extends Controller
                 $clearanceByType[$stat->clearance_type][$stat->status] = $stat->count;
                 $clearanceByType[$stat->clearance_type]['total'] += $stat->count;
             }
-            
+
             // Recent clearance requests
             $recentRequests = ClearanceRequest::where('location', $location)
                 ->with(['student', 'course', 'intake'])
@@ -539,7 +567,7 @@ class ProgramAdminL2DashboardController extends Controller
                         'remarks' => $request->remarks
                     ];
                 });
-            
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -547,7 +575,7 @@ class ProgramAdminL2DashboardController extends Controller
                     'recent_requests' => $recentRequests
                 ]
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -560,79 +588,80 @@ class ProgramAdminL2DashboardController extends Controller
      * Get payment overview
      */
     public function getPaymentOverview(Request $request)
-{
-    $location = auth()->user()->user_location ?? 'Welisara';
-    $location = str_replace('Nebula Institute of Technology – ', '', $location);
-    $location = str_replace('Nebula Institute of Technology - ', '', $location);
+    {
+        $location = auth()->user()->user_location ?? 'Welisara';
+        $location = str_replace('Nebula Institute of Technology – ', '', $location);
+        $location = str_replace('Nebula Institute of Technology - ', '', $location);
 
-    try {
-        // Total revenue from payments (through course registration location)
-        $totalRevenue = PaymentDetail::whereHas('registration', function ($query) use ($location) {
+        try {
+            // Total revenue from payments (through course registration location)
+            $totalRevenue = PaymentDetail::whereHas('registration', function ($query) use ($location) {
                 $query->where('location', $location);
             })
-            ->where('status', 'paid')
-            ->sum('amount');
+                ->where('status', 'paid')
+                ->sum('amount');
 
-        // Pending payments count
-        $pendingPayments = PaymentDetail::whereHas('registration', function ($query) use ($location) {
+            // Pending payments count
+            $pendingPayments = PaymentDetail::whereHas('registration', function ($query) use ($location) {
                 $query->where('location', $location);
             })
-            ->where('status', 'pending')
-            ->count();
+                ->where('status', 'pending')
+                ->count();
 
-        // Monthly revenue for last 12 months
-        $monthlyRevenue = PaymentDetail::whereHas('registration', function ($query) use ($location) {
+            // Monthly revenue for last 12 months
+            $monthlyRevenue = PaymentDetail::whereHas('registration', function ($query) use ($location) {
                 $query->where('location', $location);
             })
-            ->where('status', 'paid')
-            ->selectRaw('DATE_FORMAT(payment_effective_date, "%b %Y") as month, SUM(amount) as revenue')
-            ->groupByRaw('DATE_FORMAT(payment_effective_date, "%b %Y")')
-            ->orderByRaw('payment_effective_date DESC')
-            ->limit(12)
-            ->get()
-            ->reverse()
-            ->map(function ($item) {
-                return [
-                    'month' => $item->month ?? 'N/A',
-                    'revenue' => (float) ($item->revenue ?? 0)
-                ];
-            })
-            ->values()
-            ->toArray();
+                ->where('status', 'paid')
+                ->selectRaw('DATE_FORMAT(payment_effective_date, "%b %Y") as month, SUM(amount) as revenue')
+                ->groupByRaw('DATE_FORMAT(payment_effective_date, "%b %Y")')
+                ->orderByRaw('payment_effective_date DESC')
+                ->limit(12)
+                ->get()
+                ->reverse()
+                ->map(function ($item) {
+                    return [
+                        'month' => $item->month ?? 'N/A',
+                        'revenue' => (float) ($item->revenue ?? 0)
+                    ];
+                })
+                ->values()
+                ->toArray();
 
-        // Payment statistics by status
-        $paymentStats = PaymentDetail::whereHas('registration', function ($query) use ($location) {
+            // Payment statistics by status
+            $paymentStats = PaymentDetail::whereHas('registration', function ($query) use ($location) {
                 $query->where('location', $location);
             })
-            ->selectRaw('status, COUNT(*) as count')
-            ->groupBy('status')
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'status' => $item->status ?? 'unknown',
-                    'count' => (int) ($item->count ?? 0)
-                ];
-            })
-            ->toArray();
+                ->selectRaw('status, COUNT(*) as count')
+                ->groupBy('status')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'status' => $item->status ?? 'unknown',
+                        'count' => (int) ($item->count ?? 0)
+                    ];
+                })
+                ->toArray();
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'total_revenue' => (float) ($totalRevenue ?? 0),
-                'pending_payments' => (int) ($pendingPayments ?? 0),
-                'monthly_revenue' => $monthlyRevenue ?? [],
-                'payment_stats' => $paymentStats ?? [],
-            ]
-        ]);
-    } catch (\Exception $e) {
-        \Log::error('Payment Overview Error: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to load payment overview',
-            'error' => $e->getMessage()
-        ], 500);
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_revenue' => (float) ($totalRevenue ?? 0),
+                    'pending_payments' => (int) ($pendingPayments ?? 0),
+                    'monthly_revenue' => $monthlyRevenue ?? [],
+                    'payment_stats' => $paymentStats ?? [],
+                ]
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Payment Overview Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load payment overview',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
+
 
     /**
      * Approve registration
@@ -641,29 +670,29 @@ class ProgramAdminL2DashboardController extends Controller
     {
         try {
             $registration = CourseRegistration::findOrFail($id);
-            
+
             // Check if user has permission for this location
             $userLocation = auth()->user()->user_location ?? 'Welisara';
             $userLocation = str_replace('Nebula Institute of Technology – ', '', $userLocation);
             $userLocation = str_replace('Nebula Institute of Technology - ', '', $userLocation);
-            
+
             if ($registration->location !== $userLocation) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized to approve registration from this location'
                 ], 403);
             }
-            
+
             $registration->status = 'Registered';
             $registration->approval_status = 'Approved by manager';
             $registration->updated_at = now();
             $registration->save();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Registration approved successfully'
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -680,33 +709,33 @@ class ProgramAdminL2DashboardController extends Controller
         $request->validate([
             'reason' => 'required|string|max:500'
         ]);
-        
+
         try {
             $registration = CourseRegistration::findOrFail($id);
-            
+
             // Check if user has permission for this location
             $userLocation = auth()->user()->user_location ?? 'Welisara';
             $userLocation = str_replace('Nebula Institute of Technology – ', '', $userLocation);
             $userLocation = str_replace('Nebula Institute of Technology - ', '', $userLocation);
-            
+
             if ($registration->location !== $userLocation) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthorized to reject registration from this location'
                 ], 403);
             }
-            
+
             $registration->status = 'Not eligible';
             $registration->approval_status = 'Rejected';
             $registration->remarks = $request->reason;
             $registration->updated_at = now();
             $registration->save();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Registration rejected successfully'
             ]);
-            
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

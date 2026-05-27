@@ -4,7 +4,9 @@
 
 @section('content')
     <link nonce="{{ $cspNonce }}" rel="stylesheet" href="{{ asset('css/styles.min.css') }}">
-    <link nonce="{{ $cspNonce }}" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous">
+    <link nonce="{{ $cspNonce }}" rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+        integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EgVH8BgoKTaUrmKNDkHPStTQ3EyoYjCGXaOTS" crossorigin="anonymous">
     <script nonce="{{ $cspNonce }}" src="{{ asset('libs/chartjs/chart.min.js') }}"></script>
     <script nonce="{{ $cspNonce }}" src="{{ asset('libs/chartjs/chartjs-plugin-datalabels.min.js') }}"></script>
 
@@ -12,21 +14,21 @@
         .card-hover {
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-        
+
         .card-hover:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
         }
-        
+
         .kpi-card {
             border-left: 4px solid;
             transition: all 0.3s ease;
         }
-        
+
         .kpi-card:hover {
             border-left-width: 6px;
         }
-        
+
         .avatar-initial {
             width: 40px;
             height: 40px;
@@ -39,7 +41,7 @@
             font-weight: 600;
             font-size: 16px;
         }
-        
+
         .time-filter-btn {
             padding: 6px 16px;
             border-radius: 6px;
@@ -52,18 +54,18 @@
             margin-right: 8px;
             margin-bottom: 8px;
         }
-        
+
         .time-filter-btn:hover {
             background: #f8f9fa;
             border-color: #adb5bd;
         }
-        
+
         .time-filter-btn.active {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border-color: transparent;
         }
-        
+
         .chart-toggle-btn {
             padding: 8px;
             border-radius: 6px;
@@ -72,22 +74,22 @@
             color: #6c757d;
             transition: all 0.2s ease;
         }
-        
+
         .chart-toggle-btn:hover {
             background: #f8f9fa;
         }
-        
+
         .chart-toggle-btn.active {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border-color: transparent;
         }
-        
+
         .chart-container {
             position: relative;
             height: 300px;
         }
-        
+
         .status-badge {
             padding: 4px 12px;
             border-radius: 20px;
@@ -95,22 +97,22 @@
             font-weight: 600;
             display: inline-block;
         }
-        
+
         .status-registered {
             background: #d4edda;
             color: #155724;
         }
-        
+
         .status-pending {
             background: #fff3cd;
             color: #856404;
         }
-        
+
         .status-special {
             background: #d1ecf1;
             color: #0c5460;
         }
-        
+
         .action-btn {
             width: 32px;
             height: 32px;
@@ -120,15 +122,15 @@
             justify-content: center;
             transition: all 0.2s ease;
         }
-        
+
         .action-btn:hover {
             transform: scale(1.1);
         }
-        
+
         .nav-tabs-custom {
             border-bottom: 2px solid #dee2e6;
         }
-        
+
         .nav-tabs-custom .nav-link {
             border: none;
             color: #6c757d;
@@ -137,33 +139,33 @@
             border-radius: 0;
             position: relative;
         }
-        
+
         .nav-tabs-custom .nav-link.active {
             color: #667eea;
             border-bottom: 3px solid #667eea;
             background: none;
         }
-        
+
         .badge-purple {
             background-color: #667eea;
             color: white;
         }
-        
+
         .badge-primary {
             background-color: #007bff;
             color: white;
         }
-        
+
         .badge-success {
             background-color: #28a745;
             color: white;
         }
-        
+
         .badge-warning {
             background-color: #ffc107;
             color: #212529;
         }
-        
+
         .badge-danger {
             background-color: #dc3545;
             color: white;
@@ -184,7 +186,8 @@
                             </div>
                             <div>
                                 <h4 class="mb-1 fw-bold text-dark">Program Administrator (Level 02) Dashboard</h4>
-                                <p class="text-muted mb-0">Operational management, student headcount, academic performance, and course status</p>
+                                <p class="text-muted mb-0">Operational management, student headcount, academic performance,
+                                    and course status</p>
                             </div>
                         </div>
 
@@ -213,10 +216,14 @@
                         <div class="d-flex flex-wrap align-items-center">
                             <span class="me-3 text-muted"><i class="fas fa-calendar-alt me-1"></i> Time Period:</span>
                             <div class="d-flex flex-wrap">
-                                <button type="button" class="time-filter-btn active" data-period="today" onclick="setTimePeriod('today', this)">Today</button>
-                                <button type="button" class="time-filter-btn" data-period="week" onclick="setTimePeriod('week', this)">This Week</button>
-                                <button type="button" class="time-filter-btn" data-period="month" onclick="setTimePeriod('month', this)">This Month</button>
-                                <button type="button" class="time-filter-btn" data-period="quarter" onclick="setTimePeriod('quarter', this)">Last 3 Months</button>
+                                <button type="button" class="time-filter-btn active" data-period="today"
+                                    onclick="setTimePeriod('today', this)">Today</button>
+                                <button type="button" class="time-filter-btn" data-period="week"
+                                    onclick="setTimePeriod('week', this)">This Week</button>
+                                <button type="button" class="time-filter-btn" data-period="month"
+                                    onclick="setTimePeriod('month', this)">This Month</button>
+                                <button type="button" class="time-filter-btn" data-period="quarter"
+                                    onclick="setTimePeriod('quarter', this)">Last 3 Months</button>
                             </div>
                         </div>
                     </div>
@@ -232,7 +239,8 @@
                         <div class="d-flex flex-wrap align-items-end gap-3">
                             <div>
                                 <label for="analyticsLocationFilter" class="form-label mb-1 text-muted">Location</label>
-                                <select id="analyticsLocationFilter" class="form-select form-select-sm" style="min-width: 220px;">
+                                <select id="analyticsLocationFilter" class="form-select form-select-sm"
+                                    style="min-width: 220px;">
                                     <option value="">Default Location</option>
                                     <option value="Welisara">Nebula Institute of Technology - Welisara</option>
                                     <option value="Moratuwa">Nebula Institute of Technology - Moratuwa</option>
@@ -241,19 +249,23 @@
                             </div>
                             <div>
                                 <label for="analyticsCourseFilter" class="form-label mb-1 text-muted">Course</label>
-                                <select id="analyticsCourseFilter" class="form-select form-select-sm" style="min-width: 220px;" disabled>
+                                <select id="analyticsCourseFilter" class="form-select form-select-sm"
+                                    style="min-width: 220px;" disabled>
                                     <option value="">All Courses</option>
                                 </select>
                             </div>
                             <div>
                                 <label for="analyticsIntakeFilter" class="form-label mb-1 text-muted">Intake</label>
-                                <select id="analyticsIntakeFilter" class="form-select form-select-sm" style="min-width: 220px;" disabled>
+                                <select id="analyticsIntakeFilter" class="form-select form-select-sm"
+                                    style="min-width: 220px;" disabled>
                                     <option value="">All Intakes</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="analyticsModuleFilter" class="form-label mb-1 text-muted">Module (Attendance)</label>
-                                <select id="analyticsModuleFilter" class="form-select form-select-sm" style="min-width: 240px;" disabled>
+                                <label for="analyticsModuleFilter" class="form-label mb-1 text-muted">Module
+                                    (Attendance)</label>
+                                <select id="analyticsModuleFilter" class="form-select form-select-sm"
+                                    style="min-width: 240px;" disabled>
                                     <option value="">All Modules</option>
                                 </select>
                             </div>
@@ -261,7 +273,8 @@
                                 <button type="button" class="btn btn-primary btn-sm" id="applyAnalyticsFiltersBtn">
                                     <i class="fas fa-filter me-1"></i> Apply
                                 </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" id="clearAnalyticsFiltersBtn">
+                                <button type="button" class="btn btn-outline-secondary btn-sm"
+                                    id="clearAnalyticsFiltersBtn">
                                     Clear
                                 </button>
                             </div>
@@ -279,32 +292,38 @@
                     <div class="card-body">
                         <ul class="nav nav-tabs nav-tabs-custom mb-4" id="dashboardTabs" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                                <button class="nav-link active" id="overview-tab" data-bs-toggle="tab"
+                                    data-bs-target="#overview" type="button" role="tab">
                                     <i class="fas fa-chart-pie me-2"></i> Overview
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="approvals-tab" data-bs-toggle="tab" data-bs-target="#approvals" type="button" role="tab">
+                                <button class="nav-link" id="approvals-tab" data-bs-toggle="tab" data-bs-target="#approvals"
+                                    type="button" role="tab">
                                     <i class="fas fa-check-circle me-2"></i> Approvals
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="academic-tab" data-bs-toggle="tab" data-bs-target="#academic" type="button" role="tab">
+                                <button class="nav-link" id="academic-tab" data-bs-toggle="tab" data-bs-target="#academic"
+                                    type="button" role="tab">
                                     <i class="fas fa-graduation-cap me-2"></i> Academic Performance
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="attendance-tab" data-bs-toggle="tab" data-bs-target="#attendance" type="button" role="tab">
+                                <button class="nav-link" id="attendance-tab" data-bs-toggle="tab"
+                                    data-bs-target="#attendance" type="button" role="tab">
                                     <i class="fas fa-calendar-check me-2"></i> Attendance
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="clearance-tab" data-bs-toggle="tab" data-bs-target="#clearance" type="button" role="tab">
+                                <button class="nav-link" id="clearance-tab" data-bs-toggle="tab" data-bs-target="#clearance"
+                                    type="button" role="tab">
                                     <i class="fas fa-clipboard-check me-2"></i> Clearance Status
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payments" type="button" role="tab">
+                                <button class="nav-link" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payments"
+                                    type="button" role="tab">
                                     <i class="fas fa-credit-card me-2"></i> Payments
                                 </button>
                             </li>
@@ -324,7 +343,8 @@
                                                     </div>
                                                     <span class="badge bg-purple bg-opacity-10 text-purple">Total</span>
                                                 </div>
-                                                <h5 class="card-title text-muted text-uppercase fs-12">Total Active Students</h5>
+                                                <h5 class="card-title text-muted text-uppercase fs-12">Total Active Students
+                                                </h5>
                                                 <h2 class="fw-bold text-purple mb-1" id="totalActiveStudents">-</h2>
                                                 <div class="text-muted fs-13">
                                                     <i class="fas fa-user-graduate me-1"></i> Enrolled Students
@@ -332,7 +352,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="col-xl-3 col-md-6 mb-4">
                                         <div class="card kpi-card card-hover border-left-primary">
                                             <div class="card-body">
@@ -353,7 +373,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="col-xl-3 col-md-6 mb-4">
                                         <div class="card kpi-card card-hover border-left-success">
                                             <div class="card-body">
@@ -363,7 +383,8 @@
                                                     </div>
                                                     <span class="badge bg-success bg-opacity-10 text-success">Pending</span>
                                                 </div>
-                                                <h5 class="card-title text-muted text-uppercase fs-12">Pending Approvals</h5>
+                                                <h5 class="card-title text-muted text-uppercase fs-12">Pending Approvals
+                                                </h5>
                                                 <h2 class="fw-bold text-success mb-1" id="pendingApprovals">-</h2>
                                                 <div class="text-muted fs-13">
                                                     <i class="fas fa-exclamation-circle me-1"></i> Awaiting action
@@ -371,7 +392,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="col-xl-3 col-md-6 mb-4">
                                         <div class="card kpi-card card-hover border-left-warning">
                                             <div class="card-body">
@@ -379,9 +400,11 @@
                                                     <div class="avatar-initial bg-warning bg-opacity-10 text-warning">
                                                         <i class="fas fa-percentage"></i>
                                                     </div>
-                                                    <span class="badge bg-warning bg-opacity-10 text-warning">Performance</span>
+                                                    <span
+                                                        class="badge bg-warning bg-opacity-10 text-warning">Performance</span>
                                                 </div>
-                                                <h5 class="card-title text-muted text-uppercase fs-12">Avg Attendance Rate</h5>
+                                                <h5 class="card-title text-muted text-uppercase fs-12">Avg Attendance Rate
+                                                </h5>
                                                 <h2 class="fw-bold text-warning mb-1" id="avgAttendanceRate">-</h2>
                                                 <div class="text-muted fs-13">
                                                     <i class="fas fa-chart-line me-1"></i> Overall attendance
@@ -401,7 +424,8 @@
                                                         <h5 class="card-title mb-1">📊 Student Count by Batch</h5>
                                                         <p class="text-muted mb-0">Monitor capacity distribution</p>
                                                     </div>
-                                                    <select id="batchChartType" class="form-select form-select-sm" style="width: auto;">
+                                                    <select id="batchChartType" class="form-select form-select-sm"
+                                                        style="width: auto;">
                                                         <option value="bar">Bar Chart</option>
                                                         <option value="horizontalBar">Horizontal Bar</option>
                                                     </select>
@@ -412,7 +436,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="col-xl-4 mb-4">
                                         <div class="card card-hover h-100">
                                             <div class="card-body">
@@ -421,13 +445,15 @@
                                                         <h5 class="card-title mb-1">🎯 Today's Performance</h5>
                                                         <p class="text-muted mb-0">Daily overview</p>
                                                     </div>
-                                                    <button class="btn btn-outline-secondary btn-sm" onclick="refreshOverview()">
+                                                    <button class="btn btn-outline-secondary btn-sm"
+                                                        onclick="refreshOverview()">
                                                         <i class="fas fa-sync-alt"></i>
                                                     </button>
                                                 </div>
                                                 <div class="row">
                                                     <div class="col-12 mb-3">
-                                                        <div class="d-flex justify-content-between align-items-center p-3 bg-light-primary rounded">
+                                                        <div
+                                                            class="d-flex justify-content-between align-items-center p-3 bg-light-primary rounded">
                                                             <div>
                                                                 <div class="text-muted fs-12">Today's Registrations</div>
                                                                 <div class="fw-bold fs-18" id="todayRegistrations">0</div>
@@ -478,7 +504,8 @@
                                                         <h5 class="card-title mb-1">📅 Active Semesters</h5>
                                                         <p class="text-muted mb-0">Currently running semesters</p>
                                                     </div>
-                                                    <button class="btn btn-outline-primary btn-sm" onclick="viewAllSemesters()">
+                                                    <button class="btn btn-outline-primary btn-sm"
+                                                        onclick="viewAllSemesters()">
                                                         <i class="fas fa-eye me-1"></i> View All
                                                     </button>
                                                 </div>
@@ -498,7 +525,8 @@
                                                         <tbody id="activeSemestersBody">
                                                             <tr>
                                                                 <td colspan="7" class="text-center py-4">
-                                                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                                                    <div class="spinner-border spinner-border-sm text-primary"
+                                                                        role="status"></div>
                                                                     <span class="ms-2">Loading active semesters...</span>
                                                                 </td>
                                                             </tr>
@@ -520,10 +548,12 @@
                                                 <div class="d-flex justify-content-between align-items-center mb-4">
                                                     <div>
                                                         <h5 class="card-title mb-1">✅ Pending Registration Approvals</h5>
-                                                        <p class="text-muted mb-0">Approve or reject student registrations</p>
+                                                        <p class="text-muted mb-0">Approve or reject student registrations
+                                                        </p>
                                                     </div>
                                                     <div class="d-flex gap-2">
-                                                        <button class="btn btn-outline-success btn-sm" onclick="approveAll()">
+                                                        <button class="btn btn-outline-success btn-sm"
+                                                            onclick="approveAll()">
                                                             <i class="fas fa-check-double me-1"></i> Approve All
                                                         </button>
                                                         <button class="btn btn-outline-danger btn-sm" onclick="rejectAll()">
@@ -531,7 +561,7 @@
                                                         </button>
                                                     </div>
                                                 </div>
-                                                
+
                                                 <div class="table-responsive">
                                                     <table class="table table-hover">
                                                         <thead>
@@ -553,7 +583,8 @@
                                                                     <div class="spinner-border text-primary" role="status">
                                                                         <span class="visually-hidden">Loading...</span>
                                                                     </div>
-                                                                    <p class="text-muted mt-2">Loading pending approvals...</p>
+                                                                    <p class="text-muted mt-2">Loading pending approvals...
+                                                                    </p>
                                                                 </td>
                                                             </tr>
                                                         </tbody>
@@ -576,7 +607,8 @@
                                                         <h5 class="card-title mb-1">📈 Grade Distribution</h5>
                                                         <p class="text-muted mb-0">Overall academic performance</p>
                                                     </div>
-                                                    <select id="gradeChartType" class="form-select form-select-sm" style="width: auto;">
+                                                    <select id="gradeChartType" class="form-select form-select-sm"
+                                                        style="width: auto;">
                                                         <option value="bar">Bar Chart</option>
                                                         <option value="pie">Pie Chart</option>
                                                         <option value="doughnut">Doughnut Chart</option>
@@ -588,7 +620,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="col-xl-4 mb-4">
                                         <div class="card card-hover h-100">
                                             <div class="card-body">
@@ -600,7 +632,8 @@
                                                     <span class="badge badge-purple">Pass Rate</span>
                                                 </div>
                                                 <div id="coursePerformanceList" class="list-group list-group-flush">
-                                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                                    <div
+                                                        class="list-group-item d-flex justify-content-between align-items-center">
                                                         <div class="text-muted">Loading...</div>
                                                         <span class="badge bg-secondary">0%</span>
                                                     </div>
@@ -629,7 +662,8 @@
                                                         <p class="text-muted mb-0">Daily attendance trends</p>
                                                     </div>
                                                     <div class="d-flex gap-2">
-                                                        <button class="btn btn-outline-secondary btn-sm" onclick="exportAttendance()">
+                                                        <button class="btn btn-outline-secondary btn-sm"
+                                                            onclick="exportAttendance()">
                                                             <i class="fas fa-download me-1"></i> Export
                                                         </button>
                                                     </div>
@@ -641,7 +675,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div class="row">
                                     <div class="col-12">
                                         <div class="card card-hover">
@@ -693,7 +727,8 @@
                                                         <h5 class="card-title mb-1">📊 Clearance Request Status</h5>
                                                         <p class="text-muted mb-0">By clearance type</p>
                                                     </div>
-                                                    <select id="clearanceChartType" class="form-select form-select-sm" style="width: auto;">
+                                                    <select id="clearanceChartType" class="form-select form-select-sm"
+                                                        style="width: auto;">
                                                         <option value="bar">Stacked Bar</option>
                                                         <option value="stackedBar">Grouped Bar</option>
                                                     </select>
@@ -704,7 +739,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="col-xl-6 mb-4">
                                         <div class="card card-hover h-100">
                                             <div class="card-body">
@@ -713,7 +748,8 @@
                                                         <h5 class="card-title mb-1">🔄 Recent Clearance Requests</h5>
                                                         <p class="text-muted mb-0">Latest 10 requests</p>
                                                     </div>
-                                                    <button class="btn btn-outline-primary btn-sm" onclick="viewAllClearances()">
+                                                    <button class="btn btn-outline-primary btn-sm"
+                                                        onclick="viewAllClearances()">
                                                         <i class="fas fa-eye me-1"></i> View All
                                                     </button>
                                                 </div>
@@ -763,7 +799,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="col-xl-3 col-md-6 mb-4">
                                         <div class="card kpi-card card-hover border-left-warning">
                                             <div class="card-body">
@@ -781,7 +817,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="col-xl-3 col-md-6 mb-4">
                                         <div class="card kpi-card card-hover border-left-primary">
                                             <div class="card-body">
@@ -799,7 +835,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="col-xl-3 col-md-6 mb-4">
                                         <div class="card kpi-card card-hover border-left-purple">
                                             <div class="card-body">
@@ -818,7 +854,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div class="row">
                                     <div class="col-12">
                                         <div class="card card-hover">
@@ -829,10 +865,12 @@
                                                         <p class="text-muted mb-0">Last 6 months performance</p>
                                                     </div>
                                                     <div class="btn-group btn-group-sm">
-                                                        <button class="chart-toggle-btn active" onclick="toggleRevenueChart('line')">
+                                                        <button class="chart-toggle-btn active"
+                                                            onclick="toggleRevenueChart('line')">
                                                             <i class="fas fa-chart-line"></i>
                                                         </button>
-                                                        <button class="chart-toggle-btn" onclick="toggleRevenueChart('bar')">
+                                                        <button class="chart-toggle-btn"
+                                                            onclick="toggleRevenueChart('bar')">
                                                             <i class="fas fa-chart-bar"></i>
                                                         </button>
                                                     </div>
@@ -863,7 +901,8 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="rejectionReason" class="form-label">Reason for Rejection</label>
-                        <textarea class="form-control" id="rejectionReason" rows="3" placeholder="Enter reason for rejection..." required></textarea>
+                        <textarea class="form-control" id="rejectionReason" rows="3"
+                            placeholder="Enter reason for rejection..." required></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -885,12 +924,12 @@
             intake_id: '',
             module_id: ''
         };
-        
+
         // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             initializeAnalyticsFilters();
             loadDashboardData();
-            
+
             // Load data for active tab
             const activeTab = document.querySelector('#dashboardTabs .nav-link.active');
             if (activeTab.id === 'overview-tab') {
@@ -907,10 +946,10 @@
             } else if (activeTab.id === 'payments-tab') {
                 fetchPaymentOverview();
             }
-            
+
             // Tab change event
             document.querySelectorAll('#dashboardTabs button').forEach(tab => {
-                tab.addEventListener('shown.bs.tab', function(event) {
+                tab.addEventListener('shown.bs.tab', function (event) {
                     const tabId = event.target.id;
                     if (tabId === 'overview-tab') {
                         fetchOverviewMetrics();
@@ -928,36 +967,36 @@
                     }
                 });
             });
-            
+
             // Chart type changes
-            document.getElementById('batchChartType').addEventListener('change', function() {
+            document.getElementById('batchChartType').addEventListener('change', function () {
                 fetchStudentCountByBatch(this.value);
             });
-            
-            document.getElementById('gradeChartType').addEventListener('change', function() {
+
+            document.getElementById('gradeChartType').addEventListener('change', function () {
                 fetchAcademicPerformance(this.value);
             });
-            
-            document.getElementById('clearanceChartType').addEventListener('change', function() {
+
+            document.getElementById('clearanceChartType').addEventListener('change', function () {
                 fetchClearanceStatus(this.value);
             });
-            
+
             // Search functionality
-            document.getElementById('searchInput').addEventListener('input', function(e) {
+            document.getElementById('searchInput').addEventListener('input', function (e) {
                 searchDashboard(e.target.value);
             });
-            
+
             // Auto-refresh every 5 minutes
             setInterval(refreshOverview, 300000);
         });
-        
+
         function loadDashboardData() {
             fetchOverviewMetrics();
         }
-        
+
         function refreshAllData() {
             document.body.classList.add('data-loading');
-            
+
             // Refresh based on active tab
             const activeTab = document.querySelector('#dashboardTabs .nav-link.active');
             if (activeTab.id === 'overview-tab') {
@@ -974,17 +1013,17 @@
             } else if (activeTab.id === 'payments-tab') {
                 fetchPaymentOverview();
             }
-            
+
             showToast('Dashboard data refreshed successfully', 'success');
-            
+
             setTimeout(() => {
                 document.body.classList.remove('data-loading');
             }, 1000);
         }
-        
+
         function setTimePeriod(period, buttonElement = null) {
             currentTimePeriod = period;
-            
+
             // Update active button
             document.querySelectorAll('.time-filter-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.period === period);
@@ -993,7 +1032,7 @@
             if (buttonElement) {
                 buttonElement.blur();
             }
-            
+
             // Refresh data
             refreshAllData();
         }
@@ -1040,6 +1079,22 @@
                     loadIntakesForAnalyticsFilter(selectedLocation, this.value),
                     loadModulesForAnalyticsFilter(this.value)
                 ]);
+            });
+
+            intakeDropdown.addEventListener('change', async function () {
+                const courseId = document.getElementById('analyticsCourseFilter').value;
+                const intakeId = this.value; // Get selected intake ID
+
+                console.log('Intake changed - courseId:', courseId, 'intakeId:', intakeId); // DEBUG
+
+                moduleDropdown.innerHTML = '<option value="">All Modules</option>';
+                moduleDropdown.disabled = true;
+
+                if (courseId) {
+                    await loadModulesForAnalyticsFilter(courseId, intakeId);
+                }
+
+                analyticsFilters.intake_id = intakeId;
             });
 
             applyButton.addEventListener('click', function () {
@@ -1152,7 +1207,7 @@
             }
         }
 
-        async function loadModulesForAnalyticsFilter(courseId) {
+        async function loadModulesForAnalyticsFilter(courseId, intakeId = null) {
             const moduleDropdown = document.getElementById('analyticsModuleFilter');
             if (!moduleDropdown) {
                 return;
@@ -1162,7 +1217,13 @@
             moduleDropdown.disabled = true;
 
             try {
-                const response = await fetch(`{{ route('api.program.admin.l2.modules.by.course') }}?course_id=${encodeURIComponent(courseId)}`, {
+                // Build query with both course_id and intake_id
+                let url = `{{ route('api.program.admin.l2.modules.by.course') }}?course_id=${encodeURIComponent(courseId)}`;
+                if (intakeId) {
+                    url += `&intake_id=${encodeURIComponent(intakeId)}`;
+                }
+
+                const response = await fetch(url, {
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
@@ -1208,35 +1269,35 @@
 
             return params;
         }
-        
+
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             toast.className = `toast align-items-center text-bg-${type} border-0`;
             toast.setAttribute('role', 'alert');
             toast.setAttribute('aria-live', 'assertive');
             toast.setAttribute('aria-atomic', 'true');
-            
+
             toast.innerHTML = `
-                <div class="d-flex">
-                    <div class="toast-body">
-                        <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
-                        ${message}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                </div>
-            `;
-            
+                            <div class="d-flex">
+                                <div class="toast-body">
+                                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+                                    ${message}
+                                </div>
+                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                            </div>
+                        `;
+
             const container = document.querySelector('.toast-container') || document.body;
             container.appendChild(toast);
-            
+
             const bsToast = new bootstrap.Toast(toast);
             bsToast.show();
-            
+
             toast.addEventListener('hidden.bs.toast', () => {
                 toast.remove();
             });
         }
-        
+
         // Overview Metrics
         async function fetchOverviewMetrics() {
             try {
@@ -1247,35 +1308,35 @@
                     }
                 });
                 const data = await response.json();
-                
+
                 if (data.success) {
                     // Update KPI cards
-                    document.getElementById('totalActiveStudents').textContent = 
+                    document.getElementById('totalActiveStudents').textContent =
                         data.data.total_active_students?.toLocaleString() || '0';
-                    document.getElementById('activeBatches').textContent = 
+                    document.getElementById('activeBatches').textContent =
                         data.data.active_batches?.toLocaleString() || '0';
-                    document.getElementById('pendingApprovals').textContent = 
+                    document.getElementById('pendingApprovals').textContent =
                         data.data.pending_approvals?.toLocaleString() || '0';
-                    document.getElementById('avgAttendanceRate').textContent = 
+                    document.getElementById('avgAttendanceRate').textContent =
                         data.data.avg_attendance_rate + '%' || '0%';
-                    
+
                     // Update today's metrics
-                    document.getElementById('todayRegistrations').textContent = 
+                    document.getElementById('todayRegistrations').textContent =
                         data.data.today_registrations || '0';
-                    document.getElementById('growthPercentage').textContent = 
+                    document.getElementById('growthPercentage').textContent =
                         data.data.growth_percentage + '%' || '0%';
-                    document.getElementById('pendingClearances').textContent = 
+                    document.getElementById('pendingClearances').textContent =
                         data.data.pending_clearances || '0';
-                    document.getElementById('specialApprovalNeeded').textContent = 
+                    document.getElementById('specialApprovalNeeded').textContent =
                         data.data.special_approval_needed || '0';
-                    document.getElementById('passRate').textContent = 
+                    document.getElementById('passRate').textContent =
                         data.data.pass_rate + '%' || '0%';
-                    document.getElementById('monthSemesterReg').textContent = 
+                    document.getElementById('monthSemesterReg').textContent =
                         data.data.month_semester_reg || '0';
-                    
+
                     // Update student count by batch chart
                     updateBatchStudentChart(data.data.student_count_by_batch);
-                    
+
                 } else {
                     showToast(data.message || 'Failed to load overview metrics', 'danger');
                 }
@@ -1284,24 +1345,24 @@
                 showToast('Failed to load dashboard metrics', 'danger');
             }
         }
-        
+
         function updateBatchStudentChart(data) {
             const ctx = document.getElementById('batchStudentChart');
             const chartType = document.getElementById('batchChartType').value;
-            
+
             if (chartInstances.batchStudent) {
                 chartInstances.batchStudent.destroy();
             }
-            
+
             if (!data || data.length === 0) {
                 // Show empty state
                 ctx.innerHTML = '<div class="text-center py-5 text-muted">No data available</div>';
                 return;
             }
-            
+
             const labels = data.map(item => `${item.batch}\n${item.course_name.substring(0, 20)}...`);
             const counts = data.map(item => item.count);
-            
+
             chartInstances.batchStudent = new Chart(ctx, {
                 type: chartType === 'horizontalBar' ? 'bar' : chartType,
                 data: {
@@ -1325,7 +1386,7 @@
                         },
                         tooltip: {
                             callbacks: {
-                                label: function(context) {
+                                label: function (context) {
                                     return `Students: ${context.raw}`;
                                 }
                             }
@@ -1342,7 +1403,7 @@
                 }
             });
         }
-        
+
         // Active Semesters
         async function fetchActiveSemesters() {
             try {
@@ -1353,60 +1414,60 @@
                     }
                 });
                 const data = await response.json();
-                
+
                 const body = document.getElementById('activeSemestersBody');
-                
+
                 if (data.success && data.data.length > 0) {
                     let html = '';
                     data.data.forEach(semester => {
-                        const statusBadge = semester.status === 'active' ? 
+                        const statusBadge = semester.status === 'active' ?
                             '<span class="badge badge-success">Active</span>' :
                             '<span class="badge badge-warning">' + semester.status + '</span>';
-                        
+
                         html += `
-                            <tr>
-                                <td>${semester.name}</td>
-                                <td>${semester.course_name}</td>
-                                <td>${semester.start_date}</td>
-                                <td>${semester.end_date}</td>
-                                <td>
-                                    <span class="badge badge-purple">${semester.registered_count}</span>
-                                </td>
-                                <td>${statusBadge}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary" onclick="viewSemester(${semester.id})">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        `;
+                                        <tr>
+                                            <td>${semester.name}</td>
+                                            <td>${semester.course_name}</td>
+                                            <td>${semester.start_date}</td>
+                                            <td>${semester.end_date}</td>
+                                            <td>
+                                                <span class="badge badge-purple">${semester.registered_count}</span>
+                                            </td>
+                                            <td>${statusBadge}</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary" onclick="viewSemester(${semester.id})">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `;
                     });
-                    
+
                     body.innerHTML = html;
                 } else {
                     body.innerHTML = `
-                        <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">
-                                <i class="fas fa-inbox fa-2x mb-3 opacity-50"></i>
-                                <p>No active semesters found</p>
-                            </td>
-                        </tr>
-                    `;
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            <i class="fas fa-inbox fa-2x mb-3 opacity-50"></i>
+                                            <p>No active semesters found</p>
+                                        </td>
+                                    </tr>
+                                `;
                 }
             } catch (error) {
                 console.error('Error fetching active semesters:', error);
                 const body = document.getElementById('activeSemestersBody');
                 body.innerHTML = `
-                    <tr>
-                        <td colspan="7" class="text-center py-4 text-danger">
-                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
-                            <p>Failed to load active semesters</p>
-                        </td>
-                    </tr>
-                `;
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-danger">
+                                        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                                        <p>Failed to load active semesters</p>
+                                    </td>
+                                </tr>
+                            `;
             }
         }
-        
+
         // Pending Approvals
         async function fetchPendingApprovals() {
             try {
@@ -1417,71 +1478,71 @@
                     }
                 });
                 const data = await response.json();
-                
+
                 const body = document.getElementById('pendingApprovalsBody');
-                
+
                 if (data.success && data.data.length > 0) {
                     let html = '';
                     data.data.forEach(approval => {
                         html += `
-                            <tr>
-                                <td>
-                                    <div class="fw-medium">${approval.student_name}</div>
-                                    <small class="text-muted">ID: ${approval.student_id}</small>
-                                </td>
-                                <td>${approval.course_name}</td>
-                                <td>${approval.batch}</td>
-                                <td>${approval.registration_date}</td>
-                                <td>${parseFloat(approval.registration_fee).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                                <td>${approval.counselor_name || 'N/A'}</td>
-                                <td>${approval.remarks || '-'}</td>
-                                <td>${approval.created_at}</td>
-                                <td>
-                                    <div class="d-flex gap-1">
-                                        <button class="btn btn-sm btn-success" onclick="approveRegistration(${approval.id})">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-danger" onclick="showRejectionModal(${approval.id})">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-info" onclick="viewStudent(${approval.student_id})">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        `;
+                                        <tr>
+                                            <td>
+                                                <div class="fw-medium">${approval.student_name}</div>
+                                                <small class="text-muted">ID: ${approval.student_id}</small>
+                                            </td>
+                                            <td>${approval.course_name}</td>
+                                            <td>${approval.batch}</td>
+                                            <td>${approval.registration_date}</td>
+                                            <td>${parseFloat(approval.registration_fee).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                            <td>${approval.counselor_name || 'N/A'}</td>
+                                            <td>${approval.remarks || '-'}</td>
+                                            <td>${approval.created_at}</td>
+                                            <td>
+                                                <div class="d-flex gap-1">
+                                                    <button class="btn btn-sm btn-success" onclick="approveRegistration(${approval.id})">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger" onclick="showRejectionModal(${approval.id})">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-info" onclick="viewStudent(${approval.student_id})">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `;
                     });
-                    
+
                     body.innerHTML = html;
                 } else {
                     body.innerHTML = `
-                        <tr>
-                            <td colspan="9" class="text-center py-5 text-muted">
-                                <i class="fas fa-check-circle fa-2x mb-3 opacity-50"></i>
-                                <p>No pending approvals</p>
-                                <p class="small">All registrations have been processed</p>
-                            </td>
-                        </tr>
-                    `;
+                                    <tr>
+                                        <td colspan="9" class="text-center py-5 text-muted">
+                                            <i class="fas fa-check-circle fa-2x mb-3 opacity-50"></i>
+                                            <p>No pending approvals</p>
+                                            <p class="small">All registrations have been processed</p>
+                                        </td>
+                                    </tr>
+                                `;
                 }
             } catch (error) {
                 console.error('Error fetching pending approvals:', error);
                 const body = document.getElementById('pendingApprovalsBody');
                 body.innerHTML = `
-                    <tr>
-                        <td colspan="9" class="text-center py-5 text-danger">
-                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
-                            <p>Failed to load pending approvals</p>
-                            <button class="btn btn-sm btn-outline-danger mt-2" onclick="fetchPendingApprovals()">
-                                Retry
-                            </button>
-                        </td>
-                    </tr>
-                `;
+                                <tr>
+                                    <td colspan="9" class="text-center py-5 text-danger">
+                                        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                                        <p>Failed to load pending approvals</p>
+                                        <button class="btn btn-sm btn-outline-danger mt-2" onclick="fetchPendingApprovals()">
+                                            Retry
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
             }
         }
-        
+
         // Academic Performance
         async function fetchAcademicPerformance(chartType = null) {
             try {
@@ -1494,38 +1555,38 @@
                     }
                 });
                 const data = await response.json();
-                
+
                 if (data.success) {
                     // Update grade distribution chart
                     updateGradeDistributionChart(data.data.grade_distribution, selectedChartType);
-                    
+
                     // Update course performance list
                     updateCoursePerformanceList(data.data.course_performance);
-                    
+
                     // Update repeat students
-                    document.getElementById('repeatStudents').textContent = 
+                    document.getElementById('repeatStudents').textContent =
                         data.data.repeat_students || '0';
                 }
             } catch (error) {
                 console.error('Error fetching academic performance:', error);
             }
         }
-        
+
         function updateGradeDistributionChart(data, chartType = 'bar') {
             const ctx = document.getElementById('gradeDistributionChart');
-            
+
             if (chartInstances.gradeDistribution) {
                 chartInstances.gradeDistribution.destroy();
             }
-            
+
             if (!data || data.length === 0) {
                 ctx.innerHTML = '<div class="text-center py-5 text-muted">No exam data available</div>';
                 return;
             }
-            
+
             const labels = data.map(item => item.grade || 'No Grade');
             const counts = data.map(item => item.count);
-            
+
             chartInstances.gradeDistribution = new Chart(ctx, {
                 type: chartType,
                 data: {
@@ -1555,39 +1616,39 @@
                 }
             });
         }
-        
+
         function updateCoursePerformanceList(data) {
             const container = document.getElementById('coursePerformanceList');
-            
+
             if (!data || data.length === 0) {
                 container.innerHTML = `
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div class="text-muted">No course performance data</div>
-                        <span class="badge bg-secondary">-</span>
-                    </div>
-                `;
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div class="text-muted">No course performance data</div>
+                                    <span class="badge bg-secondary">-</span>
+                                </div>
+                            `;
                 return;
             }
-            
+
             let html = '';
             data.slice(0, 5).forEach(course => {
-                const badgeClass = course.pass_rate >= 70 ? 'badge-success' : 
-                                 course.pass_rate >= 50 ? 'badge-warning' : 'badge-danger';
-                
+                const badgeClass = course.pass_rate >= 70 ? 'badge-success' :
+                    course.pass_rate >= 50 ? 'badge-warning' : 'badge-danger';
+
                 html += `
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="fw-medium">${course.course_name}</div>
-                            <small class="text-muted">${course.passed}/${course.total} students</small>
-                        </div>
-                        <span class="badge ${badgeClass}">${course.pass_rate}%</span>
-                    </div>
-                `;
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="fw-medium">${course.course_name}</div>
+                                        <small class="text-muted">${course.passed}/${course.total} students</small>
+                                    </div>
+                                    <span class="badge ${badgeClass}">${course.pass_rate}%</span>
+                                </div>
+                            `;
             });
-            
+
             container.innerHTML = html;
         }
-        
+
         // Attendance Overview
         async function fetchAttendanceOverview() {
             try {
@@ -1601,17 +1662,17 @@
                     }
                 });
                 const data = await response.json();
-                
+
                 if (data.success) {
                     // Update attendance trend chart
                     updateAttendanceTrendChart(data.data.daily_attendance);
-                    
+
                     // Update course attendance table
                     updateCourseAttendanceTable(data.data.course_attendance);
-                    
+
                     // Update overall stats
                     if (data.data.overall_stats) {
-                        document.getElementById('overallAttendanceRate').textContent = 
+                        document.getElementById('overallAttendanceRate').textContent =
                             Math.round(data.data.overall_stats.overall_rate) + '%' || '0%';
                     }
                 }
@@ -1619,22 +1680,22 @@
                 console.error('Error fetching attendance overview:', error);
             }
         }
-        
+
         function updateAttendanceTrendChart(data) {
             const ctx = document.getElementById('attendanceTrendChart');
-            
+
             if (chartInstances.attendanceTrend) {
                 chartInstances.attendanceTrend.destroy();
             }
-            
+
             if (!data || data.length === 0) {
                 ctx.innerHTML = '<div class="text-center py-5 text-muted">No attendance data available</div>';
                 return;
             }
-            
+
             const labels = data.map(item => item.attendance_date);
             const rates = data.map(item => Math.round(item.attendance_rate));
-            
+
             chartInstances.attendanceTrend = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -1657,7 +1718,7 @@
                             beginAtZero: true,
                             max: 100,
                             ticks: {
-                                callback: function(value) {
+                                callback: function (value) {
                                     return value + '%';
                                 }
                             }
@@ -1666,53 +1727,53 @@
                 }
             });
         }
-        
+
         function updateCourseAttendanceTable(data) {
             const body = document.getElementById('courseAttendanceBody');
-            
+
             if (!data || data.length === 0) {
                 body.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="text-center py-4 text-muted">
-                            No attendance records found
-                        </td>
-                    </tr>
-                `;
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        No attendance records found
+                                    </td>
+                                </tr>
+                            `;
                 return;
             }
-            
+
             let html = '';
             data.forEach(course => {
-                const statusClass = course.attendance_rate >= 80 ? 'badge-success' : 
-                                   course.attendance_rate >= 60 ? 'badge-warning' : 'badge-danger';
-                const statusText = course.attendance_rate >= 80 ? 'Good' : 
-                                   course.attendance_rate >= 60 ? 'Average' : 'Poor';
-                
+                const statusClass = course.attendance_rate >= 80 ? 'badge-success' :
+                    course.attendance_rate >= 60 ? 'badge-warning' : 'badge-danger';
+                const statusText = course.attendance_rate >= 80 ? 'Good' :
+                    course.attendance_rate >= 60 ? 'Average' : 'Poor';
+
                 html += `
-                    <tr>
-                        <td>${course.course_name}</td>
-                        <td>
-                            <div class="progress" style="height: 20px;">
-                                <div class="progress-bar ${course.attendance_rate >= 80 ? 'bg-success' : course.attendance_rate >= 60 ? 'bg-warning' : 'bg-danger'}" 
-                                     style="width: ${course.attendance_rate}%">
-                                    ${course.attendance_rate}%
-                                </div>
-                            </div>
-                        </td>
-                        <td>${course.total_records}</td>
-                        <td><span class="badge ${statusClass}">${statusText}</span></td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary" onclick="viewCourseAttendance('${course.course_name}')">
-                                <i class="fas fa-chart-bar"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
+                                <tr>
+                                    <td>${course.course_name}</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar ${course.attendance_rate >= 80 ? 'bg-success' : course.attendance_rate >= 60 ? 'bg-warning' : 'bg-danger'}" 
+                                                 style="width: ${course.attendance_rate}%">
+                                                ${course.attendance_rate}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>${course.total_records}</td>
+                                    <td><span class="badge ${statusClass}">${statusText}</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="viewCourseAttendance('${course.course_name}')">
+                                            <i class="fas fa-chart-bar"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
             });
-            
+
             body.innerHTML = html;
         }
-        
+
         // Clearance Status
         async function fetchClearanceStatus(chartType = 'bar') {
             try {
@@ -1723,11 +1784,11 @@
                     }
                 });
                 const data = await response.json();
-                
+
                 if (data.success) {
                     // Update clearance status chart
                     updateClearanceStatusChart(data.data.clearance_by_type, chartType);
-                    
+
                     // Update recent clearances
                     updateRecentClearances(data.data.recent_requests);
                 }
@@ -1735,24 +1796,24 @@
                 console.error('Error fetching clearance status:', error);
             }
         }
-        
+
         function updateClearanceStatusChart(data, chartType = 'bar') {
             const ctx = document.getElementById('clearanceStatusChart');
-            
+
             if (chartInstances.clearanceStatus) {
                 chartInstances.clearanceStatus.destroy();
             }
-            
+
             if (!data || Object.keys(data).length === 0) {
                 ctx.innerHTML = '<div class="text-center py-5 text-muted">No clearance data available</div>';
                 return;
             }
-            
+
             const types = Object.keys(data);
             const pendingData = types.map(type => data[type].pending || 0);
             const approvedData = types.map(type => data[type].approved || 0);
             const rejectedData = types.map(type => data[type].rejected || 0);
-            
+
             chartInstances.clearanceStatus = new Chart(ctx, {
                 type: chartType === 'stackedBar' ? 'bar' : 'bar',
                 data: {
@@ -1796,41 +1857,41 @@
                 }
             });
         }
-        
+
         function updateRecentClearances(data) {
             const body = document.getElementById('recentClearancesBody');
-            
+
             if (!data || data.length === 0) {
                 body.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="text-center py-3 text-muted">
-                            No recent clearance requests
-                        </td>
-                    </tr>
-                `;
+                                <tr>
+                                    <td colspan="5" class="text-center py-3 text-muted">
+                                        No recent clearance requests
+                                    </td>
+                                </tr>
+                            `;
                 return;
             }
-            
+
             let html = '';
             data.forEach(request => {
                 const statusBadge = request.status === 'approved' ? 'badge-success' :
-                                   request.status === 'rejected' ? 'badge-danger' : 'badge-warning';
+                    request.status === 'rejected' ? 'badge-danger' : 'badge-warning';
                 const statusText = request.status.charAt(0).toUpperCase() + request.status.slice(1);
-                
+
                 html += `
-                    <tr>
-                        <td>${request.student_name}</td>
-                        <td><span class="badge bg-info">${request.clearance_type}</span></td>
-                        <td>${request.course_name}</td>
-                        <td><span class="badge ${statusBadge}">${statusText}</span></td>
-                        <td>${request.requested_at}</td>
-                    </tr>
-                `;
+                                <tr>
+                                    <td>${request.student_name}</td>
+                                    <td><span class="badge bg-info">${request.clearance_type}</span></td>
+                                    <td>${request.course_name}</td>
+                                    <td><span class="badge ${statusBadge}">${statusText}</span></td>
+                                    <td>${request.requested_at}</td>
+                                </tr>
+                            `;
             });
-            
+
             body.innerHTML = html;
         }
-        
+
         // Payment Overview
         async function fetchPaymentOverview() {
             try {
@@ -1841,27 +1902,27 @@
                     }
                 });
                 const data = await response.json();
-                
+
                 if (data.success) {
                     // Update KPI cards
-                    document.getElementById('totalRevenue').textContent = 
-                        'LKR ' + (data.data.total_revenue?.toLocaleString('en-US', {minimumFractionDigits: 2}) || '0.00');
-                    document.getElementById('pendingPayments').textContent = 
+                    document.getElementById('totalRevenue').textContent =
+                        'LKR ' + (data.data.total_revenue?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00');
+                    document.getElementById('pendingPayments').textContent =
                         data.data.pending_payments?.toLocaleString() || '0';
-                    
+
                     // Calculate this month revenue
                     const thisMonth = new Date().toLocaleString('default', { month: 'short', year: 'numeric' });
                     const thisMonthRevenue = data.data.monthly_revenue?.find(m => m.month === thisMonth)?.revenue || 0;
-                    document.getElementById('thisMonthRevenue').textContent = 
-                        'LKR ' + thisMonthRevenue.toLocaleString('en-US', {minimumFractionDigits: 2});
-                    
+                    document.getElementById('thisMonthRevenue').textContent =
+                        'LKR ' + thisMonthRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 });
+
                     // Calculate collection rate
                     const paidCount = data.data.payment_stats?.find(p => p.status === 'paid')?.count || 0;
                     const pendingCount = data.data.pending_payments || 0;
                     const totalCount = paidCount + pendingCount;
                     const collectionRate = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
                     document.getElementById('collectionRate').textContent = collectionRate + '%';
-                    
+
                     // Update revenue trend chart
                     updateRevenueTrendChart(data.data.monthly_revenue);
                 }
@@ -1869,22 +1930,22 @@
                 console.error('Error fetching payment overview:', error);
             }
         }
-        
+
         function updateRevenueTrendChart(data) {
             const ctx = document.getElementById('revenueTrendChart');
-            
+
             if (chartInstances.revenueTrend) {
                 chartInstances.revenueTrend.destroy();
             }
-            
+
             if (!data || data.length === 0) {
                 ctx.innerHTML = '<div class="text-center py-5 text-muted">No revenue data available</div>';
                 return;
             }
-            
+
             const labels = data.map(item => item.month);
             const revenues = data.map(item => item.revenue);
-            
+
             chartInstances.revenueTrend = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -1905,7 +1966,7 @@
                     scales: {
                         y: {
                             ticks: {
-                                callback: function(value) {
+                                callback: function (value) {
                                     return 'LKR ' + value.toLocaleString();
                                 }
                             }
@@ -1914,16 +1975,16 @@
                 }
             });
         }
-        
+
         function toggleRevenueChart(type) {
             // This would switch between line and bar chart for revenue
             // Implementation depends on your data structure
         }
-        
+
         // Approval Actions
         async function approveRegistration(id) {
             if (!confirm('Are you sure you want to approve this registration?')) return;
-            
+
             try {
                 const response = await fetch(`/api/program-admin-l2/approve-registration/${id}`, {
                     method: 'POST',
@@ -1933,9 +1994,9 @@
                         'Content-Type': 'application/json'
                     }
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     showToast('Registration approved successfully', 'success');
                     fetchPendingApprovals();
@@ -1947,20 +2008,20 @@
                 showToast('Failed to approve registration', 'danger');
             }
         }
-        
+
         function showRejectionModal(id) {
             currentRejectId = id;
             const modal = new bootstrap.Modal(document.getElementById('rejectionModal'));
             modal.show();
         }
-        
+
         async function confirmReject() {
             const reason = document.getElementById('rejectionReason').value;
             if (!reason.trim()) {
                 alert('Please enter a reason for rejection');
                 return;
             }
-            
+
             try {
                 const response = await fetch(`/api/program-admin-l2/reject-registration/${currentRejectId}`, {
                     method: 'POST',
@@ -1971,9 +2032,9 @@
                     },
                     body: JSON.stringify({ reason: reason })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
                     showToast('Registration rejected successfully', 'success');
                     document.getElementById('rejectionReason').value = '';
@@ -1988,51 +2049,51 @@
                 showToast('Failed to reject registration', 'danger');
             }
         }
-        
+
         function approveAll() {
             if (!confirm('Are you sure you want to approve ALL pending registrations?')) return;
             // Implementation would need to approve all pending registrations
             showToast('This feature is under development', 'info');
         }
-        
+
         function rejectAll() {
             if (!confirm('Are you sure you want to reject ALL pending registrations?')) return;
             // Implementation would need to reject all pending registrations with a common reason
             showToast('This feature is under development', 'info');
         }
-        
+
         // Navigation functions
         function viewAllSemesters() {
             window.location.href = '/semester-management';
         }
-        
+
         function viewAllClearances() {
             window.location.href = '/clearance-requests';
         }
-        
+
         function viewStudent(studentId) {
             window.location.href = `/students/${studentId}`;
         }
-        
+
         function viewSemester(semesterId) {
             window.location.href = `/semester-management/${semesterId}`;
         }
-        
+
         function viewCourseAttendance(courseName) {
             // Navigate to detailed attendance for this course
             window.location.href = `/attendance?course=${encodeURIComponent(courseName)}`;
         }
-        
+
         function exportAttendance() {
             showToast('Export feature is under development', 'info');
         }
-        
+
         function searchDashboard(query) {
             // Search functionality across all tabs
             // Implementation depends on what you want to search
             showToast('Search feature is under development', 'info');
         }
-        
+
         function refreshOverview() {
             fetchOverviewMetrics();
             fetchActiveSemesters();
