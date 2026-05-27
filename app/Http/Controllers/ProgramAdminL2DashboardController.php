@@ -560,78 +560,79 @@ class ProgramAdminL2DashboardController extends Controller
      * Get payment overview
      */
     public function getPaymentOverview(Request $request)
-    {
-        $location = auth()->user()->user_location ?? 'Welisara';
-        $location = str_replace('Nebula Institute of Technology – ', '', $location);
-        $location = str_replace('Nebula Institute of Technology - ', '', $location);
-        
-        try {
-            // Payment statistics
-            $paymentStats = PaymentDetail::whereHas('courseRegistration', function ($query) use ($location) {
-                    $query->where('location', $location);
-                })
-                ->select(
-                    'status',
-                    DB::raw('COUNT(*) as count'),
-                    DB::raw('SUM(amount) as total_amount')
-                )
-                ->groupBy('status')
-                ->get();
-            
-            // Monthly revenue
-            $monthlyRevenue = PaymentDetail::whereHas('courseRegistration', function ($query) use ($location) {
-                    $query->where('location', $location);
-                })
-                ->where('status', 'paid')
-                ->select(
-                    DB::raw('YEAR(payment_date) as year'),
-                    DB::raw('MONTH(payment_date) as month'),
-                    DB::raw('SUM(amount) as revenue')
-                )
-                ->whereNotNull('payment_date')
-                ->groupBy(DB::raw('YEAR(payment_date), MONTH(payment_date)'))
-                ->orderBy('year', 'desc')
-                ->orderBy('month', 'desc')
-                ->limit(6)
-                ->get()
-                ->map(function ($item) {
-                    return [
-                        'month' => Carbon::create($item->year, $item->month, 1)->format('M Y'),
-                        'revenue' => $item->revenue
-                    ];
-                });
-            
-            // Pending payments count
-            $pendingPayments = PaymentDetail::whereHas('courseRegistration', function ($query) use ($location) {
-                    $query->where('location', $location);
-                })
-                ->where('status', 'pending')
-                ->count();
-            
-            // Total revenue
-            $totalRevenue = PaymentDetail::whereHas('courseRegistration', function ($query) use ($location) {
-                    $query->where('location', $location);
-                })
-                ->where('status', 'paid')
-                ->sum('amount');
-            
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'payment_stats' => $paymentStats,
-                    'monthly_revenue' => $monthlyRevenue,
-                    'pending_payments' => $pendingPayments,
-                    'total_revenue' => $totalRevenue
-                ]
-            ]);
-            
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load payment data'
-            ], 500);
-        }
+{
+    $location = auth()->user()->user_location ?? 'Welisara';
+    $location = str_replace('Nebula Institute of Technology – ', '', $location);
+    $location = str_replace('Nebula Institute of Technology - ', '', $location);
+
+    try {
+        // Total revenue from payments (through course registration location)
+        $totalRevenue = PaymentDetail::whereHas('registration', function ($query) use ($location) {
+                $query->where('location', $location);
+            })
+            ->where('status', 'paid')
+            ->sum('amount');
+
+        // Pending payments count
+        $pendingPayments = PaymentDetail::whereHas('registration', function ($query) use ($location) {
+                $query->where('location', $location);
+            })
+            ->where('status', 'pending')
+            ->count();
+
+        // Monthly revenue for last 12 months
+        $monthlyRevenue = PaymentDetail::whereHas('registration', function ($query) use ($location) {
+                $query->where('location', $location);
+            })
+            ->where('status', 'paid')
+            ->selectRaw('DATE_FORMAT(payment_effective_date, "%b %Y") as month, SUM(amount) as revenue')
+            ->groupByRaw('DATE_FORMAT(payment_effective_date, "%b %Y")')
+            ->orderByRaw('payment_effective_date DESC')
+            ->limit(12)
+            ->get()
+            ->reverse()
+            ->map(function ($item) {
+                return [
+                    'month' => $item->month ?? 'N/A',
+                    'revenue' => (float) ($item->revenue ?? 0)
+                ];
+            })
+            ->values()
+            ->toArray();
+
+        // Payment statistics by status
+        $paymentStats = PaymentDetail::whereHas('registration', function ($query) use ($location) {
+                $query->where('location', $location);
+            })
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'status' => $item->status ?? 'unknown',
+                    'count' => (int) ($item->count ?? 0)
+                ];
+            })
+            ->toArray();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total_revenue' => (float) ($totalRevenue ?? 0),
+                'pending_payments' => (int) ($pendingPayments ?? 0),
+                'monthly_revenue' => $monthlyRevenue ?? [],
+                'payment_stats' => $paymentStats ?? [],
+            ]
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Payment Overview Error: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load payment overview',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
 
     /**
      * Approve registration
