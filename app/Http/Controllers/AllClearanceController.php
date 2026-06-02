@@ -27,12 +27,12 @@ class AllClearanceController extends Controller
         // Group intake requests by intake and calculate summary statistics
         $intakeRequests = collect();
 
-        $filteredRequests = $allClearanceRequests->filter(function($request) {
+        $filteredRequests = $allClearanceRequests->filter(function ($request) {
             return $request->intake_id && $request->course_id && $request->location;
         });
 
         // Group by unique combination of intake, course, location, and clearance type
-        $groupedRequests = $filteredRequests->groupBy(function($request) {
+        $groupedRequests = $filteredRequests->groupBy(function ($request) {
             return $request->intake_id . '-' . $request->course_id . '-' . $request->location . '-' . $request->clearance_type;
         });
 
@@ -60,7 +60,7 @@ class AllClearanceController extends Controller
             ]);
         }
 
-        $individualRequests = $allClearanceRequests->filter(function($request) {
+        $individualRequests = $allClearanceRequests->filter(function ($request) {
             // Individual requests are those sent for specific students
             // These would be sent via the individual clearance tab
             return $request->student_id && !$request->intake_id;
@@ -73,8 +73,8 @@ class AllClearanceController extends Controller
 
         if ($request->has('student_id')) {
             $student = Student::where('student_id', $request->student_id)
-                            ->orWhere('nic', $request->student_id)
-                            ->first();
+                ->orWhere('nic', $request->student_id)
+                ->first();
         }
 
         return view('clearance.all_clearance', compact(
@@ -121,7 +121,7 @@ class AllClearanceController extends Controller
     public function sendClearance($type, $student_id)
     {
         // You can implement logic here, like logging the request, updating DB, or redirecting
-        return back()->with('success', ucfirst($type).' clearance form sent for student ID: '.$student_id);
+        return back()->with('success', ucfirst($type) . ' clearance form sent for student ID: ' . $student_id);
     }
 
     /**
@@ -142,9 +142,9 @@ class AllClearanceController extends Controller
             $regQuery = CourseRegistration::where('course_id', $request->course_id)
                 ->where('intake_id', $request->intake_id)
                 ->where('location', $request->location)
-                ->where(function($query) {
+                ->where(function ($query) {
                     $query->where('status', 'Registered')
-                          ->orWhere('approval_status', 'Approved by DGM');
+                        ->orWhere('approval_status', 'Approved by DGM');
                 });
 
             if ($request->filled('student_id')) {
@@ -241,55 +241,58 @@ class AllClearanceController extends Controller
     public function getStudentsForIntake(Request $request)
     {
         try {
-    $intakeId = $request->input('intake_id');
-    $courseId = $request->input('course_id');
-    $location = $request->input('location');
+            $intakeId = $request->input('intake_id');
+            $courseId = $request->input('course_id');
+            $location = $request->input('location');
 
-    $query = CourseRegistration::where('intake_id', $intakeId)
-        ->when($courseId, fn($q) => $q->where('course_id', $courseId))
-        ->when($location, fn($q) => $q->where('location', $location))
-        ->with('student');
+            $query = CourseRegistration::where('intake_id', $intakeId)
+                ->whereHas('student', function ($q) {
+                    $q->where('academic_status', 'active');
+                })
+                ->when($courseId, fn($q) => $q->where('course_id', $courseId))
+                ->when($location, fn($q) => $q->where('location', $location))
+                ->with('student');
 
-    $registrations = $query->get();
+            $registrations = $query->get();
 
-    // Map to unique students (one entry per student)
-    $students = $registrations
-        ->unique('student_id')
-        ->map(function ($reg) use ($intakeId, $courseId, $location) {
-            $student = $reg->student;
-            if (!$student) {
-                return null;
-            }
+            // Map to unique students (one entry per student)
+            $students = $registrations
+                ->unique('student_id')
+                ->map(function ($reg) use ($intakeId, $courseId, $location) {
+                    $student = $reg->student;
+                    if (!$student) {
+                        return null;
+                    }
 
-            // Try to find latest clearance request for this student for the given intake/course/location
-            $latestRequestQuery = ClearanceRequest::where('student_id', $student->student_id)
-                ->where('intake_id', $intakeId);
+                    // Try to find latest clearance request for this student for the given intake/course/location
+                    $latestRequestQuery = ClearanceRequest::where('student_id', $student->student_id)
+                        ->where('intake_id', $intakeId);
 
-            if ($courseId) {
-                $latestRequestQuery->where('course_id', $courseId);
-            }
-            if ($location) {
-                $latestRequestQuery->where('location', $location);
-            }
+                    if ($courseId) {
+                        $latestRequestQuery->where('course_id', $courseId);
+                    }
+                    if ($location) {
+                        $latestRequestQuery->where('location', $location);
+                    }
 
-            $latest = $latestRequestQuery->orderByDesc('requested_at')->first();
+                    $latest = $latestRequestQuery->orderByDesc('requested_at')->first();
 
-            $statusText = $latest->status_text ?? ($latest->status ?? 'No Request');
+                    $statusText = $latest->status_text ?? ($latest->status ?? 'No Request');
 
-            return [
-                'student_id' => $student->student_id,
-                'name' => $student->name_with_initials ?? $student->name ?? ($student->full_name ?? ''),
-                'clearance_status' => $statusText,
-            ];
-        })
-        ->filter() // remove any nulls
-        ->values()
-        ->all();
+                    return [
+                        'student_id' => $student->student_id,
+                        'name' => $student->name_with_initials ?? $student->name ?? ($student->full_name ?? ''),
+                        'clearance_status' => $statusText,
+                    ];
+                })
+                ->filter() // remove any nulls
+                ->values()
+                ->all();
 
-    return response()->json(['success' => true, 'data' => $students]);
-} catch (\Exception $e) {
-    return response()->json(['success' => false, 'message' => 'Failed to load students: '.$e->getMessage()], 500);
-}
+            return response()->json(['success' => true, 'data' => $students]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to load students: ' . $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -327,7 +330,7 @@ class AllClearanceController extends Controller
             $courseName = $firstRequest->course->course_name;
 
             // Format student data for the response
-            $students = $clearanceRequests->map(function($request) {
+            $students = $clearanceRequests->map(function ($request) {
                 return [
                     'student_id' => $request->student->student_id,
                     'student_name' => $request->student->name_with_initials,
