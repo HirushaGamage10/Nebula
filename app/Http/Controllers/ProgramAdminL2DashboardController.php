@@ -615,7 +615,7 @@ class ProgramAdminL2DashboardController extends Controller
                 ->where('status', 'paid')
                 ->selectRaw('DATE_FORMAT(payment_effective_date, "%b %Y") as month, SUM(amount) as revenue')
                 ->groupByRaw('DATE_FORMAT(payment_effective_date, "%b %Y")')
-                ->orderByRaw('payment_effective_date DESC')
+                ->orderByRaw('MAX(payment_effective_date) DESC')
                 ->limit(12)
                 ->get()
                 ->reverse()
