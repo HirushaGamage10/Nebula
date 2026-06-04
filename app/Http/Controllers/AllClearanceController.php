@@ -61,9 +61,8 @@ class AllClearanceController extends Controller
         }
 
         $individualRequests = $allClearanceRequests->filter(function ($request) {
-            // Individual requests are those sent for specific students
-            // These would be sent via the individual clearance tab
-            return $request->student_id && !$request->intake_id;
+            // Individual requests are those explicitly sent from the individual clearance tab.
+            return $request->is_individual_request;
         });
 
         // Group requests by status for the status tab
@@ -173,6 +172,7 @@ class AllClearanceController extends Controller
                         'student_id' => $registration->student_id,
                         'status' => ClearanceRequest::STATUS_PENDING,
                         'requested_at' => now(),
+                        'is_individual_request' => $request->filled('student_id'),
                     ]);
                     $createdCount++;
                 }

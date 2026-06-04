@@ -20,12 +20,14 @@ class ClearanceRequest extends Model
         'clearance_slip',
         'approved_by',
         'approved_at',
-        'requested_at'
+        'requested_at',
+        'is_individual_request'
     ];
 
     protected $casts = [
         'approved_at' => 'datetime',
         'requested_at' => 'datetime',
+        'is_individual_request' => 'boolean',
     ];
 
     // Clearance types
