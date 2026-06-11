@@ -188,7 +188,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     });
 
     // Student Profile
-    Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Student Counselor,Bursar,Marketing Manager,Developer'])->group(function () {
+    Route::middleware(['role:DGM,Program Administrator (level 02),Student Counselor,Bursar,Marketing Manager,Developer'])->group(function () {
         Route::get('/student/profile/{studentId}', [StudentProfileController::class, 'showStudentProfile'])->name('student_management.profile');
         Route::post('/student/profile/update-personal', [StudentProfileController::class, 'updatePersonalInfoAjax'])->name('student_management.update.personal.info');
         Route::post('/student/profile/update-parent', [StudentProfileController::class, 'updateParentInfoAjax'])->name('student_management.update.parent.info');
