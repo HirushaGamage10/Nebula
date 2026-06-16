@@ -446,7 +446,7 @@
                                                 <div class="mb-2">
                                                     <strong>Total Fee:</strong> <span id="total-amount-display">-</span>
                                                 </div>
-                                                
+
                                                 <!-- <div class="mb-2">
                                                 <strong>Franchise Fee:</strong> <span id="franchise-amount-display">-</span>
                                                 </div> -->
@@ -1666,20 +1666,20 @@ function populatePaymentPlanForm(studentData) {
     // Basic info
     const nameEl = document.getElementById('student-name-display');
     if (nameEl) nameEl.textContent = studentData.student_name || 'N/A';
-    
+
     const idEl = document.getElementById('student-id-display');
     if (idEl) idEl.textContent = studentData.student_id || 'N/A';
-    
+
     const courseEl = document.getElementById('course-name-display');
     if (courseEl) courseEl.textContent = studentData.course_name || 'N/A';
-    
+
     const intakeEl = document.getElementById('intake-name-display');
     if (intakeEl) intakeEl.textContent = studentData.intake_name || 'N/A';
 
     // LKR breakdown
     const courseFeeEl = document.getElementById('course-fee-display');
     if (courseFeeEl) courseFeeEl.textContent = 'LKR ' + fmt2(courseFee);
-    
+
     const regFeeEl = document.getElementById('registration-fee-display');
     if (regFeeEl) regFeeEl.textContent = 'LKR ' + fmt2(regFee);
 
@@ -1745,7 +1745,7 @@ function normalizeDueDate(raw, installmentNumber = 1, useFallback = true) {
         const part1 = Number(slashMatch[1]);
         const part2 = Number(slashMatch[2]);
         const year = Number(slashMatch[3]);
-        
+
         // Determine if DD/MM or MM/DD by context
         // Assume DD/MM since most of the world uses this format
         // But check if part1 > 12 (must be day, not month)
@@ -1761,7 +1761,7 @@ function normalizeDueDate(raw, installmentNumber = 1, useFallback = true) {
             day = part1;
             month = part2;
         }
-        
+
         if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
             // Use UTC date to avoid timezone issues
             const ymdStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -1795,11 +1795,11 @@ function formatDateDmy(input) {
     }
 
     let day, month, year;
-    
+
     // Handle string input
     if (typeof input === 'string') {
         const str = input.trim();
-        
+
         // Handle YYYY-MM-DD format (ISO format from backend)
         const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
         if (isoMatch) {
@@ -3066,7 +3066,7 @@ async function generatePaymentSlip() {
   if (!studentId)  return showErrorMessage('Please enter Student ID / NIC.');
   if (!paymentType)return showErrorMessage('Please select a payment type.');
   if (!courseId)   return showErrorMessage('Please select a course.');
-  
+
   // Check if the selected payment is already paid
   if (row.status && row.status.toLowerCase() === 'paid') {
     return showErrorMessage('Cannot generate slip for an already paid installment.');
@@ -3233,13 +3233,13 @@ const payload = {
     setText('print-generated-date', new Date().toLocaleString());
 
     showSuccessMessage(data.message || 'Payment slip generated successfully! 🎉');
-    
+
     // Update the payment status in the table
     const selectedIndex = parseInt(document.querySelector('input[name="selectedPayment"]:checked')?.value || '-1', 10);
     if (selectedIndex >= 0 && window.paymentDetailsData && window.paymentDetailsData[selectedIndex]) {
         // Update local data immediately for UI feedback
         window.paymentDetailsData[selectedIndex].status = 'paid';
-        
+
         // Force refresh the table to show the LATEST data from backend
         // Wait longer to ensure database transaction is fully committed
         if (typeof refreshGenerateSlipsData === 'function') {
@@ -3506,7 +3506,7 @@ function renderPaymentRecords() {
         <td>${r.receipt_no}</td>
         <td>${r.status}</td>
         <td>
-          <button class="btn btn-sm btn-success btn-open-pay-modal" 
+          <button class="btn btn-sm btn-success btn-open-pay-modal"
                   data-payment-id="${r.payment_id}"
                   data-remaining-amount="${remaining}"
                   ${payDisabled ? 'disabled' : ''}>
@@ -4405,7 +4405,7 @@ function displayPaymentDetails(paymentDetails) {
         `;
         tbody.insertAdjacentHTML('beforeend', row);
     });
-    
+
     // Store payment details globally for validation
     window.paymentDetailsData = paymentDetails;
 }
@@ -4427,11 +4427,11 @@ function refreshGenerateSlipsData() {
     const studentId = document.getElementById('slip-student-id')?.value;
     const courseId = document.getElementById('slip-course')?.value;
     const paymentType = document.getElementById('slip-payment-type')?.value;
-    
+
     // Only refresh if all fields are filled (meaning data is currently loaded)
     if (studentId && courseId && paymentType) {
         console.log('🔄 Refreshing Generate Slips data...', { studentId, courseId, paymentType });
-        
+
         // Show loading state in the table
         const tbody = document.getElementById('paymentDetailsTableBody');
         if (tbody) {
@@ -4442,16 +4442,16 @@ function refreshGenerateSlipsData() {
                 Refreshing payment data...
             </td></tr>`;
         }
-        
+
         // ✅ Clear ALL cached data to force absolute fresh fetch from backend
         window.paymentDetailsDataRaw = null;
         window.paymentDetailsData = null;
         window.paymentDetailsPaymentType = null;
-        
+
         // Disable all payment radios temporarily to prevent new selections during refresh
         const radioButtons = document.querySelectorAll('input[name="selectedPayment"]');
         radioButtons.forEach(radio => radio.disabled = true);
-        
+
         // Fetch fresh data from backend - WAIT FOR IT TO COMPLETE
         (async () => {
             try {
@@ -4881,8 +4881,9 @@ function renderPaymentDetailsTable(rows, paymentType) {
   // ✅ Build table rows
   normalized.forEach((p, idx) => {
     const isPaid = p.status && p.status.toLowerCase() === 'paid';
-        const disabled = isPaid ? 'disabled' : '';
-    const rowStyle = isPaid
+    const hasGeneratedSlip = p.receipt_no && p.receipt_no !== null && p.receipt_no !== '';
+    const disabled = (isPaid || hasGeneratedSlip) ? 'disabled' : '';
+    const rowStyle = (isPaid || hasGeneratedSlip)
       ? 'style="opacity: 0.6; background-color: #f8f9fa;"'
             : '';
     const amountText = `${p.currency} ${money(p.amount)}`;
@@ -4890,17 +4891,19 @@ function renderPaymentDetailsTable(rows, paymentType) {
     // LKR column for franchise
     let lkrCell = '';
     if (showLkr) {
-      // ✅ If payment has a locked conversion_rate (slip already generated), show locked amount
-      if (p.conversion_rate && p.conversion_rate > 0 && p.lkr_amount !== null && p.lkr_amount !== undefined) {
-        lkrCell = `<td style="background-color: #f0f0f0;">
-                    <div>LKR ${money(p.lkr_amount)}</div>
-                    <small class="text-muted">Locked rate: ${p.conversion_rate}</small>
+      // ✅ If slip has already been generated (receipt_no exists), always use locked data
+      if (hasGeneratedSlip && p.conversion_rate && p.conversion_rate > 0 && p.lkr_amount !== null && p.lkr_amount !== undefined) {
+        // Slip already generated - show LOCKED amount that NEVER changes
+        lkrCell = `<td style="background-color: #f0f0f0; position: relative;">
+                    <div><strong>LKR ${money(p.lkr_amount)}</strong></div>
+                    <small class="text-muted">🔒 Locked | Rate: ${p.conversion_rate}</small>
                 </td>`;
-      } else if (rate && rate > 0) {
-                const lkrBase = p.amount * rate;
-                const ssclAmount = (lkrBase * p.sscl_tax) / 100;
-                const lkrFinal = lkrBase + ssclAmount + p.bank_charges;
-                lkrCell = `<td>
+      } else if (!hasGeneratedSlip && rate && rate > 0) {
+        // No slip yet - calculate dynamically based on current conversion rate
+        const lkrBase = p.amount * rate;
+        const ssclAmount = (lkrBase * p.sscl_tax) / 100;
+        const lkrFinal = lkrBase + ssclAmount + p.bank_charges;
+        lkrCell = `<td>
                     <div>LKR ${money(lkrFinal)}</div>
                     <small class="text-muted">Base: LKR ${money(lkrBase)} | SSCL: LKR ${money(ssclAmount)} | Bank: LKR ${money(p.bank_charges)}</small>
                 </td>`;
@@ -5005,7 +5008,7 @@ document.getElementById('currency-from')?.addEventListener('change', recalculate
 $('#paymentTabs .nav-link').on('shown.bs.tab', function (e) {
     $('#paymentTabs .nav-link').removeClass('bg-primary text-white');
     $(e.target).addClass('bg-primary text-white');
-    
+
     // ✅ REFRESH Generate Slips tab data when it becomes active
     if ($(e.target).attr('id') === 'generate-slips-tab') {
         console.log('✅ Generate Slips tab activated - refreshing data from backend...');
