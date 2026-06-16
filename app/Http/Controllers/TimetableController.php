@@ -817,75 +817,86 @@ class TimetableController extends Controller
     }
 
     public function getTimetableEvents(Request $request)
-    {
-        \Log::info('getTimetableEvents called', $request->all());
+{
+    \Log::info('getTimetableEvents called', $request->all());
 
-        // Validate incoming filters
-        $validatedData = $request->validate([
-            'location' => 'required|string',
-            'course_id' => 'required|integer',
-            'intake_id' => 'required|integer',
-            'semester' => 'required', // accept id or name
-        ]);
+    // Validate incoming filters
+    $validatedData = $request->validate([
+        'location' => 'required|string',
+        'course_id' => 'required|integer',
+        'intake_id' => 'required|integer',
+        'semester' => 'nullable', // Make semester optional
+        'specialization' => 'nullable', // Add specialization as optional
+    ]);
 
-        \Log::info('getTimetableEvents validated', $validatedData);
+    \Log::info('getTimetableEvents validated', $validatedData);
 
-        // If semester is an ID, convert to semester name/value stored in timetable
-        if (is_numeric($validatedData['semester'])) {
-            $sem = Semester::find((int)$validatedData['semester']);
-            if ($sem) {
-                $validatedData['semester'] = (string) $sem->name;
-            }
+    // If semester is an ID, convert to semester name/value stored in timetable
+    $semesterValue = null;
+    if (!empty($validatedData['semester']) && is_numeric($validatedData['semester'])) {
+        $sem = Semester::find((int)$validatedData['semester']);
+        if ($sem) {
+            $semesterValue = (string) $sem->name;
         }
+    } elseif (!empty($validatedData['semester'])) {
+        $semesterValue = (string) $validatedData['semester'];
+    }
 
-        // Retrieve timetable data based on filters
-        $events = \DB::table('timetable')
-            ->join('modules', 'timetable.module_id', '=', 'modules.module_id')
-            ->where([
-                ['timetable.location', '=', $validatedData['location']],
-                ['timetable.course_id', '=', $validatedData['course_id']],
-                ['timetable.intake_id', '=', $validatedData['intake_id']],
-                ['timetable.semester', '=', $validatedData['semester']],
-            ])
-            ->select('timetable.*', 'modules.module_name', 'modules.module_code')
-            ->get();
+    // Retrieve timetable data based on filters
+    $query = \DB::table('timetable')
+        ->join('modules', 'timetable.module_id', '=', 'modules.module_id')
+        ->where('timetable.location', '=', $validatedData['location'])
+        ->where('timetable.course_id', '=', $validatedData['course_id'])
+        ->where('timetable.intake_id', '=', $validatedData['intake_id']);
 
-        \Log::info('getTimetableEvents DB rows count: ' . $events->count(), ['rows' => $events->toArray()]);
+    // Only filter by semester if provided and not empty
+    if (!empty($semesterValue)) {
+        $query->where('timetable.semester', '=', $semesterValue);
+    }
+
+    // Only filter by specialization if provided and not empty
+    if (!empty($validatedData['specialization'])) {
+        $query->where('timetable.specialization', '=', $validatedData['specialization']);
+    }
+
+    $events = $query->select('timetable.*', 'modules.module_name', 'modules.module_code')->get();
+
+    \Log::info('getTimetableEvents DB rows count: ' . $events->count(), ['rows' => $events->toArray()]);
 
     // Map data to FullCalendar format
     $calendarEvents = $events->map(function ($event) {
-            // ensure proper ISO datetimes (add seconds if needed)
-            $time = $event->time;
-            if (strpos($time, ':') && substr_count($time, ':') === 1) {
-                $time .= ':00';
-            }
-            $startIso = $event->date . 'T' . $time;
-            $endTime = $event->end_time ?? $time;
-            if (strpos($endTime, ':') && substr_count($endTime, ':') === 1) {
-                $endTime .= ':00';
-            }
-            $endIso = $event->date . 'T' . $endTime;
+        // ensure proper ISO datetimes (add seconds if needed)
+        $time = $event->time;
+        if (strpos($time, ':') && substr_count($time, ':') === 1) {
+            $time .= ':00';
+        }
+        $startIso = $event->date . 'T' . $time;
+        $endTime = $event->end_time ?? $time;
+        if (strpos($endTime, ':') && substr_count($endTime, ':') === 1) {
+            $endTime .= ':00';
+        }
+        $endIso = $event->date . 'T' . $endTime;
 
-            return [
-                'id' => $event->id ?? null,
-        'title' => $event->module_name,
-        'date' => $event->date,
-        'time' => $time,
-        'end_time' => $endTime,
-        'start' => $startIso,
-        'end' => $endIso,
-        'classroom' => $event->classroom ?? null,
-        'lecturer' => $event->lecturer ?? null,
-        'module_code' => $event->module_code ?? null,
-        'module_name' => $event->module_name ?? null,
-            ];
-        });
+        return [
+            'id' => $event->id ?? null,
+            'title' => $event->module_name,
+            'date' => $event->date,
+            'time' => $time,
+            'end_time' => $endTime,
+            'start' => $startIso,
+            'end' => $endIso,
+            'classroom' => $event->classroom ?? null,
+            'lecturer' => $event->lecturer ?? null,
+            'module_code' => $event->module_code ?? null,
+            'module_name' => $event->module_name ?? null,
+        ];
+    });
 
-        return response()->json([
-            'events' => $calendarEvents,
-            'raw_rows' => $events // temporary debug payload
-        ]);
-    }
+    return response()->json([
+        'events' => $calendarEvents,
+        'raw_rows' => $events // temporary debug payload
+    ]);
+}
 
 
     public function getSemesters(Request $request)
