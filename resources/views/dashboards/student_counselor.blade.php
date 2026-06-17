@@ -49,8 +49,7 @@
             font-size: 13px;
             font-weight: 500;
             transition: all 0.2s ease;
-            margin-right: 8px;
-            margin-bottom: 8px;
+            white-space: nowrap;
         }
         
         .time-filter-btn:hover {
@@ -137,6 +136,85 @@
         .action-btn:hover {
             transform: scale(1.1);
         }
+
+        .dashboard-filter-card {
+            overflow: hidden;
+        }
+
+        .dashboard-filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .dashboard-filter-label {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+
+        .dashboard-filter-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            width: 100%;
+        }
+
+        .dashboard-filter-date {
+            width: 150px;
+            max-width: 100%;
+        }
+
+        .kpi-card {
+            height: 100%;
+        }
+
+        .kpi-card .card-body,
+        .kpi-card .card-title,
+        .kpi-card .text-muted {
+            min-width: 0;
+        }
+
+        @media (max-width: 767.98px) {
+            .page-title-box {
+                align-items: flex-start !important;
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .dashboard-filter-bar {
+                align-items: stretch;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .dashboard-filter-controls {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+            }
+
+            .time-filter-btn {
+                width: 100%;
+                padding-inline: 10px;
+            }
+
+            .dashboard-filter-date-wrap {
+                grid-column: 1 / -1;
+            }
+
+            .dashboard-filter-date {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .dashboard-filter-controls {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 
     <div class="container-fluid">
@@ -172,17 +250,17 @@
         <!-- Time Filter -->
         <div class="row mb-4">
             <div class="col-12">
-                <div class="card">
+                <div class="card dashboard-filter-card">
                     <div class="card-body py-3">
-                        <div class="d-flex flex-wrap align-items-center">
-                            <span class="me-3 text-muted"><i class="fas fa-calendar-alt me-1"></i> Time Period:</span>
-                            <div class="d-flex flex-wrap">
+                        <div class="dashboard-filter-bar">
+                            <span class="dashboard-filter-label text-muted"><i class="fas fa-calendar-alt me-1"></i> Time Period:</span>
+                            <div class="dashboard-filter-controls">
                                 <button type="button" class="time-filter-btn" data-period="today" onclick="setTimePeriod('today', this)">Today</button>
                                 <button type="button" class="time-filter-btn active" data-period="week" onclick="setTimePeriod('week', this)">This Week</button>
                                 <button type="button" class="time-filter-btn" data-period="month" onclick="setTimePeriod('month', this)">This Month</button>
                                 <button type="button" class="time-filter-btn" data-period="quarter" onclick="setTimePeriod('quarter', this)">Last 3 Months</button>
-                                <div class="d-inline-block ms-2">
-                                    <input type="date" id="customDate" class="form-control form-control-sm" style="width: 140px;" title="Filter dashboard by a specific date">
+                                <div class="dashboard-filter-date-wrap">
+                                    <input type="date" id="customDate" class="form-control form-control-sm dashboard-filter-date" title="Filter dashboard by a specific date">
                                 </div>
                             </div>
                         </div>
