@@ -389,7 +389,7 @@ class TimetableController extends Controller
         }
         $intakes = \App\Models\Intake::forCourse($course, $location)
             ->orderBy('batch')
-            ->get(['intake_id', 'batch']);
+            ->get(['intake_id', 'batch', 'start_date', 'end_date']);
         return response()->json(['intakes' => $intakes]);
     }
 
@@ -825,13 +825,15 @@ class TimetableController extends Controller
             'location' => 'required|string',
             'course_id' => 'required|integer',
             'intake_id' => 'required|integer',
-            'semester' => 'required', // accept id or name
+            'semester' => 'nullable|string', // accept id or name for degree
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);
 
         \Log::info('getTimetableEvents validated', $validatedData);
 
         // If semester is an ID, convert to semester name/value stored in timetable
-        if (is_numeric($validatedData['semester'])) {
+        if (!empty($validatedData['semester']) && is_numeric($validatedData['semester'])) {
             $sem = Semester::find((int)$validatedData['semester']);
             if ($sem) {
                 $validatedData['semester'] = (string) $sem->name;
@@ -839,14 +841,24 @@ class TimetableController extends Controller
         }
 
         // Retrieve timetable data based on filters
-        $events = \DB::table('timetable')
+        $query = \DB::table('timetable')
             ->join('modules', 'timetable.module_id', '=', 'modules.module_id')
-            ->where([
-                ['timetable.location', '=', $validatedData['location']],
-                ['timetable.course_id', '=', $validatedData['course_id']],
-                ['timetable.intake_id', '=', $validatedData['intake_id']],
-                ['timetable.semester', '=', $validatedData['semester']],
-            ])
+            ->where('timetable.location', '=', $validatedData['location'])
+            ->where('timetable.course_id', '=', $validatedData['course_id'])
+            ->where('timetable.intake_id', '=', $validatedData['intake_id']);
+
+        if (!empty($validatedData['semester'])) {
+            $query->where('timetable.semester', '=', $validatedData['semester']);
+        }
+
+        if (!empty($validatedData['start_date'])) {
+            $query->whereDate('timetable.date', '>=', $validatedData['start_date']);
+        }
+        if (!empty($validatedData['end_date'])) {
+            $query->whereDate('timetable.date', '<=', $validatedData['end_date']);
+        }
+
+        $events = $query
             ->select('timetable.*', 'modules.module_name', 'modules.module_code')
             ->get();
 

@@ -146,23 +146,14 @@
                             </div>
 
                             <div class="mb-3 row align-items-center">
-                                <label for="certificate_semester" class="col-sm-3 col-form-label fw-bold">Semester<span class="text-danger">*</span></label>
-                                <div class="col-sm-9">
-                                    <select class="form-select" id="certificate_semester" name="semester">
-                                        <option selected disabled value="">Select Semester</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="mb-3 row align-items-center">
-                                <label for="certificate_start_date" class="col-sm-3 col-form-label fw-bold">Semester Start Date<span class="text-danger">*</span></label>
+                                <label for="certificate_start_date" class="col-sm-3 col-form-label fw-bold">Course Start Date<span class="text-danger">*</span></label>
                                 <div class="col-sm-9">
                                     <input type="date" class="form-control" id="certificate_start_date" name="start_date" readonly>
                                 </div>
                             </div>
 
                             <div class="mb-3 row align-items-center">
-                                <label for="certificate_end_date" class="col-sm-3 col-form-label fw-bold">End Date<span class="text-danger">*</span></label>
+                                <label for="certificate_end_date" class="col-sm-3 col-form-label fw-bold">Course End Date<span class="text-danger">*</span></label>
                                 <div class="col-sm-9">
                                     <input type="date" class="form-control" id="certificate_end_date" name="end_date" readonly>
                                 </div>
@@ -419,7 +410,7 @@
                                 return evStart.isBefore(rowEnd) && evEnd.isAfter(rowStart);
                             } catch (e) { return false; }
                         });
-                        html += '<td style="border:1px solid #000;padding:6px;vertical-align:top;min-height:40px;">';
+                        html += '<td class="timetable-cell" data-date="' + day.format('YYYY-MM-DD') + '" data-time="' + moment({ hour: h }).format('HH:mm') + '" style="border:1px solid #000;padding:6px;vertical-align:top;min-height:40px;cursor:pointer;">';
                         if (cellEvents.length) {
                             cellEvents.forEach(function (ce) {
                                 var st = moment(ce.start).format('HH:mm'), en = ce.end ? moment(ce.end).format('HH:mm') : '';
@@ -468,7 +459,7 @@
                         var cellEvents = latestFcEvents.filter(function (ev) {
                             return moment(ev.start).isSame(cellDate, 'day');
                         });
-                        html += '<td style="vertical-align:top;min-width:140px;padding:6px;">';
+                        html += '<td class="timetable-cell" data-date="' + cellDate.format('YYYY-MM-DD') + '" data-time="07:00" style="vertical-align:top;min-width:140px;padding:6px;cursor:pointer;">';
                         if (cellEvents.length) {
                             cellEvents.forEach(function (ce) {
                                 var st = moment(ce.start).format('HH:mm'), en = ce.end ? moment(ce.end).format('HH:mm') : '';
@@ -501,6 +492,19 @@
                 var dtype = $('#tablePeriod option:selected').data('type') || $('#tableViewType').val();
                 if (dtype === 'week') renderWeekTable(parseInt(sel, 10));
                 else renderMonthTable(parseInt(sel, 10));
+            });
+
+            // allow clicking empty cells in the timetable table view to assign subjects
+            $(document).on('click', '.timetable-cell', function () {
+                var date = $(this).data('date');
+                var time = $(this).data('time') || '07:00';
+                if (!date) return;
+                $('#selectedDate').val(date);
+                $('#selected_date_display').val(date);
+                $('#degree_time_0').val(time);
+                $('#degree_duration_0').val('');
+                $('#degree_subject_0').val('');
+                $('#subjectSelectionModal').modal('show');
             });
 
             // Download visible table as PDF
@@ -634,6 +638,8 @@
             $('#certificate_course').change(function () {
                 var courseId = $(this).val();
                 var location = $('#certificate_location').val();
+                $('#certificate_start_date').val('');
+                $('#certificate_end_date').val('');
                 if (courseId && location) {
                     $.ajax({
                         url: '/get-intakes/' + courseId + '/' + location,
@@ -643,7 +649,7 @@
                             $('#certificate_intake').append('<option selected disabled value="">Select Intake</option>');
                             if (data.intakes && data.intakes.length > 0) {
                                 $.each(data.intakes, function (index, intake) {
-                                    $('#certificate_intake').append('<option value="' + intake.intake_id + '">' + intake.batch + '</option>');
+                                    $('#certificate_intake').append('<option value="' + intake.intake_id + '" data-start="' + (intake.start_date || '') + '" data-end="' + (intake.end_date || '') + '">' + intake.batch + '</option>');
                                 });
                                 $('#certificate_intake').prop('disabled', false);
                             } else {
@@ -690,31 +696,20 @@
                 }
             });
 
-            // Certificate: Fetch semesters for certificate intake/course
+            // Certificate: set course start/end dates when intake changes
             $('#certificate_intake').change(function () {
-                var intakeId = $(this).val();
-                var courseId = $('#certificate_course').val();
-                if (intakeId && courseId) {
-                    $.ajax({
-                        url: '/timetable/get-semesters',
-                        type: 'GET',
-                        data: { course_id: courseId, intake_id: intakeId },
-                        success: function (data) {
-                            $('#certificate_semester').empty();
-                            $('#certificate_semester').append('<option selected disabled value="">Select Semester</option>');
-                            if (data.semesters && data.semesters.length > 0) {
-                                $.each(data.semesters, function (index, semester) {
-                                    const label = semester.display_name || semester.semester_name || semester.name;
-                                    $('#certificate_semester').append('<option value="' + semester.id + '" data-start="' + (semester.start_date || '') + '" data-end="' + (semester.end_date || '') + '">' + label + '</option>');
-                                });
-                                $('#certificate_semester').prop('disabled', false);
-                            } else {
-                                $('#certificate_semester').append('<option disabled>No semesters found</option>');
-                                $('#certificate_semester').prop('disabled', true);
-                            }
-                        },
-                        error: function () { console.error('Error fetching certificate semesters'); }
-                    });
+                var selected = $(this).find('option:selected');
+                var start = selected.data('start') || '';
+                var end = selected.data('end') || '';
+                if (start && moment(start).isValid()) start = moment(start).format('YYYY-MM-DD');
+                if (end && moment(end).isValid()) end = moment(end).format('YYYY-MM-DD');
+                $('#certificate_start_date').val(start);
+                $('#certificate_end_date').val(end);
+                $('#certificate_download_buttons').toggle(!!start && !!end);
+
+                // Auto-show timetable after all certificate fields are selected
+                if ($('#certificate_location').val() && $('#certificate_course').val() && $('#certificate_intake').val() && start && end) {
+                    $('#certificate_showTimetableBtn').trigger('click');
                 }
             });
 
@@ -1188,7 +1183,7 @@
                                 return evStart.isBefore(rowEnd) && evEnd.isAfter(rowStart);
                             } catch (e) { return false; }
                         });
-                        html += '<td style="border:1px solid #000;padding:6px;vertical-align:top;min-height:40px;">';
+                        html += '<td class="timetable-cell" data-date="' + day.format('YYYY-MM-DD') + '" data-time="' + moment({ hour: h }).format('HH:mm') + '" style="border:1px solid #000;padding:6px;vertical-align:top;min-height:40px;cursor:pointer;">';
                         if (cellEvents.length) {
                             cellEvents.forEach(function (ce) {
                                 var st = moment(ce.start).format('HH:mm'), en = ce.end ? moment(ce.end).format('HH:mm') : '';
@@ -1229,7 +1224,7 @@
                         var cellEvents = latestFcEvents.filter(function (ev) {
                             return moment(ev.start).isSame(cellDate, 'day');
                         });
-                        html += '<td style="vertical-align:top;min-width:140px;padding:6px;">';
+                        html += '<td class="timetable-cell" data-date="' + cellDate.format('YYYY-MM-DD') + '" data-time="07:00" style="vertical-align:top;min-width:140px;padding:6px;cursor:pointer;">';
                         if (cellEvents.length) {
                             cellEvents.forEach(function (ce) {
                                 var st = moment(ce.start).format('HH:mm'), en = ce.end ? moment(ce.end).format('HH:mm') : '';
@@ -1823,7 +1818,6 @@
                     location: $('#certificate_location').val(),
                     course_id: $('#certificate_course').val(),
                     intake_id: $('#certificate_intake').val(),
-                    semester: '', // Certificate courses don't use semesters
                     start_date: $('#certificate_start_date').val(),
                     end_date: $('#certificate_end_date').val()
                 };
@@ -1846,7 +1840,10 @@
                         try { if (window.__nebulaCertificateCalendar) { try { window.__nebulaCertificateCalendar.removeAllEvents(); } catch(e){} } } catch(e){}
 
                         if (!eventsArray || !eventsArray.length) {
-                            alert('No events returned for certificate timetable.');
+                            console.info('No events returned for certificate timetable. Showing empty calendar.');
+                            if (window.__nebulaCertificateCalendar) {
+                                try { window.__nebulaCertificateCalendar.render(); } catch (e) { console.warn('Certificate calendar render failed', e); }
+                            }
                             return;
                         }
 
@@ -1894,7 +1891,7 @@
                             }
                         } catch (ex) { console.warn('Failed to add certificate events', ex); }
 
-                        // show download buttons if semester selected
+                        // show download buttons once certificate timetable is loaded
                         if ($('#certificate_intake').val()) $('#certificate_download_buttons').show();
                     },
                     error: function () {
