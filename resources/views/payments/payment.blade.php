@@ -1896,27 +1896,24 @@ function displayInstallments(installments) {
   const registrationFee = N(window.currentStudentData?.registration_fee || 0);
   const totalFeeForDiscount = originalLocalTotal + registrationFee;
 
-  // apply discounts to last installment only (percentage first, then fixed)
-  const discounted = installments.map((ins, idx, arr) => {
-    let dAmt = N(ins.amount);
-    let applied = 0;
+  // apply discounts across installments starting from the latest installment backwards
+  const totalDiscount = ((pct > 0) ? (totalFeeForDiscount * pct) / 100 : 0) + fixed;
+  const discounted = installments.map((ins) => ({
+    ...ins,
+    discountedAmount: N(ins.amount),
+    discountApplied: 0,
+  }));
 
-    if (idx === arr.length - 1) {
-      if (pct > 0) {
-        const p = (totalFeeForDiscount * pct) / 100;
-        dAmt -= p;
-        applied += p;
-      }
-      if (fixed > 0) {
-        dAmt -= fixed;
-        applied += fixed;
-      }
-    }
-
-    dAmt = Math.max(0, dAmt);
-    return { ...ins, discountedAmount: dAmt, discountApplied: applied };
-  });
-  // ===============================
+  let remainingDiscount = Math.max(0, totalDiscount);
+  for (let idx = discounted.length - 1; idx >= 0 && remainingDiscount > 0; idx--) {
+    const ins = discounted[idx];
+    const available = N(ins.discountedAmount);
+    const applyNow = Math.min(remainingDiscount, available);
+    ins.discountedAmount = Math.max(0, available - applyNow);
+    ins.discountApplied = applyNow;
+    remainingDiscount -= applyNow;
+  }
+  // ==============================
 // Handle registration fee discount excess
 // ===============================
 const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
