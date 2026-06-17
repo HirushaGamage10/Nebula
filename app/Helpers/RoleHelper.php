@@ -220,6 +220,7 @@ class RoleHelper
             'student.registration',
             'student.list',
             'student.view',
+            'student.profile',
 
             // REGISTRATIONS
             'course.registration',
