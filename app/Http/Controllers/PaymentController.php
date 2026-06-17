@@ -804,6 +804,7 @@ public function createPaymentPlan(Request $request)
             $lastIdx = count($rows) - 1;
 
             // ===== 2) Normal discounts =====
+            // Apply course fee discounts over the combined course fee + registration fee base.
             $pct = 0.0;
             $fixed = 0.0;
 
@@ -818,17 +819,19 @@ public function createPaymentPlan(Request $request)
             $totalDiscount = $pctAmount + $fixed;
 
             $discountedBases = [];
-            $lastDiscApplied = 0.0;
+            $discountApplied = array_fill(0, max(0, count($rows)), 0.0);
+            $remainingDiscount = $totalDiscount;
 
             foreach ($rows as $i => $r) {
-                $base = (float) $r['amount'];
-                if ($i === $lastIdx) {
-                    $discEff = min($base, $totalDiscount);
-                    $discountedBases[$i] = round($base - $discEff, 2);
-                    $lastDiscApplied = $discEff;
-                } else {
-                    $discountedBases[$i] = round($base, 2);
-                }
+                $discountedBases[$i] = round((float) $r['amount'], 2);
+            }
+
+            for ($i = $lastIdx; $i >= 0 && $remainingDiscount > 0; $i--) {
+                $available = $discountedBases[$i];
+                $deduct = min($available, $remainingDiscount);
+                $discountedBases[$i] = round($available - $deduct, 2);
+                $discountApplied[$i] = round($deduct, 2);
+                $remainingDiscount -= $deduct;
             }
 
             // ===== 3) Registration fee discount (wipe reg fee first, excess → first installment) =====
@@ -879,8 +882,8 @@ public function createPaymentPlan(Request $request)
                     'due_date'                         => $r['due_date'],
                     'status'                           => $r['status'],
                     'base'                             => $base,
-                    'discount_amount'                  => ($i === $lastIdx) ? round($lastDiscApplied, 2) : 0.0,
-                    'discount_note'                    => ($i === $lastIdx && $lastDiscApplied > 0) ? "Normal Discounts Applied" : null,
+                    'discount_amount'                  => $discountApplied[$i] ?? 0.0,
+                    'discount_note'                    => ($discountApplied[$i] ?? 0) > 0 ? "Normal Discounts Applied" : null,
                     'discounted_base'                  => $Ai,
                     'loan_amount'                      => $loanPart,
                     'final'                            => $Fi,

@@ -1892,7 +1892,8 @@ function displayInstallments(installments) {
   // original local total BEFORE any discounts
   const originalLocalTotal = installments.reduce((sum, ins) => sum + N(ins.amount), 0);
 
-  // Include registration fee in discount calculation
+  // Include registration fee in course fee discount base.
+  // Course fee discounts now apply over the combined course fee + registration fee total.
   const registrationFee = N(window.currentStudentData?.registration_fee || 0);
   const totalFeeForDiscount = originalLocalTotal + registrationFee;
 

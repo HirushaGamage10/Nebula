@@ -337,9 +337,16 @@ public function update(Request $request, $id)
         }, $rows);
 
         $normalDiscountApplied = 0.0;
-        if ($lastIndex >= 0) {
-            $normalDiscountApplied = min($discountSummary['normal_discount_total'], $discountedBases[$lastIndex]);
-            $discountedBases[$lastIndex] = round($discountedBases[$lastIndex] - $normalDiscountApplied, 2);
+        $discountApplied = array_fill(0, count($discountedBases), 0.0);
+        $remainingNormalDiscount = $discountSummary['normal_discount_total'];
+
+        for ($i = $lastIndex; $i >= 0 && $remainingNormalDiscount > 0; $i--) {
+            $available = $discountedBases[$i];
+            $deduct = min($available, $remainingNormalDiscount);
+            $discountedBases[$i] = round($available - $deduct, 2);
+            $discountApplied[$i] = round($deduct, 2);
+            $remainingNormalDiscount -= $deduct;
+            $normalDiscountApplied += $deduct;
         }
 
         $registrationDiscountApplied = 0.0;
