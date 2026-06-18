@@ -834,7 +834,6 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     Route::middleware(['auth'])->group(function () {
         Route::get('/api/student/{studentId}/history', [StudentProfileController::class, 'getCourseRegistrationHistory']);
-        Route::get('/api/student-details-by-nic', [StudentProfileController::class, 'getStudentDetailsByNic']);
         Route::get('/api/courses/{courseId}', [CourseManagementController::class, 'getCourseById']);
         Route::get('/courses/by-location', [SemesterCreationController::class, 'getCoursesByLocation'])->name('courses.byLocation');
         Route::get('/intakes-by-course/{courseId}', function ($courseId) {

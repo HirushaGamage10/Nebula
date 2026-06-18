@@ -1641,7 +1641,7 @@ class StudentProfileController extends Controller
             $studentExam->al_index_no = $request->input('al_index_no');
             $studentExam->al_exam_type = $request->input('al_exam_type');
             $studentExam->al_exam_year = $request->input('al_exam_year');
-            $studentExam->al_stream = $request->input('al_stream');
+            $studentExam->al_exam_stream = $request->input('al_stream');
             $studentExam->al_exam_subjects = json_encode($request->input('al_exam_subjects'));
             
             $studentExam->save();
