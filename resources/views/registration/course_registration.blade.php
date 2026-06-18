@@ -564,10 +564,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 
                 if (startDateInput && startDate) {
-                    // Convert ISO date to YYYY-MM-DD format
-                    const dateObj = new Date(startDate);
-                    const formattedDate = dateObj.toISOString().split('T')[0];
-                    startDateInput.value = formattedDate;
+                    // Use the date string directly (already in YYYY-MM-DD format from database)
+                    startDateInput.value = startDate;
                     startDateInput.readOnly = true;
                 }
             }
