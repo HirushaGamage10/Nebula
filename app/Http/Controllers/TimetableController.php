@@ -321,7 +321,7 @@ class TimetableController extends Controller
                 'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
                 'course_id' => 'required|exists:courses,course_id',
                 'intake_id' => 'required|exists:intakes,intake_id',
-                'semester' => 'required|string',
+                'semester' => 'nullable|string',
                 'specialization' => 'nullable|string',
             ]);
 
@@ -329,8 +329,19 @@ class TimetableController extends Controller
                 'timetable.location' => $validatedData['location'],
                 'timetable.course_id' => $validatedData['course_id'],
                 'timetable.intake_id' => $validatedData['intake_id'],
-                'timetable.semester' => $validatedData['semester']
             ];
+
+            if (!empty($validatedData['semester'])) {
+                $semesterValue = $validatedData['semester'];
+                if (is_numeric($semesterValue)) {
+                    $semesterModel = Semester::find((int) $semesterValue);
+                    if ($semesterModel) {
+                        $semesterValue = (string) $semesterModel->name;
+                    }
+                }
+
+                $whereConditions['timetable.semester'] = $semesterValue;
+            }
 
             // Add specialization filter if provided
             if (!empty($validatedData['specialization'])) {
@@ -397,7 +408,7 @@ class TimetableController extends Controller
     public function getCoursesByLocation(Request $request)
     {
         $location = $request->input('location');
-        $courseType = $request->input('course_type');
+        $courseType = strtolower((string) $request->input('course_type'));
         
         if (!$location || !$courseType) {
             return response()->json(['success' => false, 'courses' => []]);
@@ -408,10 +419,10 @@ class TimetableController extends Controller
             // For Certificate tab, only Certificate courses
             $query = Course::where('location', $location);
             
-            if ($courseType === 'Degree') {
-                $query->whereIn('course_type', ['Degree', 'Diploma']);
+            if ($courseType === 'degree') {
+                $query->whereIn(DB::raw('LOWER(course_type)'), ['degree', 'diploma']);
             } else {
-                $query->where('course_type', $courseType);
+                $query->whereRaw('LOWER(course_type) = ?', [$courseType]);
             }
             
             $courses = $query->orderBy('course_name')
