@@ -718,6 +718,7 @@
 
             // Certificate: set course start/end dates when intake changes
             $('#certificate_intake').change(function () {
+<<<<<<< Updated upstream
                 var selected = $(this).find('option:selected');
                 var start = selected.data('start') || '';
                 var end = selected.data('end') || '';
@@ -730,6 +731,34 @@
                 // Auto-show timetable after all certificate fields are selected
                 if ($('#certificate_location').val() && $('#certificate_course').val() && $('#certificate_intake').val() && start && end) {
                     $('#certificate_showTimetableBtn').trigger('click');
+=======
+                var intakeId = $(this).val();
+                var courseId = $('#certificate_course').val();
+                if (intakeId && courseId) {
+                    $.ajax({
+                        url: '/timetable/get-semesters',
+                        type: 'GET',
+                        data: { course_id: courseId, intake_id: intakeId },
+                        success: function (data) {
+                            $('#certificate_semester').empty();
+                            $('#certificate_semester').append('<option selected disabled value="">Select Semester</option>');
+                            if (data.semesters && data.semesters.length > 0) {
+                                $.each(data.semesters, function (index, semester) {
+                                    const label = semester.display_name || semester.semester_name || semester.name;
+                                    $('#certificate_semester').append('<option value="' + semester.id + '" data-start="' + (semester.start_date || '') + '" data-end="' + (semester.end_date || '') + '">' + label + '</option>');
+                                });
+                                $('#certificate_semester').prop('disabled', false);
+                                // Auto-select first semester and trigger change to populate dates
+                                var firstSemesterId = data.semesters[0].id;
+                                $('#certificate_semester').val(firstSemesterId).trigger('change');
+                            } else {
+                                $('#certificate_semester').append('<option disabled>No semesters found</option>');
+                                $('#certificate_semester').prop('disabled', true);
+                            }
+                        },
+                        error: function () { console.error('Error fetching certificate semesters'); }
+                    });
+>>>>>>> Stashed changes
                 }
             });
 
@@ -752,6 +781,24 @@
 
                 if ($('#degree_location').val() && $('#degree_course').val() && $('#degree_intake').val() && start && end) {
                     $('#showTimetableBtn').trigger('click');
+                }
+            });
+
+            // Certificate: Auto-fill semester start/end date when certificate semester selected
+            $(document).on('change', '#certificate_semester', function () {
+                var selected = $(this).find('option:selected');
+                var start = selected.data('start') || '';
+                var end = selected.data('end') || '';
+                // normalize to yyyy-mm-dd if moment can parse it
+                if (start && moment(start).isValid()) start = moment(start).format('YYYY-MM-DD');
+                if (end && moment(end).isValid()) end = moment(end).format('YYYY-MM-DD');
+                $('#certificate_start_date').val(start);
+                $('#certificate_end_date').val(end);
+                // show certificate download buttons when semester chosen
+                if ($(this).val()) {
+                    $('#certificate_download_buttons').show();
+                } else {
+                    $('#certificate_download_buttons').hide();
                 }
             });
 
@@ -785,6 +832,36 @@
                         },
                         error: function (xhr, status, error) {
                             console.error('Error fetching subjects:', error);
+                        }
+                    });
+                }
+            });
+
+            // Certificate: Fetch available subjects based on semester
+            $('#certificate_semester').change(function () {
+                var semesterId = $(this).val();
+                var courseId = $('#certificate_course').val();
+                if (semesterId && courseId) {
+                    $.ajax({
+                        url: '/get-modules-by-semester',
+                        type: 'GET',
+                        data: { semester_id: semesterId, course_id: courseId },
+                        success: function (data) {
+                            if (data.modules && data.modules.length > 0) {
+                                $('#certificate_subject_0').empty();
+                                $('#certificate_subject_0').append('<option selected disabled value="">Select Subject</option>');
+                                $.each(data.modules, function (index, module) {
+                                    $('#certificate_subject_0').append('<option value="' + module.module_id + '">' + module.module_name + ' (' + module.module_code + ')</option>');
+                                });
+                                $('#certificate_subject_0').prop('disabled', false);
+                            } else {
+                                $('#certificate_subject_0').empty();
+                                $('#certificate_subject_0').append('<option value="" disabled>No subjects found</option>');
+                                $('#certificate_subject_0').prop('disabled', true);
+                            }
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('Error fetching certificate subjects:', error);
                         }
                     });
                 }
@@ -1593,6 +1670,65 @@
                     alert('Failed to generate month PDF');
                 }
             });
+
+            // Certificate: Week PDF Download
+            $('#certificate_downloadWeekPdfBtn').on('click', function () {
+                if (!latestCertificateFcEvents || !latestCertificateFcEvents.length) { alert('Please load certificate timetable first.'); return; }
+                try {
+                    var start = null, end = null, title = 'Week Timetable';
+                    if (window.__nebulaCertificateCalendar && window.__nebulaCertificateCalendar.view) {
+                        start = moment(window.__nebulaCertificateCalendar.view.activeStart);
+                        end = moment(new Date(window.__nebulaCertificateCalendar.view.activeEnd.getTime() - 1));
+                        title = 'Week ' + start.format('YYYY-MM-DD') + ' - ' + end.format('YYYY-MM-DD');
+                    } else {
+                        var today = moment();
+                        start = today.clone().startOf('week');
+                        end = today.clone().endOf('week');
+                    }
+                    var html = buildGridHtmlForRange(start, end, title);
+                    downloadHtmlAsA4Pdf(html, 'Certificate_Week_' + start.format('YYYY-MM-DD') + '_Timetable.pdf');
+                } catch (e) {
+                    console.error('Certificate Week PDF generation failed', e);
+                    alert('Failed to generate week PDF');
+                }
+            });
+
+            // Certificate: Month PDF Download
+            $('#certificate_downloadMonthPdfBtn').on('click', function () {
+                if (!latestCertificateFcEvents || !latestCertificateFcEvents.length) { alert('Please load certificate timetable first.'); return; }
+                try {
+                    var start = null, end = null, title = 'Month Timetable';
+                    if (window.__nebulaCertificateCalendar && window.__nebulaCertificateCalendar.view) {
+                        try {
+                            var focused = null;
+                            if (typeof window.__nebulaCertificateCalendar.getDate === 'function') {
+                                focused = moment(window.__nebulaCertificateCalendar.getDate());
+                            } else {
+                                focused = moment(window.__nebulaCertificateCalendar.view.currentStart || window.__nebulaCertificateCalendar.view.activeStart);
+                            }
+                            var monthAnchor = focused.clone().startOf('month');
+                            start = monthAnchor.clone();
+                            end = monthAnchor.clone().endOf('month');
+                            title = 'Month ' + monthAnchor.format('YYYY-MM');
+                        } catch (e) {
+                            var today = moment();
+                            start = today.clone().startOf('month');
+                            end = today.clone().endOf('month');
+                            title = 'Month ' + start.format('YYYY-MM');
+                        }
+                    } else {
+                        var today = moment();
+                        start = today.clone().startOf('month');
+                        end = today.clone().endOf('month');
+                    }
+
+                    var monthHtml = buildMonthGridHtml(start, title);
+                    downloadHtmlAsA4Pdf(monthHtml, 'Certificate_Month_' + start.format('YYYY-MM') + '_Timetable.pdf');
+                } catch (e) {
+                    console.error('Certificate Month PDF generation failed', e);
+                    alert('Failed to generate month PDF');
+                }
+            });
             // --- end simplified download functions ---
 
             // safe: download-week button handler is attached below only if button exists
@@ -1838,13 +1974,37 @@
             }
 
             $('#certificate_showTimetableBtn').on('click', function () {
+                var location = $('#certificate_location').val();
+                var course_id = $('#certificate_course').val();
+                var intake_id = $('#certificate_intake').val();
+                var semester = $('#certificate_semester').val();
+                var start_date = $('#certificate_start_date').val();
+                var end_date = $('#certificate_end_date').val();
+
+                // Validate required fields
+                if (!location || !course_id || !intake_id || !semester || !start_date || !end_date) {
+                    alert('Please select Location, Course, Intake, and Semester');
+                    return;
+                }
+
                 var data = {
+<<<<<<< Updated upstream
                     location: $('#certificate_location').val(),
                     course_id: $('#certificate_course').val(),
                     intake_id: $('#certificate_intake').val(),
                     start_date: $('#certificate_start_date').val(),
                     end_date: $('#certificate_end_date').val()
+=======
+                    location: location,
+                    course_id: course_id,
+                    intake_id: intake_id,
+                    semester: semester,
+                    start_date: start_date,
+                    end_date: end_date
+>>>>>>> Stashed changes
                 };
+
+                console.log("Certificate Timetable data being sent:", data);
 
                 $.ajax({
                     url: '/get-timetable-events',
