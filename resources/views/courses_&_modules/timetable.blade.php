@@ -706,7 +706,7 @@
                                 $('#degree_semester').prop('disabled', true);
 
                                 if ($('#degree_location').val() && $('#degree_course').val() && $('#degree_intake').val() && start && end) {
-                                    $('#showTimetableBtn').trigger('click');
+                                    $('#showTimetableBtn').trigger('click', [{ autoOpenIfEmpty: true }]);
                                 }
                             }
                         },
@@ -730,7 +730,7 @@
 
                 // Auto-show timetable after all certificate fields are selected
                 if ($('#certificate_location').val() && $('#certificate_course').val() && $('#certificate_intake').val() && start && end) {
-                    $('#certificate_showTimetableBtn').trigger('click');
+                    $('#certificate_showTimetableBtn').trigger('click', [{ autoOpenIfEmpty: true }]);
                 }
 
                 loadCertificateSubjects();
@@ -754,13 +754,13 @@
                 }
 
                 if ($('#degree_location').val() && $('#degree_course').val() && $('#degree_intake').val() && start && end) {
-                    $('#showTimetableBtn').trigger('click');
+                    $('#showTimetableBtn').trigger('click', [{ autoOpenIfEmpty: true }]);
                 }
             });
 
             // Fetch available subjects based on semester
-            $('#degree_semester').change(function () {
-                var semesterId = $(this).val();
+            function loadDegreeSubjects() {
+                var semesterId = $('#degree_semester').val();
                 var courseId = $('#degree_course').val();
                 if (semesterId && courseId) {
                     $.ajax({
@@ -789,6 +789,10 @@
                         }
                     });
                 }
+            }
+
+            $('#degree_semester').change(function () {
+                loadDegreeSubjects();
             });
 
             function loadCertificateSubjects() {
@@ -911,8 +915,33 @@
                 if (courseId) $('#pdf_course').val(courseId);
             });
 
+            function openNewTimetablePopup(mode) {
+                var isCertificate = mode === 'certificate';
+                var startDate = isCertificate ? $('#certificate_start_date').val() : $('#degree_start_date').val();
+
+                if (!startDate || !moment(startDate).isValid()) {
+                    return;
+                }
+
+                $('#selectedTimetableMode').val(mode);
+                $('#selectedDate').val(moment(startDate).format('YYYY-MM-DD'));
+                $('#selected_date_display').val(moment(startDate).format('YYYY-MM-DD'));
+                $('#degree_time_0').val('07:00');
+                $('#degree_duration_0').val('');
+                $('#degree_subject_0').val('');
+
+                if (isCertificate) {
+                    loadCertificateSubjects();
+                } else {
+                    loadDegreeSubjects();
+                }
+
+                $('#subjectSelectionModal').modal('show');
+            }
+
             // Show Timetable button click event to load events
-            $('#showTimetableBtn').click(function () {
+            $('#showTimetableBtn').click(function (event, options) {
+                options = options || {};
                 var data = {
                     location: $('#degree_location').val(),
                     course_id: $('#degree_course').val(),
@@ -957,6 +986,14 @@
 
                         if (!eventsArray || !eventsArray.length) {
                             console.info('No events returned.');
+                            latestEventsRaw = [];
+                            latestFcEvents = [];
+                            if (options.autoOpenIfEmpty) {
+                                $('#degreeTimetableSection').hide();
+                                if ($('#tableViewSection').length) $('#tableViewSection').hide();
+                                openNewTimetablePopup('degree');
+                                return;
+                            }
                             setTimeout(function () { if (window.__nebulaCalendar) window.__nebulaCalendar.render(); }, 50);
                             return;
                         }
@@ -1961,7 +1998,8 @@
                 certificateCalendar.render();
             }
 
-            $('#certificate_showTimetableBtn').on('click', function () {
+            $('#certificate_showTimetableBtn').on('click', function (event, options) {
+                options = options || {};
                 var location = $('#certificate_location').val();
                 var course_id = $('#certificate_course').val();
                 var intake_id = $('#certificate_intake').val();
@@ -2003,6 +2041,13 @@
 
                         if (!eventsArray || !eventsArray.length) {
                             console.info('No events returned for certificate timetable. Showing empty calendar.');
+                            latestCertificateEventsRaw = [];
+                            latestCertificateFcEvents = [];
+                            if (options.autoOpenIfEmpty) {
+                                $('#certificateTimetableSection').hide();
+                                openNewTimetablePopup('certificate');
+                                return;
+                            }
                             if (window.__nebulaCertificateCalendar) {
                                 try { window.__nebulaCertificateCalendar.render(); } catch (e) { console.warn('Certificate calendar render failed', e); }
                             }
