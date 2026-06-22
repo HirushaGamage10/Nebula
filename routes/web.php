@@ -606,6 +606,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/get-weeks', [TimetableController::class, 'getWeeks'])->name('timetable.weeks');
         Route::get('/get-semester-dates/{semesterId}', [TimetableController::class, 'getSemesterDates'])->name('get-semester-dates');
         Route::get('/get-modules-by-semester', [TimetableController::class, 'getModulesBySemester'])->name('timetable.modules.by.semester');
+        Route::get('/timetable/get-intake-modules', [TimetableController::class, 'getModulesByIntake'])->name('timetable.modules.by.intake');
         Route::get('/get-specializations-for-course', [TimetableController::class, 'getSpecializationsForCourse'])->name('timetable.specializations.for.course');
         Route::post('/get-existing-timetable', [TimetableController::class, 'getExistingTimetable'])->name('timetable.get.existing');
         Route::get('/download-timetable-pdf', [TimetableController::class, 'downloadTimetablePDF'])->name('timetable.download.pdf');

@@ -194,6 +194,7 @@
                 <div class="modal-body">
                     <!-- Hidden input to store the selected date -->
                     <input type="hidden" id="selectedDate">
+                    <input type="hidden" id="selectedTimetableMode" value="degree">
 
                     <!-- Display selected date -->
                     <div class="mb-3 row">
@@ -718,7 +719,6 @@
 
             // Certificate: set course start/end dates when intake changes
             $('#certificate_intake').change(function () {
-<<<<<<< Updated upstream
                 var selected = $(this).find('option:selected');
                 var start = selected.data('start') || '';
                 var end = selected.data('end') || '';
@@ -731,35 +731,9 @@
                 // Auto-show timetable after all certificate fields are selected
                 if ($('#certificate_location').val() && $('#certificate_course').val() && $('#certificate_intake').val() && start && end) {
                     $('#certificate_showTimetableBtn').trigger('click');
-=======
-                var intakeId = $(this).val();
-                var courseId = $('#certificate_course').val();
-                if (intakeId && courseId) {
-                    $.ajax({
-                        url: '/timetable/get-semesters',
-                        type: 'GET',
-                        data: { course_id: courseId, intake_id: intakeId },
-                        success: function (data) {
-                            $('#certificate_semester').empty();
-                            $('#certificate_semester').append('<option selected disabled value="">Select Semester</option>');
-                            if (data.semesters && data.semesters.length > 0) {
-                                $.each(data.semesters, function (index, semester) {
-                                    const label = semester.display_name || semester.semester_name || semester.name;
-                                    $('#certificate_semester').append('<option value="' + semester.id + '" data-start="' + (semester.start_date || '') + '" data-end="' + (semester.end_date || '') + '">' + label + '</option>');
-                                });
-                                $('#certificate_semester').prop('disabled', false);
-                                // Auto-select first semester and trigger change to populate dates
-                                var firstSemesterId = data.semesters[0].id;
-                                $('#certificate_semester').val(firstSemesterId).trigger('change');
-                            } else {
-                                $('#certificate_semester').append('<option disabled>No semesters found</option>');
-                                $('#certificate_semester').prop('disabled', true);
-                            }
-                        },
-                        error: function () { console.error('Error fetching certificate semesters'); }
-                    });
->>>>>>> Stashed changes
                 }
+
+                loadCertificateSubjects();
             });
 
             // Auto-fill semester start/end date when semester selected (uses data attributes above)
@@ -783,26 +757,6 @@
                     $('#showTimetableBtn').trigger('click');
                 }
             });
-
-            // Certificate: Auto-fill semester start/end date when certificate semester selected
-            $(document).on('change', '#certificate_semester', function () {
-                var selected = $(this).find('option:selected');
-                var start = selected.data('start') || '';
-                var end = selected.data('end') || '';
-                // normalize to yyyy-mm-dd if moment can parse it
-                if (start && moment(start).isValid()) start = moment(start).format('YYYY-MM-DD');
-                if (end && moment(end).isValid()) end = moment(end).format('YYYY-MM-DD');
-                $('#certificate_start_date').val(start);
-                $('#certificate_end_date').val(end);
-                // show certificate download buttons when semester chosen
-                if ($(this).val()) {
-                    $('#certificate_download_buttons').show();
-                } else {
-                    $('#certificate_download_buttons').hide();
-                }
-            });
-
-
 
             // Fetch available subjects based on semester
             $('#degree_semester').change(function () {
@@ -837,27 +791,27 @@
                 }
             });
 
-            // Certificate: Fetch available subjects based on semester
-            $('#certificate_semester').change(function () {
-                var semesterId = $(this).val();
+            function loadCertificateSubjects() {
                 var courseId = $('#certificate_course').val();
-                if (semesterId && courseId) {
+                var intakeId = $('#certificate_intake').val();
+
+                if (courseId && intakeId) {
                     $.ajax({
-                        url: '/get-modules-by-semester',
+                        url: '/timetable/get-intake-modules',
                         type: 'GET',
-                        data: { semester_id: semesterId, course_id: courseId },
+                        data: { course_id: courseId, intake_id: intakeId },
                         success: function (data) {
                             if (data.modules && data.modules.length > 0) {
-                                $('#certificate_subject_0').empty();
-                                $('#certificate_subject_0').append('<option selected disabled value="">Select Subject</option>');
+                                $('#degree_subject_0').empty();
+                                $('#degree_subject_0').append('<option selected disabled value="">Select Subject</option>');
                                 $.each(data.modules, function (index, module) {
-                                    $('#certificate_subject_0').append('<option value="' + module.module_id + '">' + module.module_name + ' (' + module.module_code + ')</option>');
+                                    $('#degree_subject_0').append('<option value="' + module.module_id + '">' + module.module_name + ' (' + module.module_code + ')</option>');
                                 });
-                                $('#certificate_subject_0').prop('disabled', false);
+                                $('#degree_subject_0').prop('disabled', false);
                             } else {
-                                $('#certificate_subject_0').empty();
-                                $('#certificate_subject_0').append('<option value="" disabled>No subjects found</option>');
-                                $('#certificate_subject_0').prop('disabled', true);
+                                $('#degree_subject_0').empty();
+                                $('#degree_subject_0').append('<option value="" disabled>No subjects found</option>');
+                                $('#degree_subject_0').prop('disabled', true);
                             }
                         },
                         error: function (xhr, status, error) {
@@ -865,7 +819,7 @@
                         }
                     });
                 }
-            });
+            }
 
             // Initialize FullCalendar v5
             var calendarEl = document.getElementById('calendar');
@@ -916,6 +870,7 @@
                 select: function(selectionInfo) {
                     var startDate = moment(selectionInfo.start).format('YYYY-MM-DD');
                     var startTime = moment(selectionInfo.start).format('HH:mm');
+                    $('#selectedTimetableMode').val('degree');
                     $('#selectedDate').val(startDate);
                     $('#selected_date_display').val(startDate);
                     $('#degree_time_0').val(startTime);
@@ -927,6 +882,7 @@
                 dateClick: function(info) {
                     var d = moment(info.date).format('YYYY-MM-DD');
                     var t = moment(info.date).format('HH:mm');
+                    $('#selectedTimetableMode').val('degree');
                     $('#selectedDate').val(d);
                     $('#selected_date_display').val(d);
                     $('#degree_time_0').val(t);
@@ -1853,6 +1809,9 @@
                     lecturersArr.push($(this).find('.lecturer-input').val() || '');
                 });
 
+                var mode = $('#selectedTimetableMode').val() || 'degree';
+                var isCertificate = mode === 'certificate';
+
                 var payload = {
                     date: date,
                     subject_ids: subject_ids,
@@ -1861,10 +1820,10 @@
                     end_times: end_times,
                     classrooms: classroomsArr,
                     lecturers: lecturersArr,
-                    location: $('#degree_location').val() || '',
-                    course_id: $('#degree_course').val() || '',
-                    intake_id: $('#degree_intake').val() || '',
-                    semester: $('#degree_semester').val() || ''
+                    location: isCertificate ? ($('#certificate_location').val() || '') : ($('#degree_location').val() || ''),
+                    course_id: isCertificate ? ($('#certificate_course').val() || '') : ($('#degree_course').val() || ''),
+                    intake_id: isCertificate ? ($('#certificate_intake').val() || '') : ($('#degree_intake').val() || ''),
+                    semester: isCertificate ? '1' : ($('#degree_semester').val() || '')
                 };
 
                 $('#assignSubjectBtn').prop('disabled', true).text('Assigning...');
@@ -1880,7 +1839,11 @@
                         $('#subjectSelectionModal').modal('hide');
 
                         // reload events from server so week/day views show timed events correctly
-                        $('#showTimetableBtn').trigger('click');
+                        if (isCertificate) {
+                            $('#certificate_showTimetableBtn').trigger('click');
+                        } else {
+                            $('#showTimetableBtn').trigger('click');
+                        }
                     },
                     error: function (xhr) {
                         $('#assignSubjectBtn').prop('disabled', false).text('Assign Subjects');
@@ -1967,6 +1930,31 @@
                     navLinks: true,
                     eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
                     events: [],
+                    select: function(selectionInfo) {
+                        var startDate = moment(selectionInfo.start).format('YYYY-MM-DD');
+                        var startTime = moment(selectionInfo.start).format('HH:mm');
+                        $('#selectedTimetableMode').val('certificate');
+                        $('#selectedDate').val(startDate);
+                        $('#selected_date_display').val(startDate);
+                        $('#degree_time_0').val(startTime);
+                        $('#degree_duration_0').val('');
+                        $('#degree_subject_0').val('');
+                        loadCertificateSubjects();
+                        $('#subjectSelectionModal').modal('show');
+                        certificateCalendar.unselect();
+                    },
+                    dateClick: function(info) {
+                        var d = moment(info.date).format('YYYY-MM-DD');
+                        var t = moment(info.date).format('HH:mm');
+                        $('#selectedTimetableMode').val('certificate');
+                        $('#selectedDate').val(d);
+                        $('#selected_date_display').val(d);
+                        $('#degree_time_0').val(t);
+                        $('#degree_duration_0').val('');
+                        $('#degree_subject_0').val('');
+                        loadCertificateSubjects();
+                        $('#subjectSelectionModal').modal('show');
+                    },
                     eventOverlap: true
                 });
                 window.__nebulaCertificateCalendar = certificateCalendar;
@@ -1977,31 +1965,21 @@
                 var location = $('#certificate_location').val();
                 var course_id = $('#certificate_course').val();
                 var intake_id = $('#certificate_intake').val();
-                var semester = $('#certificate_semester').val();
                 var start_date = $('#certificate_start_date').val();
                 var end_date = $('#certificate_end_date').val();
 
                 // Validate required fields
-                if (!location || !course_id || !intake_id || !semester || !start_date || !end_date) {
-                    alert('Please select Location, Course, Intake, and Semester');
+                if (!location || !course_id || !intake_id || !start_date || !end_date) {
+                    alert('Please select Location, Course, and Intake');
                     return;
                 }
 
                 var data = {
-<<<<<<< Updated upstream
-                    location: $('#certificate_location').val(),
-                    course_id: $('#certificate_course').val(),
-                    intake_id: $('#certificate_intake').val(),
-                    start_date: $('#certificate_start_date').val(),
-                    end_date: $('#certificate_end_date').val()
-=======
                     location: location,
                     course_id: course_id,
                     intake_id: intake_id,
-                    semester: semester,
                     start_date: start_date,
                     end_date: end_date
->>>>>>> Stashed changes
                 };
 
                 console.log("Certificate Timetable data being sent:", data);
