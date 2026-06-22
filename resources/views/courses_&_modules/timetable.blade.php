@@ -335,7 +335,7 @@
     <script nonce="{{ $cspNonce }}" src="{{ asset('js/jquery-3.6.0.min.js') }}"></script>
 
     <!-- Moment.js (used in other parts of this page) -->
-    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js" integrity="sha384-7KgQsgOQcPx/h229ZkRapUfz10fU0/935MgiP+t/ZMnkslf5HHmoRu0yAj8BkhoT" crossorigin="anonymous"></script>
+    <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js" crossorigin="anonymous"></script>
 
     <!-- FullCalendar v5 bundle -->
     <script nonce="{{ $cspNonce }}" src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js" integrity="sha384-5/vsv56401Wf+RP3yE5/aIKW4wutk4nLY3HjueTXN0rA+DmweMtrYaN6RSjdv31b" crossorigin="anonymous"></script>
@@ -607,6 +607,11 @@
             $('#degree_course').change(function () {
                 var courseId = $(this).val();
                 var location = $('#degree_location').val();
+                $('#degree_start_date').val('');
+                $('#degree_end_date').val('');
+                $('#degree_download_buttons').hide();
+                $('#degreeTimetableSection').hide();
+
                 if (courseId && location) {
                     $.ajax({
                         url: '/get-intakes/' + courseId + '/' + location,
@@ -619,7 +624,7 @@
 
                             if (data.intakes && data.intakes.length > 0) {
                                 $.each(data.intakes, function (index, intake) {
-                                    $('#degree_intake').append('<option value="' + intake.intake_id + '">' + intake.batch + '</option>');
+                                    $('#degree_intake').append('<option value="' + intake.intake_id + '" data-start="' + (intake.start_date || '') + '" data-end="' + (intake.end_date || '') + '">' + intake.batch + '</option>');
                                 });
                                 $('#degree_intake').prop('disabled', false);
                             } else {
@@ -666,6 +671,17 @@
             $('#degree_intake').change(function () {
                 var intakeId = $(this).val();
                 var courseId = $('#degree_course').val();
+                var selected = $(this).find('option:selected');
+                var start = selected.data('start') || '';
+                var end = selected.data('end') || '';
+
+                if (start && moment(start).isValid()) start = moment(start).format('YYYY-MM-DD');
+                if (end && moment(end).isValid()) end = moment(end).format('YYYY-MM-DD');
+
+                $('#degree_start_date').val(start);
+                $('#degree_end_date').val(end);
+                $('#degree_download_buttons').toggle(!!start && !!end);
+
                 if (intakeId && courseId) {
                     $.ajax({
                         url: '/timetable/get-semesters',
@@ -687,6 +703,10 @@
                             } else {
                                 $('#degree_semester').append('<option disabled>No semesters found</option>');
                                 $('#degree_semester').prop('disabled', true);
+
+                                if ($('#degree_location').val() && $('#degree_course').val() && $('#degree_intake').val() && start && end) {
+                                    $('#showTimetableBtn').trigger('click');
+                                }
                             }
                         },
                         error: function (xhr, status, error) {
@@ -728,6 +748,10 @@
                     $('#degree_download_buttons').show();
                 } else {
                     $('#degree_download_buttons').hide();
+                }
+
+                if ($('#degree_location').val() && $('#degree_course').val() && $('#degree_intake').val() && start && end) {
+                    $('#showTimetableBtn').trigger('click');
                 }
             });
 
