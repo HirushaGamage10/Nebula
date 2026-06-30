@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use App\Models\Timetable;
 use Illuminate\Support\Facades\Validator;
 
@@ -89,7 +90,7 @@ class TimetableController extends Controller
 
                         // Only create entry if module was found
                         if ($moduleId !== null) {
-                            // Inside your loop for each subject
+                            $startTime = $this->formatTimeForDatabase($row['time']);
                             $timetableEntry = [
                                 'location' => $validatedData['location'],
                                 'course_id' => $validatedData['course_id'],
@@ -97,8 +98,8 @@ class TimetableController extends Controller
                                 'semester' => $validatedData['semester'],
                                 'module_id' => $moduleId,
                                 'date' => $date->format('Y-m-d'),
-                                'time' => $this->formatTimeForDatabase($row['time']), // Store start time
-                                'end_time' => $endTimeFormatted, // Store calculated end time
+                                'time' => $startTime,
+                                'end_time' => $this->extractEndTimeForDatabase($row['time'], $startTime),
                                 'created_at' => now(),
                                 'updated_at' => now(),
                             ];
@@ -255,6 +256,34 @@ class TimetableController extends Controller
         $formattedTime = '00:00:00';
         \Log::warning('Could not parse time format, using default:', ['input' => $timeString, 'output' => $formattedTime]);
         return $formattedTime;
+    }
+
+    private function extractEndTimeForDatabase($timeString, $startTime)
+    {
+        if (empty($timeString) || !is_string($timeString)) {
+            return $startTime;
+        }
+
+        // If time string contains a range, capture the second part
+        if (preg_match('/\d+[\.:-]\d+[\.:-]\d+[\.:-](\d+)/', $timeString, $matches)) {
+            $endHour = str_pad($matches[3] ?? $matches[1], 2, '0', STR_PAD_LEFT);
+            $endMinute = str_pad($matches[4] ?? '00', 2, '0', STR_PAD_LEFT);
+            return $endHour . ':' . $endMinute . ':00';
+        }
+
+        if (preg_match('/(\d+)[\.:-](\d+)\s*[\.:-]\s*(\d+)[\.:-]?(\d+)?/', $timeString, $matches)) {
+            $endHour = str_pad($matches[3], 2, '0', STR_PAD_LEFT);
+            $endMinute = isset($matches[4]) ? str_pad($matches[4], 2, '0', STR_PAD_LEFT) : '00';
+            return $endHour . ':' . $endMinute . ':00';
+        }
+
+        if (preg_match('/(\d+):(\d+)\s*-\s*(\d+):(\d+)/', $timeString, $matches)) {
+            $endHour = str_pad($matches[3], 2, '0', STR_PAD_LEFT);
+            $endMinute = str_pad($matches[4], 2, '0', STR_PAD_LEFT);
+            return $endHour . ':' . $endMinute . ':00';
+        }
+
+        return $startTime;
     }
 
     // Check for overlapping timetable conflicts on a given date/time
@@ -545,7 +574,7 @@ class TimetableController extends Controller
                 if (is_array($course->specializations)) {
                     $specializations = $course->specializations;
                 } elseif (is_string($course->specializations)) {
-                    $specializations = json_decode($course->specializations, true) ?: [];
+                    $specializations = json_decode((string) $course->specializations, true) ?: [];
                 }
             }
 
@@ -575,31 +604,31 @@ class TimetableController extends Controller
         }
 
         try {
-            // Find the semester and eager load modules
-            $semester = Semester::with('modules')->find($semesterId);
+            if (!Schema::hasTable('semester_module')) {
+                \Log::warning('semester_module table does not exist');
+                return response()->json(['modules' => [], 'message' => 'Semester module lookup is unavailable']);
+            }
 
-            \Log::info('Semester found:', ['semester' => $semester ? $semester->toArray() : null]);
-
+            $semester = Semester::find($semesterId);
             if (!$semester) {
                 \Log::warning('Semester not found for ID:', ['semester_id' => $semesterId]);
                 return response()->json(['modules' => [], 'message' => 'Semester not found']);
             }
 
-            $modules = $semester->modules;
+            $modules = Module::join('semester_module', 'modules.module_id', '=', 'semester_module.module_id')
+                ->where('semester_module.semester_id', $semester->id)
+                ->select('modules.*', 'semester_module.specialization as semester_specialization')
+                ->get();
 
-            // If specialization is provided, filter modules by specialization
             if ($specialization) {
                 $modules = $modules->filter(function ($module) use ($specialization) {
-                    // Check if the module has specialization field and matches
-                    if (isset($module->specialization)) {
-                        return $module->specialization === $specialization;
+                    if (isset($module->semester_specialization) && $module->semester_specialization !== null) {
+                        return $module->semester_specialization === $specialization;
                     }
-                    // If no specialization field, include core modules
-                    return $module->module_type === 'core';
+                    return ($module->module_type ?? '') === 'core';
                 });
             }
 
-            // If no modules found, log the warning
             if ($modules->isEmpty()) {
                 \Log::warning('No modules found for semester with specialization:', [
                     'semester_id' => $semesterId,
@@ -607,7 +636,6 @@ class TimetableController extends Controller
                 ]);
             }
 
-            // Map the modules into a response-friendly format
             $formattedModules = $modules->map(function ($module) {
                 return [
                     'module_id' => $module->module_id,
@@ -617,7 +645,7 @@ class TimetableController extends Controller
                 ];
             });
 
-            \Log::info('Modules found for semester:', ['module_count' => $formattedModules->count(), 'modules' => $formattedModules->toArray()]);
+            \Log::info('Modules found for semester:', ['module_count' => $formattedModules->count()]);
 
             return response()->json(['modules' => $formattedModules]);
         } catch (\Exception $e) {
@@ -626,6 +654,53 @@ class TimetableController extends Controller
         }
     }
 
+    // Method to get modules for a specific intake
+    public function getModulesByIntake(Request $request)
+    {
+        $courseId = $request->input('course_id');
+        $intakeId = $request->input('intake_id');
+
+        if (!$courseId || !$intakeId) {
+            \Log::warning('Missing course_id or intake_id for getModulesByIntake', ['course_id' => $courseId, 'intake_id' => $intakeId]);
+            return response()->json(['modules' => [], 'message' => 'Course and intake are required']);
+        }
+
+        try {
+            if (!Schema::hasTable('intake_modules')) {
+                \Log::warning('intake_modules table does not exist');
+                return response()->json(['modules' => [], 'message' => 'Intake module lookup is unavailable']);
+            }
+
+            $intake = Intake::with('modules')
+                ->where('intake_id', $intakeId)
+                ->where('course_id', $courseId)
+                ->first();
+
+            if (!$intake) {
+                \Log::warning('Intake not found for course_id and intake_id', ['course_id' => $courseId, 'intake_id' => $intakeId]);
+                return response()->json(['modules' => [], 'message' => 'Intake not found']);
+            }
+
+            $modules = $intake->modules;
+            if ($modules->isEmpty()) {
+                \Log::warning('No modules found for intake:', ['course_id' => $courseId, 'intake_id' => $intakeId]);
+            }
+
+            $formattedModules = $modules->map(function ($module) {
+                return [
+                    'module_id' => $module->module_id,
+                    'module_code' => $module->module_code,
+                    'module_name' => $module->module_name,
+                    'full_name' => $module->module_name . ' (' . $module->module_code . ')'
+                ];
+            });
+
+            return response()->json(['modules' => $formattedModules]);
+        } catch (\Exception $e) {
+            \Log::error('Error in getModulesByIntake:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json(['modules' => [], 'message' => 'An error occurred while fetching intake modules']);
+        }
+    }
 
     // Method to download timetable as PDF
     public function downloadTimetablePDF(Request $request)
