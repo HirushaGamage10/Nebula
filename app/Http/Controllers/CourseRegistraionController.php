@@ -276,7 +276,7 @@ class CourseRegistraionController extends Controller
                     'counselorName' => 'nullable|string|max:255',
                     'counselorNic' => 'nullable|string|max:255',
                     'counselorPhone' => 'nullable|string|max:255',
-                    'options' => 'required|string',
+                    'options' => 'nullable|string',
                     'surveyNo' => 'required|numeric',
                     'registrationFee' => 'required|numeric',
                     'courseStartDate' => 'required|date',
@@ -284,18 +284,17 @@ class CourseRegistraionController extends Controller
                 ]);
 
                 // Check if the student is already registered for the course.
-                // Only treat as duplicate if the previous registration is not rejected / not marked as 'Not eligible' or 'Cancelled'.
                 $isAlreadyRegistered = CourseRegistration::where('student_id', $validatedData['studentId'])
                     ->where('course_id', $validatedData['course'])
-                    ->whereNotIn('approval_status', ['Rejected'])
-                    ->whereNotIn('status', ['Not eligible', 'Cancelled'])
+                    ->whereNotIn('approval_status', ['Rejected', 'rejected'])
+                    ->whereNotIn('status', ['Not eligible', 'not eligible', 'Cancelled', 'cancelled'])
                     ->exists();
 
                 if ($isAlreadyRegistered) {
                     $blocking = CourseRegistration::where('student_id', $validatedData['studentId'])
                         ->where('course_id', $validatedData['course'])
-                        ->whereNotIn('approval_status', ['Rejected'])
-                        ->whereNotIn('status', ['Not eligible', 'Cancelled'])
+                        ->whereNotIn('approval_status', ['Rejected', 'rejected'])
+                        ->whereNotIn('status', ['Not eligible', 'not eligible', 'Cancelled', 'cancelled'])
                         ->first();
 
                     return response()->json([
@@ -334,7 +333,8 @@ class CourseRegistraionController extends Controller
                 // Update student's marketing survey
                 $student = Student::find($validatedData['studentId']);
                 if ($student) {
-                    $student->marketing_survey = $validatedData['options'];
+                    $surveyOptions = trim($validatedData['options'] ?? '');
+                    $student->marketing_survey = $surveyOptions !== '' ? $surveyOptions : null;
                     $student->save();
                 }
 
@@ -518,18 +518,17 @@ class CourseRegistraionController extends Controller
             ]);
 
             // Check if the student is already registered for the course.
-            // Treat previous registrations with approval_status 'Rejected' or status 'Not eligible'/'Cancelled' as non-blocking.
             $isAlreadyRegistered = CourseRegistration::where('student_id', $validatedData['student_id'])
                 ->where('course_id', $validatedData['course_id'])
-                ->whereNotIn('approval_status', ['Rejected'])
-                ->whereNotIn('status', ['Not eligible', 'Cancelled'])
+                ->whereNotIn('approval_status', ['Rejected', 'rejected'])
+                ->whereNotIn('status', ['Not eligible', 'not eligible', 'Cancelled', 'cancelled'])
                 ->exists();
 
             if ($isAlreadyRegistered) {
                 $blocking = CourseRegistration::where('student_id', $validatedData['student_id'])
                     ->where('course_id', $validatedData['course_id'])
-                    ->whereNotIn('approval_status', ['Rejected'])
-                    ->whereNotIn('status', ['Not eligible', 'Cancelled'])
+                    ->whereNotIn('approval_status', ['Rejected', 'rejected'])
+                    ->whereNotIn('status', ['Not eligible', 'not eligible', 'Cancelled', 'cancelled'])
                     ->first();
 
                 return response()->json([
@@ -697,18 +696,17 @@ class CourseRegistraionController extends Controller
             ]);
 
             // Check if the student is already registered for the course.
-            // Treat previous registrations with approval_status 'Rejected' or status 'Not eligible'/'Cancelled' as non-blocking.
             $isAlreadyRegistered = CourseRegistration::where('student_id', $validatedData['student_id'])
                 ->where('course_id', $validatedData['course_id'])
-                ->whereNotIn('approval_status', ['Rejected'])
-                ->whereNotIn('status', ['Not eligible', 'Cancelled'])
+                ->whereNotIn('approval_status', ['Rejected', 'rejected'])
+                ->whereNotIn('status', ['Not eligible', 'not eligible', 'Cancelled', 'cancelled'])
                 ->exists();
 
             if ($isAlreadyRegistered) {
                 $blocking = CourseRegistration::where('student_id', $validatedData['student_id'])
                     ->where('course_id', $validatedData['course_id'])
-                    ->whereNotIn('approval_status', ['Rejected'])
-                    ->whereNotIn('status', ['Not eligible', 'Cancelled'])
+                    ->whereNotIn('approval_status', ['Rejected', 'rejected'])
+                    ->whereNotIn('status', ['Not eligible', 'not eligible', 'Cancelled', 'cancelled'])
                     ->first();
 
                 return response()->json([

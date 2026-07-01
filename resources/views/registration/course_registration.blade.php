@@ -52,6 +52,7 @@
                     </div>
                 </div>
             </div>
+            <div id="messageContainer" class="mx-3 mb-3"></div>
             <div id="searchMessageContainer" class="mx-3"></div>
             <div id="studentDetailsSection" style="display: none;">
                 <div class="row mt-3">
@@ -297,11 +298,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchBtn = document.getElementById('searchNicBtn');
     const nicInput = document.getElementById('studentNicSearch');
     const studentDetailsSection = document.getElementById('studentDetailsSection');
+    const messageContainer = document.getElementById('messageContainer');
     const searchMessageContainer = document.getElementById('searchMessageContainer');
     const spinnerOverlay = document.getElementById('spinner-overlay');
     const olTableBody = document.getElementById('olExamSubjectsAndGradesTableBody');
     const alTableBody = document.getElementById('alExamSubjectsAndGradesTableBody');
     const baseUrl = "{{ url('/api/course-registration/student-by-nic') }}";
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || document.querySelector('input[name="_token"]')?.value || '';
 
     function setLoading(isLoading) {
         if (spinnerOverlay) {
@@ -310,21 +313,24 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function showMessage(type, message) {
-        if (!searchMessageContainer) {
+        const alertContainer = messageContainer || searchMessageContainer;
+        if (!alertContainer) {
             return;
         }
-        searchMessageContainer.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' + 
-            message + 
+        alertContainer.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+            message +
             '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
             '</div>';
-        
+        alertContainer.style.display = 'block';
+        alertContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
         // Auto-dismiss after 5 seconds
         setTimeout(() => {
-            const alert = searchMessageContainer.querySelector('.alert');
+            const alert = alertContainer.querySelector('.alert');
             if (alert) {
                 alert.classList.remove('show');
                 setTimeout(() => {
-                    searchMessageContainer.innerHTML = '';
+                    alertContainer.innerHTML = '';
                 }, 150);
             }
         }, 5000);
@@ -470,7 +476,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             // Fetch courses for selected location using course registration controller
-            fetch('/course-registration/get-courses-by-location/' + encodeURIComponent(location))
+            fetch('{{ url('/course-registration/get-courses-by-location') }}/' + encodeURIComponent(location))
                 .then(response => response.json())
                 .then(data => {
                     if (courseSelect) {
@@ -478,9 +484,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (data.success && data.courses && data.courses.length > 0) {
                             data.courses.forEach(course => {
                                 const option = document.createElement('option');
-                                option.value = course.course_name;
-                                option.setAttribute('data-course-id', course.course_id);
+                                option.value = course.course_id;
                                 option.textContent = course.course_name;
+                                option.dataset.courseName = course.course_name;
                                 courseSelect.appendChild(option);
                             });
                             courseSelect.disabled = false;
@@ -508,15 +514,15 @@ document.addEventListener('DOMContentLoaded', function () {
     // Handle course change to load intakes
     if (courseSelect) {
         courseSelect.addEventListener('change', function() {
-            const courseName = this.value;
+            const courseName = this.options[this.selectedIndex]?.dataset.courseName || this.options[this.selectedIndex]?.textContent || '';
             const location = locationSelect ? locationSelect.value : '';
-            
+
             if (!courseName || !location) {
                 return;
             }
 
             // Fetch intakes for selected course and location using course registration controller
-            fetch('/course-registration/get-intakes/' + encodeURIComponent(courseName) + '/' + encodeURIComponent(location))
+            fetch('{{ url('/course-registration/get-intakes') }}/' + encodeURIComponent(courseName) + '/' + encodeURIComponent(location))
                 .then(response => response.json())
                 .then(data => {
                     if (intakeSelect) {
@@ -547,26 +553,49 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Helper: normalize dates for HTML date inputs
+    function normalizeDateForInput(dateString) {
+        if (!dateString) {
+            return '';
+        }
+
+        // If the string contains a time component, convert to YYYY-MM-DD
+        const dateOnlyMatch = dateString.match(/^\d{4}-\d{2}-\d{2}/);
+        if (dateOnlyMatch) {
+            return dateOnlyMatch[0];
+        }
+
+        const parsed = new Date(dateString);
+        if (!isNaN(parsed.getTime())) {
+            const year = parsed.getFullYear();
+            const month = String(parsed.getMonth() + 1).padStart(2, '0');
+            const day = String(parsed.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        return '';
+    }
+
     // Handle intake change to auto-populate registration fee and start date
     if (intakeSelect) {
         intakeSelect.addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
             const registrationFeeInput = document.getElementById('registrationFee');
             const startDateInput = document.getElementById('courseStartDate');
-            
+
             if (selectedOption && selectedOption.value) {
-                const startDate = selectedOption.getAttribute('data-start-date');
+                const startDateRaw = selectedOption.getAttribute('data-start-date');
                 const registrationFee = selectedOption.getAttribute('data-registration-fee');
-                
-                if (registrationFeeInput && registrationFee) {
-                    registrationFeeInput.value = registrationFee;
-                    registrationFeeInput.readOnly = true;
+                const normalizedStartDate = normalizeDateForInput(startDateRaw);
+
+                if (registrationFeeInput) {
+                    registrationFeeInput.value = registrationFee || '';
+                    registrationFeeInput.readOnly = Boolean(registrationFee);
                 }
-                
-                if (startDateInput && startDate) {
-                    // Use the date string directly (already in YYYY-MM-DD format from database)
-                    startDateInput.value = startDate;
-                    startDateInput.readOnly = true;
+
+                if (startDateInput) {
+                    startDateInput.value = normalizedStartDate;
+                    startDateInput.readOnly = Boolean(normalizedStartDate);
                 }
             }
         });
@@ -627,27 +656,26 @@ document.addEventListener('DOMContentLoaded', function () {
     if (finalRegisterBtn) {
         finalRegisterBtn.addEventListener('click', async function(e) {
             e.preventDefault();
-            
+
             // Validate required fields
             const studentId = document.getElementById('studentId')?.value;
             const location = document.getElementById('location')?.value;
             const courseSelect = document.getElementById('courseSearch');
-            const courseName = courseSelect?.value;
-            const courseId = courseSelect?.options[courseSelect.selectedIndex]?.getAttribute('data-course-id');
+            const courseId = courseSelect?.value;
             const intakeId = document.getElementById('intakeId')?.value;
             const registrationFee = document.getElementById('registrationFee')?.value;
             const courseStartDate = document.getElementById('courseStartDate')?.value;
-            
+
             if (!studentId) {
                 showMessage('warning', 'Please search for a student first.');
                 return;
             }
-            
-            if (!location || !courseName || !intakeId || !registrationFee || !courseStartDate) {
+
+                if (!location || !courseId || !intakeId || !registrationFee || !courseStartDate) {
                 showMessage('warning', 'Please fill in all required course fields.');
                 return;
             }
-            
+
             // Validate SLT Employee fields
             const sltEmployee = document.querySelector('input[name="slt_employee"]:checked')?.value;
             if (sltEmployee === 'yes') {
@@ -660,17 +688,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 const counselorName = document.getElementById('counselorName')?.value;
                 const counselorNic = document.getElementById('counselorNic')?.value;
                 const counselorPhone = document.getElementById('counselorPhone')?.value;
-                
+
                 if (!counselorName || !counselorNic || !counselorPhone) {
                     showMessage('warning', 'Please fill in all counselor details.');
                     return;
                 }
             }
-            
+
             // Collect marketing survey options
             const marketingOptions = [];
-            document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
-                if (checkbox.value && checkbox.id.startsWith('checkbox')) {
+            const marketingCheckboxes = document.querySelectorAll('#checkboxLinkedIn, #checkboxFacebook, #checkboxRadio, #checkboxTV, #checkboxOther');
+            marketingCheckboxes.forEach(checkbox => {
+                if (checkbox.checked && checkbox.value) {
                     if (checkbox.id === 'checkboxOther') {
                         const otherValue = document.getElementById('marketing_survey_other')?.value;
                         if (otherValue) {
@@ -681,7 +710,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
             });
-            
+
             // Prepare form data
             const formData = {
                 studentId: studentId,
@@ -692,40 +721,70 @@ document.addEventListener('DOMContentLoaded', function () {
                 counselorName: document.getElementById('counselorName')?.value || '',
                 counselorNic: document.getElementById('counselorNic')?.value || '',
                 counselorPhone: document.getElementById('counselorPhone')?.value || '',
-                options: marketingOptions.join(', '),
+                options: marketingOptions.join(', ').trim(),
                 surveyNo: marketingOptions.length,
                 registrationFee: registrationFee,
                 courseStartDate: courseStartDate,
                 intakeId: intakeId
             };
-            
+
             setLoading(true);
             showMessage('info', 'Submitting registration...');
-            
+
             try {
-                const response = await fetch('/store-course-registration', {
+                if (!courseId) {
+                    showMessage('danger', 'Please select a valid course from the list before submitting.');
+                    return;
+                }
+
+                const response = await fetch('{{ url('/store-course-registration') }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('input[name="_token"]')?.value || ''
+                        'X-CSRF-TOKEN': csrfToken
                     },
                     body: JSON.stringify(formData)
                 });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
+
+                let data = null;
+                let responseText = null;
+
+                try {
+                    data = await response.json();
+                } catch (parseError) {
+                    responseText = await response.text();
+                }
+
+                if (response.ok && data && data.success) {
                     showMessage('success', data.message || 'Registration completed successfully!');
-                    // Optionally redirect after success
                     setTimeout(() => {
                         window.location.reload();
                     }, 2000);
                 } else {
-                    const errorMessage = data.message || 'Registration failed. Please try again.';
-                    const errors = data.errors ? Object.values(data.errors).flat().join('<br>') : '';
-                    showMessage('danger', errorMessage + (errors ? '<br>' + errors : ''));
-                    console.error('Registration failed:', data);
+                    let errorMessage = 'Registration failed. Please try again.';
+                    let errorDetails = '';
+
+                    if (data) {
+                        if (data.message) {
+                            errorMessage = data.message;
+                        }
+                        if (data.errors) {
+                            errorDetails = Object.values(data.errors)
+                                .flat()
+                                .map(item => String(item))
+                                .join('<br>');
+                        }
+                    } else if (responseText) {
+                        errorDetails = responseText;
+                    }
+
+                    if (!errorMessage && response.statusText) {
+                        errorMessage = response.statusText;
+                    }
+
+                    showMessage('danger', errorMessage + (errorDetails ? '<br>' + errorDetails : ''));
+                    console.error('Registration failed:', { status: response.status, data, responseText });
                 }
             } catch (error) {
                 console.error('Registration error:', error);
@@ -751,7 +810,7 @@ document.addEventListener('DOMContentLoaded', function () {
             params.set('course_name', courseName);
         }
         const query = params.toString();
-        window.location.href = '/eligibility-registration' + (query ? ('?' + query) : '');
+        window.location.href = '{{ url('/eligibility-registration') }}' + (query ? ('?' + query) : '');
     };
 });
 </script>
