@@ -30,7 +30,7 @@
                     </button>
                 </div>
             </div>
-            
+
             <form method="GET" action="{{ route('payment.plan.index') }}" id="filterForm" class="row gy-2 gx-2 gx-md-3 align-items-end">
                 <div class="col-12 col-sm-6 col-md-3">
                     <label class="form-label small">Location</label>
@@ -107,7 +107,7 @@
                 $from = ($currentPage - 1) * $perPage + 1;
                 $to = min($currentPage * $perPage, $totalCount);
             @endphp
-            
+
             @if($totalCount > 0)
                 <div class="d-none d-lg-block px-3 py-2 bg-light border-bottom">
                     <small class="text-muted">
@@ -128,7 +128,7 @@
                             <th class="text-end">Reg. Fee (LKR)</th>
                             <th class="text-end">Local Fee (LKR)</th>
                             <th class="text-end">Franchise</th>
-                            <th>Discount</th>
+                            <th>Full Payment Discount (%)</th>
                             <th>Installments</th>
                             <th>Created</th>
                             <th style="width: 130px;">Actions</th>
@@ -259,7 +259,7 @@
                         </small>
                     </div>
                 @endif
-                
+
                 @forelse($allPlans as $plan)
                     @php
                         $items = is_array($plan->installments) ? $plan->installments : (json_decode($plan->installments, true) ?? []);
@@ -433,10 +433,10 @@ document.addEventListener('change', function(e) {
 function exportData(format) {
     // Get current filter parameters
     const params = new URLSearchParams(window.location.search);
-    
+
     // Get all plans data from the page
     const plans = @json($plans->items());
-    
+
     if (format === 'csv') {
         exportToCSV(plans);
     } else if (format === 'pdf') {
@@ -446,12 +446,12 @@ function exportData(format) {
 
 function exportToCSV(plans) {
     // CSV Headers
-    const headers = ['ID', 'Location', 'Course', 'Intake', 'Reg. Fee (LKR)', 'Local Fee (LKR)', 
+    const headers = ['ID', 'Location', 'Course', 'Intake', 'Reg. Fee (LKR)', 'Local Fee (LKR)',
                      'International Fee', 'Currency', 'Discount %', 'Installment Plan', 'Created At'];
-    
+
     // Build CSV content
     let csv = headers.join(',') + '\n';
-    
+
     plans.forEach(plan => {
         const row = [
             plan.id,
@@ -468,7 +468,7 @@ function exportToCSV(plans) {
         ];
         csv += row.join(',') + '\n';
     });
-    
+
     // Download CSV
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -519,7 +519,7 @@ function exportToPDF(plans) {
                 </thead>
                 <tbody>
     `;
-    
+
     plans.forEach(plan => {
         printContent += `
             <tr>
@@ -534,20 +534,20 @@ function exportToPDF(plans) {
             </tr>
         `;
     });
-    
+
     printContent += `
                 </tbody>
             </table>
         </body>
         </html>
     `;
-    
+
     // Open print window
     const printWindow = window.open('', '_blank');
     printWindow.document.write(printContent);
     printWindow.document.close();
     printWindow.focus();
-    
+
     // Trigger print after content loads
     setTimeout(() => {
         printWindow.print();

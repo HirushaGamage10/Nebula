@@ -10,14 +10,14 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
-    
+
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
-    
+
     @if($errors->any())
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <ul class="mb-0">
@@ -28,7 +28,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
-    
+
     <div class="card">
         <div class="card-body">
             <h2 class="text-center mb-4">Intake Payment Plan</h2>
@@ -119,15 +119,15 @@
                             <label for="ssclTax" class="col-sm-3 col-form-label fw-bold">SSCL Tax Percentage</label>
                             <div class="col-sm-9">
                                 <div class="input-group">
-                                   <input 
-    type="number" 
-    class="form-control bg-white" 
-    id="ssclTax" 
-    name="ssclTax" 
-    placeholder="Enter SSCL tax percentage" 
-    required 
-    min="0" 
-    max="100" 
+                                   <input
+    type="number"
+    class="form-control bg-white"
+    id="ssclTax"
+    name="ssclTax"
+    placeholder="Enter SSCL tax percentage"
+    required
+    min="0"
+    max="100"
     step="0.01"
     oninput="validateInput(this)">
 
@@ -141,13 +141,13 @@
                             </label>
                             <div class="col-sm-9">
                                 <div class="input-group">
-                                    <input 
-                                        type="number" 
-                                        class="form-control bg-white" 
-                                        id="bankCharges" 
-                                        name="bankCharges" 
-                                        placeholder="Enter bank charges" 
-                                        min="0" 
+                                    <input
+                                        type="number"
+                                        class="form-control bg-white"
+                                        id="bankCharges"
+                                        name="bankCharges"
+                                        placeholder="Enter bank charges"
+                                        min="0"
                                         step="1"
                                         oninput="this.value = this.value.replace(/[^0-9]/g, '');">
                                     <span class="input-group-text bg-secondary text-white">LKR</span>
@@ -172,7 +172,7 @@
                             </div>
                         </div>
                         <div class="row align-items-center mx-3 mb-3" id="discountField" style="display: none;">
-                            <label for="fullPaymentDiscount" class="col-sm-3 col-form-label fw-bold">Discount<span class="text-danger"></span></label>
+                            <label for="fullPaymentDiscount" class="col-sm-3 col-form-label fw-bold">Full Payment Discount<span class="text-danger"></span></label>
                             <div class="col-sm-9">
                                 <div class="input-group">
                                     <input type="text" class="form-control bg-white" id="fullPaymentDiscount" name="fullPaymentDiscount" placeholder="Enter discount percentage" oninput="validateInput(this)">
@@ -334,29 +334,29 @@ function addRows() {
 function calculateTotals() {
   let totalLocal = 0;
   let totalInternational = 0;
-  
+
   const localInputs = document.querySelectorAll('input[id^="localAmount"]');
   const internationalInputs = document.querySelectorAll('input[id^="internationalAmount"]');
-  
+
   localInputs.forEach(input => {
     totalLocal += parseFloat(input.value || 0);
   });
-  
+
   internationalInputs.forEach(input => {
     totalInternational += parseFloat(input.value || 0);
   });
-  
+
   // Update total display
   document.getElementById('totalLocalAmount').textContent = `Rs. ${totalLocal.toFixed(2)}`;
   document.getElementById('totalInternationalAmount').textContent = totalInternational.toFixed(2);
-  
+
   // Update required amounts
   const localFee = parseFloat(document.getElementById('localFee').value || 0);
   const internationalFee = parseFloat(document.getElementById('internationalFee').value || 0);
-  
+
   document.getElementById('requiredLocalAmount').textContent = `Rs. ${localFee.toFixed(2)}`;
   document.getElementById('requiredInternationalAmount').textContent = internationalFee.toFixed(2);
-  
+
   // Show validation message
   validateInstallmentTotals(totalLocal, totalInternational, localFee, internationalFee);
 }
@@ -365,10 +365,10 @@ function validateInstallmentTotals(totalLocal, totalInternational, requiredLocal
   const validationRow = document.getElementById('validationRow');
   const validationMessage = document.getElementById('validationMessage');
   const autoCompleteRow = document.getElementById('autoCompleteRow');
-  
+
   const localMatch = Math.abs(totalLocal - requiredLocal) <= 0.01;
   const internationalMatch = Math.abs(totalInternational - requiredInternational) <= 0.01;
-  
+
   if (localMatch && internationalMatch) {
     validationRow.style.display = 'none';
     autoCompleteRow.style.display = 'none';
@@ -376,7 +376,7 @@ function validateInstallmentTotals(totalLocal, totalInternational, requiredLocal
     validationRow.style.display = 'table-row';
     let message = '';
     let alertClass = 'alert-warning';
-    
+
     if (!localMatch) {
       const localDiff = requiredLocal - totalLocal;
       message += `Local amounts mismatch: Total (Rs. ${totalLocal.toFixed(2)}) vs Required (Rs. ${requiredLocal.toFixed(2)})<br>`;
@@ -395,10 +395,10 @@ function validateInstallmentTotals(totalLocal, totalInternational, requiredLocal
         message += `<small class="text-danger">Excess: ${Math.abs(internationalDiff).toFixed(2)}</small>`;
       }
     }
-    
+
     validationMessage.innerHTML = message;
     validationMessage.className = `alert ${alertClass}`;
-    
+
     // Show auto-complete button if there are remaining amounts
     const localDiff = requiredLocal - totalLocal;
     const internationalDiff = requiredInternational - totalInternational;
@@ -413,42 +413,42 @@ function validateInstallmentTotals(totalLocal, totalInternational, requiredLocal
 function autoCompleteRemaining() {
   const localFee = parseFloat(document.getElementById('localFee').value || 0);
   const internationalFee = parseFloat(document.getElementById('internationalFee').value || 0);
-  
+
   let totalLocal = 0;
   let totalInternational = 0;
-  
+
   const localInputs = document.querySelectorAll('input[id^="localAmount"]');
   const internationalInputs = document.querySelectorAll('input[id^="internationalAmount"]');
-  
+
   localInputs.forEach(input => {
     totalLocal += parseFloat(input.value || 0);
   });
-  
+
   internationalInputs.forEach(input => {
     totalInternational += parseFloat(input.value || 0);
   });
-  
+
   const localDiff = localFee - totalLocal;
   const internationalDiff = internationalFee - totalInternational;
-  
+
   // Find the last non-empty installment and add the remaining amounts
   let lastLocalInput = null;
   let lastInternationalInput = null;
-  
+
   for (let i = localInputs.length - 1; i >= 0; i--) {
     if (parseFloat(localInputs[i].value || 0) > 0) {
       lastLocalInput = localInputs[i];
       break;
     }
   }
-  
+
   for (let i = internationalInputs.length - 1; i >= 0; i--) {
     if (parseFloat(internationalInputs[i].value || 0) > 0) {
       lastInternationalInput = internationalInputs[i];
       break;
     }
   }
-  
+
   // If no installment has amounts, use the first one
   if (!lastLocalInput && localInputs.length > 0) {
     lastLocalInput = localInputs[0];
@@ -456,18 +456,18 @@ function autoCompleteRemaining() {
   if (!lastInternationalInput && internationalInputs.length > 0) {
     lastInternationalInput = internationalInputs[0];
   }
-  
+
   // Add remaining amounts
   if (lastLocalInput && localDiff > 0) {
     const currentValue = parseFloat(lastLocalInput.value || 0);
     lastLocalInput.value = (currentValue + localDiff).toFixed(2);
   }
-  
+
   if (lastInternationalInput && internationalDiff > 0) {
     const currentValue = parseFloat(lastInternationalInput.value || 0);
     lastInternationalInput.value = (currentValue + internationalDiff).toFixed(2);
   }
-  
+
   // Recalculate totals
   calculateTotals();
 }
@@ -527,7 +527,7 @@ function autofillFromIntake() {
         // Populate SSCL tax and bank charges from intakes table
         $('#ssclTax').val(response.sscl_tax);
         $('#bankCharges').val(response.bank_charges);
-        
+
         // Recalculate totals after updating fees
         calculateTotals();
       } else {
@@ -546,10 +546,10 @@ $('#course, #location, #intake').on('change', autofillFromIntake);
 // Intake dropdown population
 $('#course, #location').on('change', function() {
     $('#intake').val('').prop('disabled', true);
-    
+
     // Clear the fee fields when course/location changes
     $('#registrationFee, #localFee, #internationalFee, #ssclTax, #bankCharges').val('');
-    
+
     if($('#course').val() && $('#location').val()) {
         // AJAX to get intakes for course/location
         $.ajax({
@@ -597,24 +597,24 @@ function showAutofillToast(message) {
 // Handle form submission to collect installment data
 $('#paymentPlanForm').on('submit', function(e) {
   e.preventDefault();
-  
+
   // Collect installment data from the table
   const installments = [];
   const rows = document.querySelectorAll('#installmentsTableBody tr');
-  
+
   rows.forEach((row, index) => {
     const installmentNumber = index + 1;
     const dueDateInput = row.querySelector('input[type="date"]');
     const localAmountInput = row.querySelector('input[id^="localAmount"]');
     const internationalAmountInput = row.querySelector('input[id^="internationalAmount"]');
     const applyTaxInput = row.querySelector('input[type="checkbox"]');
-    
+
     if (dueDateInput && localAmountInput && internationalAmountInput) {
       const dueDate = dueDateInput.value || '';
       const localAmount = parseFloat(localAmountInput.value || '0') || 0;
       const internationalAmount = parseFloat(internationalAmountInput.value || '0') || 0;
       const applyTax = applyTaxInput ? applyTaxInput.checked : false;
-      
+
       if (localAmount > 0 || internationalAmount > 0) {
         installments.push({
           installment_number: installmentNumber,
@@ -626,32 +626,32 @@ $('#paymentPlanForm').on('submit', function(e) {
       }
     }
   });
-  
+
   // Validate installment amounts if installment plan is enabled
   if ($('#franchisePaymentYes').is(':checked') && installments.length > 0) {
     const localFee = parseFloat($('#localFee').val() || '0');
     const internationalFee = parseFloat($('#internationalFee').val() || '0');
-    
+
     let totalLocalAmount = 0;
     let totalInternationalAmount = 0;
-    
+
     installments.forEach(function(installment) {
       totalLocalAmount += parseFloat(installment.local_amount || 0);
       totalInternationalAmount += parseFloat(installment.international_amount || 0);
     });
-    
+
     const errors = [];
-    
+
     // Check if local amounts sum equals local course fee
     if (Math.abs(totalLocalAmount - localFee) > 0.01) {
       errors.push(`The sum of local installment amounts (Rs. ${totalLocalAmount.toFixed(2)}) must equal the local course fee (Rs. ${localFee.toFixed(2)}).`);
     }
-    
+
     // Check if international amounts sum equals franchise payment amount
     if (Math.abs(totalInternationalAmount - internationalFee) > 0.01) {
       errors.push(`The sum of international installment amounts (${totalInternationalAmount.toFixed(2)}) must equal the franchise payment amount (${internationalFee.toFixed(2)}).`);
     }
-    
+
     if (errors.length > 0) {
       // Show validation errors
       let errorMessage = 'Please correct the following errors:\n';
@@ -662,14 +662,14 @@ $('#paymentPlanForm').on('submit', function(e) {
       return false;
     }
   }
-  
+
   // Add installments data to form
   const installmentsInput = document.createElement('input');
   installmentsInput.type = 'hidden';
   installmentsInput.name = 'installments';
   installmentsInput.value = JSON.stringify(installments);
   this.appendChild(installmentsInput);
-  
+
   // Submit the form
   this.submit();
 });
@@ -694,31 +694,31 @@ window.addEventListener('DOMContentLoaded', function () {
         } else {
             // When location is selected, enable course dropdown
             $course.prop('disabled', false);
-            
+
             // Don't touch intake dropdown - let AJAX handler manage it
             // This prevents interference with the AJAX population
-            
+
             // Enable other form inputs (but keep readonly fields as readonly)
             $form.find('input:not([readonly]), textarea')
                 .not('#location, #course, #intake')
                 .prop('disabled', false);
-            
+
             // Enable buttons
             $form.find('button').prop('disabled', false);
-            
+
             // Enable radio buttons
             $form.find('input[type="radio"], input[type="checkbox"]').prop('disabled', false);
-            
+
             $submitBtn.prop('disabled', false);
         }
-        
+
         // Always keep location enabled
         $location.prop('disabled', false);
     }
 
     // Run on page load
     toggleFormFields();
-    
+
     // Run when location changes (but not on other field changes)
     $location.on('change', function() {
         toggleFormFields();
@@ -727,4 +727,4 @@ window.addEventListener('DOMContentLoaded', function () {
 
 
 </script>
-@endsection 
+@endsection

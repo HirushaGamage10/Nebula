@@ -99,9 +99,9 @@
                     <label class="form-check-label" for="applyDiscountCheckbox">Apply Full Payment Discount</label>
                 </div>
 
-                {{-- Discount --}}
+                {{-- Full Payment Discount --}}
                 <div class="mb-3">
-                    <label class="form-label">Discount(%)</label>
+                    <label class="form-label">Full Payment Discount (%)</label>
                     <input type="number" class="form-control" name="discount" value="{{ $plan->discount }}" min="0" step="0.01">
                 </div>
 
