@@ -96,6 +96,7 @@
 
                             <div class="mb-3 row align-items-center">
                                 <div class="col-sm-9 offset-sm-3">
+                                    <p class="text-muted small mb-2">For Degree/Diploma, select Location, Course, Intake and Semester. For Certificate, select Location, Course and Intake. Dates will be filled automatically.</p>
                                     <button type="button" class="btn btn-primary" id="showTimetableBtn">Show Timetable</button>
                                     <div id="degree_download_buttons" style="display:none;display:inline-block;margin-left:8px;">
                                         <button type="button" class="btn btn-outline-secondary" id="downloadPdfBtn">Download PDF</button>
@@ -161,6 +162,7 @@
 
                             <div class="mb-3 row align-items-center">
                                 <div class="col-sm-9 offset-sm-3">
+                                    <p class="text-muted small mb-2">For Certificate, select Location, Course and Intake. The course dates will be filled automatically.</p>
                                     <button type="button" class="btn btn-primary" id="certificate_showTimetableBtn">Show Timetable</button>
                                     <div id="certificate_download_buttons" style="display:none;display:inline-block;margin-left:8px;">
                                         <button type="button" class="btn btn-outline-secondary" id="certificate_downloadPdfBtn">Download PDF</button>
@@ -178,6 +180,12 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Success Notification Alert -->
+    <div id="successNotification" class="alert alert-success alert-dismissible fade show" role="alert" style="position:fixed;top:20px;right:20px;z-index:9999;min-width:350px;display:none;">
+        <strong>Success!</strong> <span id="successNotificationMessage">Timetable entry has been saved successfully.</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 
     <!-- Modal for subject selection -->
@@ -200,7 +208,7 @@
                     <div class="mb-3 row">
                         <label for="selected_date_display" class="col-sm-3 col-form-label fw-bold">Date</label>
                         <div class="col-sm-9">
-                            <input type="text" class="form-control" id="selected_date_display" readonly>
+                            <input type="date" class="form-control" id="selected_date_display">
                         </div>
                     </div>
 
@@ -901,6 +909,25 @@
             window.__nebulaCalendar = calendar;
             calendar.render();
 
+            function applyCalendarDateRange(calendarInstance, startDate, endDate) {
+                if (!calendarInstance || !startDate || !endDate) {
+                    return;
+                }
+
+                var startMoment = moment(startDate, 'YYYY-MM-DD', true);
+                var endMoment = moment(endDate, 'YYYY-MM-DD', true);
+
+                if (!startMoment.isValid() || !endMoment.isValid() || endMoment.isBefore(startMoment)) {
+                    return;
+                }
+
+                calendarInstance.setOption('validRange', {
+                    start: startMoment.format('YYYY-MM-DD'),
+                    end: endMoment.clone().add(1, 'day').format('YYYY-MM-DD')
+                });
+                calendarInstance.gotoDate(startMoment.format('YYYY-MM-DD'));
+            }
+
             // Populate PDF modal course select when course list loads (reuse degree_course change)
             $('#degree_course').on('change', function () {
                 // also update pdf_course options
@@ -939,6 +966,20 @@
                 $('#subjectSelectionModal').modal('show');
             }
 
+            function showTimetableEmptyNotice(sectionId, message) {
+                var noticeId = sectionId + '_notice';
+                var $notice = $('#' + noticeId);
+                if (!$notice.length) {
+                    $notice = $('<div id="' + noticeId + '" class="alert alert-info mt-2 py-2"></div>');
+                    $('#' + sectionId).prepend($notice);
+                }
+                $notice.text(message).show();
+            }
+
+            function hideTimetableEmptyNotice(sectionId) {
+                $('#' + sectionId + '_notice').hide();
+            }
+
             // Show Timetable button click event to load events
             $('#showTimetableBtn').click(function (event, options) {
                 options = options || {};
@@ -951,6 +992,8 @@
                     end_date: $('#degree_end_date').val()
                 };
                 console.log("Timetable data being sent:", data);
+
+                applyCalendarDateRange(window.__nebulaCalendar, data.start_date, data.end_date);
 
                 $.ajax({
                     url: '/get-timetable-events',
@@ -973,7 +1016,12 @@
                         // show calendar section first so layout/scroll exists
                         $('#degreeTimetableSection').show();
                         // ensure calendar re-render (important when it was hidden)
-                        setTimeout(function () { if (window.__nebulaCalendar) window.__nebulaCalendar.render(); }, 40);
+                        setTimeout(function () {
+                            if (window.__nebulaCalendar) {
+                                applyCalendarDateRange(window.__nebulaCalendar, data.start_date, data.end_date);
+                                window.__nebulaCalendar.render();
+                            }
+                        }, 40);
 
                         // remove previous events safely
                         try {
@@ -988,13 +1036,15 @@
                             console.info('No events returned.');
                             latestEventsRaw = [];
                             latestFcEvents = [];
-                            if (options.autoOpenIfEmpty) {
-                                $('#degreeTimetableSection').hide();
-                                if ($('#tableViewSection').length) $('#tableViewSection').hide();
-                                openNewTimetablePopup('degree');
-                                return;
+                            $('#degreeTimetableSection').show();
+                            showTimetableEmptyNotice('degreeTimetableSection', 'No timetable has been created for these filters yet. Click a date slot to add your first timetable entry.');
+                            if (window.__nebulaCalendar) {
+                                try {
+                                    applyCalendarDateRange(window.__nebulaCalendar, data.start_date, data.end_date);
+                                    window.__nebulaCalendar.render();
+                                } catch (e) { console.warn('Degree calendar render failed', e); }
                             }
-                            setTimeout(function () { if (window.__nebulaCalendar) window.__nebulaCalendar.render(); }, 50);
+                            openNewTimetablePopup('degree');
                             return;
                         }
 
@@ -1111,6 +1161,8 @@
                                 } catch (e) { console.warn('Failed to read client events', e); }
                             }, 150);
                         }, 120);
+
+                        hideTimetableEmptyNotice('degreeTimetableSection');
 
                         // keep raw server data
                         latestEventsRaw = eventsArray;
@@ -1801,6 +1853,26 @@
                 var date = $('#selectedDate').val();
                 if (!date) { alert('No date selected'); return; }
 
+                // Validate date is within the start and end date range
+                var mode = $('#selectedTimetableMode').val() || 'degree';
+                var isCertificate = mode === 'certificate';
+                var startDateStr = isCertificate ? $('#certificate_start_date').val() : $('#degree_start_date').val();
+                var endDateStr = isCertificate ? $('#certificate_end_date').val() : $('#degree_end_date').val();
+
+                var selectedMoment = moment(date, 'YYYY-MM-DD');
+                var startMoment = moment(startDateStr, 'YYYY-MM-DD');
+                var endMoment = moment(endDateStr, 'YYYY-MM-DD');
+
+                if (!selectedMoment.isValid() || !startMoment.isValid() || !endMoment.isValid()) {
+                    alert('Invalid date range. Please try again.');
+                    return;
+                }
+
+                if (selectedMoment.isBefore(startMoment) || selectedMoment.isAfter(endMoment)) {
+                    alert('You can only add timetable entries between ' + startMoment.format('YYYY-MM-DD') + ' and ' + endMoment.format('YYYY-MM-DD'));
+                    return;
+                }
+
                     var subject_ids = [], durations = [], times = [], end_times = [];
                 var valid = true;
 
@@ -1846,9 +1918,6 @@
                     lecturersArr.push($(this).find('.lecturer-input').val() || '');
                 });
 
-                var mode = $('#selectedTimetableMode').val() || 'degree';
-                var isCertificate = mode === 'certificate';
-
                 var payload = {
                     date: date,
                     subject_ids: subject_ids,
@@ -1875,12 +1944,28 @@
                         $('#assignSubjectBtn').prop('disabled', false).text('Assign Subjects');
                         $('#subjectSelectionModal').modal('hide');
 
-                        // reload events from server so week/day views show timed events correctly
-                        if (isCertificate) {
-                            $('#certificate_showTimetableBtn').trigger('click');
-                        } else {
-                            $('#showTimetableBtn').trigger('click');
-                        }
+                        // Show success notification
+                        var subjectCount = subject_ids.length;
+                        $('#successNotificationMessage').text(subjectCount + ' timetable entry/entries have been saved successfully.');
+                        var $notification = $('#successNotification');
+                        $notification.show();
+
+                        // Auto-dismiss after 4 seconds
+                        setTimeout(function() {
+                            $notification.fadeOut('slow', function() {
+                                $notification.hide();
+                            });
+                        }, 4000);
+
+                        // delay reload to allow modal to fully close and calendar to be ready
+                        setTimeout(function() {
+                            // reload events from server so week/day views show timed events correctly
+                            if (isCertificate) {
+                                $('#certificate_showTimetableBtn').trigger('click');
+                            } else {
+                                $('#showTimetableBtn').trigger('click');
+                            }
+                        }, 500);
                     },
                     error: function (xhr) {
                         $('#assignSubjectBtn').prop('disabled', false).text('Assign Subjects');
@@ -2022,6 +2107,8 @@
 
                 console.log("Certificate Timetable data being sent:", data);
 
+                applyCalendarDateRange(window.__nebulaCertificateCalendar, start_date, end_date);
+
                 $.ajax({
                     url: '/get-timetable-events',
                     type: 'GET',
@@ -2035,7 +2122,12 @@
 
                         // show certificate calendar section (must exist in DOM)
                         try { $('#certificateTimetableSection').show(); } catch (e) { /* ignore if not present */ }
-                        setTimeout(function () { if (window.__nebulaCertificateCalendar) window.__nebulaCertificateCalendar.render(); }, 40);
+                        setTimeout(function () {
+                            if (window.__nebulaCertificateCalendar) {
+                                applyCalendarDateRange(window.__nebulaCertificateCalendar, start_date, end_date);
+                                window.__nebulaCertificateCalendar.render();
+                            }
+                        }, 40);
 
                         try { if (window.__nebulaCertificateCalendar) { try { window.__nebulaCertificateCalendar.removeAllEvents(); } catch(e){} } } catch(e){}
 
@@ -2043,14 +2135,15 @@
                             console.info('No events returned for certificate timetable. Showing empty calendar.');
                             latestCertificateEventsRaw = [];
                             latestCertificateFcEvents = [];
-                            if (options.autoOpenIfEmpty) {
-                                $('#certificateTimetableSection').hide();
-                                openNewTimetablePopup('certificate');
-                                return;
-                            }
+                            $('#certificateTimetableSection').show();
+                            showTimetableEmptyNotice('certificateTimetableSection', 'No timetable has been created for these filters yet. Click a date slot to add your first timetable entry.');
                             if (window.__nebulaCertificateCalendar) {
-                                try { window.__nebulaCertificateCalendar.render(); } catch (e) { console.warn('Certificate calendar render failed', e); }
+                                try {
+                                    applyCalendarDateRange(window.__nebulaCertificateCalendar, start_date, end_date);
+                                    window.__nebulaCertificateCalendar.render();
+                                } catch (e) { console.warn('Certificate calendar render failed', e); }
                             }
+                            openNewTimetablePopup('certificate');
                             return;
                         }
 
@@ -2086,6 +2179,8 @@
                                 overlap: true
                             });
                         });
+
+                        hideTimetableEmptyNotice('certificateTimetableSection');
 
                         latestCertificateEventsRaw = eventsArray;
                         latestCertificateFcEvents = fcEvents;
