@@ -466,7 +466,7 @@
                                                 </select>
                                             </div>
                                             <div class="col-md-4">
-                                                <label class="form-label fw-bold">Discounts</label>
+                                                <label class="form-label fw-bold">Local Fee Discounts</label>
                                                 <div id="discounts-container">
                                                     <div class="discount-item mb-2">
                                                         <select class="form-select discount-select" name="discounts[]">
@@ -1840,10 +1840,20 @@ function formatDueDateForTable(raw, installmentNumber = 1) {
     return formatDateDmy(`${ymd}T00:00:00`);
 }
 
+function getDiscountBaseAmount() {
+    const studentData = window.currentStudentData || {};
+    const storedTotal = Number(studentData.total_amount_lkr || 0);
 
+    if (storedTotal > 0) {
+        return storedTotal;
+    }
 
+    const courseFee = Number(studentData.course_fee || 0);
+    const registrationFee = Number(studentData.registration_fee || 0);
+    return courseFee + registrationFee;
+}
 
-// Display installments in the table (discounts first, then SLT prorated by original local total)
+// Display installments in the table (discounts first, then SLT prorated by the combined local + registration base)
 function displayInstallments(installments) {
   const tbody = document.getElementById('installmentTableBody');
   tbody.innerHTML = '';
@@ -1889,13 +1899,12 @@ function displayInstallments(installments) {
     else if (type === 'amount') fixed += val;
   });
 
-  // original local total BEFORE any discounts
+  // Original installment total before discounts.
   const originalLocalTotal = installments.reduce((sum, ins) => sum + N(ins.amount), 0);
 
-  // Include registration fee in course fee discount base.
-  // Course fee discounts now apply over the combined course fee + registration fee total.
+  // Discounts should apply to the full local + registration amount.
   const registrationFee = N(window.currentStudentData?.registration_fee || 0);
-  const totalFeeForDiscount = originalLocalTotal + registrationFee;
+  const totalFeeForDiscount = Math.max(getDiscountBaseAmount(), originalLocalTotal + registrationFee);
 
   // apply discounts across installments starting from the latest installment backwards
   const totalDiscount = ((pct > 0) ? (totalFeeForDiscount * pct) / 100 : 0) + fixed;
@@ -2050,7 +2059,7 @@ function showFormulaModal(Ai, L, LminusS) {
     </tr>
     <tr>
       <td style="padding:6px; border:1px solid #ddd;"><strong>L</strong></td>
-      <td style="padding:6px; border:1px solid #ddd;">Total of all installments after discounts (Course Fee Only)</td>
+      <td style="padding:6px; border:1px solid #ddd;">Total of all installments after discounts (Combined Local + Registration Fee)</td>
       <td style="padding:6px; border:1px solid #ddd; color:#007bff;">LKR ${L.toLocaleString()}</td>
     </tr>
     <tr>
@@ -2432,8 +2441,8 @@ function showInstallmentPreview() {
     console.log('currentStudentData:', window.currentStudentData);
 
     if (planType === 'full') {
-        // Compute discounts and SLT for full payment
-        const totalAmount = window.currentStudentData ? window.currentStudentData.total_amount_lkr : 0;
+        // Compute discounts and SLT for full payment using the combined local + registration base.
+        const totalAmount = getDiscountBaseAmount();
         const discountSelects = document.querySelectorAll('.discount-select');
         const sltLoanDropdown = document.getElementById('slt-loan-applied');
         const sltLoanApplied = sltLoanDropdown ? sltLoanDropdown.value : 'no';
@@ -2556,7 +2565,7 @@ function calculateAndDisplayInstallments() {
 }
 // Calculate final amount after multiple discounts and SLT loan
 function calculateFinalAmount() {
-    const totalAmount = window.currentStudentData ? window.currentStudentData.total_amount_lkr : 0;
+    const totalAmount = getDiscountBaseAmount();
     const discountSelects = document.querySelectorAll('.discount-select');
 
     const sltLoanDropdown = document.getElementById('slt-loan-applied');
