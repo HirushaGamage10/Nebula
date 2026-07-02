@@ -132,7 +132,8 @@ class PaymentDiscountController extends Controller
             $discountedBases[] = round(max(0, $base - $discount - $registrationDiscount), 2);
         }
 
-        $loanAmount = min(max(0, $loanAmount), round(array_sum($discountedBases), 2));
+        $planLoanTotal = round(max(0, $loanAmount), 2);
+        $loanAmount = min($planLoanTotal, round(array_sum($discountedBases), 2));
         $allocations = $this->allocateSltLoanByStartInstallment($installments->values()->all(), $discountedBases, $loanAmount, $startInstallment);
         $appliedLoan = round(array_sum($allocations), 2);
         $finalTotal = 0.0;
@@ -165,7 +166,7 @@ class PaymentDiscountController extends Controller
             'slt_loan_years' => $plan->slt_loan_years,
             'loan_installment_count' => $installmentCount,
             'slt_receivable_effective_date' => $plan->slt_receivable_effective_date?->format('Y-m-d'),
-            'installment_receivable' => $installmentCount > 0 ? round($appliedLoan / $installmentCount, 2) : 0,
+            'installment_receivable' => $installmentCount > 0 ? round($planLoanTotal / $installmentCount, 2) : 0,
             'final_amount' => round($finalTotal, 2),
         ];
     }
