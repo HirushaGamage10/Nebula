@@ -7,6 +7,8 @@ use App\Models\Semester;
 use App\Models\Course;
 use App\Models\Intake;
 use App\Models\Module;
+use App\Support\SemesterModuleSpecializationHelper;
+use Illuminate\Support\Facades\DB;
 
 class SemesterCreationController extends Controller
 {
@@ -91,65 +93,7 @@ class SemesterCreationController extends Controller
             // Handle modules if present - update semester_module table
             $modules = $request->modules;
             if (is_array($modules)) {
-                $existingModuleRows = \DB::table('semester_module')
-                    ->where('semester_id', $semester->id)
-                    ->get();
-
-                $existingModules = [];
-                foreach ($existingModuleRows as $row) {
-                    $existingModules[] = [
-                        'module_id' => (string) $row->module_id,
-                        'specialization' => $row->specialization ?? null,
-                    ];
-                }
-
-                $desiredModules = [];
-                foreach ($modules as $module) {
-                    if (!isset($module['module_id'])) {
-                        continue;
-                    }
-                    $desiredModules[] = [
-                        'module_id' => (string) $module['module_id'],
-                        'specialization' => $module['specialization'] ?? null,
-                    ];
-                }
-
-                $toDelete = array_filter($existingModules, function ($existing) use ($desiredModules) {
-                    return !in_array($existing, $desiredModules, true);
-                });
-                $toInsert = array_filter($desiredModules, function ($desired) use ($existingModules) {
-                    return !in_array($desired, $existingModules, true);
-                });
-
-                foreach ($toDelete as $deleteRow) {
-                    $query = \DB::table('semester_module')
-                        ->where('semester_id', $semester->id)
-                        ->where('module_id', $deleteRow['module_id']);
-
-                    if ($deleteRow['specialization'] === null) {
-                        $query->whereNull('specialization');
-                    } else {
-                        $query->where('specialization', $deleteRow['specialization']);
-                    }
-
-                    $query->delete();
-                }
-
-                if (!empty($toInsert)) {
-                    $semesterModuleData = [];
-                    foreach ($toInsert as $module) {
-                        $semesterModuleData[] = [
-                            'semester_id' => $semester->id,
-                            'module_id' => $module['module_id'],
-                            'specialization' => $module['specialization'] ?? null,
-                        ];
-                    }
-
-                    if (!empty($semesterModuleData)) {
-                        \DB::table('semester_module')->insert($semesterModuleData);
-                        \Log::info('Modules updated in semester_module table:', ['inserted' => count($semesterModuleData)]);
-                    }
-                }
+                $this->syncSemesterModules($semester->id, $modules);
             }
 
             return response()->json([
@@ -223,6 +167,8 @@ class SemesterCreationController extends Controller
                 'modules' => 'required|array',
                 'modules.*.module_id' => 'required|exists:modules,module_id',
                 'modules.*.specialization' => 'nullable|string|max:255',
+                'modules.*.specializations' => 'nullable|array',
+                'modules.*.specializations.*' => 'string|max:255',
             ]);
 
 
@@ -252,20 +198,7 @@ class SemesterCreationController extends Controller
             // Handle modules if present - save to semester_module table
             $modules = $request->input('modules', []);
             if (!empty($modules) && is_array($modules)) {
-                $semesterModuleData = [];
-                foreach ($modules as $module) {
-                    if (isset($module['module_id'])) {
-                        $semesterModuleData[] = [
-                            'semester_id' => $semester->id,
-                            'module_id' => $module['module_id'],
-                            'specialization' => $module['specialization'] ?? null
-                        ];
-                    }
-                }
-                \Log::info('Semester module insert:', $semesterModuleData);
-                if (!empty($semesterModuleData)) {
-                    \DB::table('semester_module')->insert($semesterModuleData);
-                }
+                $this->syncSemesterModules($semester->id, $modules);
             }
 
             return response()->json([
@@ -477,7 +410,8 @@ class SemesterCreationController extends Controller
                 \DB::table('semester_module')->insert([
                     'semester_id' => $newSemester->id,
                     'module_id' => $module->module_id,
-                    'specialization' => $module->specialization
+                    'specialization' => $module->specialization,
+                    'specializations' => $module->specializations ?? null,
                 ]);
             }
 
@@ -493,5 +427,44 @@ class SemesterCreationController extends Controller
                 'message' => 'An error occurred while duplicating the semester.'
             ], 500);
         }
+    }
+
+    private function syncSemesterModules(int $semesterId, array $modules): void
+    {
+        $desiredModuleIds = [];
+
+        foreach ($modules as $module) {
+            if (!isset($module['module_id'])) {
+                continue;
+            }
+
+            $normalized = SemesterModuleSpecializationHelper::normalizePayload($module);
+            if ($normalized['module_id'] === '') {
+                continue;
+            }
+
+            $desiredModuleIds[] = $normalized['module_id'];
+
+            DB::table('semester_module')->updateOrInsert(
+                [
+                    'semester_id' => $semesterId,
+                    'module_id' => $normalized['module_id'],
+                ],
+                [
+                    'specializations' => $normalized['specializations'],
+                    'specialization' => $normalized['specialization'],
+                ]
+            );
+        }
+
+        if (empty($desiredModuleIds)) {
+            DB::table('semester_module')->where('semester_id', $semesterId)->delete();
+            return;
+        }
+
+        DB::table('semester_module')
+            ->where('semester_id', $semesterId)
+            ->whereNotIn('module_id', $desiredModuleIds)
+            ->delete();
     }
 }

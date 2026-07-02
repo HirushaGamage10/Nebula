@@ -13,7 +13,7 @@ use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
+use App\Support\SemesterModuleSpecializationHelper;
 use App\Models\Timetable;
 use Illuminate\Support\Facades\Validator;
 
@@ -617,15 +617,20 @@ class TimetableController extends Controller
 
             $modules = Module::join('semester_module', 'modules.module_id', '=', 'semester_module.module_id')
                 ->where('semester_module.semester_id', $semester->id)
-                ->select('modules.*', 'semester_module.specialization as semester_specialization')
+                ->select(
+                    'modules.*',
+                    'semester_module.specialization as semester_specialization',
+                    'semester_module.specializations as semester_specializations'
+                )
                 ->get();
 
             if ($specialization) {
                 $modules = $modules->filter(function ($module) use ($specialization) {
-                    if (isset($module->semester_specialization) && $module->semester_specialization !== null) {
-                        return $module->semester_specialization === $specialization;
-                    }
-                    return ($module->module_type ?? '') === 'core';
+                    return SemesterModuleSpecializationHelper::appliesTo(
+                        $module->semester_specializations,
+                        $module->semester_specialization,
+                        $specialization
+                    );
                 });
             }
 

@@ -16,6 +16,11 @@ class SemesterModule extends Model
         'semester_id',
         'module_id',
         'specialization',
+        'specializations',
+    ];
+
+    protected $casts = [
+        'specializations' => 'array',
     ];
 
     // Relationships
