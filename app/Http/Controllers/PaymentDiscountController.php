@@ -10,6 +10,7 @@ use App\Models\PaymentPlan;
 use App\Models\Discount;
 use App\Models\PaymentInstallment;
 use App\Models\Student;
+use App\Models\SltLoanReceivableRecord;
 use App\Models\StudentPaymentPlan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -159,6 +160,27 @@ class PaymentDiscountController extends Controller
         ]);
 
         $installmentCount = $loanYears > 0 ? $loanYears * 12 : 0;
+        $monthlyReceivable = $installmentCount > 0 ? round($planLoanTotal / $installmentCount, 2) : 0;
+
+        if ($installmentCount > 0 && $effectiveDate) {
+            $existingRecords = SltLoanReceivableRecord::where('student_payment_plan_id', $plan->id)->count();
+            $nextInstallmentNumber = $existingRecords + 1;
+
+            if ($nextInstallmentNumber <= $installmentCount) {
+                SltLoanReceivableRecord::create([
+                    'student_payment_plan_id' => $plan->id,
+                    'student_id' => $plan->student_id,
+                    'course_id' => $plan->course_id,
+                    'loan_installment_number' => $nextInstallmentNumber,
+                    'total_loan_amount' => $planLoanTotal,
+                    'loan_taken_years' => $loanYears,
+                    'loan_installment_count' => $installmentCount,
+                    'apply_from_installment' => $startInstallment,
+                    'monthly_receivable_amount' => $monthlyReceivable,
+                    'payment_effective_date' => $effectiveDate,
+                ]);
+            }
+        }
 
         return [
             'id' => $plan->id,

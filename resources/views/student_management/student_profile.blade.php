@@ -831,6 +831,48 @@
                           </table>
                         </div>
                       </div>
+                      <!-- SLT Loan Receivables -->
+                      <div class="mb-4" id="sltLoanReceivablesSection" style="display:none;">
+                        <h6 class="text-danger mb-3">
+                          <i class="ti ti-building-bank me-2"></i>SLT Loan Receivables
+                        </h6>
+                        <div class="row mb-3">
+                          <div class="col-md-4">
+                            <p class="mb-1"><strong>SLT Loan Amount:</strong> <span id="slt-summary-loan-amount">-</span></p>
+                          </div>
+                          <div class="col-md-4">
+                            <p class="mb-1"><strong>Loan Taken Years:</strong> <span id="slt-summary-loan-years">-</span></p>
+                          </div>
+                          <div class="col-md-4">
+                            <p class="mb-1"><strong>No of Loan Installments:</strong> <span id="slt-summary-installment-count">-</span></p>
+                          </div>
+                          <div class="col-md-4">
+                            <p class="mb-1"><strong>Apply From Installment:</strong> <span id="slt-summary-start-installment">-</span></p>
+                          </div>
+                          <div class="col-md-4">
+                            <p class="mb-1"><strong>Monthly Receivable:</strong> <span id="slt-summary-monthly-receivable">-</span></p>
+                          </div>
+                          <div class="col-md-4">
+                            <p class="mb-1"><strong>Last Effective Date:</strong> <span id="slt-summary-effective-date">-</span></p>
+                          </div>
+                        </div>
+                        <div class="table-responsive">
+                          <table class="table table-bordered table-sm">
+                            <thead class="table-light">
+                              <tr>
+                                <th>Loan Installment #</th>
+                                <th>Receivable Amount (Monthly)</th>
+                                <th>Status</th>
+                                <th>Payment Effective Date</th>
+                                <th>Recorded At</th>
+                              </tr>
+                            </thead>
+                            <tbody id="sltLoanReceivablesTableBody">
+                              <tr><td colspan="5" class="text-center text-muted">No SLT loan receivable data available</td></tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
                       <!-- Hostel Fee Table -->
                       <div class="mb-4">
                         <h6 class="text-warning mb-3">
@@ -2165,6 +2207,34 @@ $(function(){
         fillTable('#hostelFeeTableBody', 'hostel');
         fillTable('#libraryFeeTableBody', 'library');
         fillTable('#otherFeeTableBody', 'other');
+
+        const sltReceivables = summary.slt_loan_receivables;
+        const $sltSection = $('#sltLoanReceivablesSection');
+        const $sltBody = $('#sltLoanReceivablesTableBody').empty();
+
+        if (sltReceivables && sltReceivables.installments && sltReceivables.installments.length) {
+          $sltSection.show();
+          $('#slt-summary-loan-amount').text('Rs. ' + Number(sltReceivables.slt_loan_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+          $('#slt-summary-loan-years').text(sltReceivables.loan_taken_years || '-');
+          $('#slt-summary-installment-count').text(sltReceivables.loan_installment_count || '-');
+          $('#slt-summary-start-installment').text(sltReceivables.apply_from_installment || '-');
+          $('#slt-summary-monthly-receivable').text('Rs. ' + Number(sltReceivables.monthly_receivable || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+          $('#slt-summary-effective-date').text(sltReceivables.last_payment_effective_date || '-');
+
+          sltReceivables.installments.forEach(row => {
+            const statusClass = row.status === 'Recorded' ? 'text-success' : 'text-muted';
+            $sltBody.append(`<tr>
+              <td>${row.installment_number}</td>
+              <td>Rs. ${Number(row.receivable_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td class="${statusClass} fw-bold">${row.status || 'Pending'}</td>
+              <td>${row.payment_effective_date || '-'}</td>
+              <td>${row.recorded_at || '-'}</td>
+            </tr>`);
+          });
+        } else {
+          $sltSection.hide();
+          $sltBody.append('<tr><td colspan="5" class="text-center text-muted">No SLT loan receivable data available</td></tr>');
+        }
       } else {
         showErrorMessage(res.message || 'No payment summary found.');
         $('#paymentSummarySection').hide();

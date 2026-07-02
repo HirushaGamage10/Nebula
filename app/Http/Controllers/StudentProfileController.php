@@ -14,6 +14,7 @@ use App\Models\Attendance;
 use App\Models\PaymentDetail;
 use App\Models\PaymentPlan;
 use App\Models\StudentPaymentPlan;
+use App\Models\SltLoanReceivableRecord;
 use App\Models\StudentClearance;
 use App\Models\StudentOtherInformation;
 use App\Models\Intake;
@@ -676,8 +677,10 @@ class StudentProfileController extends Controller
 
             // Build registration fee amount and payment plan installments
             $baseRegistrationFee = $registration->intake->registration_fee ?? 0;
-            $studentPaymentPlan = \App\Models\StudentPaymentPlan::where('student_id', $student->student_id)
+            $studentPaymentPlan = StudentPaymentPlan::where('student_id', $student->student_id)
                 ->where('course_id', $registration->course_id)
+                ->where('status', '!=', 'archived')
+                ->orderByDesc('id')
                 ->with(['installments', 'discounts.discount'])
                 ->first();
 
@@ -903,7 +906,8 @@ class StudentProfileController extends Controller
                 'local_outstanding' => max(0, ($courseFee + $registrationFee) - $localPaid),
                 'franchise_currency' => $franchiseCurrency,
                 'payment_details' => $paymentDetails,
-                'payment_history' => $paymentHistory
+                'payment_history' => $paymentHistory,
+                'slt_loan_receivables' => $this->buildSltLoanReceivableSummary($studentPaymentPlan),
             ];
 
             return response()->json([
@@ -942,6 +946,47 @@ class StudentProfileController extends Controller
         }
 
         return max(0, (float) $baseRegistrationFee - $discountAmount);
+    }
+
+    private function buildSltLoanReceivableSummary(?StudentPaymentPlan $plan): ?array
+    {
+        if (!$plan || ($plan->slt_loan_applied ?? 'no') !== 'yes') {
+            return null;
+        }
+
+        $loanAmount = (float) ($plan->slt_loan_amount ?? 0);
+        $years = (int) ($plan->slt_loan_years ?? 0);
+        $installmentCount = $years > 0 ? $years * 12 : 0;
+        $monthlyReceivable = $installmentCount > 0 ? round($loanAmount / $installmentCount, 2) : 0;
+
+        $records = SltLoanReceivableRecord::where('student_payment_plan_id', $plan->id)
+            ->orderBy('loan_installment_number')
+            ->get()
+            ->keyBy('loan_installment_number');
+
+        $installments = [];
+        for ($i = 1; $i <= $installmentCount; $i++) {
+            $record = $records->get($i);
+            $installments[] = [
+                'installment_number' => $i,
+                'receivable_amount' => $monthlyReceivable,
+                'status' => $record ? 'Recorded' : 'Pending',
+                'payment_effective_date' => $record?->payment_effective_date?->format('Y-m-d'),
+                'recorded_at' => $record?->created_at?->format('Y-m-d H:i'),
+            ];
+        }
+
+        return [
+            'slt_loan_amount' => $loanAmount,
+            'loan_taken_years' => $years,
+            'loan_installment_count' => $installmentCount,
+            'apply_from_installment' => (int) ($plan->slt_loan_start_installment ?? 1),
+            'monthly_receivable' => $monthlyReceivable,
+            'last_payment_effective_date' => optional($plan->slt_receivable_effective_date)->format('Y-m-d'),
+            'recorded_count' => $records->count(),
+            'pending_count' => max(0, $installmentCount - $records->count()),
+            'installments' => $installments,
+        ];
     }
 
     private function buildPaymentRowsFromDetails($payments, $type)

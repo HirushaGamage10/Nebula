@@ -54,6 +54,11 @@ class StudentPaymentPlan extends Model
         return $this->hasMany(PaymentInstallment::class, 'payment_plan_id');
     }
 
+    public function sltLoanReceivableRecords()
+    {
+        return $this->hasMany(SltLoanReceivableRecord::class, 'student_payment_plan_id');
+    }
+
     public function discounts()
     {
         return $this->hasMany(PaymentPlanDiscount::class, 'payment_plan_id');
