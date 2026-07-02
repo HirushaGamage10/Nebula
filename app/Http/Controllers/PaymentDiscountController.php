@@ -8,6 +8,10 @@ use App\Models\Intake;
 use App\Models\CourseRegistration;
 use App\Models\PaymentPlan;
 use App\Models\Discount;
+use App\Models\PaymentInstallment;
+use App\Models\Student;
+use App\Models\StudentPaymentPlan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PaymentDiscountController extends Controller
@@ -50,9 +54,141 @@ class PaymentDiscountController extends Controller
     // Save SLT loan data (AJAX)
     public function saveSltLoan(Request $request)
     {
-        // Save logic here (e.g., to a new SltLoan model/table)
-        // $request->input('location'), ...
-        return response()->json(['success' => true, 'message' => 'SLT loan data saved.']);
+        try {
+            $validated = $request->validate([
+                'student_identifier' => 'required|string',
+                'course_id' => 'required|integer|exists:courses,course_id',
+                'slt_loan_amount' => 'required|numeric|min:0',
+                'slt_loan_years' => 'required|integer|min:1|max:50',
+                'slt_loan_start_installment' => 'nullable|integer|min:1',
+                'payment_effective_date' => 'required|date',
+            ]);
+
+            $student = Student::where('student_id', $validated['student_identifier'])
+                ->orWhere('id_value', $validated['student_identifier'])
+                ->first();
+
+            if (!$student) {
+                return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+            }
+
+            $registration = CourseRegistration::where('student_id', $student->student_id)
+                ->where('course_id', $validated['course_id'])
+                ->first();
+
+            if (!$registration) {
+                return response()->json(['success' => false, 'message' => 'Student is not registered for the selected course.'], 404);
+            }
+
+            $plan = StudentPaymentPlan::where('student_id', $student->student_id)
+                ->where('course_id', $validated['course_id'])
+                ->where('status', '!=', 'archived')
+                ->orderByDesc('id')
+                ->first();
+
+            if (!$plan) {
+                return response()->json(['success' => false, 'message' => 'Create the student payment plan before updating SLT loan receivables.'], 404);
+            }
+
+            $result = DB::transaction(function () use ($plan, $validated) {
+                return $this->updateSltLoanReceivable(
+                    $plan,
+                    (float) $validated['slt_loan_amount'],
+                    (int) $validated['slt_loan_years'],
+                    (int) ($validated['slt_loan_start_installment'] ?? 1),
+                    $validated['payment_effective_date']
+                );
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'SLT loan receivable updated successfully.',
+                'payment_plan' => $result,
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first()], 422);
+        } catch (\Throwable $e) {
+            Log::error('Error saving SLT loan receivable: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json(['success' => false, 'message' => 'Error saving SLT loan receivable: ' . $e->getMessage()], 500);
+        }
+    }
+
+    private function updateSltLoanReceivable(StudentPaymentPlan $plan, float $loanAmount, int $loanYears, int $startInstallment, ?string $effectiveDate = null): array
+    {
+        $installments = PaymentInstallment::where('payment_plan_id', $plan->id)
+            ->orderBy('installment_number')
+            ->get();
+
+        if ($installments->isEmpty()) {
+            throw new \RuntimeException('No installments found for this student payment plan.');
+        }
+
+        $discountedBases = [];
+        foreach ($installments as $installment) {
+            $base = (float) ($installment->base_amount ?? $installment->amount ?? 0);
+            $discount = (float) ($installment->discount_amount ?? 0);
+            $registrationDiscount = (float) ($installment->registration_fee_discount_applied ?? 0);
+            $discountedBases[] = round(max(0, $base - $discount - $registrationDiscount), 2);
+        }
+
+        $loanAmount = min(max(0, $loanAmount), round(array_sum($discountedBases), 2));
+        $allocations = $this->allocateSltLoanByStartInstallment($installments->values()->all(), $discountedBases, $loanAmount, $startInstallment);
+        $appliedLoan = round(array_sum($allocations), 2);
+        $finalTotal = 0.0;
+
+        foreach ($installments as $index => $installment) {
+            $finalAmount = round(max(0, $discountedBases[$index] - ($allocations[$index] ?? 0)), 2);
+            $finalTotal += $finalAmount;
+
+            $installment->update([
+                'slt_loan_amount' => round($allocations[$index] ?? 0, 2),
+                'amount' => $finalAmount,
+                'final_amount' => $finalAmount,
+            ]);
+        }
+
+        $plan->update([
+            'slt_loan_applied' => $appliedLoan > 0 ? 'yes' : 'no',
+            'slt_loan_amount' => $appliedLoan,
+            'slt_loan_start_installment' => $appliedLoan > 0 ? $startInstallment : null,
+            'slt_loan_years' => $appliedLoan > 0 ? $loanYears : null,
+            'slt_receivable_effective_date' => $effectiveDate,
+            'final_amount' => round($finalTotal, 2),
+        ]);
+
+        $installmentCount = $loanYears > 0 ? $loanYears * 12 : 0;
+
+        return [
+            'id' => $plan->id,
+            'slt_loan_amount' => $appliedLoan,
+            'slt_loan_years' => $plan->slt_loan_years,
+            'loan_installment_count' => $installmentCount,
+            'slt_receivable_effective_date' => $plan->slt_receivable_effective_date?->format('Y-m-d'),
+            'installment_receivable' => $installmentCount > 0 ? round($appliedLoan / $installmentCount, 2) : 0,
+            'final_amount' => round($finalTotal, 2),
+        ];
+    }
+
+    private function allocateSltLoanByStartInstallment(array $rows, array $discountedBases, float $loanAmount, int $startInstallment): array
+    {
+        $allocations = array_fill(0, count($rows), 0.0);
+        $remainingLoan = round(max(0, $loanAmount), 2);
+
+        foreach ($rows as $index => $row) {
+            $installmentNumber = (int) ($row->installment_number ?? ($index + 1));
+
+            if ($installmentNumber < $startInstallment || $remainingLoan <= 0) {
+                continue;
+            }
+
+            $available = round(max(0, (float) ($discountedBases[$index] ?? 0)), 2);
+            $deduct = min($available, $remainingLoan);
+            $allocations[$index] = round($deduct, 2);
+            $remainingLoan = round($remainingLoan - $deduct, 2);
+        }
+
+        return $allocations;
     }
 
     // Save discount data (AJAX)

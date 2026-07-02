@@ -15,6 +15,9 @@ class StudentPaymentPlan extends Model
         'payment_plan_type',
         'slt_loan_applied',
         'slt_loan_amount',
+        'slt_loan_start_installment',
+        'slt_loan_years',
+        'slt_receivable_effective_date',
         'total_amount',
         'final_amount',
         'remaining_registration_discount',
@@ -24,6 +27,9 @@ class StudentPaymentPlan extends Model
 
     protected $casts = [
         'slt_loan_amount' => 'decimal:2',
+        'slt_loan_start_installment' => 'integer',
+        'slt_loan_years' => 'integer',
+        'slt_receivable_effective_date' => 'date',
         'total_amount' => 'decimal:2',
         'final_amount' => 'decimal:2',
         'remaining_registration_discount' => 'decimal:2',

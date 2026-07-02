@@ -711,6 +711,8 @@ public function createPaymentPlan(Request $request)
 
             'slt_loan_applied'  => 'nullable|in:yes,no',
             'slt_loan_amount'   => 'nullable|numeric|min:0',
+            'slt_loan_start_installment' => 'nullable|integer|min:1',
+            'slt_loan_years' => 'nullable|integer|min:1|max:50',
         ];
 
         // Installments are only required for 'installments' payment plan type
@@ -851,31 +853,24 @@ public function createPaymentPlan(Request $request)
                 }
             }
 
-            // ===== 4) SLT loan prorating =====
+            // ===== 4) SLT loan allocation =====
             $sumAfterDiscounts = array_sum($discountedBases);
             $S = ($request->slt_loan_applied === 'yes') ? (float)($request->slt_loan_amount ?? 0) : 0.0;
             $S = max(0, min($S, $sumAfterDiscounts));
+            $loanStartInstallment = $S > 0 ? (int) ($request->slt_loan_start_installment ?? 1) : null;
+            $loanYears = $S > 0 ? (int) ($request->slt_loan_years ?? 0) : null;
+            $loanAllocations = $this->allocateSltLoanByStartInstallment($rows, $discountedBases, $S, $loanStartInstallment);
+            $S = round(array_sum($loanAllocations), 2);
             $T = $sumAfterDiscounts - $S;
 
             // ===== 5) Compute installments =====
             $computed = [];
-            $runningFinals = 0.0;
 
             foreach ($rows as $i => $r) {
                 $base = round((float)$r['amount'], 2);
                 $Ai   = round($discountedBases[$i], 2);
-                $isLast = ($i === $lastIdx);
-
-                if (!$isLast) {
-                    $Fi = ($sumAfterDiscounts > 0)
-                        ? round(($Ai / $sumAfterDiscounts) * $T, 2)
-                        : 0.0;
-                    $runningFinals += $Fi;
-                } else {
-                    $Fi = round($T - $runningFinals, 2); // remainder to fix rounding drift
-                }
-
-                $loanPart = $Ai - $Fi;
+                $loanPart = round($loanAllocations[$i] ?? 0, 2);
+                $Fi = round(max(0, $Ai - $loanPart), 2);
 
                 $computed[] = [
                     'installment_number'               => $r['installment_number'],
@@ -899,6 +894,8 @@ public function createPaymentPlan(Request $request)
                 'payment_plan_type' => $request->payment_plan_type,
                 'slt_loan_applied'  => $request->slt_loan_applied,
                 'slt_loan_amount'   => $S,
+                'slt_loan_start_installment' => $loanStartInstallment,
+                'slt_loan_years'    => $loanYears,
                 'total_amount'      => $totalFeeForDiscount, // local + reg
                 'final_amount'      => $T,
                 'status'            => 'active',
@@ -1049,6 +1046,11 @@ public function getExistingPaymentPlans(\Illuminate\Http\Request $request)
                 'payment_plan_type' => $p->payment_plan_type,
                 'total_amount'      => (float) $p->total_amount,
                 'final_amount'      => (float) $p->final_amount,
+                'slt_loan_applied'  => $p->slt_loan_applied,
+                'slt_loan_amount'   => (float) $p->slt_loan_amount,
+                'slt_loan_start_installment' => $p->slt_loan_start_installment,
+                'slt_loan_years'    => $p->slt_loan_years,
+                'slt_receivable_effective_date' => optional($p->slt_receivable_effective_date)->format('Y-m-d'),
                 'status'            => $p->status,
                 'installments'      => $inst,
             ];
@@ -2557,6 +2559,33 @@ public function makePayment(Request $request)
     /**
      * Calculate final amount after applying discounts and loans.
      */
+    private function allocateSltLoanByStartInstallment(array $rows, array $discountedBases, float $loanAmount, ?int $startInstallment): array
+    {
+        $allocations = array_fill(0, count($rows), 0.0);
+        $remainingLoan = round(max(0, $loanAmount), 2);
+
+        if ($remainingLoan <= 0 || empty($rows)) {
+            return $allocations;
+        }
+
+        $startInstallment = $startInstallment ?: 1;
+
+        foreach ($rows as $index => $row) {
+            $installmentNumber = (int) ($row['installment_number'] ?? ($index + 1));
+
+            if ($installmentNumber < $startInstallment || $remainingLoan <= 0) {
+                continue;
+            }
+
+            $available = round(max(0, (float) ($discountedBases[$index] ?? 0)), 2);
+            $deduct = min($available, $remainingLoan);
+            $allocations[$index] = round($deduct, 2);
+            $remainingLoan = round($remainingLoan - $deduct, 2);
+        }
+
+        return $allocations;
+    }
+
     private function calculateFinalAmount($baseAmount, $discounts, $sltLoanAmount, $totalInstallments)
     {
         $finalAmount = $baseAmount;
@@ -2971,4 +3000,4 @@ private function getPaymentDescription($payment)
     return ucfirst(str_replace('_', ' ', $payment->installment_type));
 }
 
-} 
+}

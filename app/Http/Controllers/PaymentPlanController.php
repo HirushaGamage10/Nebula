@@ -359,25 +359,18 @@ public function update(Request $request, $id)
         $sltLoanApplied = ($existingPlan?->slt_loan_applied ?? 'no') === 'yes' ? 'yes' : 'no';
         $sltLoanAmount = $sltLoanApplied === 'yes' ? round((float) ($existingPlan?->slt_loan_amount ?? 0), 2) : 0.0;
         $sltLoanAmount = min($sltLoanAmount, $sumAfterDiscounts);
-        $targetFinalTotal = round($sumAfterDiscounts - $sltLoanAmount, 2);
+        $loanStartInstallment = $sltLoanAmount > 0 ? (int) ($existingPlan?->slt_loan_start_installment ?? 1) : null;
+        $loanYears = $sltLoanAmount > 0 ? ($existingPlan?->slt_loan_years ?? null) : null;
+        $loanAllocations = $this->allocateSltLoanByStartInstallment($rows, $discountedBases, $sltLoanAmount, $loanStartInstallment);
+        $sltLoanAmount = round(array_sum($loanAllocations), 2);
 
         $installments = [];
-        $runningTotal = 0.0;
 
         foreach ($rows as $index => $row) {
             $discountedBase = $discountedBases[$index] ?? 0.0;
             $isLast = $index === $lastIndex;
-
-            if ($isLast) {
-                $finalAmount = round($targetFinalTotal - $runningTotal, 2);
-            } else {
-                $finalAmount = $sumAfterDiscounts > 0
-                    ? round(($discountedBase / $sumAfterDiscounts) * $targetFinalTotal, 2)
-                    : 0.0;
-                $runningTotal += $finalAmount;
-            }
-
-            $loanShare = round($discountedBase - $finalAmount, 2);
+            $loanShare = round($loanAllocations[$index] ?? 0, 2);
+            $finalAmount = round(max(0, $discountedBase - $loanShare), 2);
 
             $installments[] = [
                 'installment_number' => (int) ($row['installment_number'] ?? ($index + 1)),
@@ -399,6 +392,8 @@ public function update(Request $request, $id)
                 'payment_plan_type' => $templatePlan->installment_plan ? 'installments' : 'full',
                 'slt_loan_applied' => $sltLoanApplied,
                 'slt_loan_amount' => $sltLoanAmount,
+                'slt_loan_start_installment' => $loanStartInstallment,
+                'slt_loan_years' => $loanYears,
                 'total_amount' => $totalAmount,
                 'final_amount' => round(array_sum(array_column($installments, 'final_amount')), 2),
                 'remaining_registration_discount' => $discountSummary['remaining_registration_discount'],
@@ -452,6 +447,33 @@ public function update(Request $request, $id)
             'registration_discount_excess' => round($registrationDiscountExcess, 2),
             'remaining_registration_discount' => $remainingRegistrationDiscount,
         ];
+    }
+
+    private function allocateSltLoanByStartInstallment(array $rows, array $discountedBases, float $loanAmount, ?int $startInstallment): array
+    {
+        $allocations = array_fill(0, count($rows), 0.0);
+        $remainingLoan = round(max(0, $loanAmount), 2);
+
+        if ($remainingLoan <= 0 || empty($rows)) {
+            return $allocations;
+        }
+
+        $startInstallment = $startInstallment ?: 1;
+
+        foreach ($rows as $index => $row) {
+            $installmentNumber = (int) ($row['installment_number'] ?? ($index + 1));
+
+            if ($installmentNumber < $startInstallment || $remainingLoan <= 0) {
+                continue;
+            }
+
+            $available = round(max(0, (float) ($discountedBases[$index] ?? 0)), 2);
+            $deduct = min($available, $remainingLoan);
+            $allocations[$index] = round($deduct, 2);
+            $remainingLoan = round($remainingLoan - $deduct, 2);
+        }
+
+        return $allocations;
     }
 
     private function getTemplateInstallmentRows(PaymentPlan $templatePlan, float $localFee): array
@@ -627,4 +649,4 @@ public function update(Request $request, $id)
     ]);
 }
 
-} 
+}

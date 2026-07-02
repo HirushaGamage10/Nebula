@@ -151,9 +151,6 @@
             <h2 class="text-center mb-4">Payment Discount</h2>
             <hr>
             <ul class="nav nav-tabs mb-4" id="discountTabs" role="tablist">
-                <!-- <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="slt-loan-tab" data-bs-toggle="tab" data-bs-target="#slt-loan" type="button" role="tab" aria-controls="slt-loan" aria-selected="true">SLT Loan</button>
-                </li> -->
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active bg-primary text-white" id="local-course-discounts-tab" data-bs-toggle="tab" data-bs-target="#local-course-discounts" type="button" role="tab" aria-controls="local-course-discounts" aria-selected="true">Discounts for Local Course Fee</button>
                 </li>
@@ -162,7 +159,6 @@
                 </li>
             </ul>
             <div class="tab-content" id="discountTabsContent">
-            
                 <!-- Local Course Fee Discounts Tab -->
                 <div class="tab-pane fade show active" id="local-course-discounts" role="tabpanel" aria-labelledby="local-course-discounts-tab">
                     <form id="local-course-discount-form">
@@ -291,63 +287,6 @@
 
 <script nonce="{{ $cspNonce }}">
 $(document).ready(function() {
-    // Auto-calculate when both fields are filled
-    $('#sltLoanAmount, #sltInstallments').on('input change', function() {
-        const loanAmount = parseFloat($('#sltLoanAmount').val()) || 0;
-        const numInstallments = parseInt($('#sltInstallments').val()) || 0;
-        
-        // Auto-calculate if both fields have values
-        if (loanAmount > 0 && numInstallments > 0) {
-            updateSltLoanSummaryAndTable();
-        } else {
-            // Clear table and summary if fields are empty
-            $('#sltLoanSummary').hide();
-            $('#sltInstallmentsTable tbody').empty();
-        }
-    });
-
-    function updateSltLoanSummaryAndTable() {
-        const loanAmount = parseFloat($('#sltLoanAmount').val()) || 0;
-        const numInstallments = parseInt($('#sltInstallments').val()) || 0;
-
-        // Calculations
-        if (loanAmount > 0 && numInstallments > 0) {
-            const loanInstallment = loanAmount / numInstallments;
-            
-            // Create summary
-            const summary = `<b>Loan Amount:</b> LKR ${loanAmount.toFixed(2)}<br>` +
-                           `<b>Number of Installments:</b> ${numInstallments}<br>` +
-                           `<b>Loan Installment Amount:</b> LKR ${loanInstallment.toFixed(2)}`;
-            $('#sltLoanSummary').html(summary).show();
-
-            // Generate installment table
-            let tableRows = '';
-            const currentDate = new Date();
-            
-            for (let i = 1; i <= numInstallments; i++) {
-                // Calculate due date (3 months apart)
-                const dueDate = new Date(currentDate);
-                dueDate.setMonth(dueDate.getMonth() + (i * 3));
-                const dueDateStr = dueDate.toISOString().split('T')[0];
-                
-                // For demo purposes, assume each installment is equal
-                const installmentAmount = loanInstallment;
-                
-                tableRows += `<tr>
-                    <td>${i}</td>
-                    <td>LKR ${installmentAmount.toFixed(2)}</td>
-                    <td>${dueDateStr}</td>
-                    <td>LKR ${installmentAmount.toFixed(2)}</td>
-                </tr>`;
-            }
-            
-            $('#sltInstallmentsTable tbody').html(tableRows);
-        } else {
-            $('#sltLoanSummary').hide();
-            $('#sltInstallmentsTable tbody').empty();
-        }
-    }
-
     // Local Course Fee Discount tab: change label based on type
     $('#localCourseDiscountType').on('change', function() {
         const type = $(this).val();

@@ -368,6 +368,11 @@
                         <i class="ti ti-edit me-2"></i>Update Records
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="slt-loan-tab" data-bs-toggle="tab" data-bs-target="#slt-loan" type="button" role="tab" aria-controls="slt-loan" aria-selected="false">
+                        <i class="ti ti-building-bank me-2"></i>SLT Loan Receivables
+                    </button>
+                </li>
                 <!-- <li class="nav-item" role="presentation">
                     <button class="nav-link" id="payment-summary-tab" data-bs-toggle="tab" data-bs-target="#payment-summary" type="button" role="tab" aria-controls="payment-summary" aria-selected="false">
                         <i class="ti ti-chart-pie me-2"></i>Payment Summary
@@ -489,17 +494,28 @@
                                         </div>
 
                                         <div class="row mb-3">
-                                            <div class="col-md-4">
+                                            <div class="col-md-3">
                                                 <label class="form-label fw-bold">SLT Loan Applied <span class="text-danger">*</span></label>
                                                 <select class="form-select" id="slt-loan-applied" name="slt_loan_applied">
                                                     <option value="no">No SLT Loan</option>
                                                     <option value="yes">Yes - SLT Loan Applied</option>
                                                 </select>
                                             </div>
-                                            <div class="col-md-4">
+                                            <div class="col-md-3">
                                                 <label class="form-label fw-bold">SLT Loan Amount</label>
                                                 <input type="number" class="form-control" id="slt-loan-amount" name="slt_loan_amount" min="0" step="0.01" placeholder="Enter SLT loan amount" disabled>
                                             </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label fw-bold">Loan Starts From Installment</label>
+                                                <input type="number" class="form-control" id="slt-loan-start-installment" name="slt_loan_start_installment" min="1" step="1" placeholder="e.g. 3" disabled>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label fw-bold">Loan Taken Years</label>
+                                                <input type="number" class="form-control" id="slt-loan-years" name="slt_loan_years" min="1" max="50" step="1" placeholder="e.g. 4" disabled>
+                                            </div>
+                                        </div>
+
+                                        <div class="row mb-3">
                                             <div class="col-md-4">
     <label class="form-label fw-bold">Final Amount After Discount & Loan</label>
     <div class="input-group">
@@ -959,6 +975,69 @@
     </div>
 </div>
 
+                <!-- SLT Loan Receivables Tab -->
+                <div class="tab-pane fade" id="slt-loan" role="tabpanel" aria-labelledby="slt-loan-tab">
+                    <div class="mt-4">
+                        <form id="slt-loan-receivable-form">
+                            <div class="row mb-3 align-items-center">
+                                <label class="col-sm-2 col-form-label fw-bold">Student NIC <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" id="slt-loan-student-nic" placeholder="Enter Student NIC" required>
+                                </div>
+                            </div>
+                            <div class="row mb-3 align-items-center">
+                                <label class="col-sm-2 col-form-label fw-bold">Course <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select" id="slt-loan-course" required disabled>
+                                        <option value="" selected disabled>Select a Course</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mb-3 align-items-center">
+                                <label class="col-sm-2 col-form-label fw-bold">Loan Taken Years</label>
+                                <div class="col-sm-10">
+                                    <input type="number" class="form-control" id="sltLoanYears" readonly>
+                                </div>
+                            </div>
+                            <div class="row mb-3 align-items-center">
+                                <label class="col-sm-2 col-form-label fw-bold">No of Loan Installments</label>
+                                <div class="col-sm-10">
+                                    <input type="number" class="form-control" id="sltLoanInstallmentCount" readonly>
+                                    <small class="form-text text-muted">Calculated as loan taken years × 12 months.</small>
+                                </div>
+                            </div>
+                            <div class="row mb-3 align-items-center">
+                                <label class="col-sm-2 col-form-label fw-bold">Apply From Installment</label>
+                                <div class="col-sm-10">
+                                    <input type="number" class="form-control" id="sltLoanStartInstallment" readonly>
+                                </div>
+                            </div>
+                            <div class="row mb-3 align-items-center">
+                                <label class="col-sm-2 col-form-label fw-bold">SLT Loan Receivable Amounst (Monthly) <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <div class="input-group">
+                                        <span class="input-group-text">LKR</span>
+                                        <input type="number" class="form-control" id="sltLoanAmount" min="0" step="0.01" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mb-3 align-items-center">
+                                <label class="col-sm-2 col-form-label fw-bold">Payment Effective Date <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <input type="date" class="form-control" id="sltLoanEffectiveDate" value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
+                                    <small class="form-text text-muted">Enter the actual date the SLT receivable payment is effective.</small>
+                                </div>
+                            </div>
+                            <div class="alert alert-info" id="sltLoanSummary" style="display:none;"></div>
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="ti ti-device-floppy me-2"></i>Update SLT Receivable
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
 <!-- Pay Modal -->
 <div class="modal fade" id="payModal" tabindex="-1">
   <div class="modal-dialog">
@@ -1372,6 +1451,14 @@ document.getElementById('currency-from')?.addEventListener('change', function() 
 
 document.getElementById('update-student-nic')?.addEventListener('change', function() {
     loadStudentCoursesForUpdate();
+});
+
+document.getElementById('slt-loan-student-nic')?.addEventListener('change', function() {
+    loadStudentCoursesForSltLoan();
+});
+
+document.getElementById('slt-loan-course')?.addEventListener('change', function() {
+    loadSltLoanPlanDetails();
 });
 
 document.getElementById('summary-student-nic')?.addEventListener('change', function() {
@@ -1853,7 +1940,27 @@ function getDiscountBaseAmount() {
     return courseFee + registrationFee;
 }
 
-// Display installments in the table (discounts first, then SLT prorated by the combined local + registration base)
+function getSltLoanStartInstallment() {
+  const value = parseInt(document.getElementById('slt-loan-start-installment')?.value || '1', 10);
+  return Number.isFinite(value) && value > 0 ? value : 1;
+}
+
+function allocateSltLoanByStartInstallment(installments, loanAmount, startInstallment) {
+  let remainingLoan = Math.max(0, Number(loanAmount) || 0);
+  return installments.map((ins, index) => {
+    const installmentNumber = Number(ins.installment_number || index + 1);
+    if (installmentNumber < startInstallment || remainingLoan <= 0) {
+      return 0;
+    }
+
+    const available = Math.max(0, Number(ins.discountedAmount || 0));
+    const applied = Math.min(available, remainingLoan);
+    remainingLoan = Math.max(0, remainingLoan - applied);
+    return Math.round(applied * 100) / 100;
+  });
+}
+
+// Display installments in the table (discounts first, then SLT loan from the selected installment onward)
 function displayInstallments(installments) {
   const tbody = document.getElementById('installmentTableBody');
   tbody.innerHTML = '';
@@ -1960,16 +2067,16 @@ if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value && disc
   // ΣFi = (ΣAi / ΣAi) * (ΣAi - S)  where Ai = discountedAmount, S = SLT
   // This simplifies to: ΣFi = ΣAi - S (total after discounts minus SLT loan)
   const useLoan = (sltLoanApplied === 'yes' && sltLoanAmount > 0 && sumAfterDiscounts > 0);
-  const targetTotal = useLoan
-    ? sumAfterDiscounts - sltLoanAmount
-    : sumAfterDiscounts;
-
-  // build rows; prorate SLT AFTER discounts using originalLocalTotal; fix rounding on last row
+  const loanStartInstallment = getSltLoanStartInstallment();
+  const loanAllocations = useLoan
+    ? allocateSltLoanByStartInstallment(discounted, Math.min(sltLoanAmount, sumAfterDiscounts), loanStartInstallment)
+    : discounted.map(() => 0);
+  const targetTotal = Math.max(0, sumAfterDiscounts - Math.min(sltLoanAmount, sumAfterDiscounts));
   let runningFinals = 0;
 
+  // build rows; prorate SLT AFTER discounts using originalLocalTotal; fix rounding on last row
   discounted.forEach((ins, idx) => {
     const isLast = idx === discounted.length - 1;
-
     // Combine regular discount and registration fee discount excess
     let discountText = '-';
     let totalDiscount = ins.discountApplied || 0;
@@ -1990,6 +2097,7 @@ if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value && disc
     let sltLoanText = '-';
 
     if (useLoan) {
+      const loanAppliedToInstallment = loanAllocations[idx] || 0;
       let Fi;
       if (!isLast) {
         // Apply the formula: (Installment amount after discounts) / (Total sum of installments after discounts) × amount to be paid
@@ -2005,9 +2113,9 @@ if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value && disc
       const S  = targetTotal;
 
       // 👉 show the final-amount formula in SLT column (e.g., 200,000 / 500,000 × 400,000)
-      sltLoanText = sltFormulaHTML(Ai, L, S);
+      sltLoanText = loanAppliedToInstallment > 0 ? `LKR ${fmt(loanAppliedToInstallment)}` : '-';
 
-      finalAmount = Math.max(0, Fi);
+      finalAmount = Math.max(0, r2(ins.discountedAmount - loanAppliedToInstallment));
     }
 
     const row = `
@@ -2225,10 +2333,12 @@ function loadExistingPaymentPlans(studentNic, courseId) {
 
     // Cache for "Load to editor" (optional)
     window.existingPlansCache = {};
+    window.existingPlanMetaCache = {};
 
     plans.forEach(p => {
       const inst = p.installments || [];
       window.existingPlansCache[p.payment_plan_id] = inst;
+      window.existingPlanMetaCache[p.payment_plan_id] = p;
 
       const fmtLKR = n => `LKR ${(Number(n || 0)).toLocaleString()}`;
       const badge  = s => `<span class="badge bg-${s==='active'?'success':'secondary'}">${s}</span>`;
@@ -2339,6 +2449,7 @@ function attachLoadToEditorHandler() {
 
     const planId = btn.dataset.planId;
     let inst = (window.existingPlansCache && window.existingPlansCache[planId]) || [];
+    const planMeta = (window.existingPlanMetaCache && window.existingPlanMetaCache[planId]) || {};
     if (!Array.isArray(inst)) inst = [];
 
     // Show the editor
@@ -2353,6 +2464,28 @@ function attachLoadToEditorHandler() {
     if (planTypeSel) {
       planTypeSel.value = 'installments';
       planTypeSel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    const sltLoanApplied = document.getElementById('slt-loan-applied');
+    const sltLoanAmount = document.getElementById('slt-loan-amount');
+    const sltLoanStart = document.getElementById('slt-loan-start-installment');
+    const sltLoanYears = document.getElementById('slt-loan-years');
+    const hasSltLoan = (planMeta.slt_loan_applied || '').toLowerCase() === 'yes';
+    if (sltLoanApplied) sltLoanApplied.value = hasSltLoan ? 'yes' : 'no';
+    if (sltLoanAmount) {
+      sltLoanAmount.disabled = !hasSltLoan;
+      sltLoanAmount.required = hasSltLoan;
+      sltLoanAmount.value = hasSltLoan ? Number(planMeta.slt_loan_amount || 0) : 0;
+    }
+    if (sltLoanStart) {
+      sltLoanStart.disabled = !hasSltLoan;
+      sltLoanStart.required = hasSltLoan;
+      sltLoanStart.value = hasSltLoan ? (planMeta.slt_loan_start_installment || 1) : '';
+    }
+    if (sltLoanYears) {
+      sltLoanYears.disabled = !hasSltLoan;
+      sltLoanYears.required = hasSltLoan;
+      sltLoanYears.value = hasSltLoan ? (planMeta.slt_loan_years || '') : '';
     }
 
     // Normalize installments for displayInstallments()
@@ -2676,22 +2809,68 @@ const sltLoanAppliedField = document.getElementById('slt-loan-applied');
 if (sltLoanAppliedField) {
     sltLoanAppliedField.addEventListener('change', function() {
         const sltLoanAmountField = document.getElementById('slt-loan-amount');
+        const sltLoanStartField = document.getElementById('slt-loan-start-installment');
+        const sltLoanYearsField = document.getElementById('slt-loan-years');
         if (this.value === 'yes') {
             sltLoanAmountField.disabled = false;
             sltLoanAmountField.required = true;
+            if (sltLoanStartField) {
+                sltLoanStartField.disabled = false;
+                sltLoanStartField.required = true;
+                if (!sltLoanStartField.value) sltLoanStartField.value = '1';
+            }
+            if (sltLoanYearsField) {
+                sltLoanYearsField.disabled = false;
+                sltLoanYearsField.required = true;
+            }
         } else {
             sltLoanAmountField.disabled = true;
             sltLoanAmountField.required = false;
             sltLoanAmountField.value = '0'; // ✅ SET TO ZERO!
         }
+        if (this.value !== 'yes' && sltLoanStartField) {
+            sltLoanStartField.disabled = true;
+            sltLoanStartField.required = false;
+            sltLoanStartField.value = '';
+        }
+        if (this.value !== 'yes' && sltLoanYearsField) {
+            sltLoanYearsField.disabled = true;
+            sltLoanYearsField.required = false;
+            sltLoanYearsField.value = '';
+        }
         calculateFinalAmount();
+        if (window.currentStudentData) {
+            calculateAndDisplayInstallments();
+        }
     });
 }
 
     // SLT Loan Amount Input
     const sltLoanAmount = document.getElementById('slt-loan-amount');
     if (sltLoanAmount) {
-        sltLoanAmount.addEventListener('input', calculateFinalAmount);
+        sltLoanAmount.addEventListener('input', function() {
+            calculateFinalAmount();
+            if (window.currentStudentData) {
+                calculateAndDisplayInstallments();
+            }
+        });
+    }
+
+    const sltLoanStart = document.getElementById('slt-loan-start-installment');
+    if (sltLoanStart) {
+        sltLoanStart.addEventListener('input', function() {
+            calculateFinalAmount();
+            if (window.currentStudentData) {
+                calculateAndDisplayInstallments();
+            }
+        });
+    }
+
+    const sltLoanYears = document.getElementById('slt-loan-years');
+    if (sltLoanYears) {
+        sltLoanYears.addEventListener('input', function() {
+            calculateFinalAmount();
+        });
     }
 
     // Normal Discounts
@@ -2743,6 +2922,8 @@ function createPaymentPlan() {
   const discountSelects= document.querySelectorAll('.discount-select');
   const sltLoanApplied = document.getElementById('slt-loan-applied').value;
   const sltLoanAmount  = parseFloat(document.getElementById('slt-loan-amount').value || '0');
+  const sltLoanStartInstallment = getSltLoanStartInstallment();
+  const sltLoanYears = parseInt(document.getElementById('slt-loan-years')?.value || '0', 10);
 
   console.log('Form validation - currentStudentData:', window.currentStudentData);
   console.log('Form validation - planType:', planType);
@@ -2755,6 +2936,10 @@ function createPaymentPlan() {
   if (!planType) {
     console.log('Validation failed: No plan type selected');
     showErrorMessage('Please select a payment plan type.');
+    return;
+  }
+  if (sltLoanApplied === 'yes' && (!Number.isFinite(sltLoanYears) || sltLoanYears < 1)) {
+    showErrorMessage('Please enter how many years the SLT loan has been taken.');
     return;
   }
 
@@ -2814,18 +2999,13 @@ function createPaymentPlan() {
   .then(data => {
     if (!data.success) throw new Error(data.message || 'Failed to get payment plan installments');
 
-    // Compute SLT loan per installment (frontend distributes it)
-    const count = (data.installments || []).length || 1;
-    const sltPerInst = (sltLoanApplied === 'yes' && sltLoanAmount > 0) ? (sltLoanAmount / count) : 0;
-
         let usedFallbackDueDate = false;
 
     // Build installments INCLUDING final_amount
-const installments = (data.installments || []).map(inst => {
+const sourceInstallments = (data.installments || []).map(inst => {
   const base = parseFloat(inst.amount || 0);
   const discounted = parseFloat(inst.final_amount || base);
   const discountAmount = Math.max(0, base - discounted);
-  const finalWithLoan = Math.max(0, discounted - sltPerInst);
     const originalDate = normalizeDueDate(inst.due_date, inst.installment_number, false);
     const normalizedDueDate = normalizeDueDate(inst.due_date, inst.installment_number, true);
     if (!originalDate && normalizedDueDate) {
@@ -2836,13 +3016,27 @@ const installments = (data.installments || []).map(inst => {
     installment_number: inst.installment_number,
         due_date: normalizedDueDate,
     amount: base,
+    discountedAmount: discounted,
     discount_amount: discountAmount,
     discount_note: inst.discount || null,
     registration_fee_discount_applied: 0,     // always start with 0
     registration_fee_discount_note: null,
-    slt_loan_amount: sltPerInst,
-    final_amount: finalWithLoan,
+    slt_loan_amount: 0,
+    final_amount: discounted,
     status: 'pending'
+  };
+});
+
+const loanAllocations = (sltLoanApplied === 'yes' && sltLoanAmount > 0)
+  ? allocateSltLoanByStartInstallment(sourceInstallments, sltLoanAmount, sltLoanStartInstallment)
+  : sourceInstallments.map(() => 0);
+
+const installments = sourceInstallments.map((inst, index) => {
+  const loanAmount = loanAllocations[index] || 0;
+  return {
+    ...inst,
+    slt_loan_amount: loanAmount,
+    final_amount: Math.max(0, inst.discountedAmount - loanAmount)
   };
 });
 
@@ -2886,6 +3080,8 @@ if (registrationFeeDiscount && installments.length > 0) {
       discounts: selectedDiscounts,
       slt_loan_applied: sltLoanApplied,
       slt_loan_amount: sltLoanApplied === 'yes' ? sltLoanAmount : 0,
+      slt_loan_start_installment: sltLoanApplied === 'yes' ? sltLoanStartInstallment : null,
+      slt_loan_years: sltLoanApplied === 'yes' ? sltLoanYears : null,
       total_amount: totalAmount,
       final_amount: finalTotal, // top-level summary after discount + loan
       installments: installments
@@ -3478,6 +3674,137 @@ function loadStudentCoursesForUpdate() {
     .finally(() => showSpinner(false));
 }
 
+function resetSltLoanAutoFields() {
+    document.getElementById('sltLoanYears').value = '';
+    document.getElementById('sltLoanInstallmentCount').value = '';
+    document.getElementById('sltLoanStartInstallment').value = '';
+    document.getElementById('sltLoanAmount').value = '';
+    document.getElementById('sltLoanSummary').style.display = 'none';
+}
+
+const SLT_MONTHS_PER_YEAR = 12;
+
+function calculateSltLoanInstallmentCount(years) {
+    const parsedYears = parseInt(years, 10) || 0;
+    return parsedYears > 0 ? parsedYears * SLT_MONTHS_PER_YEAR : 0;
+}
+
+function updateSltLoanInstallmentCountField() {
+    const years = document.getElementById('sltLoanYears')?.value;
+    const installmentCount = calculateSltLoanInstallmentCount(years);
+    const installmentField = document.getElementById('sltLoanInstallmentCount');
+    if (installmentField) {
+        installmentField.value = installmentCount > 0 ? installmentCount : '';
+    }
+}
+
+function loadStudentCoursesForSltLoan() {
+    const studentNic = document.getElementById('slt-loan-student-nic')?.value;
+
+    if (!studentNic) {
+        const courseSelect = document.getElementById('slt-loan-course');
+        if (courseSelect) {
+            courseSelect.innerHTML = '<option value="" selected disabled>Select a Course</option>';
+            courseSelect.disabled = true;
+        }
+        resetSltLoanAutoFields();
+        return;
+    }
+
+    showSpinner(true);
+
+    fetch('/payment/get-student-courses', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        body: JSON.stringify({ student_nic: studentNic })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const courseSelect = document.getElementById('slt-loan-course');
+        courseSelect.innerHTML = '<option value="" selected disabled>Select a Course</option>';
+        resetSltLoanAutoFields();
+
+        if (data.success) {
+            data.courses.forEach(course => {
+                const option = document.createElement('option');
+                option.value = course.course_id;
+                option.textContent = course.course_name;
+                courseSelect.appendChild(option);
+            });
+            courseSelect.disabled = data.courses.length === 0;
+        } else {
+            courseSelect.disabled = true;
+            showErrorMessage(data.message || 'Failed to load courses.');
+        }
+    })
+    .catch(() => {
+        showErrorMessage('An error occurred while loading courses.');
+        const courseSelect = document.getElementById('slt-loan-course');
+        courseSelect.innerHTML = '<option value="" selected disabled>Select a Course</option>';
+        courseSelect.disabled = true;
+        resetSltLoanAutoFields();
+    })
+    .finally(() => showSpinner(false));
+}
+
+function loadSltLoanPlanDetails() {
+    const studentNic = document.getElementById('slt-loan-student-nic')?.value;
+    const courseId = document.getElementById('slt-loan-course')?.value;
+
+    if (!studentNic || !courseId) {
+        resetSltLoanAutoFields();
+        return;
+    }
+
+    showSpinner(true);
+
+    fetch('{{ route("payment.existingPlans") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        body: JSON.stringify({
+            student_nic: studentNic,
+            course_id: courseId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            resetSltLoanAutoFields();
+            showErrorMessage(data.message || 'Failed to load payment plan details.');
+            return;
+        }
+
+        const plans = data.plans || [];
+        const plan = plans.find(p => p.status !== 'archived') || plans[0];
+
+        if (!plan) {
+            resetSltLoanAutoFields();
+            showWarningMessage('No payment plan found. Create a payment plan first.');
+            return;
+        }
+
+        if ((plan.slt_loan_applied || '').toLowerCase() !== 'yes') {
+            showWarningMessage('This payment plan does not have an SLT loan applied.');
+        }
+
+        document.getElementById('sltLoanYears').value = plan.slt_loan_years || '';
+        updateSltLoanInstallmentCountField();
+        document.getElementById('sltLoanStartInstallment').value = plan.slt_loan_start_installment || '';
+        document.getElementById('sltLoanAmount').value = plan.slt_loan_amount > 0 ? plan.slt_loan_amount : '';
+
+        if (plan.slt_receivable_effective_date) {
+            document.getElementById('sltLoanEffectiveDate').value = plan.slt_receivable_effective_date;
+        }
+
+        updateSltReceivableSummary();
+    })
+    .catch(() => {
+        resetSltLoanAutoFields();
+        showErrorMessage('An error occurred while loading payment plan details.');
+    })
+    .finally(() => showSpinner(false));
+}
+
 function renderPaymentRecords() {
   const tbody = document.getElementById('paymentRecordsTableBody');
   tbody.innerHTML = "";
@@ -3999,13 +4326,34 @@ document.addEventListener('DOMContentLoaded', function() {
     if (sltLoanAppliedField) {
         sltLoanAppliedField.addEventListener('change', function() {
             const sltLoanAmountField = document.getElementById('slt-loan-amount');
+            const sltLoanStartField = document.getElementById('slt-loan-start-installment');
+            const sltLoanYearsField = document.getElementById('slt-loan-years');
             if (this.value === 'yes') {
                 sltLoanAmountField.disabled = false;
                 sltLoanAmountField.required = true;
+                if (sltLoanStartField) {
+                    sltLoanStartField.disabled = false;
+                    sltLoanStartField.required = true;
+                    if (!sltLoanStartField.value) sltLoanStartField.value = '1';
+                }
+                if (sltLoanYearsField) {
+                    sltLoanYearsField.disabled = false;
+                    sltLoanYearsField.required = true;
+                }
             } else {
                 sltLoanAmountField.disabled = true;
                 sltLoanAmountField.required = false;
                 sltLoanAmountField.value = '';
+                if (sltLoanStartField) {
+                    sltLoanStartField.disabled = true;
+                    sltLoanStartField.required = false;
+                    sltLoanStartField.value = '';
+                }
+                if (sltLoanYearsField) {
+                    sltLoanYearsField.disabled = true;
+                    sltLoanYearsField.required = false;
+                    sltLoanYearsField.value = '';
+                }
             }
             calculateFinalAmount();
             if (window.currentStudentData) {
@@ -4026,6 +4374,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     calculateAndDisplayInstallments();
                 }
             }
+        });
+    }
+
+    const sltLoanStartField = document.getElementById('slt-loan-start-installment');
+    if (sltLoanStartField) {
+        sltLoanStartField.addEventListener('input', function() {
+            calculateFinalAmount();
+            if (document.getElementById('payment-plan-type').value === 'full') {
+                showInstallmentPreview();
+            } else if (window.currentStudentData) {
+                calculateAndDisplayInstallments();
+            }
+        });
+    }
+
+    const sltLoanYearsField = document.getElementById('slt-loan-years');
+    if (sltLoanYearsField) {
+        sltLoanYearsField.addEventListener('input', function() {
+            calculateFinalAmount();
         });
     }
 
@@ -4066,7 +4433,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Recalculate installments when SLT loan changes
-        if (e.target.id === 'slt-loan-applied' || e.target.id === 'slt-loan-amount') {
+        if (e.target.id === 'slt-loan-applied' || e.target.id === 'slt-loan-amount' || e.target.id === 'slt-loan-start-installment') {
             calculateFinalAmount();
             if (window.currentStudentData) {
                 calculateAndDisplayInstallments();
@@ -5010,6 +5377,88 @@ function renderPaymentDetailsTable(rows, paymentType) {
 // If user changes FX inputs, recompute the LKR column live
 document.getElementById('currency-conversion-rate')?.addEventListener('input', recalculateLKRAmounts);
 document.getElementById('currency-from')?.addEventListener('change', recalculateLKRAmounts);
+
+function updateSltReceivableSummary() {
+    const loanAmount = parseFloat(document.getElementById('sltLoanAmount')?.value) || 0;
+    const years = parseInt(document.getElementById('sltLoanYears')?.value, 10) || 0;
+    const installmentCount = calculateSltLoanInstallmentCount(years);
+    const startInstallment = parseInt(document.getElementById('sltLoanStartInstallment')?.value, 10) || 0;
+    const summaryEl = document.getElementById('sltLoanSummary');
+
+    updateSltLoanInstallmentCountField();
+
+    if (!summaryEl) return;
+
+    if (loanAmount > 0 && installmentCount > 0) {
+        const receivablePerInstallment = loanAmount / installmentCount;
+        summaryEl.innerHTML =
+            `<strong>Total SLT Receivable:</strong> LKR ${loanAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}<br>` +
+            `<strong>No of loan installments:</strong> ${installmentCount}<br>` +
+            `<strong>Receivable per installment:</strong> LKR ${receivablePerInstallment.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}<br>` +
+            `<strong>Student collection changes from installment:</strong> ${startInstallment || '-'}`;
+        summaryEl.style.display = 'block';
+    } else {
+        summaryEl.style.display = 'none';
+    }
+}
+
+document.getElementById('sltLoanAmount')?.addEventListener('input', updateSltReceivableSummary);
+
+document.getElementById('slt-loan-receivable-form')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const studentNic = document.getElementById('slt-loan-student-nic')?.value;
+    const courseId = document.getElementById('slt-loan-course')?.value;
+    const loanYears = document.getElementById('sltLoanYears')?.value;
+    const startInstallment = document.getElementById('sltLoanStartInstallment')?.value;
+    const loanAmount = document.getElementById('sltLoanAmount')?.value;
+    const effectiveDate = document.getElementById('sltLoanEffectiveDate')?.value;
+
+    if (!studentNic || !courseId) {
+        showWarningMessage('Please enter student NIC and select a course.');
+        return;
+    }
+
+    if (!loanYears || !startInstallment) {
+        showWarningMessage('Loan details could not be loaded from the payment plan. Select a course with an SLT loan applied.');
+        return;
+    }
+
+    showSpinner(true);
+
+    fetch('{{ route("payment.discount.save.sltloan") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        body: JSON.stringify({
+            student_identifier: studentNic,
+            course_id: courseId,
+            slt_loan_amount: loanAmount,
+            slt_loan_years: loanYears,
+            slt_loan_start_installment: startInstallment,
+            payment_effective_date: effectiveDate
+        })
+    })
+    .then(async response => {
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Unable to update SLT loan receivable.');
+        }
+        return data;
+    })
+    .then(response => {
+        const plan = response.payment_plan || {};
+        showSuccessMessage(response.message || 'SLT loan receivable updated successfully.');
+        if (plan.installment_receivable !== undefined) {
+            const summaryEl = document.getElementById('sltLoanSummary');
+            summaryEl.innerHTML += `<br><strong>Saved receivable per installment:</strong> LKR ${Number(plan.installment_receivable || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            summaryEl.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        showErrorMessage(error.message || 'Unable to update SLT loan receivable.');
+    })
+    .finally(() => showSpinner(false));
+});
 
 // Tab coloring logic (like all clearance page)
 $('#paymentTabs .nav-link').on('shown.bs.tab', function (e) {
