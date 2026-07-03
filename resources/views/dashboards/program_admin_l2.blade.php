@@ -279,7 +279,7 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="small text-muted mt-2">Applies to Academic Performance and Attendance tabs.</div>
+                        <div class="small text-danger mt-2">Applies to Academic Performance and Attendance tabs.</div>
                     </div>
                 </div>
             </div>
