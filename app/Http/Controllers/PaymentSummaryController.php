@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\PaymentDetail;
+use App\Models\CourseRegistration;
 use App\Models\Student;
 use App\Models\Course;
 use App\Models\Intake;
@@ -86,7 +87,7 @@ class PaymentSummaryController extends Controller
 
         $courses = Course::query()
             ->where('location', $request->input('location'))
-            ->select('course_id', 'course_name')
+            ->select('course_id', 'course_name', 'location')
             ->orderBy('course_name')
             ->get();
 
@@ -393,6 +394,7 @@ class PaymentSummaryController extends Controller
         $query = PaymentDetail::query();
         $hasStatus = $this->hasPaymentDetailColumn('status');
         $breakdownScope = ($filters['breakdown_scope'] ?? 'paid') === 'all' ? 'all' : 'paid';
+        $matchingStudentIds = collect();
 
         // Apply student filter (supports internal student_id and NIC/id_value)
         $studentSearch = trim((string) ($filters['student_id'] ?? $studentId ?? ''));
@@ -552,6 +554,166 @@ class PaymentSummaryController extends Controller
             ->orderBy('district')
             ->get();
 
+        $selectedLocation = !empty($filters['location']) ? $filters['location'] : null;
+        $selectedCourseId = !empty($filters['course_id']) ? (int) $filters['course_id'] : null;
+        $selectedIntakeId = !empty($filters['intake_id']) ? (int) $filters['intake_id'] : null;
+        $selectedNewRegistrationCourseId = !empty($filters['new_registration_course_id']) ? (int) $filters['new_registration_course_id'] : null;
+        $selectedOngoingCourseId = !empty($filters['ongoing_course_id']) ? (int) $filters['ongoing_course_id'] : null;
+        $currentMonthStart = now()->startOfMonth()->toDateString();
+        $currentMonthEnd = now()->toDateString();
+
+        $registrationQuery = CourseRegistration::query();
+
+        if ($studentSearch !== '') {
+            if (isset($matchingStudentIds) && $matchingStudentIds->isNotEmpty()) {
+                $registrationQuery->whereIn('student_id', $matchingStudentIds->all());
+            } else {
+                $registrationQuery->whereRaw('1 = 0');
+            }
+        }
+
+        if ($selectedLocation) {
+            $registrationQuery->where('location', $selectedLocation);
+        }
+
+        if ($selectedCourseId) {
+            $registrationQuery->where('course_id', $selectedCourseId);
+        }
+
+        if ($selectedIntakeId) {
+            $registrationQuery->where('intake_id', $selectedIntakeId);
+        }
+
+        if ($startDateInput || $endDateInput) {
+            if ($startDateInput) {
+                $registrationQuery->whereDate('registration_date', '>=', $startDateInput);
+            }
+
+            if ($endDateInput) {
+                $registrationQuery->whereDate('registration_date', '<=', $endDateInput);
+            }
+        } elseif ($startDate) {
+            $registrationQuery->whereDate('registration_date', '>=', $startDate->toDateString());
+        }
+
+        $availableCourses = Course::query()
+            ->select('course_id', 'course_name', 'location')
+            ->when($selectedLocation, function ($q) use ($selectedLocation) {
+                $q->where('location', $selectedLocation);
+            })
+            ->orderBy('course_name')
+            ->get();
+
+        $registrationSummary = (clone $registrationQuery)
+            ->select(
+                'course_id',
+                DB::raw('COUNT(*) as total_registrations'),
+                DB::raw("SUM(CASE WHEN status = 'Registered' THEN 1 ELSE 0 END) as ongoing_courses"),
+                DB::raw("SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending_registrations"),
+                DB::raw("SUM(CASE WHEN registration_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 ELSE 0 END) as new_registrations")
+            )
+            ->groupBy('course_id')
+            ->get()
+            ->keyBy('course_id');
+
+        $paymentSummary = PaymentDetail::join('course_registration', 'payment_details.course_registration_id', '=', 'course_registration.id')
+            ->where('course_registration.location', $selectedLocation ?? auth()->user()->user_location ?? 'Welisara')
+            ->when($selectedCourseId, function ($query) use ($selectedCourseId) {
+                $query->where('course_registration.course_id', $selectedCourseId);
+            })
+            ->when($selectedIntakeId, function ($query) use ($selectedIntakeId) {
+                $query->where('course_registration.intake_id', $selectedIntakeId);
+            })
+            ->when($studentSearch !== '', function ($query) use ($matchingStudentIds) {
+                if (isset($matchingStudentIds) && $matchingStudentIds->isNotEmpty()) {
+                    $query->whereIn('course_registration.student_id', $matchingStudentIds->all());
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
+            })
+            ->when($startDateInput || $endDateInput || $startDate, function ($query) use ($dashboardDateExpr, $startDateInput, $endDateInput, $startDate) {
+                if ($startDateInput) {
+                    $query->whereRaw("DATE({$dashboardDateExpr}) >= ?", [$startDateInput]);
+                } elseif ($startDate) {
+                    $query->whereRaw("DATE({$dashboardDateExpr}) >= ?", [$startDate->toDateString()]);
+                }
+
+                if ($endDateInput) {
+                    $query->whereRaw("DATE({$dashboardDateExpr}) <= ?", [$endDateInput]);
+                }
+            })
+            ->select(
+                'course_registration.course_id',
+                DB::raw("SUM(CASE WHEN payment_details.status = 'paid' THEN payment_details.amount ELSE 0 END) as paid_amount"),
+                DB::raw("SUM(CASE WHEN payment_details.status = 'pending' THEN payment_details.amount ELSE 0 END) as pending_amount"),
+                DB::raw('COUNT(payment_details.id) as payment_count')
+            )
+            ->groupBy('course_registration.course_id')
+            ->get()
+            ->keyBy('course_id');
+
+        $courseWiseSummary = $availableCourses->map(function ($course) use ($registrationSummary, $paymentSummary) {
+            $courseId = (int) $course->course_id;
+            $registrationRow = $registrationSummary->get($courseId);
+            $paymentRow = $paymentSummary->get($courseId);
+
+            return [
+                'course_id' => $courseId,
+                'course_name' => $course->course_name,
+                'location' => $course->location ?? 'N/A',
+                'total_registrations' => (int) ($registrationRow->total_registrations ?? 0),
+                'new_registrations' => (int) ($registrationRow->new_registrations ?? 0),
+                'ongoing_courses' => (int) ($registrationRow->ongoing_courses ?? 0),
+                'pending_registrations' => (int) ($registrationRow->pending_registrations ?? 0),
+                'paid_amount' => (float) ($paymentRow->paid_amount ?? 0),
+                'pending_amount' => (float) ($paymentRow->pending_amount ?? 0),
+                'payment_count' => (int) ($paymentRow->payment_count ?? 0),
+            ];
+        })->sortByDesc('paid_amount')->values();
+
+        $newRegistrationsCurrentMonthQuery = CourseRegistration::query()
+            ->when($selectedLocation, function ($query) use ($selectedLocation) {
+                $query->where('location', $selectedLocation);
+            })
+            ->when($selectedNewRegistrationCourseId, function ($query) use ($selectedNewRegistrationCourseId) {
+                $query->where('course_id', $selectedNewRegistrationCourseId);
+            })
+            ->whereDate('registration_date', '>=', $currentMonthStart)
+            ->whereDate('registration_date', '<=', $currentMonthEnd);
+
+        $newRegistrationsCount = (clone $newRegistrationsCurrentMonthQuery)->count();
+        $newRegistrationsAmount = (float) (clone $newRegistrationsCurrentMonthQuery)->sum(DB::raw('COALESCE(registration_fee, 0)'));
+
+        $ongoingRegistrationsQuery = CourseRegistration::query()
+            ->where('status', 'Registered')
+            ->when($selectedLocation, function ($query) use ($selectedLocation) {
+                $query->where('location', $selectedLocation);
+            })
+            ->when($selectedOngoingCourseId, function ($query) use ($selectedOngoingCourseId) {
+                $query->where('course_id', $selectedOngoingCourseId);
+            });
+
+        $ongoingCoursesCount = (clone $ongoingRegistrationsQuery)->count();
+
+        $ongoingCoursesAmount = (float) PaymentDetail::join('course_registration', 'payment_details.course_registration_id', '=', 'course_registration.id')
+            ->where('course_registration.status', 'Registered')
+            ->when($selectedLocation, function ($query) use ($selectedLocation) {
+                $query->where('course_registration.location', $selectedLocation);
+            })
+            ->when($selectedOngoingCourseId, function ($query) use ($selectedOngoingCourseId) {
+                $query->where('course_registration.course_id', $selectedOngoingCourseId);
+            })
+            ->whereRaw("DATE({$dashboardDateExpr}) >= ?", [$currentMonthStart])
+            ->whereRaw("DATE({$dashboardDateExpr}) <= ?", [$currentMonthEnd])
+            ->where('payment_details.status', 'paid')
+            ->sum('payment_details.amount');
+
+        $newRegistrations = (clone $newRegistrationsCurrentMonthQuery)
+            ->with(['student', 'course'])
+            ->orderBy('registration_date', 'desc')
+            ->limit(10)
+            ->get();
+
         if (request()->ajax()) {
             return response()->json([
                 'totalCollected' => $totalCollected,
@@ -569,11 +731,14 @@ class PaymentSummaryController extends Controller
                 'monthlyIncome' => $monthlyIncome,
                 'weeklyTrend' => $weeklyTrend,
                 'districtAnalytics' => $districtAnalytics,
+                'courseWiseSummary' => $courseWiseSummary,
+                'newRegistrations' => $newRegistrations,
+                'newRegistrationsCount' => $newRegistrationsCount,
+                'newRegistrationsAmount' => $newRegistrationsAmount,
+                'ongoingCoursesCount' => $ongoingCoursesCount,
+                'ongoingCoursesAmount' => $ongoingCoursesAmount,
             ]);
         }
-
-        $selectedLocation = !empty($filters['location']) ? $filters['location'] : null;
-        $selectedCourseId = !empty($filters['course_id']) ? (int) $filters['course_id'] : null;
 
         $courses = Course::query()
             ->select('course_id', 'course_name')
@@ -598,7 +763,9 @@ class PaymentSummaryController extends Controller
             'totalCollected', 'totalPending', 'totalLateFee', 'totalDiscount',
             'totalTransactions', 'averageTransaction', 'ssclTaxTotal', 'bankChargesTotal',
             'paymentByMethod', 'paymentByType', 'paymentByStatus', 'breakdownScope', 'monthlyIncome',
-            'weeklyTrend', 'districtAnalytics', 'courses', 'intakes'
+            'weeklyTrend', 'districtAnalytics', 'courses', 'intakes', 'courseWiseSummary',
+            'newRegistrations', 'newRegistrationsCount', 'newRegistrationsAmount',
+            'ongoingCoursesCount', 'ongoingCoursesAmount'
         ));
     }
 
@@ -696,16 +863,16 @@ class PaymentSummaryController extends Controller
     {
         $dateColumns = [];
 
-        if ($this->hasPaymentDetailColumn('due_date')) {
-            $dateColumns[] = "{$table}.due_date";
-        }
-
         if ($this->hasPaymentDetailColumn('payment_effective_date')) {
             $dateColumns[] = "{$table}.payment_effective_date";
         }
 
         if ($this->hasPaymentDetailColumn('payment_date')) {
             $dateColumns[] = "{$table}.payment_date";
+        }
+
+        if ($this->hasPaymentDetailColumn('due_date')) {
+            $dateColumns[] = "{$table}.due_date";
         }
 
         // Final fallback so old rows still participate in reports.

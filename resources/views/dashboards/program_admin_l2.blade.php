@@ -781,6 +781,15 @@
 
                             <!-- Payments Tab -->
                             <div class="tab-pane fade" id="payments" role="tabpanel">
+                                <div class="row mb-3">
+                                    <div class="col-lg-4 col-md-6 ms-auto">
+                                        <label for="paymentCourseFilter" class="form-label fw-semibold text-muted">Course Filter</label>
+                                        <select id="paymentCourseFilter" class="form-select form-select-sm">
+                                            <option value="">All Courses</option>
+                                        </select>
+                                    </div>
+                                </div>
+
                                 <div class="row mb-4">
                                     <div class="col-xl-3 col-md-6 mb-4">
                                         <div class="card kpi-card card-hover border-left-success">
@@ -849,6 +858,71 @@
                                                 <h2 class="fw-bold text-purple mb-1" id="collectionRate">-</h2>
                                                 <div class="text-muted fs-13">
                                                     <i class="fas fa-chart-pie me-1"></i> Payment efficiency
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-4">
+                                    <div class="col-xl-6 mb-4">
+                                        <div class="card card-hover h-100">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <div>
+                                                        <h5 class="card-title mb-1">🆕 New Registrations</h5>
+                                                        <p class="text-muted mb-0">Current month course registrations</p>
+                                                    </div>
+                                                    <span class="badge bg-primary" id="newRegistrationsCount">0</span>
+                                                </div>
+                                                <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                                                    <table class="table table-sm align-middle mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Student</th>
+                                                                <th>Course</th>
+                                                                <th>Date</th>
+                                                                <th>Fee</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="newRegistrationsBody">
+                                                            <tr>
+                                                                <td colspan="4" class="text-center py-3 text-muted">Loading new registrations...</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-xl-6 mb-4">
+                                        <div class="card card-hover h-100">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <div>
+                                                        <h5 class="card-title mb-1">📚 Ongoing Courses</h5>
+                                                        <p class="text-muted mb-0">Registered course-wise payment summary</p>
+                                                    </div>
+                                                    <span class="badge bg-success" id="ongoingCoursesCount">0</span>
+                                                </div>
+                                                <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                                                    <table class="table table-sm align-middle mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Course</th>
+                                                                <th>New Reg.</th>
+                                                                <th>Ongoing</th>
+                                                                <th>Paid</th>
+                                                                <th>Pending</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody id="courseWisePaymentsBody">
+                                                            <tr>
+                                                                <td colspan="5" class="text-center py-3 text-muted">Loading course summary...</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
                                                 </div>
                                             </div>
                                         </div>
@@ -928,6 +1002,12 @@
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function () {
             initializeAnalyticsFilters();
+            const paymentCourseFilter = document.getElementById('paymentCourseFilter');
+            if (paymentCourseFilter) {
+                paymentCourseFilter.addEventListener('change', function () {
+                    fetchPaymentOverview();
+                });
+            }
             loadDashboardData();
 
             // Load data for active tab
@@ -1895,7 +1975,13 @@
         // Payment Overview
         async function fetchPaymentOverview() {
             try {
-                const response = await fetch(`/api/program-admin-l2/payment-overview`, {
+                const paymentCourseFilter = document.getElementById('paymentCourseFilter');
+                const courseId = paymentCourseFilter ? paymentCourseFilter.value : '';
+                const url = courseId
+                    ? `/api/program-admin-l2/payment-overview?course_id=${encodeURIComponent(courseId)}`
+                    : `/api/program-admin-l2/payment-overview`;
+
+                const response = await fetch(url, {
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
@@ -1904,6 +1990,8 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    populatePaymentCourseFilter(data.data.available_courses || [], courseId);
+
                     // Update KPI cards
                     document.getElementById('totalRevenue').textContent =
                         'LKR ' + (data.data.total_revenue?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00');
@@ -1923,12 +2011,96 @@
                     const collectionRate = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
                     document.getElementById('collectionRate').textContent = collectionRate + '%';
 
+                    document.getElementById('newRegistrationsCount').textContent =
+                        data.data.new_registrations_count?.toLocaleString() || '0';
+                    document.getElementById('ongoingCoursesCount').textContent =
+                        data.data.ongoing_courses_count?.toLocaleString() || '0';
+
                     // Update revenue trend chart
                     updateRevenueTrendChart(data.data.monthly_revenue);
+                    updateNewRegistrationsTable(data.data.new_registrations || []);
+                    updateCourseWisePaymentsTable(data.data.course_wise_summary || []);
                 }
             } catch (error) {
                 console.error('Error fetching payment overview:', error);
             }
+        }
+
+        function populatePaymentCourseFilter(courses, selectedCourseId = '') {
+            const dropdown = document.getElementById('paymentCourseFilter');
+
+            if (!dropdown) {
+                return;
+            }
+
+            const currentValue = dropdown.value;
+            dropdown.innerHTML = '<option value="">All Courses</option>';
+
+            (courses || []).forEach(course => {
+                const option = document.createElement('option');
+                option.value = course.course_id;
+                option.textContent = course.course_name;
+                dropdown.appendChild(option);
+            });
+
+            if (selectedCourseId) {
+                dropdown.value = selectedCourseId;
+            } else if (currentValue) {
+                dropdown.value = currentValue;
+            }
+        }
+
+        function updateNewRegistrationsTable(data) {
+            const body = document.getElementById('newRegistrationsBody');
+
+            if (!body) {
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                body.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center py-3 text-muted">No new registrations found</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            body.innerHTML = data.map(item => `
+                <tr>
+                    <td>${item.student_name || 'N/A'}</td>
+                    <td>${item.course_name || 'N/A'}</td>
+                    <td>${item.registration_date || 'N/A'}</td>
+                    <td>LKR ${(Number(item.registration_fee) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                </tr>
+            `).join('');
+        }
+
+        function updateCourseWisePaymentsTable(data) {
+            const body = document.getElementById('courseWisePaymentsBody');
+
+            if (!body) {
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                body.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-3 text-muted">No course-wise payment data available</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            body.innerHTML = data.map(item => `
+                <tr>
+                    <td>${item.course_name || 'N/A'}</td>
+                    <td>${Number(item.new_registrations || 0).toLocaleString()}</td>
+                    <td>${Number(item.ongoing_courses || 0).toLocaleString()}</td>
+                    <td>LKR ${(Number(item.paid_amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td>LKR ${(Number(item.pending_amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                </tr>
+            `).join('');
         }
 
         function updateRevenueTrendChart(data) {

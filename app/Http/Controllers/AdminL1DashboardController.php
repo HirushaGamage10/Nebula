@@ -50,7 +50,7 @@ class AdminL1DashboardController extends Controller
             'pending_payments' => DB::table('payment_details')->where('status', 'pending')->count(),
             'total_revenue_this_period' => DB::table('payment_details')
                 ->where('status', 'paid')
-                ->whereBetween('payment_date', [$dateRange['start'], $dateRange['end']])
+                ->whereBetween('payment_effective_date', [$dateRange['start'], $dateRange['end']])
                 ->sum('amount'),
 
             'attendance_taken_today' => DB::table('attendance')->whereDate('date', today())->count(),
@@ -167,7 +167,7 @@ class AdminL1DashboardController extends Controller
                 'total_revenue' => DB::table('payment_details')->where('status', 'paid')->sum('amount'),
                 'revenue_this_period' => DB::table('payment_details')
                     ->where('status', 'paid')
-                    ->whereBetween('payment_date', [$dateRange['start'], $dateRange['end']])
+                    ->whereBetween('payment_effective_date', [$dateRange['start'], $dateRange['end']])
                     ->sum('amount'),
                 'pending_amount' => DB::table('payment_details')->where('status', 'pending')->sum('amount'),
             ],
