@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Log;
 use App\Support\SemesterModuleSpecializationHelper;
 use App\Models\Timetable;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Schema;
 
 class TimetableController extends Controller
 {
