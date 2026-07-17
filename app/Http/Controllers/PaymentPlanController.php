@@ -98,6 +98,9 @@ class PaymentPlanController extends Controller
             'installments' => 'nullable',
         ]);
 
+        $course = Course::find($validated['course']);
+        $courseType = $course->course_type ?? null;
+
         $exists = PaymentPlan::where('location', $validated['location'])
             ->where('course_id', $validated['course'])
             ->where('intake_id', $validated['intake'])
@@ -118,9 +121,10 @@ class PaymentPlanController extends Controller
             $this->validateInstallmentAmounts($installments, $validated['localFee'], $validated['internationalFee']);
         }
 
-        $syncSummary = DB::transaction(function () use ($validated, $request, $installments) {
+        $syncSummary = DB::transaction(function () use ($validated, $request, $installments, $courseType) {
             $plan = PaymentPlan::create([
                 'location' => $validated['location'],
+                'course_type' => $courseType,
                 'course_id' => $validated['course'],
                 'intake_id' => $validated['intake'],
                 'registration_fee' => $validated['registrationFee'],
@@ -134,6 +138,8 @@ class PaymentPlanController extends Controller
                 'installment_plan' => $request->input('franchisePayment') === 'yes',
                 'installments' => $installments ?: null,
             ]);
+
+            $this->syncIntakeFeesFromPaymentPlan($plan);
 
             return $this->syncStudentsForIntakePlan($plan);
         });
@@ -183,8 +189,8 @@ public function update(Request $request, $id)
 
         $request->validate([
             'location'               => 'required|string',
-            'course_id'              => 'required|integer',
-            'intake_id'              => 'nullable|integer',
+            'course_id'              => 'required|exists:courses,course_id',
+            'intake_id'              => 'nullable|exists:intakes,intake_id',
             'registration_fee'       => 'required|numeric|min:0',
             'local_fee'              => 'required|numeric|min:0',
             'international_fee'      => 'required|numeric|min:0',
@@ -197,8 +203,12 @@ public function update(Request $request, $id)
             'installments'           => 'nullable|array',
         ]);
 
-        $syncSummary = DB::transaction(function () use ($request, $plan) {
+        $course = Course::find($request->course_id);
+        $courseType = $course->course_type ?? null;
+
+        $syncSummary = DB::transaction(function () use ($request, $plan, $courseType) {
             $plan->location               = $request->location;
+            $plan->course_type            = $courseType;
             $plan->course_id              = $request->course_id;
             $plan->intake_id              = $request->intake_id;
             $plan->registration_fee       = $request->registration_fee;
@@ -226,6 +236,8 @@ public function update(Request $request, $id)
 
             $plan->installments = $installments;
             $plan->save();
+
+            $this->syncIntakeFeesFromPaymentPlan($plan);
 
             return $this->syncStudentsForIntakePlan($plan);
         });
@@ -625,6 +637,27 @@ public function update(Request $request, $id)
             'franchise_payment_currency' => $intake->franchise_payment_currency ?? 'LKR',
             'sscl_tax' => $intake->sscl_tax ?? 0.00,
             'bank_charges' => $intake->bank_charges ?? 0.00,
+        ]);
+    }
+
+    private function syncIntakeFeesFromPaymentPlan(PaymentPlan $plan): void
+    {
+        if (!$plan->intake_id) {
+            return;
+        }
+
+        $intake = Intake::find($plan->intake_id);
+        if (!$intake) {
+            return;
+        }
+
+        $intake->update([
+            'registration_fee' => $plan->registration_fee,
+            'course_fee' => $plan->local_fee,
+            'franchise_payment' => $plan->international_fee,
+            'franchise_payment_currency' => $plan->international_currency,
+            'sscl_tax' => $plan->sscl_tax,
+            'bank_charges' => $plan->bank_charges,
         ]);
     }
     public function getIntakesByCourse(Request $request)

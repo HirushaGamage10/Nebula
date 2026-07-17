@@ -5,8 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Intake;
 use App\Models\Course;
-use App\Models\Module;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Module;use App\Models\PaymentPlan;use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
@@ -122,6 +121,9 @@ class IntakeCreationController extends Controller
         if ($isCertificate && !empty($validatedData['module_ids'])) {
             $intake->modules()->attach($validatedData['module_ids']);
         }
+
+        // Keep any linked payment plans aligned with the intake fees
+        $this->syncPaymentPlansFromIntake($intake);
 
         return response()->json([
             'success' => true,
@@ -281,6 +283,9 @@ class IntakeCreationController extends Controller
                 $intake->modules()->detach();
             }
 
+            // Keep any linked payment plans aligned with the intake fees
+            $this->syncPaymentPlansFromIntake($intake);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Intake updated successfully.',
@@ -311,17 +316,24 @@ class IntakeCreationController extends Controller
     public function getPaymentPlanDetails(Request $request)
     {
         $request->validate([
-            'course_name' => 'required|string',
-            'location' => 'required|string',
             'course_type' => 'required|string',
+            'location' => 'required|string',
         ]);
 
-        $course = \App\Models\Course::where('course_name', $request->course_name)->first();
+        $course = null;
+        if ($request->filled('course_id')) {
+            $course = Course::find($request->course_id);
+        }
+
+        if (!$course && $request->filled('course_name')) {
+            $course = Course::where('course_name', $request->course_name)->first();
+        }
+
         if (!$course) {
             return response()->json(['success' => false, 'message' => 'Course not found.'], 404);
         }
 
-        $plan = \App\Models\PaymentPlan::where('course_id', $course->course_id)
+        $plan = PaymentPlan::where('course_id', $course->course_id)
             ->where('location', $request->location)
             ->where('course_type', $request->course_type)
             ->latest()
@@ -335,7 +347,32 @@ class IntakeCreationController extends Controller
             'success' => true,
             'registration_fee' => $plan->registration_fee,
             'course_fee' => $plan->local_fee,
-            'international_fee' => $plan->international_fee,
+            'franchise_payment' => $plan->international_fee,
+            'franchise_payment_currency' => $plan->international_currency,
+            'sscl_tax' => $plan->sscl_tax,
+            'bank_charges' => $plan->bank_charges,
         ]);
+    }
+
+    /**
+     * Sync any existing payment plans for this intake with the intake fee fields.
+     */
+    private function syncPaymentPlansFromIntake(Intake $intake)
+    {
+        $plans = PaymentPlan::where('intake_id', $intake->intake_id)->get();
+        if ($plans->isEmpty()) {
+            return;
+        }
+
+        foreach ($plans as $plan) {
+            $plan->update([
+                'registration_fee' => $intake->registration_fee,
+                'local_fee' => $intake->course_fee,
+                'international_fee' => $intake->franchise_payment,
+                'international_currency' => $intake->franchise_payment_currency,
+                'sscl_tax' => $intake->sscl_tax,
+                'bank_charges' => $intake->bank_charges,
+            ]);
+        }
     }
 } 
