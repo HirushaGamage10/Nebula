@@ -895,45 +895,45 @@ class PaymentSummaryController extends Controller
     {
         $table = $this->getPaymentDetailsTable();
         $hasInstallmentType = Schema::hasColumn($table, 'installment_type');
+        $hasPaymentType = Schema::hasColumn($table, 'payment_type');
         $hasMiscCategory = Schema::hasColumn($table, 'misc_category');
 
-        if (!$hasInstallmentType && !$hasMiscCategory) {
+        // Prefer a unified type column from `installment_type` or `payment_type` if available.
+        $typeExpr = null;
+
+        if ($hasInstallmentType && $hasPaymentType) {
+            $typeExpr = "COALESCE({$table}.installment_type, {$table}.payment_type)";
+        } elseif ($hasInstallmentType) {
+            $typeExpr = "{$table}.installment_type";
+        } elseif ($hasPaymentType) {
+            $typeExpr = "{$table}.payment_type";
+        }
+
+        // If neither type column exists, fall back to misc_category or unknown.
+        if (is_null($typeExpr)) {
+            if ($hasMiscCategory) {
+                return "CASE WHEN misc_category IS NOT NULL THEN 'Miscellaneous' ELSE 'Unknown' END as type";
+            }
             return "'Unknown' as type";
         }
 
-        if ($hasInstallmentType && !$hasMiscCategory) {
-            return "CASE
-                WHEN installment_type = '' THEN 'Unknown'
-                WHEN installment_type IS NULL THEN 'Unknown'
-                ELSE
-                    CASE
-                        WHEN installment_type = 'course_fee' THEN 'Course Fee'
-                        WHEN installment_type = 'franchise_fee' THEN 'Franchise Fee'
-                        WHEN installment_type = 'registration_fee' THEN 'Registration Fee'
-                        ELSE installment_type
-                    END
-            END as type";
+        // Build CASE mapping for known type values, while preserving misc_category when present.
+        $case = "CASE\n";
+
+        if ($hasMiscCategory) {
+            $case .= "    WHEN ({$typeExpr}) IS NULL AND misc_category IS NOT NULL THEN 'Miscellaneous'\n";
         }
 
-        if (!$hasInstallmentType && $hasMiscCategory) {
-            return "CASE
-                WHEN misc_category IS NOT NULL THEN 'Miscellaneous'
-                ELSE 'Unknown'
-            END as type";
-        }
+        $case .= "    WHEN {$typeExpr} = '' THEN 'Unknown'\n";
+        $case .= "    WHEN {$typeExpr} IS NULL THEN 'Unknown'\n";
+        $case .= "    ELSE CASE\n";
+        $case .= "        WHEN {$typeExpr} = 'course_fee' THEN 'Course Fee'\n";
+        $case .= "        WHEN {$typeExpr} = 'franchise_fee' THEN 'Franchise Fee'\n";
+        $case .= "        WHEN {$typeExpr} = 'registration_fee' THEN 'Registration Fee'\n";
+        $case .= "        ELSE {$typeExpr}\n";
+        $case .= "    END\nEND as type";
 
-        return "CASE 
-            WHEN installment_type IS NULL AND misc_category IS NOT NULL THEN 'Miscellaneous'
-            WHEN installment_type = '' THEN 'Unknown'
-            WHEN installment_type IS NULL THEN 'Unknown'
-            ELSE 
-                CASE 
-                    WHEN installment_type = 'course_fee' THEN 'Course Fee'
-                    WHEN installment_type = 'franchise_fee' THEN 'Franchise Fee'
-                    WHEN installment_type = 'registration_fee' THEN 'Registration Fee'
-                    ELSE installment_type
-                END
-        END as type";
+        return $case;
     }
 
     /**
