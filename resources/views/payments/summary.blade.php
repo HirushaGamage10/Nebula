@@ -232,154 +232,6 @@
     </div>
 
     <div class="row g-4 mb-4">
-        <div class="col-lg-6">
-            <div class="card border-0 shadow-sm h-100 bg-white">
-                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div>
-                        <h6 class="fw-bold mb-0">🆕 New Registrations</h6>
-                        <small class="text-muted">Current month registration fee total</small>
-                    </div>
-                    <span class="badge bg-primary">{{ number_format($newRegistrationsCount ?? 0) }} regs</span>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
-                        <div>
-                            <div class="text-muted small mb-1">Current month total</div>
-                            <div class="display-6 fw-bold text-primary mb-1">LKR {{ number_format($newRegistrationsAmount ?? 0, 2) }}</div>
-                            <div class="text-muted small">{{ number_format($newRegistrationsCount ?? 0) }} new registrations this month</div>
-                        </div>
-                        <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-3">
-                            <i class="bi bi-journal-plus fs-3"></i>
-                        </div>
-                    </div>
-
-                    <label class="form-label small text-muted" for="newRegistrationCourseFilter">Filter by course</label>
-                    <select class="form-select" id="newRegistrationCourseFilter" name="new_registration_course_id">
-                        <option value="">All courses</option>
-                        @foreach(($courses ?? []) as $course)
-                            <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
-                        @endforeach
-                    </select>
-                    <small class="text-muted d-block mt-2">Select one course to recalculate the current month registration fee total.</small>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6">
-            <div class="card border-0 shadow-sm h-100 bg-white">
-                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div>
-                        <h6 class="fw-bold mb-0">📚 Ongoing Courses</h6>
-                        <small class="text-muted">Current month collected amount from active registrations</small>
-                    </div>
-                    <span class="badge bg-success">{{ number_format($ongoingCoursesCount ?? 0) }} active</span>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
-                        <div>
-                            <div class="text-muted small mb-1">Current month collected</div>
-                            <div class="display-6 fw-bold text-success mb-1">LKR {{ number_format($ongoingCoursesAmount ?? 0, 2) }}</div>
-                            <div class="text-muted small">{{ number_format($ongoingCoursesCount ?? 0) }} ongoing registrations</div>
-                        </div>
-                        <div class="bg-success bg-opacity-10 text-success rounded-3 p-3">
-                            <i class="bi bi-cash-coin fs-3"></i>
-                        </div>
-                    </div>
-
-                    <label class="form-label small text-muted" for="ongoingCourseFilter">Filter by course</label>
-                    <select class="form-select" id="ongoingCourseFilter" name="ongoing_course_id">
-                        <option value="">All courses</option>
-                        @foreach(($courses ?? []) as $course)
-                            <option value="{{ $course->course_id }}">{{ $course->course_name }}</option>
-                        @endforeach
-                    </select>
-                    <small class="text-muted d-block mt-2">Select one course to recalculate the current month collected payment total.</small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-4 mb-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div>
-                        <h6 class="fw-bold mb-0">📊 Course-wise Payment Summary</h6>
-                        <small class="text-muted">Registrations, new registrations, and payments by course</small>
-                    </div>
-                </div>
-                <div class="card-body pt-3 px-3 pb-2">
-                    <div class="table-responsive">
-                        <table class="table table-striped align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Course</th>
-                                    <th>Location</th>
-                                    <th class="text-end">Total Reg.</th>
-                                    <th class="text-end">New Reg.</th>
-                                    <th class="text-end">Ongoing</th>
-                                    <th class="text-end">Pending Reg.</th>
-                                    <th class="text-end">Paid Amount</th>
-                                    <th class="text-end">Pending Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse(($courseWiseSummary ?? []) as $courseSummary)
-                                    <tr>
-                                        <td>{{ $courseSummary['course_name'] ?? 'N/A' }}</td>
-                                        <td>{{ $courseSummary['location'] ?? 'N/A' }}</td>
-                                        <td class="text-end">{{ number_format($courseSummary['total_registrations'] ?? 0) }}</td>
-                                        <td class="text-end">{{ number_format($courseSummary['new_registrations'] ?? 0) }}</td>
-                                        <td class="text-end">{{ number_format($courseSummary['ongoing_courses'] ?? 0) }}</td>
-                                        <td class="text-end">{{ number_format($courseSummary['pending_registrations'] ?? 0) }}</td>
-                                        <td class="text-end">LKR {{ number_format($courseSummary['paid_amount'] ?? 0, 2) }}</td>
-                                        <td class="text-end">LKR {{ number_format($courseSummary['pending_amount'] ?? 0, 2) }}</td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="8" class="text-center py-4 text-muted">No course-wise payment summary available</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="card-footer bg-white border-0 pt-0 pb-3">
-                    <div class="border rounded-3 bg-light p-3">
-                        <div class="fw-semibold mb-2">Column guide</div>
-                        <div class="row g-3 small text-muted">
-                            <div class="col-md-4">
-                                <div class="fw-semibold text-dark">Total Reg.</div>
-                                Shows all registrations counted for that course in the selected filters.
-                            </div>
-                            <div class="col-md-4">
-                                <div class="fw-semibold text-dark">New Reg.</div>
-                                Shows registrations created in the current month for that course.
-                            </div>
-                            <div class="col-md-4">
-                                <div class="fw-semibold text-dark">Ongoing</div>
-                                Shows registrations currently marked as active or ongoing.
-                            </div>
-                            <div class="col-md-4">
-                                <div class="fw-semibold text-dark">Pending Reg.</div>
-                                Shows registrations that still need payment completion.
-                            </div>
-                            <div class="col-md-4">
-                                <div class="fw-semibold text-dark">Paid Amount</div>
-                                Shows the total paid amount collected for the course.
-                            </div>
-                            <div class="col-md-4">
-                                <div class="fw-semibold text-dark">Pending Amount</div>
-                                Shows the outstanding amount still waiting to be collected.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-4 mb-4">
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -538,8 +390,6 @@ function applyFilters() {
     const location = document.getElementById('locationFilter').value;
     const courseId = document.getElementById('courseFilter').value;
     const intakeId = document.getElementById('intakeFilter').value;
-    const newRegistrationCourseId = document.getElementById('newRegistrationCourseFilter').value;
-    const ongoingCourseId = document.getElementById('ongoingCourseFilter').value;
     const breakdownScope = document.getElementById('breakdownScopeFilter').value;
 
     // Build query parameters
@@ -553,8 +403,6 @@ function applyFilters() {
     if (location) params.append('location', location);
     if (courseId) params.append('course_id', courseId);
     if (intakeId) params.append('intake_id', intakeId);
-    if (newRegistrationCourseId) params.append('new_registration_course_id', newRegistrationCourseId);
-    if (ongoingCourseId) params.append('ongoing_course_id', ongoingCourseId);
     params.append('breakdown_scope', breakdownScope || 'paid');
 
     // Show loading indicator
@@ -574,8 +422,6 @@ function resetFilters() {
     document.getElementById('locationFilter').value = '';
     document.getElementById('courseFilter').value = '';
     document.getElementById('intakeFilter').value = '';
-    document.getElementById('newRegistrationCourseFilter').value = '';
-    document.getElementById('ongoingCourseFilter').value = '';
     document.getElementById('breakdownScopeFilter').value = 'paid';
     
     // Redirect to clean URL
@@ -591,10 +437,8 @@ function exportData() {
     const location = document.getElementById('locationFilter').value;
     const courseId = document.getElementById('courseFilter').value;
     const intakeId = document.getElementById('intakeFilter').value;
-    const newRegistrationCourseId = document.getElementById('newRegistrationCourseFilter').value;
-    const ongoingCourseId = document.getElementById('ongoingCourseFilter').value;
     const breakdownScope = document.getElementById('breakdownScopeFilter').value;
-    
+
     const params = new URLSearchParams();
     params.append('format', 'csv');
     params.append('range', range);
@@ -605,8 +449,6 @@ function exportData() {
     if (location) params.append('location', location);
     if (courseId) params.append('course_id', courseId);
     if (intakeId) params.append('intake_id', intakeId);
-    if (newRegistrationCourseId) params.append('new_registration_course_id', newRegistrationCourseId);
-    if (ongoingCourseId) params.append('ongoing_course_id', ongoingCourseId);
     params.append('breakdown_scope', breakdownScope || 'paid');
     
     window.location.href = `{{ route('payment.export') }}?${params.toString()}`;
@@ -626,8 +468,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const locationFilter = document.getElementById('locationFilter');
     const courseFilter = document.getElementById('courseFilter');
     const intakeFilter = document.getElementById('intakeFilter');
-    const newRegistrationCourseFilter = document.getElementById('newRegistrationCourseFilter');
-    const ongoingCourseFilter = document.getElementById('ongoingCourseFilter');
     const initialCourseOptions = courseFilter ? courseFilter.innerHTML : '<option value="">All Courses</option>';
     const initialIntakeOptions = intakeFilter ? intakeFilter.innerHTML : '<option value="">All Intakes</option>';
 
@@ -740,19 +580,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     const selectedCourseId = urlParams.get('course_id') || '';
     const selectedIntakeId = urlParams.get('intake_id') || '';
-    const selectedNewRegistrationCourseId = urlParams.get('new_registration_course_id') || '';
-    const selectedOngoingCourseId = urlParams.get('ongoing_course_id') || '';
     if (urlParams.has('breakdown_scope')) {
         document.getElementById('breakdownScopeFilter').value = urlParams.get('breakdown_scope');
     }
 
-    if (newRegistrationCourseFilter && selectedNewRegistrationCourseId) {
-        newRegistrationCourseFilter.value = selectedNewRegistrationCourseId;
-    }
-
-    if (ongoingCourseFilter && selectedOngoingCourseId) {
-        ongoingCourseFilter.value = selectedOngoingCourseId;
-    }
 
     (async function initializeDependentFilters() {
         const selectedLocation = locationFilter ? locationFilter.value : '';
@@ -783,13 +614,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    if (newRegistrationCourseFilter) {
-        newRegistrationCourseFilter.addEventListener('change', applyFilters);
-    }
-
-    if (ongoingCourseFilter) {
-        ongoingCourseFilter.addEventListener('change', applyFilters);
-    }
 
     updateBreakdownScopeIndicator();
 

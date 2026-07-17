@@ -2896,6 +2896,28 @@ if (sltLoanAppliedField) {
 
     // Run once on load
     calculateFinalAmount();
+
+    const params = new URLSearchParams(window.location.search);
+    const studentNic = params.get('student_nic');
+    const courseId = params.get('course_id');
+
+    if (studentNic) {
+        const nicInput = document.getElementById('update-student-nic');
+        const courseSelect = document.getElementById('update-course');
+
+        if (nicInput) {
+            nicInput.value = studentNic;
+            loadStudentCoursesForUpdate().then((loaded) => {
+                if (loaded && courseId) {
+                    const option = Array.from(courseSelect.options).find(opt => opt.value === courseId);
+                    if (option) {
+                        courseSelect.value = courseId;
+                        loadPaymentRecords();
+                    }
+                }
+            });
+        }
+    }
 });
 
 // Calculate and display installments
@@ -3647,12 +3669,12 @@ function loadStudentCoursesForUpdate() {
 
     if (!studentNic) {
         document.getElementById('update-course').innerHTML = '<option value="" selected disabled>Select a Course</option>';
-        return;
+        return Promise.resolve(false);
     }
 
     showSpinner(true);
 
-    fetch('/payment/get-student-courses', {
+    return fetch('/payment/get-student-courses', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
         body: JSON.stringify({
@@ -3661,10 +3683,10 @@ function loadStudentCoursesForUpdate() {
     })
     .then(response => response.json())
     .then(data => {
-        if (data.success) {
-            const courseSelect = document.getElementById('update-course');
-            courseSelect.innerHTML = '<option value="" selected disabled>Select a Course</option>';
+        const courseSelect = document.getElementById('update-course');
+        courseSelect.innerHTML = '<option value="" selected disabled>Select a Course</option>';
 
+        if (data.success) {
             data.courses.forEach(course => {
                 const option = document.createElement('option');
                 option.value = course.course_id;
@@ -3673,14 +3695,16 @@ function loadStudentCoursesForUpdate() {
             });
 
             showSuccessMessage('Courses loaded successfully!');
-        } else {
-            showErrorMessage(data.message || 'Failed to load courses.');
-            document.getElementById('update-course').innerHTML = '<option value="" selected disabled>Select a Course</option>';
+            return true;
         }
+
+        showErrorMessage(data.message || 'Failed to load courses.');
+        return false;
     })
     .catch(() => {
         showErrorMessage('An error occurred while loading courses.');
         document.getElementById('update-course').innerHTML = '<option value="" selected disabled>Select a Course</option>';
+        return false;
     })
     .finally(() => showSpinner(false));
 }

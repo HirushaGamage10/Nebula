@@ -8,6 +8,8 @@ use App\Models\CourseRegistration;
 use App\Models\Student;
 use App\Models\Course;
 use App\Models\Intake;
+use App\Models\StudentPaymentPlan;
+use App\Models\SltLoanReceivableRecord;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
@@ -255,64 +257,163 @@ class PaymentSummaryController extends Controller
             ->orderBy('date')
             ->get();
 
-        // Payment Success Rate
-        $successRate = (clone $query)
-            ->select(
-                DB::raw('COUNT(CASE WHEN status = "paid" THEN 1 END) as paid_count'),
-                DB::raw('COUNT(*) as total_count'),
-                DB::raw('(COUNT(CASE WHEN status = "paid" THEN 1 END) / COUNT(*) * 100) as success_rate')
-            )
-            ->first();
+        $totalRevenue = $revenueByDay->sum('revenue');
+        $totalPendingPayments = (clone $query)->where('status', 'pending')->sum('total_fee');
+        $averagePaidTransaction = (clone $query)->where('status', 'paid')->avg('total_fee') ?? 0;
 
-        // Late Fee Analysis
-        $lateFeeAnalysis = (clone $query)
-            ->select(
-                DB::raw('SUM(late_fee) as total_late_fees'),
-                DB::raw('SUM(approved_late_fee) as total_approved'),
-                DB::raw('COUNT(CASE WHEN late_fee > 0 THEN 1 END) as late_payment_count')
-            )
-            ->first();
+        $startOfMonth = Carbon::now()->startOfMonth();
+        $endOfMonth = Carbon::now()->endOfMonth();
 
-        // Currency Breakdown
-        $currencyBreakdown = (clone $query)
-            ->whereNotNull('foreign_currency_code')
-            ->select(
-                'foreign_currency_code',
-                DB::raw('SUM(foreign_currency_amount) as total_foreign'),
-                DB::raw('SUM(total_fee) as total_lkr'),
-                DB::raw('COUNT(*) as transaction_count')
-            )
-            ->groupBy('foreign_currency_code')
+        if (Schema::hasTable('slt_loan_receivable_records')) {
+            $pendingSltLoanRecoveries = SltLoanReceivableRecord::with(['studentPaymentPlan.student', 'studentPaymentPlan.course'])
+                ->whereBetween('payment_effective_date', [$startOfMonth, $endOfMonth])
+                ->orderBy('payment_effective_date')
+                ->get()
+                ->map(function ($record) {
+                    $plan = $record->studentPaymentPlan;
+                    $student = optional($plan)->student;
+                    $course = optional($plan)->course;
+                    $registration = CourseRegistration::where('student_id', optional($plan)->student_id)
+                        ->where('course_id', optional($plan)->course_id)
+                        ->orderByDesc('id')
+                        ->first();
+
+                    return [
+                        'student_name' => optional($student)->full_name ?? 'N/A',
+                        'student_id_value' => optional($student)->id_value ?? null,
+                        'course_name' => optional($course)->course_name ?? 'N/A',
+                        'intake' => optional($registration?->intake)->batch ?? 'N/A',
+                        'loan_amount' => (float) ($plan->slt_loan_amount ?? 0),
+                        'installment_amount' => (float) ($record->monthly_receivable_amount ?? 0),
+                        'effective_date' => optional($record->payment_effective_date)->format('Y-m-d'),
+                        'course_id' => optional($plan)->course_id,
+                    ];
+                });
+        } else {
+            $pendingSltLoanRecoveries = StudentPaymentPlan::with(['student', 'course'])
+                ->where('slt_loan_applied', 'yes')
+                ->whereBetween('slt_receivable_effective_date', [$startOfMonth, $endOfMonth])
+                ->orderBy('slt_receivable_effective_date')
+                ->get()
+                ->map(function ($plan) {
+                    $student = optional($plan)->student;
+                    $course = optional($plan)->course;
+                    $registration = CourseRegistration::where('student_id', optional($plan)->student_id)
+                        ->where('course_id', optional($plan)->course_id)
+                        ->orderByDesc('id')
+                        ->first();
+
+                    $installmentAmount = 0;
+                    if ($plan->slt_loan_amount && $plan->slt_loan_years) {
+                        $installmentAmount = round($plan->slt_loan_amount / ($plan->slt_loan_years * 12), 2);
+                    }
+
+                    return [
+                        'student_name' => optional($student)->full_name ?? 'N/A',
+                        'student_id_value' => optional($student)->id_value ?? null,
+                        'course_name' => optional($course)->course_name ?? 'N/A',
+                        'intake' => optional($registration?->intake)->batch ?? 'N/A',
+                        'loan_amount' => (float) ($plan->slt_loan_amount ?? 0),
+                        'installment_amount' => $installmentAmount,
+                        'effective_date' => optional($plan->slt_receivable_effective_date)->format('Y-m-d'),
+                        'course_id' => optional($plan)->course_id,
+                    ];
+                });
+        }
+
+        $selectedNewRegistrationCourseId = $request->input('new_registration_course_id');
+        $selectedOngoingCourseId = $request->input('ongoing_course_id');
+
+        $totalSltLoanRecoveries = $pendingSltLoanRecoveries->count();
+        $totalSltRecoveryAmount = $pendingSltLoanRecoveries->sum('installment_amount');
+
+        $courses = Course::query()
+            ->select('course_id', 'course_name')
+            ->orderBy('course_name')
             ->get();
 
-        // Top Performing Courses
-        $topCourses = (clone $query)
-            ->whereNotNull('course_registration_id')
-            ->select(
-                'course_registration_id',
-                DB::raw('SUM(total_fee) as revenue'),
-                DB::raw('COUNT(DISTINCT student_id) as student_count')
-            )
-            ->groupBy('course_registration_id')
-            ->orderByDesc('revenue')
-            ->take(10)
+        $availableCourses = Course::query()
+            ->select('course_id', 'course_name', 'location')
+            ->orderBy('course_name')
             ->get();
 
-        // Payment Method Performance
-        $methodPerformance = (clone $query)
+        $registrationSummary = CourseRegistration::query()
             ->select(
-                'payment_method',
-                DB::raw('COUNT(*) as transaction_count'),
-                DB::raw('SUM(total_fee) as total_revenue'),
-                DB::raw('AVG(total_fee) as avg_transaction'),
-                DB::raw('COUNT(CASE WHEN status = "paid" THEN 1 END) as success_count')
+                'course_id',
+                DB::raw('COUNT(*) as total_registrations'),
+                DB::raw("SUM(CASE WHEN status = 'Registered' THEN 1 ELSE 0 END) as ongoing_courses"),
+                DB::raw("SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending_registrations"),
+                DB::raw("SUM(CASE WHEN registration_date >= '{$startOfMonth->toDateString()}' THEN 1 ELSE 0 END) as new_registrations")
             )
-            ->groupBy('payment_method')
-            ->get();
+            ->groupBy('course_id')
+            ->get()
+            ->keyBy('course_id');
+
+        $paymentSummary = PaymentDetail::join('course_registration', 'payment_details.course_registration_id', '=', 'course_registration.id')
+            ->select(
+                'course_registration.course_id',
+                DB::raw("SUM(CASE WHEN payment_details.status = 'paid' THEN payment_details.amount ELSE 0 END) as paid_amount"),
+                DB::raw("SUM(CASE WHEN payment_details.status = 'pending' THEN payment_details.amount ELSE 0 END) as pending_amount"),
+                DB::raw('COUNT(payment_details.id) as payment_count')
+            )
+            ->groupBy('course_registration.course_id')
+            ->get()
+            ->keyBy('course_id');
+
+        $courseWiseSummary = $availableCourses->map(function ($course) use ($registrationSummary, $paymentSummary) {
+            $courseId = (int) $course->course_id;
+            $registrationRow = $registrationSummary->get($courseId);
+            $paymentRow = $paymentSummary->get($courseId);
+
+            return [
+                'course_id' => $courseId,
+                'course_name' => $course->course_name,
+                'location' => $course->location ?? 'N/A',
+                'total_registrations' => (int) ($registrationRow->total_registrations ?? 0),
+                'new_registrations' => (int) ($registrationRow->new_registrations ?? 0),
+                'ongoing_courses' => (int) ($registrationRow->ongoing_courses ?? 0),
+                'pending_registrations' => (int) ($registrationRow->pending_registrations ?? 0),
+                'paid_amount' => (float) ($paymentRow->paid_amount ?? 0),
+                'pending_amount' => (float) ($paymentRow->pending_amount ?? 0),
+                'payment_count' => (int) ($paymentRow->payment_count ?? 0),
+            ];
+        })->sortByDesc('paid_amount')->values();
+
+        $newRegistrationsCurrentMonthQuery = CourseRegistration::query()
+            ->when($selectedNewRegistrationCourseId, function ($query) use ($selectedNewRegistrationCourseId) {
+                $query->where('course_id', $selectedNewRegistrationCourseId);
+            })
+            ->whereDate('registration_date', '>=', $startOfMonth->toDateString())
+            ->whereDate('registration_date', '<=', $endOfMonth->toDateString());
+
+        $newRegistrationsCount = (clone $newRegistrationsCurrentMonthQuery)->count();
+        $newRegistrationsAmount = (float) (clone $newRegistrationsCurrentMonthQuery)->sum(DB::raw('COALESCE(registration_fee, 0)'));
+
+        $ongoingCoursesQuery = CourseRegistration::query()
+            ->where('status', 'Registered')
+            ->when($selectedOngoingCourseId, function ($query) use ($selectedOngoingCourseId) {
+                $query->where('course_id', $selectedOngoingCourseId);
+            });
+
+        $ongoingCoursesCount = (clone $ongoingCoursesQuery)->count();
+
+        $ongoingCoursesAmount = (float) PaymentDetail::join('course_registration', 'payment_details.course_registration_id', '=', 'course_registration.id')
+            ->where('course_registration.status', 'Registered')
+            ->when($selectedOngoingCourseId, function ($query) use ($selectedOngoingCourseId) {
+                $query->where('course_registration.course_id', $selectedOngoingCourseId);
+            })
+            ->where('payment_details.status', 'paid')
+            ->whereDate('payment_details.created_at', '>=', $startOfMonth->toDateString())
+            ->whereDate('payment_details.created_at', '<=', $endOfMonth->toDateString())
+            ->sum('payment_details.amount');
 
         return view('payments.analytics', compact(
-            'revenueByDay', 'successRate', 'lateFeeAnalysis', 
-            'currencyBreakdown', 'topCourses', 'methodPerformance'
+            'revenueByDay', 'pendingSltLoanRecoveries', 'totalRevenue',
+            'totalPendingPayments', 'averagePaidTransaction',
+            'totalSltLoanRecoveries', 'totalSltRecoveryAmount',
+            'courseWiseSummary', 'newRegistrationsCount', 'newRegistrationsAmount',
+            'ongoingCoursesCount', 'ongoingCoursesAmount', 'courses',
+            'selectedNewRegistrationCourseId', 'selectedOngoingCourseId'
         ));
     }
 
