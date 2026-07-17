@@ -244,6 +244,21 @@ class PaymentSummaryController extends Controller
         $range = $request->input('range', '1y');
         $startDate = $this->getDateFromRange($range);
 
+        // Support an explicit month filter (format: YYYY-MM)
+        $monthParam = $request->input('month');
+        if (!empty($monthParam)) {
+            try {
+                $startOfMonth = Carbon::parse($monthParam . '-01')->startOfMonth();
+                $endOfMonth = Carbon::parse($monthParam . '-01')->endOfMonth();
+            } catch (\Exception $e) {
+                $startOfMonth = Carbon::now()->startOfMonth();
+                $endOfMonth = Carbon::now()->endOfMonth();
+            }
+        } else {
+            $startOfMonth = Carbon::now()->startOfMonth();
+            $endOfMonth = Carbon::now()->endOfMonth();
+        }
+
         $query = PaymentDetail::query()->where('created_at', '>=', $startDate);
 
         // Revenue Analytics
@@ -261,8 +276,9 @@ class PaymentSummaryController extends Controller
         $totalPendingPayments = (clone $query)->where('status', 'pending')->sum('total_fee');
         $averagePaidTransaction = (clone $query)->where('status', 'paid')->avg('total_fee') ?? 0;
 
-        $startOfMonth = Carbon::now()->startOfMonth();
-        $endOfMonth = Carbon::now()->endOfMonth();
+        // Keep $currentMonthStart/$currentMonthEnd for backwards compatibility elsewhere
+        $currentMonthStart = $startOfMonth->toDateString();
+        $currentMonthEnd = $endOfMonth->toDateString();
 
         if (Schema::hasTable('slt_loan_receivable_records')) {
             $pendingSltLoanRecoveries = SltLoanReceivableRecord::with(['studentPaymentPlan.student', 'studentPaymentPlan.course'])
@@ -387,7 +403,26 @@ class PaymentSummaryController extends Controller
             ->whereDate('registration_date', '<=', $endOfMonth->toDateString());
 
         $newRegistrationsCount = (clone $newRegistrationsCurrentMonthQuery)->count();
-        $newRegistrationsAmount = (float) (clone $newRegistrationsCurrentMonthQuery)->sum(DB::raw('COALESCE(registration_fee, 0)'));
+
+        // Compute registration fees collected (payments of type registration_fee) within the selected month
+        $dashboardDateExpr = $this->getDashboardDateSqlExpression($this->getPaymentDetailsTable());
+        $registrationFeesCollected = (float) PaymentDetail::query()
+            ->when($selectedLocation, function ($q) use ($selectedLocation) {
+                $q->whereHas('registration', fn($r) => $r->where('location', $selectedLocation));
+            })
+            ->when($selectedNewRegistrationCourseId, function ($q) use ($selectedNewRegistrationCourseId) {
+                $q->whereHas('registration', fn($r) => $r->where('course_id', $selectedNewRegistrationCourseId));
+            })
+            ->whereRaw("DATE({$dashboardDateExpr}) >= ?", [$startOfMonth->toDateString()])
+            ->whereRaw("DATE({$dashboardDateExpr}) <= ?", [$endOfMonth->toDateString()])
+            ->where(function($q) {
+                $q->where('installment_type', 'registration_fee')->orWhere('payment_type', 'registration_fee');
+            })
+            ->where('status', 'paid')
+            ->sum('total_fee');
+
+        // For backwards compatibility reuse variable name expected in view
+        $newRegistrationsAmount = $registrationFeesCollected;
 
         $ongoingCoursesQuery = CourseRegistration::query()
             ->where('status', 'Registered')
@@ -662,6 +697,8 @@ class PaymentSummaryController extends Controller
         $selectedOngoingCourseId = !empty($filters['ongoing_course_id']) ? (int) $filters['ongoing_course_id'] : null;
         $currentMonthStart = now()->startOfMonth()->toDateString();
         $currentMonthEnd = now()->toDateString();
+        $startOfMonth = !empty($filters['start_date']) ? Carbon::parse($filters['start_date']) : now()->startOfMonth();
+        $endOfMonth = !empty($filters['end_date']) ? Carbon::parse($filters['end_date']) : now()->endOfMonth();
 
         $registrationQuery = CourseRegistration::query();
 
@@ -796,7 +833,8 @@ class PaymentSummaryController extends Controller
 
         $ongoingCoursesCount = (clone $ongoingRegistrationsQuery)->count();
 
-        $ongoingCoursesAmount = (float) PaymentDetail::join('course_registration', 'payment_details.course_registration_id', '=', 'course_registration.id')
+        // Sum paid course_fee + franchise_fee within selected month for ongoing registrations
+        $ongoingFeesCollected = (float) PaymentDetail::join('course_registration', 'payment_details.course_registration_id', '=', 'course_registration.id')
             ->where('course_registration.status', 'Registered')
             ->when($selectedLocation, function ($query) use ($selectedLocation) {
                 $query->where('course_registration.location', $selectedLocation);
@@ -804,10 +842,19 @@ class PaymentSummaryController extends Controller
             ->when($selectedOngoingCourseId, function ($query) use ($selectedOngoingCourseId) {
                 $query->where('course_registration.course_id', $selectedOngoingCourseId);
             })
-            ->whereRaw("DATE({$dashboardDateExpr}) >= ?", [$currentMonthStart])
-            ->whereRaw("DATE({$dashboardDateExpr}) <= ?", [$currentMonthEnd])
+            ->whereRaw("DATE({$dashboardDateExpr}) >= ?", [$startOfMonth->toDateString()])
+            ->whereRaw("DATE({$dashboardDateExpr}) <= ?", [$endOfMonth->toDateString()])
             ->where('payment_details.status', 'paid')
-            ->sum('payment_details.amount');
+            ->where(function($q) {
+                $q->where('payment_details.installment_type', 'course_fee')
+                  ->orWhere('payment_details.installment_type', 'franchise_fee')
+                  ->orWhere('payment_details.payment_type', 'course_fee')
+                  ->orWhere('payment_details.payment_type', 'franchise_fee');
+            })
+            ->sum('payment_details.total_fee');
+
+        // Backwards-compatible variable used by the Blade view
+        $ongoingCoursesAmount = $ongoingFeesCollected;
 
         $newRegistrations = (clone $newRegistrationsCurrentMonthQuery)
             ->with(['student', 'course'])

@@ -15,6 +15,13 @@
         </a>
     </div>
 
+    <div class="row mb-3">
+        <div class="col-auto">
+            <label class="form-label small text-muted">Month</label>
+            <input type="month" id="analyticsMonthFilter" class="form-control" value="{{ request()->input('month', \Carbon\Carbon::now()->format('Y-m')) }}">
+        </div>
+    </div>
+
     {{-- Summary KPI Cards --}}
     <div class="row g-3 mb-4">
         <div class="col-lg-3 col-md-6">
@@ -332,12 +339,41 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Include month filter when applying course filters
+    const analyticsMonthFilter = document.getElementById('analyticsMonthFilter');
+    function applyAnalyticsFilters() {
+        const url = new URL(window.location.href);
+        if (analyticsMonthFilter && analyticsMonthFilter.value) {
+            url.searchParams.set('month', analyticsMonthFilter.value);
+        } else if (analyticsMonthFilter) {
+            url.searchParams.delete('month');
+        }
+
+        if (newRegistrationCourseFilter && newRegistrationCourseFilter.value) {
+            url.searchParams.set('new_registration_course_id', newRegistrationCourseFilter.value);
+        } else {
+            url.searchParams.delete('new_registration_course_id');
+        }
+
+        if (ongoingCourseFilter && ongoingCourseFilter.value) {
+            url.searchParams.set('ongoing_course_id', ongoingCourseFilter.value);
+        } else {
+            url.searchParams.delete('ongoing_course_id');
+        }
+
+        window.location.href = url.toString();
+    }
+
     if (newRegistrationCourseFilter) {
-        newRegistrationCourseFilter.addEventListener('change', applyAnalyticsCourseFilters);
+        newRegistrationCourseFilter.addEventListener('change', applyAnalyticsFilters);
     }
 
     if (ongoingCourseFilter) {
-        ongoingCourseFilter.addEventListener('change', applyAnalyticsCourseFilters);
+        ongoingCourseFilter.addEventListener('change', applyAnalyticsFilters);
+    }
+
+    if (analyticsMonthFilter) {
+        analyticsMonthFilter.addEventListener('change', applyAnalyticsFilters);
     }
 
     // Revenue Trend Chart
