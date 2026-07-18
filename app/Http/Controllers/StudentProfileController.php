@@ -959,10 +959,15 @@ class StudentProfileController extends Controller
         $installmentCount = $years > 0 ? $years * 12 : 0;
         $monthlyReceivable = $installmentCount > 0 ? round($loanAmount / $installmentCount, 2) : 0;
 
-        $records = SltLoanReceivableRecord::where('student_payment_plan_id', $plan->id)
-            ->orderBy('loan_installment_number')
-            ->get()
-            ->keyBy('loan_installment_number');
+        $records = collect();
+        try {
+            $records = SltLoanReceivableRecord::where('student_payment_plan_id', $plan->id)
+                ->orderBy('loan_installment_number')
+                ->get()
+                ->keyBy('loan_installment_number');
+        } catch (\Throwable $e) {
+            \Log::warning("slt_loan_receivable_records table query failed in StudentProfileController: " . $e->getMessage());
+        }
 
         $installments = [];
         for ($i = 1; $i <= $installmentCount; $i++) {

@@ -163,22 +163,26 @@ class PaymentDiscountController extends Controller
         $monthlyReceivable = $installmentCount > 0 ? round($planLoanTotal / $installmentCount, 2) : 0;
 
         if ($installmentCount > 0 && $effectiveDate) {
-            $existingRecords = SltLoanReceivableRecord::where('student_payment_plan_id', $plan->id)->count();
-            $nextInstallmentNumber = $existingRecords + 1;
+            try {
+                $existingRecords = SltLoanReceivableRecord::where('student_payment_plan_id', $plan->id)->count();
+                $nextInstallmentNumber = $existingRecords + 1;
 
-            if ($nextInstallmentNumber <= $installmentCount) {
-                SltLoanReceivableRecord::create([
-                    'student_payment_plan_id' => $plan->id,
-                    'student_id' => $plan->student_id,
-                    'course_id' => $plan->course_id,
-                    'loan_installment_number' => $nextInstallmentNumber,
-                    'total_loan_amount' => $planLoanTotal,
-                    'loan_taken_years' => $loanYears,
-                    'loan_installment_count' => $installmentCount,
-                    'apply_from_installment' => $startInstallment,
-                    'monthly_receivable_amount' => $monthlyReceivable,
-                    'payment_effective_date' => $effectiveDate,
-                ]);
+                if ($nextInstallmentNumber <= $installmentCount) {
+                    SltLoanReceivableRecord::create([
+                        'student_payment_plan_id' => $plan->id,
+                        'student_id' => $plan->student_id,
+                        'course_id' => $plan->course_id,
+                        'loan_installment_number' => $nextInstallmentNumber,
+                        'total_loan_amount' => $planLoanTotal,
+                        'loan_taken_years' => $loanYears,
+                        'loan_installment_count' => $installmentCount,
+                        'apply_from_installment' => $startInstallment,
+                        'monthly_receivable_amount' => $monthlyReceivable,
+                        'payment_effective_date' => $effectiveDate,
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                \Log::error("Failed to count or create SltLoanReceivableRecord in PaymentDiscountController: " . $e->getMessage());
             }
         }
 

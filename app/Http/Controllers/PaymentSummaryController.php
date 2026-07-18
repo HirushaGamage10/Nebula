@@ -243,6 +243,7 @@ class PaymentSummaryController extends Controller
     {
         $range = $request->input('range', '1y');
         $startDate = $this->getDateFromRange($range);
+        $selectedLocation = $request->input('location') ?? auth()->user()->user_location ?? null;
 
         // Support an explicit month filter (format: YYYY-MM)
         $monthParam = $request->input('month');
@@ -280,32 +281,40 @@ class PaymentSummaryController extends Controller
         $currentMonthStart = $startOfMonth->toDateString();
         $currentMonthEnd = $endOfMonth->toDateString();
 
+        $pendingSltLoanRecoveries = null;
         if (Schema::hasTable('slt_loan_receivable_records')) {
-            $pendingSltLoanRecoveries = SltLoanReceivableRecord::with(['studentPaymentPlan.student', 'studentPaymentPlan.course'])
-                ->whereBetween('payment_effective_date', [$startOfMonth, $endOfMonth])
-                ->orderBy('payment_effective_date')
-                ->get()
-                ->map(function ($record) {
-                    $plan = $record->studentPaymentPlan;
-                    $student = optional($plan)->student;
-                    $course = optional($plan)->course;
-                    $registration = CourseRegistration::where('student_id', optional($plan)->student_id)
-                        ->where('course_id', optional($plan)->course_id)
-                        ->orderByDesc('id')
-                        ->first();
+            try {
+                $pendingSltLoanRecoveries = SltLoanReceivableRecord::with(['studentPaymentPlan.student', 'studentPaymentPlan.course'])
+                    ->whereBetween('payment_effective_date', [$startOfMonth, $endOfMonth])
+                    ->orderBy('payment_effective_date')
+                    ->get()
+                    ->map(function ($record) {
+                        $plan = $record->studentPaymentPlan;
+                        $student = optional($plan)->student;
+                        $course = optional($plan)->course;
+                        $registration = CourseRegistration::where('student_id', optional($plan)->student_id)
+                            ->where('course_id', optional($plan)->course_id)
+                            ->orderByDesc('id')
+                            ->first();
 
-                    return [
-                        'student_name' => optional($student)->full_name ?? 'N/A',
-                        'student_id_value' => optional($student)->id_value ?? null,
-                        'course_name' => optional($course)->course_name ?? 'N/A',
-                        'intake' => optional($registration?->intake)->batch ?? 'N/A',
-                        'loan_amount' => (float) ($plan->slt_loan_amount ?? 0),
-                        'installment_amount' => (float) ($record->monthly_receivable_amount ?? 0),
-                        'effective_date' => optional($record->payment_effective_date)->format('Y-m-d'),
-                        'course_id' => optional($plan)->course_id,
-                    ];
-                });
-        } else {
+                        return [
+                            'student_name' => optional($student)->full_name ?? 'N/A',
+                            'student_id_value' => optional($student)->id_value ?? null,
+                            'course_name' => optional($course)->course_name ?? 'N/A',
+                            'intake' => optional($registration?->intake)->batch ?? 'N/A',
+                            'loan_amount' => (float) ($plan->slt_loan_amount ?? 0),
+                            'installment_amount' => (float) ($record->monthly_receivable_amount ?? 0),
+                            'effective_date' => optional($record->payment_effective_date)->format('Y-m-d'),
+                            'course_id' => optional($plan)->course_id,
+                        ];
+                    });
+            } catch (\Throwable $e) {
+                \Log::warning("slt_loan_receivable_records table query failed, falling back to student_payment_plans: " . $e->getMessage());
+                $pendingSltLoanRecoveries = null;
+            }
+        }
+
+        if (is_null($pendingSltLoanRecoveries)) {
             $pendingSltLoanRecoveries = StudentPaymentPlan::with(['student', 'course'])
                 ->where('slt_loan_applied', 'yes')
                 ->whereBetween('slt_receivable_effective_date', [$startOfMonth, $endOfMonth])
@@ -416,7 +425,10 @@ class PaymentSummaryController extends Controller
             ->whereRaw("DATE({$dashboardDateExpr}) >= ?", [$startOfMonth->toDateString()])
             ->whereRaw("DATE({$dashboardDateExpr}) <= ?", [$endOfMonth->toDateString()])
             ->where(function($q) {
-                $q->where('installment_type', 'registration_fee')->orWhere('payment_type', 'registration_fee');
+                $q->where('installment_type', 'registration_fee');
+                if ($this->hasPaymentDetailColumn('payment_type')) {
+                    $q->orWhere('payment_type', 'registration_fee');
+                }
             })
             ->where('status', 'paid')
             ->sum('total_fee');
@@ -847,9 +859,11 @@ class PaymentSummaryController extends Controller
             ->where('payment_details.status', 'paid')
             ->where(function($q) {
                 $q->where('payment_details.installment_type', 'course_fee')
-                  ->orWhere('payment_details.installment_type', 'franchise_fee')
-                  ->orWhere('payment_details.payment_type', 'course_fee')
-                  ->orWhere('payment_details.payment_type', 'franchise_fee');
+                  ->orWhere('payment_details.installment_type', 'franchise_fee');
+                if ($this->hasPaymentDetailColumn('payment_type')) {
+                    $q->orWhere('payment_details.payment_type', 'course_fee')
+                      ->orWhere('payment_details.payment_type', 'franchise_fee');
+                }
             })
             ->sum('payment_details.total_fee');
 
