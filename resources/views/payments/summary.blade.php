@@ -307,6 +307,30 @@
                     <h6 class="fw-bold mb-0">📊 Monthly Collection Trend</h6>
                 </div>
                 <div class="card-body">
+                    {{-- Monthly Trend KPI Sub-cards --}}
+                    <div class="row g-3 mb-4 text-dark" id="monthlyMetricsContainer">
+                        <div class="col-sm-4">
+                            <div class="p-3 rounded bg-light border-start border-primary border-3" style="border-left-width: 4px !important;">
+                                <div class="text-muted small mb-1 text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.05em;">This Month</div>
+                                <div class="fs-5 fw-bold text-dark" id="monthlyThisMonthVal">LKR 0.00</div>
+                                <div class="small mt-1" id="monthlyGrowthBadge">-</div>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="p-3 rounded bg-light border-start border-secondary border-3" style="border-left-width: 4px !important;">
+                                <div class="text-muted small mb-1 text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Last Month</div>
+                                <div class="fs-5 fw-bold text-dark" id="monthlyLastMonthVal">LKR 0.00</div>
+                                <div class="text-muted small mt-1" id="monthlyLastMonthName">-</div>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="p-3 rounded bg-light border-start border-info border-3" style="border-left-width: 4px !important;">
+                                <div class="text-muted small mb-1 text-uppercase fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.05em;">Monthly Avg</div>
+                                <div class="fs-5 fw-bold text-dark" id="monthlyAvgVal">LKR 0.00</div>
+                                <div class="text-muted small mt-1" id="monthlySpanLabel">Over selected range</div>
+                            </div>
+                        </div>
+                    </div>
                     <canvas id="monthlyChart" height="80"></canvas>
                 </div>
             </div>
@@ -356,6 +380,23 @@
                     <h6 class="fw-bold mb-0">📅 Weekly Trend</h6>
                 </div>
                 <div class="card-body">
+                    {{-- Weekly Trend KPI Sub-cards --}}
+                    <div class="row g-2 mb-3 text-dark" id="weeklyMetricsContainer">
+                        <div class="col-6">
+                            <div class="p-2 rounded bg-light border-start border-primary border-3" style="border-left-width: 4px !important; padding: 0.75rem;">
+                                <div class="text-muted small mb-1 text-uppercase fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.05em;">This Week</div>
+                                <div class="fs-6 fw-bold text-dark" id="weeklyThisWeekVal">LKR 0.00</div>
+                                <div class="small mt-1" id="weeklyGrowthBadge" style="font-size: 0.75rem;">-</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 rounded bg-light border-start border-secondary border-3" style="border-left-width: 4px !important; padding: 0.75rem;">
+                                <div class="text-muted small mb-1 text-uppercase fw-semibold" style="font-size: 0.7rem; letter-spacing: 0.05em;">Last Week</div>
+                                <div class="fs-6 fw-bold text-dark" id="weeklyLastWeekVal">LKR 0.00</div>
+                                <div class="text-muted small mt-1" id="weeklyLastWeekName" style="font-size: 0.72rem;">-</div>
+                            </div>
+                        </div>
+                    </div>
                     <canvas id="weeklyChart" height="200"></canvas>
                 </div>
             </div>
@@ -1001,6 +1042,85 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     });
+
+    // ========== MONTHLY & WEEKLY TREND METRIC COMPUTATIONS ==========
+    // Calculate Monthly Trend Metrics
+    if (Array.isArray(monthlyIncome) && monthlyIncome.length > 0) {
+        const len = monthlyIncome.length;
+        const currentMonthData = monthlyIncome[len - 1];
+        const prevMonthData = len > 1 ? monthlyIncome[len - 2] : null;
+
+        const thisMonthPaid = Number(currentMonthData.paid || 0);
+        const thisMonthTotal = thisMonthPaid; 
+        const lastMonthPaid = prevMonthData ? Number(prevMonthData.paid || 0) : 0;
+
+        document.getElementById('monthlyThisMonthVal').textContent = formatCurrency(thisMonthTotal);
+        document.getElementById('monthlyLastMonthVal').textContent = formatCurrency(lastMonthPaid);
+        document.getElementById('monthlyLastMonthName').textContent = prevMonthData ? `For ${prevMonthData.month}` : 'No previous data';
+
+        // MoM Growth
+        let momGrowthHtml = '';
+        if (lastMonthPaid > 0) {
+            const pctChange = ((thisMonthTotal - lastMonthPaid) / lastMonthPaid) * 100;
+            const sign = pctChange >= 0 ? '+' : '';
+            const badgeClass = pctChange >= 0 ? 'text-success' : 'text-danger';
+            const icon = pctChange >= 0 ? 'bi-arrow-up-right' : 'bi-arrow-down-left';
+            momGrowthHtml = `<span class="${badgeClass} fw-bold" style="font-size: 0.8rem;"><i class="bi ${icon}"></i> ${sign}${pctChange.toFixed(1)}% MoM</span>`;
+        } else {
+            momGrowthHtml = `<span class="text-muted small" style="font-size: 0.8rem;">New series</span>`;
+        }
+        document.getElementById('monthlyGrowthBadge').innerHTML = momGrowthHtml;
+
+        // Average
+        const totalPaid = monthlyIncome.reduce((sum, item) => sum + Number(item.paid || 0), 0);
+        const avgPaid = totalPaid / len;
+        document.getElementById('monthlyAvgVal').textContent = formatCurrency(avgPaid);
+        document.getElementById('monthlySpanLabel').textContent = `Avg over ${len} month${len > 1 ? 's' : ''}`;
+    } else {
+        document.getElementById('monthlyThisMonthVal').textContent = 'LKR 0.00';
+        document.getElementById('monthlyLastMonthVal').textContent = 'LKR 0.00';
+        document.getElementById('monthlyAvgVal').textContent = 'LKR 0.00';
+    }
+
+    // Calculate Weekly Trend Metrics
+    if (Array.isArray(weeklyTrend) && weeklyTrend.length > 0) {
+        // Since php does order by week desc: weeklyTrend[0] is latest week, weeklyTrend[1] is prev week
+        const currentWeekData = weeklyTrend[0];
+        const prevWeekData = weeklyTrend.length > 1 ? weeklyTrend[1] : null;
+
+        const thisWeekTotal = Number(currentWeekData.total || 0);
+        const lastWeekTotal = prevWeekData ? Number(prevWeekData.total || 0) : 0;
+
+        document.getElementById('weeklyThisWeekVal').textContent = formatCurrency(thisWeekTotal);
+        document.getElementById('weeklyLastWeekVal').textContent = formatCurrency(lastWeekTotal);
+        
+        const formatWeekName = (weekStr) => {
+            if (!weekStr) return '';
+            const s = String(weekStr);
+            if (s.length >= 6) {
+                return `Week ${s.slice(4)} (${s.slice(0, 4)})`;
+            }
+            return 'Week ' + s;
+        };
+
+        document.getElementById('weeklyLastWeekName').textContent = prevWeekData ? formatWeekName(prevWeekData.week) : 'No previous data';
+
+        // WoW Growth
+        let wowGrowthHtml = '';
+        if (lastWeekTotal > 0) {
+            const pctChange = ((thisWeekTotal - lastWeekTotal) / lastWeekTotal) * 100;
+            const sign = pctChange >= 0 ? '+' : '';
+            const badgeClass = pctChange >= 0 ? 'text-success' : 'text-danger';
+            const icon = pctChange >= 0 ? 'bi-arrow-up-right' : 'bi-arrow-down-left';
+            wowGrowthHtml = `<span class="${badgeClass} fw-bold" style="font-size: 0.8rem;"><i class="bi ${icon}"></i> ${sign}${pctChange.toFixed(1)}% WoW</span>`;
+        } else {
+            wowGrowthHtml = `<span class="text-muted small" style="font-size: 0.8rem;">New series</span>`;
+        }
+        document.getElementById('weeklyGrowthBadge').innerHTML = wowGrowthHtml;
+    } else {
+        document.getElementById('weeklyThisWeekVal').textContent = 'LKR 0.00';
+        document.getElementById('weeklyLastWeekVal').textContent = 'LKR 0.00';
+    }
 });
 </script>
 
