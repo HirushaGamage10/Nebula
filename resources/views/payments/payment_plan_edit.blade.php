@@ -3,6 +3,31 @@
 @section('content')
 
 <div class="container-fluid">
+    @php
+        $planId = is_scalar($plan->id ?? null) ? (string) $plan->id : '0';
+        $planCourseId = is_scalar($plan->course_id ?? null) ? (string) $plan->course_id : '';
+        $planIntakeId = is_scalar($plan->intake_id ?? null) ? (string) $plan->intake_id : '';
+        $planLocation = is_scalar($plan->location ?? null) ? (string) $plan->location : '';
+        $planRegistrationFee = is_scalar($plan->registration_fee ?? null) ? (string) $plan->registration_fee : '';
+        $planLocalFee = is_scalar($plan->local_fee ?? null) ? (string) $plan->local_fee : '';
+        $planInternationalFee = is_scalar($plan->international_fee ?? null) ? (string) $plan->international_fee : '';
+        $planInternationalCurrency = is_scalar($plan->international_currency ?? null) ? (string) $plan->international_currency : '';
+        $planSsclTax = is_scalar($plan->sscl_tax ?? null) ? (string) $plan->sscl_tax : '';
+        $planBankCharges = is_scalar($plan->bank_charges ?? null) ? (string) $plan->bank_charges : '';
+        $planDiscount = is_scalar($plan->discount ?? null) ? (string) $plan->discount : '';
+        $safeCourses = collect($courses ?? [])->map(function ($course) {
+            return [
+                'id' => is_scalar($course->course_id ?? null) ? (string) $course->course_id : '',
+                'name' => is_scalar($course->course_name ?? null) ? (string) $course->course_name : '',
+            ];
+        });
+        $safeIntakes = collect($intakes ?? [])->map(function ($intake) {
+            return [
+                'id' => is_scalar($intake->intake_id ?? null) ? (string) $intake->intake_id : '',
+                'batch' => is_scalar($intake->batch ?? null) ? (string) $intake->batch : '',
+            ];
+        });
+    @endphp
     <div class="card">
         <div class="card-body">
             <h2 class="text-center mb-4">Edit Payment Plan</h2>
@@ -18,7 +43,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('payment.plan.update', $plan->id) }}">
+            <form method="POST" action="{{ route('payment.plan.update', $planId) }}">
                 @csrf
                 @method('PUT')
 
@@ -27,7 +52,7 @@
                     <label class="form-label">Location</label>
                     <select name="location" class="form-select" required>
                         @foreach(['Welisara','Moratuwa','Peradeniya'] as $loc)
-                            <option value="{{ $loc }}" @selected($plan->location==$loc)>{{ $loc }}</option>
+                            <option value="{{ $loc }}" @selected($planLocation == $loc)>{{ $loc }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -36,8 +61,8 @@
                 <div class="mb-3">
                     <label class="form-label">Course</label>
                     <select name="course_id" class="form-select" required>
-                        @foreach($courses as $c)
-                            <option value="{{ $c->course_id }}" @selected($plan->course_id==$c->course_id)>{{ $c->course_name }}</option>
+                        @foreach($safeCourses as $courseOption)
+                            <option value="{{ $courseOption['id'] }}" @selected($planCourseId == $courseOption['id'])>{{ $courseOption['name'] }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -47,9 +72,9 @@
     <label class="form-label">Intake</label>
     <select name="intake_id" class="form-select">
         <option value="">None</option>
-        @foreach($intakes as $i)
-            <option value="{{ $i->intake_id }}" @selected($plan->intake_id == $i->intake_id)>
-                {{ $i->batch }}
+        @foreach($safeIntakes as $intakeOption)
+            <option value="{{ $intakeOption['id'] }}" @selected($planIntakeId == $intakeOption['id'])>
+                {{ $intakeOption['batch'] }}
             </option>
         @endforeach
     </select>
@@ -59,37 +84,37 @@
                 {{-- Registration Fee --}}
                 <div class="mb-3">
                     <label class="form-label">Registration Fee</label>
-                    <input type="number" name="registration_fee" class="form-control" value="{{ $plan->registration_fee }}" required min="0" step="0.01">
+                    <input type="number" name="registration_fee" class="form-control" value="{{ $planRegistrationFee }}" required min="0" step="0.01">
                 </div>
 
                 {{-- Local Fee --}}
                 <div class="mb-3">
                     <label class="form-label">Local Fee</label>
-                    <input type="number" name="local_fee" class="form-control" value="{{ $plan->local_fee }}" required min="0" step="0.01">
+                    <input type="number" name="local_fee" class="form-control" value="{{ $planLocalFee }}" required min="0" step="0.01">
                 </div>
 
                 {{-- Franchise Fee --}}
                 <div class="mb-3">
                     <label class="form-label">Franchise Fee</label>
-                    <input type="number" name="international_fee" class="form-control" value="{{ $plan->international_fee }}" required min="0" step="0.01">
+                    <input type="number" name="international_fee" class="form-control" value="{{ $planInternationalFee }}" required min="0" step="0.01">
                 </div>
 
                 {{-- Currency --}}
                 <div class="mb-3">
                     <label class="form-label">Currency</label>
-                    <input type="text" name="international_currency" class="form-control" value="{{ $plan->international_currency }}" required>
+                    <input type="text" name="international_currency" class="form-control" value="{{ $planInternationalCurrency }}" required>
                 </div>
 
                 {{-- SSCL Tax --}}
                 <div class="mb-3">
                     <label class="form-label">SSCL Tax</label>
-                    <input type="number" name="sscl_tax" class="form-control" value="{{ $plan->sscl_tax }}" min="0" step="0.01">
+                    <input type="number" name="sscl_tax" class="form-control" value="{{ $planSsclTax }}" min="0" step="0.01">
                 </div>
 
                 {{-- Bank Charges --}}
                 <div class="mb-3">
                     <label class="form-label">Bank Charges</label>
-                    <input type="number" name="bank_charges" class="form-control" value="{{ $plan->bank_charges }}" min="0" step="0.01">
+                    <input type="number" name="bank_charges" class="form-control" value="{{ $planBankCharges }}" min="0" step="0.01">
                 </div>
 
                 {{-- Apply Discount --}}
@@ -102,7 +127,7 @@
                 {{-- Full Payment Discount --}}
                 <div class="mb-3">
                     <label class="form-label">Full Payment Discount (%)</label>
-                    <input type="number" class="form-control" name="discount" value="{{ $plan->discount }}" min="0" step="0.01">
+                    <input type="number" class="form-control" name="discount" value="{{ $planDiscount }}" min="0" step="0.01">
                 </div>
 
                 {{-- Installment Plan --}}
@@ -122,17 +147,22 @@
                                 <th>No.</th>
                                 <th>Due Date</th>
                                 <th>Local (LKR)</th>
-                                <th>International ({{ $plan->international_currency }})</th>
+                                <th>International ({{ $planInternationalCurrency }})</th>
                                 <th>Tax?</th>
                             </tr>
                         </thead>
                         <tbody id="installmentsTableBody">
                             @forelse($installments as $i => $inst)
+                                @php
+                                    $dueDate = is_scalar($inst['due_date'] ?? null) ? (string) ($inst['due_date'] ?? '') : '';
+                                    $localAmount = is_scalar($inst['local_amount'] ?? null) ? (string) ($inst['local_amount'] ?? '') : '';
+                                    $internationalAmount = is_scalar($inst['international_amount'] ?? null) ? (string) ($inst['international_amount'] ?? '') : '';
+                                @endphp
                                 <tr>
                                     <td>{{ $i+1 }}</td>
-                                    <td><input type="date" name="installments[{{ $i }}][due_date]" value="{{ $inst['due_date'] ?? '' }}" class="form-control"></td>
-                                    <td><input type="number" step="0.01" name="installments[{{ $i }}][local_amount]" value="{{ $inst['local_amount'] ?? '' }}" class="form-control"></td>
-                                    <td><input type="number" step="0.01" name="installments[{{ $i }}][international_amount]" value="{{ $inst['international_amount'] ?? '' }}" class="form-control"></td>
+                                    <td><input type="date" name="installments[{{ $i }}][due_date]" value="{{ $dueDate }}" class="form-control"></td>
+                                    <td><input type="number" step="0.01" name="installments[{{ $i }}][local_amount]" value="{{ $localAmount }}" class="form-control"></td>
+                                    <td><input type="number" step="0.01" name="installments[{{ $i }}][international_amount]" value="{{ $internationalAmount }}" class="form-control"></td>
                                     <td class="text-center">
                                         <input type="checkbox" name="installments[{{ $i }}][apply_tax]" value="1" @checked(!empty($inst['apply_tax']))>
                                     </td>
@@ -159,7 +189,7 @@
 </div>
 
 {{-- JS for dynamic rows --}}
-<script nonce="{{ $cspNonce }}">
+<script nonce="{{ $cspNonce ?? '' }}">
 // Event delegation for buttons
 document.addEventListener('click', function(e) {
     if (e.target.closest('.btn-add-installment-row')) {

@@ -168,11 +168,22 @@ class PaymentPlanController extends Controller
     {
         $plan = PaymentPlan::with('course','intake')->findOrFail($id);
         $courses = Course::orderBy('course_name')->get(['course_id','course_name']);
+        $courseName = optional($plan->course)->course_name;
 
-        $intakes = Intake::where('course_id', $plan->course_id)
+        $intakesQuery = Intake::query()
             ->when(!empty($plan->location), function ($query) use ($plan) {
                 $query->where('location', $plan->location);
-            })
+            });
+
+        if (Schema::hasColumn('intakes', 'course_id')) {
+            $intakesQuery->where('course_id', $plan->course_id);
+        } elseif ($courseName) {
+            $intakesQuery->where('course_name', $courseName);
+        } else {
+            $intakesQuery->where('intake_id', $plan->intake_id);
+        }
+
+        $intakes = $intakesQuery
             ->orderBy('batch')
             ->get(['intake_id','batch']);
 
@@ -180,6 +191,29 @@ class PaymentPlanController extends Controller
         $installments = is_array($plan->installments) 
             ? $plan->installments 
             : (json_decode($plan->installments, true) ?? []);
+
+        $installments = collect($installments)
+            ->filter(fn ($installment) => is_array($installment))
+            ->map(function ($installment, $index) {
+                $dueDate = $installment['due_date'] ?? null;
+                if (is_array($dueDate)) {
+                    $dueDate = null;
+                }
+
+                return [
+                    'installment_number' => $installment['installment_number'] ?? ($index + 1),
+                    'due_date' => is_scalar($dueDate) ? (string) $dueDate : '',
+                    'local_amount' => is_numeric($installment['local_amount'] ?? null)
+                        ? (string) $installment['local_amount']
+                        : (is_numeric($installment['amount'] ?? null) ? (string) $installment['amount'] : ''),
+                    'international_amount' => is_numeric($installment['international_amount'] ?? null)
+                        ? (string) $installment['international_amount']
+                        : '',
+                    'apply_tax' => !empty($installment['apply_tax']),
+                ];
+            })
+            ->values()
+            ->all();
 
         return view('payments.payment_plan_edit', compact('plan','courses','intakes','installments'));
     }

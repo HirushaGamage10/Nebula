@@ -437,7 +437,7 @@
             @endif
             @if(RoleHelper::hasPermission($role, 'payment.plan'))
                 <li class="sidebar-item">
-                    <a class="sidebar-link {{ request()->routeIs('payment.plan.index') ? 'active' : '' }}" href="{{ route('payment.plan.index') }}">
+                    <a class="sidebar-link {{ request()->routeIs('payment.plan.index') || request()->routeIs('payment.plan.edit') ? 'active' : '' }}" href="{{ route('payment.plan.index') }}">
                         <span><i class="ti ti-cash"></i></span>
                         <span class="hide-menu">Existing Payment Plans</span>
                     </a>
