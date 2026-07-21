@@ -28,6 +28,19 @@
             ];
         });
     @endphp
+    @php
+        $renderValue = function ($value) {
+            if (is_scalar($value) || $value === null) {
+                return (string) $value;
+            }
+
+            if ($value instanceof \Stringable) {
+                return (string) $value;
+            }
+
+            return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        };
+    @endphp
     <div class="card">
         <div class="card-body">
             <h2 class="text-center mb-4">Edit Payment Plan</h2>
@@ -37,7 +50,7 @@
                 <div class="alert alert-danger">
                     <ul class="mb-0">
                         @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
+                            <li>{{ $renderValue($error) }}</li>
                         @endforeach
                     </ul>
                 </div>
@@ -90,13 +103,13 @@
                 {{-- Local Fee --}}
                 <div class="mb-3">
                     <label class="form-label">Local Fee</label>
-                    <input type="number" name="local_fee" class="form-control" value="{{ $planLocalFee }}" required min="0" step="0.01">
+                    <input type="number" id="localFee" name="local_fee" class="form-control" value="{{ $planLocalFee }}" required min="0" step="0.01">
                 </div>
 
                 {{-- Franchise Fee --}}
                 <div class="mb-3">
                     <label class="form-label">Franchise Fee</label>
-                    <input type="number" name="international_fee" class="form-control" value="{{ $planInternationalFee }}" required min="0" step="0.01">
+                    <input type="number" id="internationalFee" name="international_fee" class="form-control" value="{{ $planInternationalFee }}" required min="0" step="0.01">
                 </div>
 
                 {{-- Currency --}}
@@ -175,6 +188,10 @@
                         </tbody>
                     </table>
 
+                    <div class="small text-muted mb-2" id="installmentTotalsNote">
+                        Installment totals will sync to the fee fields before save.
+                    </div>
+
                     <div class="d-flex justify-content-between">
                         <button type="button" class="btn btn-sm btn-primary btn-add-installment-row">+ Add Row</button>
                         <button type="button" class="btn btn-sm btn-danger btn-remove-last-row">Remove Last</button>
@@ -211,6 +228,8 @@ function addInstallmentRow() {
         <td><input type="number" step="0.01" name="installments[${index}][international_amount]" class="form-control"></td>
         <td class="text-center"><input type="checkbox" name="installments[${index}][apply_tax]" value="1"></td>
     `;
+
+    syncFeeFieldsFromInstallments();
 }
 
 function removeLastRow() {
@@ -218,7 +237,54 @@ function removeLastRow() {
     if (tbody.rows.length > 0) {
         tbody.deleteRow(tbody.rows.length - 1);
     }
+
+    syncFeeFieldsFromInstallments();
 }
+
+function syncFeeFieldsFromInstallments() {
+    const installmentPlanEnabled = document.getElementById('installmentPlanCheckbox')?.checked;
+    if (!installmentPlanEnabled) {
+        return;
+    }
+
+    let totalLocal = 0;
+    let totalInternational = 0;
+
+    document.querySelectorAll('#installmentsTableBody input[name$="[local_amount]"]').forEach(function (input) {
+        totalLocal += parseFloat(input.value || '0') || 0;
+    });
+
+    document.querySelectorAll('#installmentsTableBody input[name$="[international_amount]"]').forEach(function (input) {
+        totalInternational += parseFloat(input.value || '0') || 0;
+    });
+
+    const localFeeInput = document.getElementById('localFee');
+    const internationalFeeInput = document.getElementById('internationalFee');
+
+    if (localFeeInput) {
+        localFeeInput.value = totalLocal.toFixed(2);
+    }
+
+    if (internationalFeeInput) {
+        internationalFeeInput.value = totalInternational.toFixed(2);
+    }
+}
+
+document.addEventListener('input', function (e) {
+    if (e.target.closest('#installmentsTableBody')) {
+        syncFeeFieldsFromInstallments();
+    }
+});
+
+document.addEventListener('change', function (e) {
+    if (e.target.id === 'installmentPlanCheckbox') {
+        syncFeeFieldsFromInstallments();
+    }
+}
+
+window.addEventListener('DOMContentLoaded', function () {
+    syncFeeFieldsFromInstallments();
+});
 </script>
 
 @endsection

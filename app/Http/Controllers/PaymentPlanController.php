@@ -100,6 +100,15 @@ class PaymentPlanController extends Controller
 
         $course = Course::find($validated['course']);
         $courseType = $course->course_type ?? null;
+        $supportsCourseType = Schema::hasColumn('payment_plans', 'course_type');
+        $installmentTotals = $this->calculateInstallmentTotals($installments);
+        $localFee = (float) $validated['localFee'];
+        $internationalFee = (float) $validated['internationalFee'];
+
+        if ($request->input('franchisePayment') === 'yes' && !empty($installments)) {
+            $localFee = $installmentTotals['local_fee'];
+            $internationalFee = $installmentTotals['international_fee'];
+        }
 
         $exists = PaymentPlan::where('location', $validated['location'])
             ->where('course_id', $validated['course'])
@@ -117,19 +126,14 @@ class PaymentPlanController extends Controller
             $installments = json_decode($installments, true);
         }
 
-        if ($request->input('franchisePayment') === 'yes' && $installments) {
-            $this->validateInstallmentAmounts($installments, $validated['localFee'], $validated['internationalFee']);
-        }
-
-        $syncSummary = DB::transaction(function () use ($validated, $request, $installments, $courseType) {
-            $plan = PaymentPlan::create([
+        $syncSummary = DB::transaction(function () use ($validated, $request, $installments, $courseType, $supportsCourseType, $localFee, $internationalFee) {
+            $planData = [
                 'location' => $validated['location'],
-                'course_type' => $courseType,
                 'course_id' => $validated['course'],
                 'intake_id' => $validated['intake'],
                 'registration_fee' => $validated['registrationFee'],
-                'local_fee' => $validated['localFee'],
-                'international_fee' => $validated['internationalFee'],
+                'local_fee' => $localFee,
+                'international_fee' => $internationalFee,
                 'international_currency' => $validated['currency'],
                 'sscl_tax' => $validated['ssclTax'],
                 'bank_charges' => $validated['bankCharges'] ?? null,
@@ -137,7 +141,13 @@ class PaymentPlanController extends Controller
                 'discount' => $validated['fullPaymentDiscount'] ?? null,
                 'installment_plan' => $request->input('franchisePayment') === 'yes',
                 'installments' => $installments ?: null,
-            ]);
+            ];
+
+            if ($supportsCourseType) {
+                $planData['course_type'] = $courseType;
+            }
+
+            $plan = PaymentPlan::create($planData);
 
             $this->syncIntakeFeesFromPaymentPlan($plan);
 
@@ -247,20 +257,24 @@ public function update(Request $request, $id)
 
         $course = Course::find($request->course_id);
         $courseType = $course->course_type ?? null;
+        $supportsCourseType = Schema::hasColumn('payment_plans', 'course_type');
         $installments = $this->normalizeTemplateInstallments($request->input('installments', []));
+        $installmentTotals = $this->calculateInstallmentTotals($installments);
+        $localFee = (float) $request->local_fee;
+        $internationalFee = (float) $request->international_fee;
 
-        if ($request->boolean('installment_plan')) {
-            $this->validateInstallmentAmounts($installments, (float) $request->local_fee, (float) $request->international_fee);
+        if ($request->boolean('installment_plan') && !empty($installments)) {
+            $localFee = $installmentTotals['local_fee'];
+            $internationalFee = $installmentTotals['international_fee'];
         }
 
-        $syncSummary = DB::transaction(function () use ($request, $plan, $courseType, $installments) {
+        $syncSummary = DB::transaction(function () use ($request, $plan, $courseType, $installments, $supportsCourseType, $localFee, $internationalFee) {
             $plan->location               = $request->location;
-            $plan->course_type            = $courseType;
             $plan->course_id              = $request->course_id;
             $plan->intake_id              = $request->intake_id;
             $plan->registration_fee       = $request->registration_fee;
-            $plan->local_fee              = $request->local_fee;
-            $plan->international_fee      = $request->international_fee;
+            $plan->local_fee              = $localFee;
+            $plan->international_fee      = $internationalFee;
             $plan->international_currency = $request->international_currency;
             $plan->sscl_tax               = $request->sscl_tax;
             $plan->bank_charges           = $request->bank_charges;
@@ -268,6 +282,11 @@ public function update(Request $request, $id)
             $plan->discount               = $request->discount;
             $plan->installment_plan       = $request->installment_plan ? 1 : 0;
             $plan->installments = $installments;
+
+            if ($supportsCourseType) {
+                $plan->course_type = $courseType;
+            }
+
             $plan->save();
 
             $this->syncIntakeFeesFromPaymentPlan($plan);
@@ -336,6 +355,26 @@ private function normalizeTemplateInstallments($installments): array
 
     return $normalized;
 }
+
+    private function calculateInstallmentTotals(array $installments): array
+    {
+        $localFee = 0.0;
+        $internationalFee = 0.0;
+
+        foreach ($installments as $installment) {
+            if (!is_array($installment)) {
+                continue;
+            }
+
+            $localFee += (float) ($installment['local_amount'] ?? $installment['amount'] ?? 0);
+            $internationalFee += (float) ($installment['international_amount'] ?? 0);
+        }
+
+        return [
+            'local_fee' => round($localFee, 2),
+            'international_fee' => round($internationalFee, 2),
+        ];
+    }
 
 
 
