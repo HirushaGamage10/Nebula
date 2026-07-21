@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Schema;
 use App\Models\Course;
 use App\Models\Intake;
 use App\Exports\StudentListExport;
+use App\Support\SpecializationStudentScope;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -42,6 +43,30 @@ class StudentListController extends Controller
         return is_array($specializations) && count(array_filter($specializations)) > 0;
     }
 
+    private function applySpecializationScope($query, ?string $specialization, int $courseId, int $intakeId, string $location)
+    {
+        if ($specialization === null) {
+            return $query;
+        }
+
+        return SpecializationStudentScope::applyToQuery($query, 'cr.student_id', $courseId, $intakeId, $location, $specialization);
+    }
+
+    private function fillSelectedSpecialization($students, ?string $specialization)
+    {
+        if ($specialization === null) {
+            return $students;
+        }
+
+        return $students->map(function ($student) use ($specialization) {
+            if (trim((string) ($student->specialization ?? '')) === '') {
+                $student->specialization = $specialization;
+            }
+
+            return $student;
+        });
+    }
+
     public function showStudentList()
     {
         $locations = ['Welisara', 'Moratuwa', 'Peradeniya'];
@@ -74,15 +99,15 @@ class StudentListController extends Controller
             ], 422);
         }
 
-        $students = DB::table('course_registration as cr')
+        $query = DB::table('course_registration as cr')
             ->join('students as s', 's.student_id', '=', 'cr.student_id')
             ->where('cr.location', $location)
             ->where('cr.course_id', $course_id)
-            ->where('cr.intake_id', $intake_id)
-            ->when($specialization && $hasSpecializationColumn, function ($query) use ($specialization) {
-                $query->where('cr.specialization', $specialization);
-            })
-            ->select([
+            ->where('cr.intake_id', $intake_id);
+
+        $this->applySpecializationScope($query, $specialization, $course_id, $intake_id, $location);
+
+        $students = $query->select([
                 'cr.course_registration_id',
                 's.student_id',
                 DB::raw('COALESCE(s.name_with_initials, s.full_name) as name'),
@@ -99,6 +124,8 @@ class StudentListController extends Controller
             ])
             ->orderBy('s.name_with_initials')
             ->get();
+
+        $students = $this->fillSelectedSpecialization($students, $specialization);
 
         return response()->json([
             'success'  => true,
@@ -139,9 +166,7 @@ class StudentListController extends Controller
             ->where('cr.location', $location)
             ->where('cr.course_id', $course_id)
             ->where('cr.intake_id', $intake_id);
-        if ($specialization && $hasSpecializationColumn) {
-            $query->where('cr.specialization', $specialization);
-        }
+        $this->applySpecializationScope($query, $specialization, $course_id, $intake_id, $location);
 
         // status filter mapping
         if ($status !== 'all') {
@@ -168,6 +193,8 @@ class StudentListController extends Controller
             ])
             ->orderBy('s.name_with_initials')
             ->get();
+
+        $students = $this->fillSelectedSpecialization($students, $specialization);
 
         $course = Course::find($course_id);
         $intake = Intake::find($intake_id);
@@ -218,9 +245,7 @@ class StudentListController extends Controller
             ->where('cr.location', $location)
             ->where('cr.course_id', $course_id)
             ->where('cr.intake_id', $intake_id);
-        if ($specialization && $hasSpecializationColumn) {
-            $query->where('cr.specialization', $specialization);
-        }
+        $this->applySpecializationScope($query, $specialization, $course_id, $intake_id, $location);
 
         // mapping
         if ($status !== 'all') {
@@ -247,6 +272,8 @@ class StudentListController extends Controller
             ])
             ->orderBy('s.name_with_initials')
             ->get();
+
+        $students = $this->fillSelectedSpecialization($students, $specialization);
 
         $course = Course::find($course_id);
         $intake = Intake::find($intake_id);

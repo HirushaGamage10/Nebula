@@ -10,6 +10,7 @@ use App\Models\Library;
 use App\Models\PaymentClearance;
 use App\Models\Project;
 use App\Models\Student;
+use App\Support\SpecializationStudentScope;
 use Illuminate\Http\Request;
 
 class AllClearanceController extends Controller
@@ -171,15 +172,14 @@ class AllClearanceController extends Controller
                 });
 
             if ($specialization) {
-                $regQuery->where(function ($query) use ($specialization) {
-                    $query->where('specialization', $specialization)
-                        ->orWhereHas('student.semesterRegistrations', function ($semesterQuery) use ($specialization) {
-                            $semesterQuery->where('specialization', $specialization);
-                        })
-                        ->orWhereHas('student.moduleManagements', function ($moduleQuery) use ($specialization) {
-                            $moduleQuery->where('specialization', $specialization);
-                        });
-                });
+                SpecializationStudentScope::applyToQuery(
+                    $regQuery,
+                    'student_id',
+                    (int) $request->course_id,
+                    (int) $request->intake_id,
+                    $request->location,
+                    $specialization
+                );
             }
 
             if ($request->filled('student_id')) {
@@ -286,18 +286,18 @@ class AllClearanceController extends Controller
                 })
                 ->when($courseId, fn($q) => $q->where('course_id', $courseId))
                 ->when($location, fn($q) => $q->where('location', $location))
-                ->when($specialization, function ($q) use ($specialization) {
-                    $q->where(function ($inner) use ($specialization) {
-                        $inner->where('specialization', $specialization)
-                            ->orWhereHas('student.semesterRegistrations', function ($semesterQuery) use ($specialization) {
-                                $semesterQuery->where('specialization', $specialization);
-                            })
-                            ->orWhereHas('student.moduleManagements', function ($moduleQuery) use ($specialization) {
-                                $moduleQuery->where('specialization', $specialization);
-                            });
-                    });
-                })
                 ->with('student');
+
+            if ($specialization && $courseId) {
+                SpecializationStudentScope::applyToQuery(
+                    $query,
+                    'student_id',
+                    (int) $courseId,
+                    (int) $intakeId,
+                    $location,
+                    $specialization
+                );
+            }
 
             $registrations = $query->get();
 

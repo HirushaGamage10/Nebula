@@ -7,6 +7,7 @@ use App\Models\Student;
 use App\Models\CourseRegistration;
 use App\Models\Course;
 use App\Models\Intake;
+use App\Support\SpecializationStudentScope;
 
 class StudentViewController extends Controller
 {
@@ -43,11 +44,22 @@ class StudentViewController extends Controller
 
     public function filter(Request $request)
     {
-        $query = Student::query()
-            ->with(['courseRegistrations.course', 'courseRegistrations.intake']);
-
         $selectedCourseId = $request->input('course_id');
+        $selectedIntakeId = $request->input('intake_id');
         $specialization = $this->normalizeSpecializationValue($request->input('specialization'));
+
+        $query = Student::query()
+            ->with(['courseRegistrations' => function ($registrationQuery) use ($selectedCourseId, $selectedIntakeId) {
+                if ($selectedCourseId) {
+                    $registrationQuery->where('course_id', $selectedCourseId);
+                }
+
+                if ($selectedIntakeId) {
+                    $registrationQuery->where('intake_id', $selectedIntakeId);
+                }
+
+                $registrationQuery->with(['course', 'intake'])->orderByDesc('id');
+            }]);
 
         if ($selectedCourseId) {
             $course = Course::find($selectedCourseId);
@@ -76,10 +88,15 @@ class StudentViewController extends Controller
             });
         }
 
-        if ($specialization) {
-            $query->whereHas('courseRegistrations', function ($q) use ($specialization) {
-                $q->where('specialization', $specialization);
-            });
+        if ($specialization && $selectedCourseId) {
+            SpecializationStudentScope::applyToQuery(
+                $query,
+                'student_id',
+                (int) $selectedCourseId,
+                $selectedIntakeId ? (int) $selectedIntakeId : null,
+                null,
+                $specialization
+            );
         }
 
         if ($request->filled('status')) {
@@ -91,6 +108,14 @@ class StudentViewController extends Controller
         }
 
         $students = $query->orderBy('student_id', 'asc')->get();
+
+        if ($specialization) {
+            $students->each(function ($student) use ($specialization) {
+                if (trim((string) ($student->specialization ?? '')) === '') {
+                    $student->setAttribute('specialization', $specialization);
+                }
+            });
+        }
 
         return response()->json([
             'success' => true,
