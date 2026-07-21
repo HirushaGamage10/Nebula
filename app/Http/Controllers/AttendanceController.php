@@ -223,6 +223,43 @@ class AttendanceController extends Controller
         return $query;
     }
 
+    private function getAttendanceSemesterStorageValue(\App\Models\Semester $semester): string
+    {
+        return trim((string) $semester->name);
+    }
+
+    private function getAttendanceSemesterLookupValues(\App\Models\Semester $semester): array
+    {
+        return collect([
+            $this->getAttendanceSemesterStorageValue($semester),
+            (string) $semester->id,
+        ])
+            ->filter(fn ($value) => $value !== '')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function normalizeLegacyAttendanceSemesterValues(array $baseConditions, array $lookupValues, string $canonicalSemester): void
+    {
+        if (empty($lookupValues)) {
+            return;
+        }
+
+        $legacyValues = array_values(array_filter($lookupValues, function ($value) use ($canonicalSemester) {
+            return (string) $value !== $canonicalSemester;
+        }));
+
+        if (empty($legacyValues)) {
+            return;
+        }
+
+        Attendance::query()
+            ->where($baseConditions)
+            ->whereIn('semester', $legacyValues)
+            ->update(['semester' => $canonicalSemester, 'updated_at' => now()]);
+    }
+
     public function getFilteredModules(Request $request)
     {
         $request->validate([
@@ -363,6 +400,14 @@ class AttendanceController extends Controller
         if (!$semester) {
             return response()->json(['error' => 'Semester not found.'], 404);
         }
+        $semesterStorageValue = $this->getAttendanceSemesterStorageValue($semester);
+        $semesterLookupValues = $this->getAttendanceSemesterLookupValues($semester);
+        $this->normalizeLegacyAttendanceSemesterValues([
+            'course_id' => $courseId,
+            'intake_id' => $intakeId,
+            'location' => $location,
+            'module_id' => $moduleId,
+        ], $semesterLookupValues, $semesterStorageValue);
 
         // Check if this is a core module (assigned to semester) or elective module
         $isCoreModule = DB::table('semester_module')
@@ -564,12 +609,21 @@ class AttendanceController extends Controller
                     'message' => 'Semester not found.'
                 ], 404);
             }
+            $semesterStorageValue = $this->getAttendanceSemesterStorageValue($semester);
+            $semesterLookupValues = $this->getAttendanceSemesterLookupValues($semester);
+            $this->normalizeLegacyAttendanceSemesterValues([
+                'course_id' => $request->course_id,
+                'intake_id' => $request->intake_id,
+                'location' => $request->location,
+                'module_id' => $request->module_id,
+                'date' => $date->toDateString(),
+            ], $semesterLookupValues, $semesterStorageValue);
             
             // Delete existing attendance records for this date, course, intake, semester, and module
             $deleteQuery = Attendance::where('date', $date)
                      ->where('course_id', $request->course_id)
                      ->where('intake_id', $request->intake_id)
-                     ->where('semester', $semester->name)
+                     ->whereIn('semester', $semesterLookupValues)
                      ->where('module_id', $request->module_id);
 
             if ($hasAttendanceTypeColumn) {
@@ -589,7 +643,7 @@ class AttendanceController extends Controller
                     'location' => $request->location,
                     'course_id' => $request->course_id,
                     'intake_id' => $request->intake_id,
-                    'semester' => $semester->name,
+                    'semester' => $semesterStorageValue,
                     'module_id' => $request->module_id,
                     'date' => $date,
                     'student_id' => $studentData['student_id'],
@@ -658,6 +712,15 @@ class AttendanceController extends Controller
                     'message' => 'Semester not found.'
                 ], 404);
             }
+            $semesterStorageValue = $this->getAttendanceSemesterStorageValue($semester);
+            $semesterLookupValues = $this->getAttendanceSemesterLookupValues($semester);
+            $this->normalizeLegacyAttendanceSemesterValues([
+                'location' => $request->location,
+                'course_id' => $request->course_id,
+                'intake_id' => $request->intake_id,
+                'module_id' => $request->module_id,
+                'date' => $request->date,
+            ], $semesterLookupValues, $semesterStorageValue);
 
             $course = Course::find($request->course_id);
             if (!$course) {
@@ -696,7 +759,7 @@ class AttendanceController extends Controller
                         ->where('course_id', $request->course_id)
                         ->where('intake_id', $request->intake_id)
                         ->where('location', $request->location)
-                        ->where('semester', $semester->name)
+                        ->where('semester', $semesterStorageValue)
                         ->where('specialization', $specialization)
                         ->pluck('student_id')
                         ->all();
@@ -706,7 +769,7 @@ class AttendanceController extends Controller
             $attendance = Attendance::where('location', $request->location)
                                    ->where('course_id', $request->course_id)
                                    ->where('intake_id', $request->intake_id)
-                                   ->where('semester', $semester->name)
+                                   ->whereIn('semester', $semesterLookupValues)
                                    ->where('module_id', $request->module_id)
                                    ->where('date', $request->date);
 
@@ -890,6 +953,14 @@ class AttendanceController extends Controller
         if (!$semester) {
             return response()->json(['error' => 'Semester not found.'], 404);
         }
+        $semesterStorageValue = $this->getAttendanceSemesterStorageValue($semester);
+        $semesterLookupValues = $this->getAttendanceSemesterLookupValues($semester);
+        $this->normalizeLegacyAttendanceSemesterValues([
+            'course_id' => $courseId,
+            'intake_id' => $intakeId,
+            'location' => $location,
+            'module_id' => $moduleId,
+        ], $semesterLookupValues, $semesterStorageValue);
 
         // Check if this is a core module (assigned to semester) or elective module
         $isCoreModule = DB::table('semester_module')
@@ -901,7 +972,7 @@ class AttendanceController extends Controller
         $attendanceSessions = \App\Models\Attendance::where('course_id', $courseId)
             ->where('intake_id', $intakeId)
             ->where('location', $location)
-            ->where('semester', $semester->name)
+            ->whereIn('semester', $semesterLookupValues)
             ->where('module_id', $moduleId)
             ->select('date')
             ->distinct()
@@ -926,7 +997,7 @@ class AttendanceController extends Controller
                 ->where('course_id', $courseId)
                 ->where('intake_id', $intakeId)
                 ->where('location', $location)
-                ->where('semester', $semester->name)
+                ->where('semester', $semesterStorageValue)
                 ->with('student')
                 ->get();
             if ($specialization !== null) {
@@ -946,7 +1017,7 @@ class AttendanceController extends Controller
             $attendedSessions = \App\Models\Attendance::where('course_id', $courseId)
                 ->where('intake_id', $intakeId)
                 ->where('location', $location)
-                ->where('semester', $semester->name)
+                ->whereIn('semester', $semesterLookupValues)
                 ->where('module_id', $moduleId)
                 ->where('student_id', $reg->student_id)
                 ->where('status', true)
@@ -964,7 +1035,7 @@ class AttendanceController extends Controller
         $attendanceRecords = \App\Models\Attendance::where('course_id', $courseId)
             ->where('intake_id', $intakeId)
             ->where('location', $location)
-            ->where('semester', $semester->name)
+            ->whereIn('semester', $semesterLookupValues)
             ->where('module_id', $moduleId)
             ->get(['date', 'student_id', 'status']);
 
@@ -1122,7 +1193,7 @@ class AttendanceController extends Controller
         $attendanceSessions = \App\Models\Attendance::where('course_id', $courseId)
             ->where('intake_id', $intakeId)
             ->where('location', $location)
-            ->where('semester', $semester->name)
+            ->whereIn('semester', $semesterLookupValues)
             ->where('module_id', $moduleId)
             ->select('date')
             ->distinct()
@@ -1147,7 +1218,7 @@ class AttendanceController extends Controller
                 ->where('course_id', $courseId)
                 ->where('intake_id', $intakeId)
                 ->where('location', $location)
-                ->where('semester', $semester->name)
+                ->where('semester', $semesterStorageValue)
                 ->with('student')
                 ->get();
             if ($specialization !== null) {
@@ -1160,7 +1231,7 @@ class AttendanceController extends Controller
             $attendedSessions = \App\Models\Attendance::where('course_id', $courseId)
                 ->where('intake_id', $intakeId)
                 ->where('location', $location)
-                ->where('semester', $semester->name)
+                ->whereIn('semester', $semesterLookupValues)
                 ->where('module_id', $moduleId)
                 ->where('student_id', $reg->student_id)
                 ->where('status', true)
@@ -1450,7 +1521,10 @@ class AttendanceController extends Controller
         
         if (!$isCertificate) {
             $semesterModel = \App\Models\Semester::find($request->semester);
-            $semesterName = $semesterModel ? $semesterModel->name : $request->semester;
+            if (!$semesterModel) {
+                return response()->json(['success' => false, 'message' => 'Semester not found.'], 404);
+            }
+            $semesterName = $this->getAttendanceSemesterStorageValue($semesterModel);
             $moduleId = $request->module_id;
         }
 
@@ -1538,7 +1612,16 @@ class AttendanceController extends Controller
                 $deleteQuery->whereNull('semester')
                     ->whereNull('module_id');
             } else {
-                $deleteQuery->where('semester', $semesterName)
+                $semesterLookupValues = $this->getAttendanceSemesterLookupValues($semesterModel);
+                $this->normalizeLegacyAttendanceSemesterValues([
+                    'course_id' => $request->course_id,
+                    'intake_id' => $request->intake_id,
+                    'location' => $request->location,
+                    'module_id' => $moduleId,
+                    'date' => $date->toDateString(),
+                ], $semesterLookupValues, $semesterName);
+
+                $deleteQuery->whereIn('semester', $semesterLookupValues)
                     ->where('module_id', $moduleId);
             }
 

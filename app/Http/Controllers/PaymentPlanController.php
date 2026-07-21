@@ -169,7 +169,10 @@ class PaymentPlanController extends Controller
         $plan = PaymentPlan::with('course','intake')->findOrFail($id);
         $courses = Course::orderBy('course_name')->get(['course_id','course_name']);
 
-        $intakes = Intake::where('course_name', $plan->course->course_name ?? '')
+        $intakes = Intake::where('course_id', $plan->course_id)
+            ->when(!empty($plan->location), function ($query) use ($plan) {
+                $query->where('location', $plan->location);
+            })
             ->orderBy('batch')
             ->get(['intake_id','batch']);
 
@@ -186,6 +189,11 @@ public function update(Request $request, $id)
 {
     try {
         $plan = PaymentPlan::findOrFail($id);
+
+        Log::info('PaymentPlan update request received', [
+            'plan_id' => $id,
+            'payload' => $request->all(),
+        ]);
 
         $request->validate([
             'location'               => 'required|string',
@@ -205,8 +213,13 @@ public function update(Request $request, $id)
 
         $course = Course::find($request->course_id);
         $courseType = $course->course_type ?? null;
+        $installments = $this->normalizeTemplateInstallments($request->input('installments', []));
 
-        $syncSummary = DB::transaction(function () use ($request, $plan, $courseType) {
+        if ($request->boolean('installment_plan')) {
+            $this->validateInstallmentAmounts($installments, (float) $request->local_fee, (float) $request->international_fee);
+        }
+
+        $syncSummary = DB::transaction(function () use ($request, $plan, $courseType, $installments) {
             $plan->location               = $request->location;
             $plan->course_type            = $courseType;
             $plan->course_id              = $request->course_id;
@@ -220,20 +233,6 @@ public function update(Request $request, $id)
             $plan->apply_discount         = $request->apply_discount ? 1 : 0;
             $plan->discount               = $request->discount;
             $plan->installment_plan       = $request->installment_plan ? 1 : 0;
-
-            $installments = [];
-            if ($request->has('installments')) {
-                foreach ($request->installments as $i => $inst) {
-                    $installments[] = [
-                        'installment_number'   => $i + 1,
-                        'due_date'             => $inst['due_date'] ?? null,
-                        'local_amount'         => (float) ($inst['local_amount'] ?? 0),
-                        'international_amount' => (float) ($inst['international_amount'] ?? 0),
-                        'apply_tax'            => isset($inst['apply_tax']),
-                    ];
-                }
-            }
-
             $plan->installments = $installments;
             $plan->save();
 
@@ -264,6 +263,44 @@ public function update(Request $request, $id)
             ->with('error', 'An unexpected error occurred while updating the payment plan.')
             ->withInput();
     }
+}
+
+private function normalizeTemplateInstallments($installments): array
+{
+    if (is_string($installments)) {
+        $decoded = json_decode($installments, true);
+        $installments = is_array($decoded) ? $decoded : [];
+    }
+
+    if (!is_array($installments)) {
+        return [];
+    }
+
+    $normalized = [];
+    foreach (array_values($installments) as $index => $installment) {
+        if (!is_array($installment)) {
+            continue;
+        }
+
+        $dueDate = $installment['due_date'] ?? null;
+        $localAmount = (float) ($installment['local_amount'] ?? $installment['amount'] ?? 0);
+        $internationalAmount = (float) ($installment['international_amount'] ?? 0);
+        $hasTax = !empty($installment['apply_tax']);
+
+        if (!$dueDate && $localAmount <= 0 && $internationalAmount <= 0 && !$hasTax) {
+            continue;
+        }
+
+        $normalized[] = [
+            'installment_number' => $index + 1,
+            'due_date' => $dueDate,
+            'local_amount' => $localAmount,
+            'international_amount' => $internationalAmount,
+            'apply_tax' => $hasTax,
+        ];
+    }
+
+    return $normalized;
 }
 
 

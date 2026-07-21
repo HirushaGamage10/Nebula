@@ -666,7 +666,7 @@ class ExamResultController extends Controller
                 ->where('status', 'Registered')
                 ->with('student')
                 ->get()
-                ->map(function($reg) use ($request, $existingResults, $courseId, $intakeId, $location) {
+                ->map(function($reg) use ($request, $existingResults, $courseId, $intakeId, $location, $certificateModuleId) {
                     $studentData = [
                         'registration_id' => $reg->course_registration_id,
                         'student_id' => $reg->student->student_id,

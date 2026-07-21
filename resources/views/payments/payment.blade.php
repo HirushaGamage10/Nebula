@@ -3893,9 +3893,26 @@ function loadSltLoanPlanDetails() {
 
 function renderPaymentRecords() {
   const tbody = document.getElementById('paymentRecordsTableBody');
-  tbody.innerHTML = "";
+    if (!tbody) return;
 
-  (window.paymentRecords || []).forEach((r) => {
+    tbody.innerHTML = "";
+
+    let modalContainer = document.getElementById('payment-record-history-modals');
+    if (!modalContainer) {
+        modalContainer = document.createElement('div');
+        modalContainer.id = 'payment-record-history-modals';
+        document.body.appendChild(modalContainer);
+    }
+    modalContainer.innerHTML = '';
+
+    const records = Array.isArray(window.paymentRecords) ? window.paymentRecords : [];
+
+    if (!records.length) {
+        tbody.innerHTML = '<tr><td colspan="14" class="text-center text-muted">No payment records found.</td></tr>';
+        return;
+    }
+
+    records.forEach((r) => {
     const modalId = `historyModal-${r.payment_id}`; // ✅ Use payment_id instead of id
 
     // ✅ Map payment_type to display name
@@ -3912,19 +3929,19 @@ function renderPaymentRecords() {
 
     const row = `
       <tr ${isPaid ? 'class="table-secondary"' : ''}>
-                <td>${r.student_id ?? '-'}</td>
-        <td>${r.student_name}</td>
+        <td>${r.student_id ?? '-'}</td>
+        <td>${r.student_name ?? '-'}</td>
         <td>${paymentTypeDisplay}</td>
         <td>${r.installment_number ?? '-'}</td>
-                <td>${Number(r.amount ?? 0).toLocaleString()}</td>
-                <td>${Number(r.late_fee ?? 0).toLocaleString()}</td>
-                <td>${Number(r.approved_late_fee ?? 0).toLocaleString()}</td>
-                <td>${Number(r.total_fee ?? 0).toLocaleString()}</td>
-                <td>${remaining.toLocaleString()}</td>
+        <td>${Number(r.amount ?? 0).toLocaleString()}</td>
+        <td>${Number(r.late_fee ?? 0).toLocaleString()}</td>
+        <td>${Number(r.approved_late_fee ?? 0).toLocaleString()}</td>
+        <td>${Number(r.total_fee ?? 0).toLocaleString()}</td>
+        <td>${remaining.toLocaleString()}</td>
         <td>${r.payment_method ?? '-'}</td>
         <td>${r.payment_date ?? '-'}</td>
-        <td>${r.receipt_no}</td>
-        <td>${r.status}</td>
+        <td>${r.receipt_no ?? '-'}</td>
+        <td>${r.status ?? '-'}</td>
         <td>
           <button class="btn btn-sm btn-success btn-open-pay-modal"
                   data-payment-id="${r.payment_id}"
@@ -3936,27 +3953,29 @@ function renderPaymentRecords() {
             <i class="ti ti-history me-1"></i>History
           </button>
         </td>
-      </tr>
-
-      <!-- History Modal -->
-      <div class="modal fade" id="${modalId}" tabindex="-1">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">Payment History - ${r.receipt_no}</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-              ${renderHistoryList(r.partial_payments)}
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-          </div>
-        </div>
-      </div>
+            </tr>
     `;
     tbody.insertAdjacentHTML("beforeend", row);
+
+        const modalMarkup = `
+            <div class="modal fade" id="${modalId}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Payment History - ${r.receipt_no ?? '-'}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            ${renderHistoryList(r.partial_payments)}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        modalContainer.insertAdjacentHTML('beforeend', modalMarkup);
   });
 }
 
