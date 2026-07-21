@@ -280,7 +280,7 @@ document.addEventListener('change', function (e) {
     if (e.target.id === 'installmentPlanCheckbox') {
         syncFeeFieldsFromInstallments();
     }
-}
+});
 
 window.addEventListener('DOMContentLoaded', function () {
     syncFeeFieldsFromInstallments();
