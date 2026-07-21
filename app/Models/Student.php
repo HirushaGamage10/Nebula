@@ -13,6 +13,8 @@ use App\Models\StudentOtherInformation;
 use App\Models\StudentExam;
 use App\Models\ParentGuardian;
 use App\Models\CourseRegistration;
+use App\Models\SemesterRegistration;
+use App\Models\ModuleManagement;
 use App\Models\Attendance;
 use App\Models\ExamResult;
 use App\Models\PaymentDetail;
@@ -105,6 +107,16 @@ class Student extends Model
     public function courseRegistrations()
     {
         return $this->hasMany(CourseRegistration::class, 'student_id', 'student_id');
+    }
+
+    public function semesterRegistrations()
+    {
+        return $this->hasMany(SemesterRegistration::class, 'student_id', 'student_id');
+    }
+
+    public function moduleManagements()
+    {
+        return $this->hasMany(ModuleManagement::class, 'student_id', 'student_id');
     }
 
     public function attendance()

@@ -36,6 +36,13 @@
           </select>
         </div>
 
+        <div class="col-md-3" id="specializationFilterWrap" style="display:none;">
+          <label class="form-label">Specialization</label>
+          <select id="specializationSelect" name="specialization" class="form-select">
+            <option value="">All Specializations</option>
+          </select>
+        </div>
+
         <div class="col-md-2">
           <label class="form-label">Status</label>
           <select id="statusSelect" name="status" class="form-select">
@@ -63,6 +70,7 @@
           <div><input type="checkbox" class="colToggle" value="nic" checked> NIC</div>
           <div><input type="checkbox" class="colToggle" value="course" checked> Course</div>
           <div><input type="checkbox" class="colToggle" value="intake" checked> Intake</div>
+          <div><input type="checkbox" class="colToggle" value="specialization" checked> Specialization</div>
           <div><input type="checkbox" class="colToggle" value="location" checked> Location</div>
           <div><input type="checkbox" class="colToggle" value="status" checked> Status</div>
         </div>
@@ -92,6 +100,7 @@
                 <th class="col-nic">NIC</th>
                 <th class="col-course">Course</th>
                 <th class="col-intake">Intake</th>
+                <th class="col-specialization">Specialization</th>
                 <th class="col-location">Location</th>
                 <th class="col-status">Status</th>
               </tr>
@@ -110,6 +119,40 @@
 
 <script nonce="{{ $cspNonce }}">
 let tableData = [];
+
+const specializationWrap = document.getElementById('specializationFilterWrap');
+const specializationSelect = document.getElementById('specializationSelect');
+
+function resetSpecializationFilter() {
+  specializationSelect.innerHTML = '<option value="">All Specializations</option>';
+  specializationWrap.style.display = 'none';
+}
+
+function loadSpecializations(courseId) {
+  resetSpecializationFilter();
+  if (!courseId) {
+    return;
+  }
+
+  fetch(`/api/course/${encodeURIComponent(courseId)}/specializations`)
+    .then(response => response.json())
+    .then(data => {
+      if (!data.success || !Array.isArray(data.specializations) || !data.specializations.length) {
+        return;
+      }
+
+      let html = '<option value="">All Specializations</option>';
+      data.specializations.forEach(spec => {
+        const value = typeof spec === 'object' ? (spec.name || spec.value || spec.specialization || '') : spec;
+        if (value) {
+          html += `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`;
+        }
+      });
+      specializationSelect.innerHTML = html;
+      specializationWrap.style.display = 'block';
+    })
+    .catch(() => resetSpecializationFilter());
+}
 
 /* HTML Escape Helper Function */
 function escapeHtml(text) {
@@ -133,11 +176,18 @@ document.getElementById('filterForm').addEventListener('submit', async e => {
   const text = document.getElementById('searchText');
   btn.disabled = true; spin.classList.remove('d-none'); text.textContent = 'Loading...';
 
+  if (specializationWrap.style.display !== 'none' && !specializationSelect.value) {
+    btn.disabled = false; spin.classList.add('d-none'); text.textContent = 'Search';
+    alert('Please select a specialization first.');
+    return;
+  }
+
   const payload = {
     student_id: document.getElementById('student_id').value.trim(),
     course_id: document.getElementById('courseSelect').value,
     intake_id: document.getElementById('intakeSelect').value,
     status: document.getElementById('statusSelect').value,
+    specialization: document.getElementById('specializationSelect').value,
   };
 
   const res = await fetch('{{ route("student_management.filter") }}', {
@@ -158,6 +208,7 @@ document.getElementById('filterForm').addEventListener('submit', async e => {
 --------------------------------*/
 document.getElementById('clearFilters').addEventListener('click', () => {
   document.getElementById('filterForm').reset();
+  resetSpecializationFilter();
   document.getElementById('studentRows').innerHTML = '';
   document.getElementById('resultSection').style.display = 'none';
 });
@@ -170,7 +221,7 @@ function renderResults(items) {
   table.innerHTML = '';
 
   if (!items.length) {
-    table.innerHTML = `<tr><td colspan="7" class="text-center text-muted p-3">No records found.</td></tr>`;
+    table.innerHTML = `<tr><td colspan="8" class="text-center text-muted p-3">No records found.</td></tr>`;
     document.getElementById('resultSection').style.display = 'block';
     return;
   }
@@ -178,6 +229,7 @@ function renderResults(items) {
   items.forEach((s, i) => {
     const course = escapeHtml(s.course_registrations?.[0]?.course?.course_name || '-');
     const intake = escapeHtml(s.course_registrations?.[0]?.intake?.batch || '-');
+    const specialization = escapeHtml(s.course_registrations?.[0]?.specialization || s.specialization || '-');
     const location = escapeHtml(s.institute_location || '-');
     const status = s.academic_status
       ? `<span class="badge bg-${getStatusColor(s.academic_status)}">${escapeHtml(s.academic_status)}</span>`
@@ -190,6 +242,7 @@ function renderResults(items) {
         <td class="col-nic">${escapeHtml(s.id_value || '-')}</td>
         <td class="col-course">${course}</td>
         <td class="col-intake">${intake}</td>
+        <td class="col-specialization">${specialization}</td>
         <td class="col-location">${location}</td>
         <td class="col-status">${status}</td>
       </tr>`;
@@ -224,11 +277,13 @@ document.getElementById('exportCsv').addEventListener('click', () => {
   tableData.forEach((s, i) => {
     const c = s.course_registrations?.[0]?.course?.course_name || '-';
     const inb = s.course_registrations?.[0]?.intake?.batch || '-';
+    const spec = s.course_registrations?.[0]?.specialization || s.specialization || '-';
     const row = {
       student: s.full_name,
       nic: s.id_value || '-',
       course: c,
       intake: inb,
+      specialization: spec,
       location: s.institute_location || '-',
       status: s.academic_status || '-'
     };
@@ -255,11 +310,13 @@ document.getElementById('exportPdf').addEventListener('click', () => {
   const body = tableData.map((s, i) => {
     const c = s.course_registrations?.[0]?.course?.course_name || '-';
     const inb = s.course_registrations?.[0]?.intake?.batch || '-';
+    const spec = s.course_registrations?.[0]?.specialization || s.specialization || '-';
     const row = {
       student: s.full_name,
       nic: s.id_value || '-',
       course: c,
       intake: inb,
+      specialization: spec,
       location: s.institute_location || '-',
       status: s.academic_status || '-'
     };
@@ -309,6 +366,12 @@ document.getElementById('student_id').addEventListener('change', async e => {
     document.getElementById('courseSelect').innerHTML = '<option value="">Error loading courses</option>';
   }
 });
+
+document.getElementById('courseSelect').addEventListener('change', () => {
+  loadSpecializations(document.getElementById('courseSelect').value);
+});
+
+resetSpecializationFilter();
 
 /* -------------------------------
    🔹 Status Color Helper

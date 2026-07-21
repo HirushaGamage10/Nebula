@@ -66,6 +66,15 @@
                                 </div>
                             </div>
 
+                            <div class="mb-3 row align-items-center" id="degree_specialization_row" style="display:none;">
+                                <label for="degree_specialization" class="col-sm-3 col-form-label fw-bold">Specialization<span class="text-danger">*</span></label>
+                                <div class="col-sm-9">
+                                    <select class="form-select" id="degree_specialization" name="specialization" disabled>
+                                        <option selected disabled value="">Select Specialization</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <div class="mb-3 row align-items-center">
                                 <label for="degree_semester" class="col-sm-3 col-form-label fw-bold">Semester<span
                                         class="text-danger">*</span></label>
@@ -770,11 +779,12 @@
             function loadDegreeSubjects() {
                 var semesterId = $('#degree_semester').val();
                 var courseId = $('#degree_course').val();
+                var specialization = $('#degree_specialization').val();
                 if (semesterId && courseId) {
                     $.ajax({
                         url: '/get-modules-by-semester',
                         type: 'GET',
-                        data: { semester_id: semesterId, course_id: courseId },
+                        data: { semester_id: semesterId, course_id: courseId, specialization: specialization },
                         success: function (data) {
                             console.log("Modules data received:", data); // Debug log for modules
 
@@ -800,6 +810,54 @@
             }
 
             $('#degree_semester').change(function () {
+                loadDegreeSubjects();
+            });
+
+            function loadDegreeSpecializations() {
+                var courseId = $('#degree_course').val();
+                var $specialization = $('#degree_specialization');
+                if (!courseId) {
+                    $('#degree_specialization_row').hide();
+                    $specialization.empty().append('<option selected disabled value="">Select Specialization</option>').prop('disabled', true);
+                    return;
+                }
+
+                $.ajax({
+                    url: '{{ route('timetable.specializations.for.course') }}',
+                    type: 'GET',
+                    data: { course_id: courseId },
+                    success: function (response) {
+                        $specialization.empty().append('<option selected disabled value="">Select Specialization</option>');
+                        if (response && Array.isArray(response.specializations) && response.specializations.length) {
+                            response.specializations.forEach(function (specialization) {
+                                var value = typeof specialization === 'object' ? (specialization.name || specialization.value || specialization.specialization || '') : specialization;
+                                if (value) {
+                                    $specialization.append('<option value="' + value + '">' + value + '</option>');
+                                }
+                            });
+                            $specialization.prop('disabled', false);
+                            $('#degree_specialization_row').show();
+                            return;
+                        }
+
+                        $('#degree_specialization_row').hide();
+                        $specialization.prop('disabled', true);
+                    },
+                    error: function () {
+                        $('#degree_specialization_row').hide();
+                        $specialization.prop('disabled', true);
+                    }
+                });
+            }
+
+            $('#degree_course').on('change', function () {
+                $('#degree_semester').val('');
+                $('#degree_specialization').val('');
+                $('#degree_specialization_row').hide();
+                loadDegreeSpecializations();
+            });
+
+            $('#degree_specialization').on('change', function () {
                 loadDegreeSubjects();
             });
 
@@ -983,10 +1041,15 @@
             // Show Timetable button click event to load events
             $('#showTimetableBtn').click(function (event, options) {
                 options = options || {};
+                if ($('#degree_specialization_row').is(':visible') && !$('#degree_specialization').val()) {
+                    alert('Please select a specialization first.');
+                    return;
+                }
                 var data = {
                     location: $('#degree_location').val(),
                     course_id: $('#degree_course').val(),
                     intake_id: $('#degree_intake').val(),
+                    specialization: $('#degree_specialization').val(),
                     semester: $('#degree_semester').val(),
                     start_date: $('#degree_start_date').val(),
                     end_date: $('#degree_end_date').val()
@@ -1207,10 +1270,15 @@
             // Generate PDF from filtered events (simple list PDF)
             $('#generatePdfBtn').off('click').on('click', function () {
                 // include semester (fall back to main form) — server validation needs this
+                if ($('#degree_specialization_row').is(':visible') && !$('#degree_specialization').val()) {
+                    alert('Please select a specialization first.');
+                    return;
+                }
                 var filters = {
                     location: $('#pdf_location').val() || $('#degree_location').val() || '',
                     course_id: $('#pdf_course').val() || $('#degree_course').val() || '',
                     intake_id: $('#pdf_intake').val() || $('#degree_intake').val() || '',
+                    specialization: $('#degree_specialization').val() || '',
                     semester: $('#pdf_semester')?.val() || $('#degree_semester').val() || '',
                     start_date: $('#pdf_from').val() || $('#degree_start_date').val() || '',
                     end_date: $('#pdf_to').val() || $('#degree_end_date').val() || ''
@@ -1863,6 +1931,11 @@
                 var startMoment = moment(startDateStr, 'YYYY-MM-DD');
                 var endMoment = moment(endDateStr, 'YYYY-MM-DD');
 
+                if (!isCertificate && $('#degree_specialization_row').is(':visible') && !$('#degree_specialization').val()) {
+                    alert('Please select a specialization first.');
+                    return;
+                }
+
                 if (!selectedMoment.isValid() || !startMoment.isValid() || !endMoment.isValid()) {
                     alert('Invalid date range. Please try again.');
                     return;
@@ -1929,7 +2002,8 @@
                     location: isCertificate ? ($('#certificate_location').val() || '') : ($('#degree_location').val() || ''),
                     course_id: isCertificate ? ($('#certificate_course').val() || '') : ($('#degree_course').val() || ''),
                     intake_id: isCertificate ? ($('#certificate_intake').val() || '') : ($('#degree_intake').val() || ''),
-                    semester: isCertificate ? '1' : ($('#degree_semester').val() || '')
+                    semester: isCertificate ? '1' : ($('#degree_semester').val() || ''),
+                    specialization: isCertificate ? '' : ($('#degree_specialization').val() || '')
                 };
 
                 $('#assignSubjectBtn').prop('disabled', true).text('Assigning...');

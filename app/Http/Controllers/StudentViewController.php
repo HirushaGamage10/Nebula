@@ -10,6 +10,30 @@ use App\Models\Intake;
 
 class StudentViewController extends Controller
 {
+    private function normalizeSpecializationValue($value)
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $value = trim($value);
+
+        return $value === '' ? null : $value;
+    }
+
+    private function courseHasSpecializations(?Course $course): bool
+    {
+        if (!$course || empty($course->specializations)) {
+            return false;
+        }
+
+        $specializations = is_array($course->specializations)
+            ? $course->specializations
+            : json_decode($course->specializations, true);
+
+        return is_array($specializations) && count(array_filter($specializations)) > 0;
+    }
+
     public function index()
     {
         $courses = Course::orderBy('course_name')->get();
@@ -21,6 +45,19 @@ class StudentViewController extends Controller
     {
         $query = Student::query()
             ->with(['courseRegistrations.course', 'courseRegistrations.intake']);
+
+        $selectedCourseId = $request->input('course_id');
+        $specialization = $this->normalizeSpecializationValue($request->input('specialization'));
+
+        if ($selectedCourseId) {
+            $course = Course::find($selectedCourseId);
+            if ($this->courseHasSpecializations($course) && !$specialization) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please select a specialization for this course.'
+                ], 422);
+            }
+        }
 
         if ($request->filled('student_id')) {
             $query->where('student_id', $request->student_id)
@@ -36,6 +73,12 @@ class StudentViewController extends Controller
         if ($request->filled('intake_id')) {
             $query->whereHas('courseRegistrations', function($q) use ($request) {
                 $q->where('intake_id', $request->intake_id);
+            });
+        }
+
+        if ($specialization) {
+            $query->whereHas('courseRegistrations', function ($q) use ($specialization) {
+                $q->where('specialization', $specialization);
             });
         }
 

@@ -33,7 +33,7 @@
                     <strong>Location:</strong> {{ $locationText }}<br>
                     <strong>Course:</strong> {{ $courseText }}<br>
                     <strong>Batch:</strong> {{ $intakeText }}<br>
-                    <strong>View:</strong>
+                        <strong>View:</strong>
                     @if(($status ?? 'all') === 'all') All @else {{ ucfirst($status) }} @endif
                 </div>
 
@@ -45,6 +45,7 @@
                                 <th>Course Registration ID</th>
                                 <th>Student ID</th>
                                 <th>Student Name</th>
+                                <th>Specialization</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
@@ -55,13 +56,14 @@
                                     <td style="text-align:center;">{{ $st->course_registration_id }}</td>
                                     <td style="text-align:center;">{{ $st->student_id }}</td>
                                     <td>{{ $st->name }}</td>
+                                    <td style="text-align:center;">{{ $st->specialization ?: '-' }}</td>
                                     <td style="text-align:center;">
                                         <span class="status-chip">{{ $st->status }}</span>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" style="text-align:center;">No students found</td>
+                                    <td colspan="6" style="text-align:center;">No students found</td>
                                 </tr>
                             @endforelse
                         </tbody>

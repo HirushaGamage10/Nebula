@@ -16,6 +16,30 @@ use App\Models\Semester;
 
 class ModuleManagementController extends Controller
 {
+    private function normalizeSpecializationValue($value)
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $value = trim($value);
+
+        return $value === '' ? null : $value;
+    }
+
+    private function courseHasSpecializations(?Course $course): bool
+    {
+        if (!$course || empty($course->specializations)) {
+            return false;
+        }
+
+        $specializations = is_array($course->specializations)
+            ? $course->specializations
+            : json_decode($course->specializations, true);
+
+        return is_array($specializations) && count(array_filter($specializations)) > 0;
+    }
+
     /**
      * Display the module management page.
      */
@@ -91,21 +115,33 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
         $request->validate([
             'intake_id' => 'required|exists:intakes,intake_id',
             'semester' => 'required|string',
-            'course_id' => 'required|exists:courses,course_id'
+            'course_id' => 'required|exists:courses,course_id',
+            'specialization' => 'nullable|string'
         ]);
 
         try {
+            $specialization = $this->normalizeSpecializationValue($request->specialization);
+            $course = Course::find($request->course_id);
+
+            if ($this->courseHasSpecializations($course) && !$specialization) {
+                return response()->json(['success' => false, 'message' => 'Please select a specialization for this course.'], 422);
+            }
+
             // Debug: Log the request parameters
             \Log::info('getStudents called with:', [
                 'intake_id' => $request->intake_id,
                 'course_id' => $request->course_id,
-                'semester' => $request->semester
+                'semester' => $request->semester,
+                'specialization' => $specialization
             ]);
             
             // Get students who have registered for this semester through semester registration
             $students = \App\Models\SemesterRegistration::where('intake_id', $request->intake_id)
                                                        ->where('course_id', $request->course_id)
                                                        ->where('semester_id', $request->semester)
+                                                       ->when($specialization, function ($query) use ($specialization) {
+                                                           $query->where('specialization', $specialization);
+                                                       })
                                                        ->with(['student:id,student_id,first_name,last_name,nic'])
                                                        ->get();
             
@@ -119,7 +155,9 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
                 return [
                     'student_id' => $registration->student->student_id,
                     'name' => $registration->student->first_name . ' ' . $registration->student->last_name,
-                    'nic' => $registration->student->nic
+                    'nic' => $registration->student->nic,
+                    'email' => $registration->student->email ?? '',
+                    'specialization' => $registration->specialization ?? ''
                 ];
             });
 
@@ -177,12 +215,18 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
 
         $request->validate([
             'intake_id' => 'required|exists:intakes,intake_id',
-            'semester' => 'required|in:1,2,3,4,5,6'
+            'semester' => 'required|in:1,2,3,4,5,6',
+            'specialization' => 'nullable|string'
         ]);
 
         try {
+            $specialization = $this->normalizeSpecializationValue($request->specialization);
+
             $assignments = ModuleManagement::where('intake_id', $request->intake_id)
                                          ->where('semester', $request->semester)
+                                         ->when($specialization, function ($query) use ($specialization) {
+                                             $query->where('specialization', $specialization);
+                                         })
                                          ->with(['student:id,student_id,first_name,last_name', 'module:id,module_id,module_name'])
                                          ->get()
                                          ->map(function ($assignment) {
@@ -191,7 +235,8 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
                                                  'student_id' => $assignment->student->student_id,
                                                  'student_name' => $assignment->student->first_name . ' ' . $assignment->student->last_name,
                                                  'module_id' => $assignment->module->module_id,
-                                                 'module_name' => $assignment->module->module_name
+                                                 'module_name' => $assignment->module->module_name,
+                                                 'specialization' => $assignment->specialization ?? ''
                                              ];
                                          });
 
@@ -224,15 +269,26 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
             'intake_id' => 'required|exists:intakes,intake_id',
             'course_id' => 'required|exists:courses,course_id',
             'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
-            'semester' => 'required|in:1,2,3,4,5,6'
+            'semester' => 'required|in:1,2,3,4,5,6',
+            'specialization' => 'nullable|string'
         ]);
 
         try {
+            $specialization = $this->normalizeSpecializationValue($request->specialization);
+            $course = Course::find($request->course_id);
+
+            if ($this->courseHasSpecializations($course) && !$specialization) {
+                return response()->json(['success' => false, 'message' => 'Please select a specialization for this course.'], 422);
+            }
+
             DB::beginTransaction();
 
             // Delete existing assignments for this intake and semester
             ModuleManagement::where('intake_id', $request->intake_id)
                           ->where('semester', $request->semester)
+                          ->when($specialization, function ($query) use ($specialization) {
+                              $query->where('specialization', $specialization);
+                          })
                           ->delete();
 
             // Create new assignments
@@ -245,6 +301,7 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
                     'course_id' => $request->course_id,
                     'location' => $request->location,
                     'semester' => $request->semester,
+                    'specialization' => $specialization,
                     'created_at' => now(),
                     'updated_at' => now()
                 ];
@@ -281,16 +338,21 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
             'semester_id' => 'required|exists:semesters,id',
             'course_id' => 'required|exists:courses,course_id',
             'intake_id' => 'required|exists:intakes,intake_id',
-            'location' => 'required|in:Welisara,Moratuwa,Peradeniya'
+            'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
+            'specialization' => 'nullable|string'
         ]);
 
         try {
             $semester = Semester::find($request->semester_id);
+            $specialization = $this->normalizeSpecializationValue($request->specialization);
             
             $registrations = ModuleManagement::where('intake_id', $request->intake_id)
                                            ->where('course_id', $request->course_id)
                                            ->where('location', $request->location)
                                            ->where('semester', $semester->name)
+                                           ->when($specialization, function ($query) use ($specialization) {
+                                               $query->where('specialization', $specialization);
+                                           })
                                            ->whereHas('module', function($query) use ($request) {
                                                $query->whereHas('courses', function($q) use ($request) {
                                                    $q->where('course_id', $request->course_id)
@@ -305,7 +367,8 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
                                                    'student_id' => $registration->student->student_id,
                                                    'student_name' => $registration->student->first_name . ' ' . $registration->student->last_name,
                                                    'module_id' => $registration->module->module_id,
-                                                   'module_name' => $registration->module->module_name
+                                                   'module_name' => $registration->module->module_name,
+                                                   'specialization' => $registration->specialization,
                                                ];
                                            });
 

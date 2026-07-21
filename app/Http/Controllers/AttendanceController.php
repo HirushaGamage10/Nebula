@@ -182,6 +182,47 @@ class AttendanceController extends Controller
         return (string) $fallbackNumber;
     }
 
+    private function getCourseSpecializations(Course $course): array
+    {
+        $specializations = $course->specializations ?? [];
+
+        if (is_string($specializations)) {
+            $decoded = json_decode($specializations, true);
+            $specializations = is_array($decoded) ? $decoded : [];
+        }
+
+        if (!is_array($specializations)) {
+            return [];
+        }
+
+        return array_values(array_filter($specializations, function ($specialization) {
+            return is_string($specialization) ? trim($specialization) !== '' : !empty($specialization);
+        }));
+    }
+
+    private function courseHasSpecializations(Course $course): bool
+    {
+        return count($this->getCourseSpecializations($course)) > 0;
+    }
+
+    private function normalizeSpecializationValue(?string $specialization): ?string
+    {
+        $specialization = trim((string) $specialization);
+
+        return $specialization !== '' ? $specialization : null;
+    }
+
+    private function applySpecializationFilter($query, ?string $specialization, string $column = 'specialization')
+    {
+        $specialization = $this->normalizeSpecializationValue($specialization);
+
+        if ($specialization !== null) {
+            $query->where($column, $specialization);
+        }
+
+        return $query;
+    }
+
     public function getFilteredModules(Request $request)
     {
         $request->validate([
@@ -248,12 +289,22 @@ class AttendanceController extends Controller
                 'intake_id' => 'required|exists:intakes,intake_id',
                 'semester' => 'required',
                 'module_id' => 'required|exists:modules,module_id',
+                'specialization' => 'nullable|string|max:255',
             ]);
         }
 
         $courseId = $request->course_id;
         $intakeId = $request->intake_id;
         $location = $request->location;
+        $course = Course::find($courseId);
+        $specialization = $this->normalizeSpecializationValue($request->input('specialization'));
+
+        if (!$isCertificate && $course && $this->courseHasSpecializations($course) && !$specialization) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Specialization is required for this course.'
+            ], 422);
+        }
         
         // For certificate courses, fetch students directly from course_registration
         if ($isCertificate) {
@@ -303,7 +354,8 @@ class AttendanceController extends Controller
             'intake_id' => $intakeId,
             'location' => $location,
             'semester_id' => $semesterId,
-            'module_id' => $moduleId
+            'module_id' => $moduleId,
+            'specialization' => $specialization
         ]);
 
         // Get the semester to determine if it's core or elective
@@ -338,6 +390,9 @@ class AttendanceController extends Controller
                 ->where('semester_registrations.intake_id', $intakeId)
                 ->where('semester_registrations.location', $location)
                 ->where('semester_registrations.status', 'registered')
+                ->when($specialization !== null, function ($query) use ($specialization) {
+                    return $query->where('semester_registrations.specialization', $specialization);
+                })
                 ->leftJoin('course_registration as cr', function($join) {
                     $join->on('semester_registrations.student_id', '=', 'cr.student_id')
                         ->on('semester_registrations.course_id', '=', 'cr.course_id')
@@ -375,6 +430,9 @@ class AttendanceController extends Controller
                 ->where('module_management.intake_id', $intakeId)
                 ->where('module_management.location', $location)
                 ->where('module_management.semester', $semester->name)
+                ->when($specialization !== null, function ($query) use ($specialization) {
+                    return $query->where('module_management.specialization', $specialization);
+                })
                 ->leftJoin('course_registration as cr', function($join) {
                     $join->on('module_management.student_id', '=', 'cr.student_id')
                         ->on('module_management.course_id', '=', 'cr.course_id')
@@ -587,7 +645,8 @@ class AttendanceController extends Controller
             'semester' => 'required',
             'module_id' => 'required|integer',
             'date' => 'required|date',
-            'attendance_type' => 'nullable|string|in:lectures,labs,special_lectures,tutorials,other'
+            'attendance_type' => 'nullable|string|in:lectures,labs,special_lectures,tutorials,other',
+            'specialization' => 'nullable|string|max:255'
         ]);
 
         try {
@@ -598,6 +657,50 @@ class AttendanceController extends Controller
                     'success' => false,
                     'message' => 'Semester not found.'
                 ], 404);
+            }
+
+            $course = Course::find($request->course_id);
+            if (!$course) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Course not found.'
+                ], 404);
+            }
+
+            $specialization = $this->normalizeSpecializationValue($request->input('specialization'));
+            if ($this->courseHasSpecializations($course) && !$specialization) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Specialization is required for this course.'
+                ], 422);
+            }
+
+            $studentIds = null;
+            if ($request->filled('specialization')) {
+                $isCoreModule = DB::table('semester_module')
+                    ->where('semester_id', $request->semester)
+                    ->where('module_id', $request->module_id)
+                    ->exists();
+
+                if ($isCoreModule) {
+                    $studentIds = \App\Models\SemesterRegistration::where('semester_id', $request->semester)
+                        ->where('course_id', $request->course_id)
+                        ->where('intake_id', $request->intake_id)
+                        ->where('location', $request->location)
+                        ->where('status', 'registered')
+                        ->where('specialization', $specialization)
+                        ->pluck('student_id')
+                        ->all();
+                } else {
+                    $studentIds = \App\Models\ModuleManagement::where('module_id', $request->module_id)
+                        ->where('course_id', $request->course_id)
+                        ->where('intake_id', $request->intake_id)
+                        ->where('location', $request->location)
+                        ->where('semester', $semester->name)
+                        ->where('specialization', $specialization)
+                        ->pluck('student_id')
+                        ->all();
+                }
             }
 
             $attendance = Attendance::where('location', $request->location)
@@ -612,6 +715,10 @@ class AttendanceController extends Controller
             }
 
             $attendance = $attendance->with('student')->get();
+
+            if (is_array($studentIds)) {
+                $attendance = $attendance->whereIn('student_id', $studentIds)->values();
+            }
 
             return response()->json([
                 'success' => true,
@@ -659,6 +766,7 @@ class AttendanceController extends Controller
         if (!$isCertificate) {
             $rules['semester'] = 'required';
             $rules['module_id'] = 'required|exists:modules,module_id';
+            $rules['specialization'] = 'nullable|string|max:255';
         }
         
         $request->validate($rules);
@@ -668,6 +776,19 @@ class AttendanceController extends Controller
         $location = $request->location;
         $semesterId = $request->semester;
         $moduleId = $request->module_id;
+        $specialization = $this->normalizeSpecializationValue($request->input('specialization'));
+
+        $course = Course::find($courseId);
+        if (!$course) {
+            return response()->json(['error' => 'Course not found.'], 404);
+        }
+
+        if (!$isCertificate && $this->courseHasSpecializations($course) && !$specialization) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Specialization is required for this course.'
+            ], 422);
+        }
 
         if ($isCertificate) {
             // For certificate courses: Get all attendance sessions (no semester/module filter)
@@ -796,6 +917,9 @@ class AttendanceController extends Controller
                 ->where('status', 'registered')
                 ->with('student')
                 ->get();
+            if ($specialization !== null) {
+                $registrations = $registrations->where('specialization', $specialization)->values();
+            }
         } else {
             // For elective modules: Get students registered for the specific module
             $registrations = \App\Models\ModuleManagement::where('module_id', $moduleId)
@@ -805,6 +929,9 @@ class AttendanceController extends Controller
                 ->where('semester', $semester->name)
                 ->with('student')
                 ->get();
+            if ($specialization !== null) {
+                $registrations = $registrations->where('specialization', $specialization)->values();
+            }
         }
 
         $attendanceData = [];
@@ -906,6 +1033,7 @@ class AttendanceController extends Controller
         if (!$isCertificate) {
             $rules['semester'] = 'required';
             $rules['module_id'] = 'required|exists:modules,module_id';
+            $rules['specialization'] = 'nullable|string|max:255';
         }
         
         $request->validate($rules);
@@ -915,10 +1043,17 @@ class AttendanceController extends Controller
         $location = $request->location;
         $semesterId = $request->semester;
         $moduleId = $request->module_id;
+        $specialization = $this->normalizeSpecializationValue($request->input('specialization'));
 
         // Get course and intake details
         $course = Course::find($courseId);
         $intake = Intake::find($intakeId);
+
+        if (!$isCertificate && $this->courseHasSpecializations($course) && !$specialization) {
+            return response()->json([
+                'error' => 'Specialization is required for this course.'
+            ], 422);
+        }
 
         if ($isCertificate) {
             // For certificate courses: Get all attendance sessions (no semester/module filter)
@@ -1003,6 +1138,9 @@ class AttendanceController extends Controller
                 ->where('status', 'registered')
                 ->with('student')
                 ->get();
+            if ($specialization !== null) {
+                $registrations = $registrations->where('specialization', $specialization)->values();
+            }
         } else {
             // For elective modules: Get students registered for the specific module
             $registrations = \App\Models\ModuleManagement::where('module_id', $moduleId)
@@ -1012,6 +1150,9 @@ class AttendanceController extends Controller
                 ->where('semester', $semester->name)
                 ->with('student')
                 ->get();
+            if ($specialization !== null) {
+                $registrations = $registrations->where('specialization', $specialization)->values();
+            }
         }
 
         $excelData = [];
@@ -1063,6 +1204,14 @@ class AttendanceController extends Controller
         $semesterId = $request->query('semester');
         $moduleId = $request->query('module_id');
         $date = $request->query('date');
+        $specialization = $this->normalizeSpecializationValue($request->query('specialization'));
+
+        $course = $courseId ? Course::find($courseId) : null;
+        if ($course && !$isCertificate && $this->courseHasSpecializations($course) && !$specialization) {
+            return response()->json([
+                'error' => 'Specialization is required for this course.'
+            ], 422);
+        }
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -1116,6 +1265,9 @@ class AttendanceController extends Controller
                             ->where('intake_id', $intakeId)
                             ->where('location', $location)
                             ->where('status', 'registered')
+                            ->when($specialization !== null, function ($query) use ($specialization) {
+                                return $query->where('specialization', $specialization);
+                            })
                             ->leftJoin('course_registration as cr', function($join) {
                                 $join->on('semester_registrations.student_id', '=', 'cr.student_id')
                                     ->on('semester_registrations.course_id', '=', 'cr.course_id')
@@ -1139,6 +1291,9 @@ class AttendanceController extends Controller
                             ->where('intake_id', $intakeId)
                             ->where('location', $location)
                             ->when($semester, function($q) use ($semester) { return $q->where('semester', $semester->name); })
+                            ->when($specialization !== null, function ($query) use ($specialization) {
+                                return $query->where('specialization', $specialization);
+                            })
                             ->leftJoin('course_registration as cr', function($join) {
                                 $join->on('module_management.student_id', '=', 'cr.student_id')
                                     ->on('module_management.course_id', '=', 'cr.course_id')

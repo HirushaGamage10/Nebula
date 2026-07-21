@@ -104,6 +104,7 @@
                                         <tr>
                                             <th>Student ID</th>
                                             <th>Name</th>
+                                            <th>Specialization</th>
                                             <th>Email</th>
                                             <th>NIC</th>
                                             <th>Register</th>
@@ -528,7 +529,8 @@ $(document).ready(function() {
             course_id: $('#elective_course').val(),
             intake_id: $('#elective_intake').val(),
             semester_id: $('#elective_semester').val(),
-            location: $('#elective_location').val()
+            location: $('#elective_location').val(),
+            specialization: $('#elective_specialization_hidden').val()
         });
         
         $.ajax({
@@ -539,6 +541,7 @@ $(document).ready(function() {
                 intake_id: $('#elective_intake').val(),
                 semester_id: $('#elective_semester').val(),
                 location: $('#elective_location').val(),
+                specialization: $('#elective_specialization_hidden').val(),
                 _token: '{{ csrf_token() }}'
             },
             success: function(response) {
@@ -550,6 +553,7 @@ $(document).ready(function() {
                         rows += `<tr>
                             <td>${student.student_id}</td>
                             <td>${student.name}</td>
+                            <td>${student.specialization || ''}</td>
                             <td>${student.email}</td>
                             <td>${student.nic}</td>
                             <td><input type="checkbox" name="register_students[]" value="${student.student_id}"></td>

@@ -44,6 +44,14 @@
             </select>
           </div>
         </div>
+        <div class="mb-3 row mx-3" id="specializationRow" style="display:none;">
+          <label class="col-sm-2 col-form-label">Specialization <span class="text-danger">*</span></label>
+          <div class="col-sm-10">
+            <select class="form-select" id="specialization" disabled>
+              <option value="" selected disabled>Select Specialization</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <hr class="my-4">
@@ -99,6 +107,7 @@
                 <th>Course Registration ID</th>
                 <th>Student ID</th>
                 <th>Student Name</th>
+                <th>Specialization</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -120,6 +129,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const locationSelect = document.getElementById('location');
   const courseSelect   = document.getElementById('course');
   const intakeSelect   = document.getElementById('intake');
+  const specializationSelect = document.getElementById('specialization');
+  const specializationRow = document.getElementById('specializationRow');
   const section        = document.getElementById('studentTableSection');
   const tbody          = document.getElementById('studentTableBody');
   const downloadBtn    = document.getElementById('downloadListBtn');
@@ -132,6 +143,34 @@ document.addEventListener('DOMContentLoaded', () => {
   function reset(select, placeholder){
     select.innerHTML = `<option selected disabled value="">${placeholder}</option>`;
     select.disabled = true;
+  }
+
+  function resetSpecialization(){
+    specializationRow.style.display = 'none';
+    reset(specializationSelect, 'Select Specialization');
+  }
+
+  function loadSpecializations(courseId){
+    resetSpecialization();
+    if(!courseId) return;
+
+    fetch(`/api/course/${encodeURIComponent(courseId)}/specializations`)
+      .then(r => r.json())
+      .then(data => {
+        if(data.success && Array.isArray(data.specializations) && data.specializations.length){
+          let html = '<option selected disabled value="">Select Specialization</option>';
+          data.specializations.forEach(spec => {
+            const value = typeof spec === 'object' ? (spec.name || spec.value || spec.specialization || '') : spec;
+            if(value){
+              html += `<option value="${value}">${value}</option>`;
+            }
+          });
+          specializationSelect.innerHTML = html;
+          specializationSelect.disabled = false;
+          specializationRow.style.display = 'flex';
+        }
+      })
+      .catch(() => resetSpecialization());
   }
 
   function showSpinner(show){
@@ -157,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loc = locationSelect.value;
     reset(courseSelect,'Select Course');
     reset(intakeSelect,'Select Batch');
+    resetSpecialization();
     section.style.display='none';
     if(!loc) return;
 
@@ -182,6 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const courseId = courseSelect.value;
     const loc = locationSelect.value;
     reset(intakeSelect,'Select Batch');
+    resetSpecialization();
     section.style.display='none';
     if(!courseId || !loc) return;
 
@@ -201,21 +242,30 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       .catch(()=>showToast('Error','Failed to fetch intakes.','bg-danger'))
       .finally(()=>showSpinner(false));
+
+      loadSpecializations(courseId);
   });
 
   intakeSelect.addEventListener('change', fetchStudents);
+      specializationSelect.addEventListener('change', fetchStudents);
 
   function fetchStudents(){
     const location = locationSelect.value;
     const courseId = courseSelect.value;
     const intakeId = intakeSelect.value;
+    const specialization = specializationSelect.value;
     if(!location || !courseId || !intakeId){ section.style.display='none'; return; }
+    if(specializationRow.style.display !== 'none' && !specialization){
+      showToast('Warning','Please select a specialization first.','bg-warning');
+      section.style.display='none';
+      return;
+    }
 
     showSpinner(true);
     fetch('/get-student-list-data', {
       method:'POST',
       headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},
-      body: JSON.stringify({location, course_id:courseId, intake_id:intakeId})
+      body: JSON.stringify({location, course_id:courseId, intake_id:intakeId, specialization})
     })
     .then(r=>r.json())
     .then(data=>{
@@ -233,7 +283,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const locText = locationSelect.options[locationSelect.selectedIndex].text;
         const crsText = courseSelect.options[courseSelect.selectedIndex].text;
         const inText  = intakeSelect.options[intakeSelect.selectedIndex].text;
-        headerEl.innerHTML = `Student list - ${locText}<br>${crsText} - ${inText}`;
+        const specText = specializationSelect.value ? ` - ${specializationSelect.value}` : '';
+        headerEl.innerHTML = `Student list - ${locText}<br>${crsText} - ${inText}${specText}`;
 
         renderTable();
         section.style.display='block';
@@ -257,12 +308,14 @@ document.addEventListener('DOMContentLoaded', () => {
     list.forEach((s, idx)=>{
       const isTerminated = s.status === 'terminated';
       const trClass = isTerminated ? 'table-danger' : '';
+      const specialization = s.specialization || s.course_registration_specialization || s.course_registration?.specialization || '-';
       tbody.insertAdjacentHTML('beforeend', `
         <tr class="${trClass}">
           <td>${idx+1}</td>
           <td>${s.course_registration_id ?? ''}</td>
           <td>${s.student_id ?? ''}</td>
           <td>${s.name ?? ''}</td>
+          <td>${specialization}</td>
           <td class="text-capitalize">${s.status ?? ''}</td>
         </tr>
       `);
@@ -299,6 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <input type="hidden" name="location" value="${location}">
       <input type="hidden" name="course_id" value="${courseId}">
       <input type="hidden" name="intake_id" value="${intakeId}">
+      <input type="hidden" name="specialization" value="${specializationSelect.value || ''}">
       <input type="hidden" name="status" value="${currentStatus}">
     `;
     document.body.appendChild(form);
@@ -323,6 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <input type="hidden" name="location" value="${location}">
       <input type="hidden" name="course_id" value="${courseId}">
       <input type="hidden" name="intake_id" value="${intakeId}">
+      <input type="hidden" name="specialization" value="${specializationSelect.value || ''}">
       <input type="hidden" name="status" value="${currentStatus}">
     `;
     document.body.appendChild(form);

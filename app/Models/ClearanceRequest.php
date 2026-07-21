@@ -14,6 +14,7 @@ class ClearanceRequest extends Model
         'location',
         'course_id',
         'intake_id',
+        'specialization',
         'student_id',
         'status',
         'remarks',

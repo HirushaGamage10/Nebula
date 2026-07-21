@@ -50,6 +50,14 @@
                                 </select>
                             </div>
                         </div>
+                        <div class="mb-3 row align-items-center mx-3" id="specializationRow" style="display:none;">
+                            <label for="specializationDropdown" class="col-sm-3 col-form-label fw-bold">Specialization<span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <select id="specializationDropdown" class="form-select" disabled>
+                                    <option selected disabled value="">Select Specialization</option>
+                                </select>
+                            </div>
+                        </div>
                     </form>
                     <div id="clearanceTableSection" style="display:none;">
                         <table class="table table-bordered align-middle text-center mt-4">
@@ -104,6 +112,7 @@
                                     <tr>
                                         <th>Student ID</th>
                                         <th>Name</th>
+                                        <th>Specialization</th>
                                         <th>Clearance Status</th>
                                     </tr>
                                 </thead>
@@ -142,6 +151,14 @@
                             <div class="col-sm-9">
                                 <select id="ind_intakeDropdown" class="form-select" required disabled>
                                     <option selected disabled value="">Select Intake</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3 row align-items-center mx-3" id="indSpecializationRow" style="display:none;">
+                            <label for="ind_specializationDropdown" class="col-sm-3 col-form-label fw-bold">Specialization<span class="text-danger">*</span></label>
+                            <div class="col-sm-9">
+                                <select id="ind_specializationDropdown" class="form-select" disabled>
+                                    <option selected disabled value="">Select Specialization</option>
                                 </select>
                             </div>
                         </div>
@@ -255,6 +272,7 @@
                                                 <tr>
                                                     <th>Intake</th>
                                                     <th>Course</th>
+                                                    <th>Specialization</th>
                                                     <th>Location</th>
                                                     <th>Clearance Type</th>
                                                     <th>Total Students</th>
@@ -271,6 +289,7 @@
                                                             <strong>{{ $request->intake->batch }}</strong>
                                                         </td>
                                                         <td>{{ $request->course->course_name }}</td>
+                                                        <td>{{ $request->specialization ?: 'All' }}</td>
                                                         <td>{{ $request->location }}</td>
                                                         <td>
                                                             <span class="badge bg-secondary">
@@ -308,6 +327,7 @@
                                                                     data-intake="{{ $request->intake->intake_id }}"
                                                                     data-course="{{ $request->course->course_id }}"
                                                                     data-location="{{ $request->location }}"
+                                                                    data-specialization="{{ $request->specialization }}"
                                                                     data-type="{{ $request->clearance_type }}">
                                                                 <i class="ti ti-eye"></i> View Details
                                                             </button>
@@ -458,6 +478,8 @@ $(document).ready(function() {
     $('#locationDropdown').on('change', function() {
         $('#courseDropdown').empty().append('<option selected disabled value="">Select Course</option>').prop('disabled', true);
         $('#intakeDropdown').empty().append('<option selected disabled value="">Select Intake</option>').prop('disabled', true);
+        $('#specializationDropdown').empty().append('<option selected disabled value="">Select Specialization</option>').prop('disabled', true);
+        $('#specializationRow').hide();
         $('#clearanceTableSection').hide();
         $('#studentListSection').hide();
 
@@ -470,6 +492,8 @@ $(document).ready(function() {
     // Intake dropdown population
     $('#courseDropdown').on('change', function() {
         $('#intakeDropdown').empty().append('<option selected disabled value="">Select Intake</option>').prop('disabled', true);
+        $('#specializationDropdown').empty().append('<option selected disabled value="">Select Specialization</option>').prop('disabled', true);
+        $('#specializationRow').hide();
         $('#clearanceTableSection').hide();
         $('#studentListSection').hide();
 
@@ -493,10 +517,33 @@ $(document).ready(function() {
                     }
                 }
             });
+
+            $.ajax({
+                url: '/api/course/' + $('#courseDropdown').val() + '/specializations',
+                method: 'GET',
+                success: function(response) {
+                    if (response && response.success && Array.isArray(response.specializations) && response.specializations.length) {
+                        let options = '<option selected disabled value="">Select Specialization</option>';
+                        response.specializations.forEach(function(spec) {
+                            const value = typeof spec === 'object' ? (spec.name || spec.value || spec.specialization || '') : spec;
+                            if (value) {
+                                options += `<option value="${value}">${value}</option>`;
+                            }
+                        });
+                        $('#specializationDropdown').html(options).prop('disabled', false);
+                        $('#specializationRow').show();
+                    }
+                }
+            });
         }
     });
     // Show table when all fields selected
     $('#intakeDropdown').on('change', function() {
+        if($('#specializationRow').is(':visible') && !$('#specializationDropdown').val()) {
+            $('#clearanceTableSection').hide();
+            $('#studentListSection').hide();
+            return;
+        }
         if($('#locationDropdown').val() && $('#courseDropdown').val() && $('#intakeDropdown').val()) {
             $('#clearanceTableSection').show();
             @if(auth()->user()->hasAnyRole(['Librarian', 'Hostel Manager', 'Bursar', 'Project Tutor']))
@@ -508,6 +555,14 @@ $(document).ready(function() {
             $('#studentListSection').hide();
         }
     });
+
+    $('#specializationDropdown').on('change', function() {
+        if($('#locationDropdown').val() && $('#courseDropdown').val() && $('#intakeDropdown').val()) {
+            @if(auth()->user()->hasAnyRole(['Librarian', 'Hostel Manager', 'Bursar', 'Project Tutor']))
+            loadStudentList();
+            @endif
+        }
+    });
     // Send button logic
     $(document).on('click', '.send-clearance-btn', function() {
         const button = $(this);
@@ -515,6 +570,12 @@ $(document).ready(function() {
         const location = $('#locationDropdown').val();
         const courseId = $('#courseDropdown').val();
         const intakeId = $('#intakeDropdown').val();
+        const specialization = $('#specializationDropdown').val();
+
+        if($('#specializationRow').is(':visible') && !specialization) {
+            showToast('Please select a specialization first.', 'warning');
+            return;
+        }
         
         // Prevent multiple clicks
         if (button.hasClass('loading')) {
@@ -533,6 +594,7 @@ $(document).ready(function() {
                 location: location,
                 course_id: courseId,
                 intake_id: intakeId,
+                specialization: specialization,
                 _token: '{{ csrf_token() }}'
             },
             success: function(response) {
@@ -569,19 +631,24 @@ $(document).ready(function() {
     // Load student list for other users
     function loadStudentList() {
         const intakeId = $('#intakeDropdown').val();
+        const courseId = $('#courseDropdown').val();
+        const specialization = $('#specializationDropdown').val();
         if(!intakeId) return;
+        if($('#specializationRow').is(':visible') && !specialization) return;
         $.ajax({
             url: '{{ route('clearance.getStudentsForIntake') }}',
             method: 'POST',
             data: {
                 intake_id: intakeId,
+                course_id: courseId,
+                specialization: specialization,
                 _token: '{{ csrf_token() }}'
             },
             success: function(response) {
                 if(response.success) {
                     let html = '';
                     response.data.forEach(function(student) {
-                        html += `<tr><td>${student.student_id}</td><td>${student.name}</td><td>${student.clearance_status}</td></tr>`;
+                        html += `<tr><td>${student.student_id}</td><td>${student.name}</td><td>${student.specialization || ''}</td><td>${student.clearance_status}</td></tr>`;
                     });
                     $('#studentListTableBody').html(html);
                 }
@@ -595,6 +662,7 @@ $(document).ready(function() {
         const courseId = $(this).data('course');
         const location = $(this).data('location');
         const type = $(this).data('type');
+        const specialization = $(this).data('specialization') || $('#specializationDropdown').val() || '';
         
         // Show loading state
         $('#intakeDetailsContent').html('<div class="text-center"><i class="ti ti-loader ti-spin" style="font-size: 2rem;"></i><p>Loading details...</p></div>');
@@ -608,6 +676,7 @@ $(document).ready(function() {
                 intake_id: intakeId,
                 course_id: courseId,
                 location: location,
+                specialization: specialization,
                 clearance_type: type,
                 _token: '{{ csrf_token() }}'
             },
@@ -616,7 +685,7 @@ $(document).ready(function() {
                     let tableHtml = `
                         <div class="row mb-3">
                             <div class="col-md-12">
-                                <h6 class="text-muted">Intake: ${response.intake_name} | Course: ${response.course_name} | Location: ${response.location}</h6>
+                                <h6 class="text-muted">Intake: ${response.intake_name} | Course: ${response.course_name} | Specialization: ${response.specialization || 'All'} | Location: ${response.location}</h6>
                             </div>
                         </div>
                         <div class="table-responsive">
@@ -625,6 +694,7 @@ $(document).ready(function() {
                                     <tr>
                                         <th>Student ID</th>
                                         <th>Student Name</th>
+                                        <th>Specialization</th>
                                         <th>Status</th>
                                         <th>Processed By</th>
                                         <th>Processed Date</th>
@@ -640,6 +710,7 @@ $(document).ready(function() {
                             <tr>
                                 <td>${student.student_id}</td>
                                 <td>${student.student_name}</td>
+                                <td>${student.specialization || 'N/A'}</td>
                                 <td>${statusBadge}</td>
                                 <td>${student.processed_by || 'N/A'}</td>
                                 <td>${student.processed_date || 'N/A'}</td>
@@ -706,6 +777,8 @@ $(function(){
     function resetIndividual(selectors){
         $('#ind_intakeDropdown').empty().append('<option selected disabled value="">Select Intake</option>').prop('disabled', true);
         $('#ind_studentDropdown').empty().append('<option selected disabled value="">Select Student</option>').prop('disabled', true);
+        $('#ind_specializationDropdown').empty().append('<option selected disabled value="">Select Specialization</option>').prop('disabled', true);
+        $('#indSpecializationRow').hide();
         $('#individualClearanceTableSection').hide();
     }
 
@@ -722,6 +795,8 @@ $(function(){
         resetIndividual();
         const courseId = $('#ind_courseDropdown').val();
         const location = $('#ind_locationDropdown').val();
+        $('#ind_specializationDropdown').empty().append('<option selected disabled value="">Select Specialization</option>').prop('disabled', true);
+        $('#indSpecializationRow').hide();
         if(!courseId || !location) return;
         $.ajax({
             url: '{{ route('module.management.getIntakes') }}',
@@ -735,17 +810,66 @@ $(function(){
                 }
             }
         });
+
+        $.ajax({
+            url: '/api/course/' + courseId + '/specializations',
+            method: 'GET',
+            success: function(response) {
+                if (response && response.success && Array.isArray(response.specializations) && response.specializations.length) {
+                    let options = '<option selected disabled value="">Select Specialization</option>';
+                    response.specializations.forEach(function(spec) {
+                        const value = typeof spec === 'object' ? (spec.name || spec.value || spec.specialization || '') : spec;
+                        if (value) {
+                            options += `<option value="${value}">${value}</option>`;
+                        }
+                    });
+                    $('#ind_specializationDropdown').html(options).prop('disabled', false);
+                    $('#indSpecializationRow').show();
+                }
+            }
+        });
     });
 
     // Load students once an intake is chosen
     $('#ind_intakeDropdown').on('change', function(){
         const intakeId = $(this).val();
         if(!intakeId) return;
+        if($('#indSpecializationRow').is(':visible') && !$('#ind_specializationDropdown').val()) {
+            $('#ind_studentDropdown').prop('disabled', true).empty().append('<option selected disabled value="">Select Specialization first</option>');
+            return;
+        }
         $('#ind_studentDropdown').prop('disabled', true).empty().append('<option selected disabled value="">Loading...</option>');
         $.ajax({
             url: '{{ route('clearance.getStudentsForIntake') }}',
             method: 'POST',
-            data: { intake_id: intakeId, _token: '{{ csrf_token() }}' },
+            data: { intake_id: intakeId, course_id: $('#ind_courseDropdown').val(), specialization: $('#ind_specializationDropdown').val(), _token: '{{ csrf_token() }}' },
+            success: function(res){
+                const $std = $('#ind_studentDropdown').empty();
+                $std.append('<option selected disabled value="">Select Student</option>');
+                if(res && res.success && Array.isArray(res.data)){
+                    res.data.forEach(function(s){ $std.append(`<option value="${s.student_id}">${s.student_id} - ${s.name}</option>`); });
+                }
+                $std.prop('disabled', false);
+            },
+            error: function(){
+                $('#ind_studentDropdown').empty().append('<option selected disabled value="">Failed to load</option>');
+            }
+        });
+    });
+
+    $('#ind_specializationDropdown').on('change', function(){
+        const intakeId = $('#ind_intakeDropdown').val();
+        if(!intakeId) return;
+        $('#ind_studentDropdown').prop('disabled', true).empty().append('<option selected disabled value="">Loading...</option>');
+        $.ajax({
+            url: '{{ route('clearance.getStudentsForIntake') }}',
+            method: 'POST',
+            data: {
+                intake_id: intakeId,
+                course_id: $('#ind_courseDropdown').val(),
+                specialization: $('#ind_specializationDropdown').val(),
+                _token: '{{ csrf_token() }}'
+            },
             success: function(res){
                 const $std = $('#ind_studentDropdown').empty();
                 $std.append('<option selected disabled value="">Select Student</option>');
@@ -779,8 +903,14 @@ $(function(){
             course_id: $('#ind_courseDropdown').val(),
             intake_id: $('#ind_intakeDropdown').val(),
             student_id: $('#ind_studentDropdown').val(),
+            specialization: $('#ind_specializationDropdown').val(),
             _token: '{{ csrf_token() }}'
         };
+
+        if($('#indSpecializationRow').is(':visible') && !payload.specialization){
+            alert('Please select a specialization first.');
+            return;
+        }
 
         // quick validation
         if(!payload.location || !payload.course_id || !payload.intake_id || !payload.student_id){

@@ -61,6 +61,14 @@
                                     </select>
                                 </div>
                             </div>
+                            <div class="mb-3 row mx-3" id="degree_specialization_row" style="display:none;">
+                                <label for="degree_specialization" class="col-sm-2 col-form-label">Specialization <span class="text-danger">*</span></label>
+                                <div class="col-sm-10">
+                                    <select class="form-select degree-filter" id="degree_specialization" name="specialization" disabled>
+                                        <option selected disabled value="">Select a Specialization</option>
+                                    </select>
+                                </div>
+                            </div>
                             <div class="mb-3 row mx-3">
                                 <label for="degree_semester" class="col-sm-2 col-form-label">Semester <span class="text-danger">*</span></label>
                                 <div class="col-sm-10">
@@ -262,6 +270,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const degreeCourseType = document.getElementById('degree_course_type');
     const degreeCourse = document.getElementById('degree_course');
     const degreeIntake = document.getElementById('degree_intake');
+    let degreeSpecializationsLoaded = false;
+    const degreeSpecialization = document.getElementById('degree_specialization');
+    const degreeSpecializationRow = document.getElementById('degree_specialization_row');
     const degreeSemester = document.getElementById('degree_semester');
     const degreeModule = document.getElementById('degree_module');
     const degreeTableBody = document.getElementById('degreeOverallAttendanceTableBody');
@@ -296,6 +307,53 @@ document.addEventListener('DOMContentLoaded', function() {
         select.disabled = true;
     }
 
+    function resetSpecialization() {
+        if (!degreeSpecialization || !degreeSpecializationRow) {
+            return;
+        }
+
+        degreeSpecializationsLoaded = false;
+        degreeSpecialization.innerHTML = '<option selected disabled value="">Select a Specialization</option>';
+        degreeSpecialization.disabled = true;
+        degreeSpecializationRow.style.display = 'none';
+    }
+
+    function hasDegreeSpecializationSelection() {
+        return degreeSpecializationsLoaded && (!degreeSpecializationRow || degreeSpecializationRow.style.display === 'none' || !!degreeSpecialization.value);
+    }
+
+    function fetchDegreeSpecializations() {
+        if (!degreeCourse.value) {
+            resetSpecialization();
+            return;
+        }
+
+        showSpinner(true);
+        fetch(`/api/course/${degreeCourse.value}/specializations`)
+            .then(response => response.json())
+            .then(data => {
+                const specializations = data.success && Array.isArray(data.specializations) ? data.specializations.filter(Boolean) : [];
+
+                if (specializations.length > 0) {
+                    degreeSpecialization.innerHTML = '<option selected disabled value="">Select a Specialization</option>';
+                    specializations.forEach(spec => {
+                        degreeSpecialization.add(new Option(spec, spec));
+                    });
+                    degreeSpecialization.disabled = false;
+                    degreeSpecializationRow.style.display = '';
+                    degreeSpecializationsLoaded = true;
+                } else {
+                    resetSpecialization();
+                    degreeSpecializationsLoaded = true;
+                }
+            })
+            .catch(() => {
+                resetSpecialization();
+                degreeSpecializationsLoaded = true;
+            })
+            .finally(() => showSpinner(false));
+    }
+
     // Initialize disabled state
     resetAndDisable(degreeCourse, 'Select a Course');
     resetAndDisable(degreeIntake, 'Select an Intake');
@@ -308,6 +366,7 @@ document.addEventListener('DOMContentLoaded', function() {
     degreeLocation.addEventListener('change', function() {
         resetAndDisable(degreeCourse, 'Select a Course');
         resetAndDisable(degreeIntake, 'Select an Intake');
+        resetSpecialization();
         resetAndDisable(degreeSemester, 'Select a Semester');
         resetAndDisable(degreeModule, 'Select a Module');
         degreeSection.style.display = 'none';
@@ -319,6 +378,7 @@ document.addEventListener('DOMContentLoaded', function() {
     degreeCourseType.addEventListener('change', function() {
         resetAndDisable(degreeCourse, 'Select a Course');
         resetAndDisable(degreeIntake, 'Select an Intake');
+        resetSpecialization();
         resetAndDisable(degreeSemester, 'Select a Semester');
         resetAndDisable(degreeModule, 'Select a Module');
         degreeSection.style.display = 'none';
@@ -329,9 +389,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     degreeCourse.addEventListener('change', function() {
         resetAndDisable(degreeIntake, 'Select an Intake');
+        resetSpecialization();
         resetAndDisable(degreeSemester, 'Select a Semester');
         resetAndDisable(degreeModule, 'Select a Module');
         if (degreeCourse.value && degreeLocation.value) {
+            fetchDegreeSpecializations();
             fetchDegreeIntakes(degreeCourse.value, degreeLocation.value);
         }
     });
@@ -352,6 +414,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     degreeModule.addEventListener('change', fetchDegreeOverallAttendance);
+
+    degreeSpecialization.addEventListener('change', fetchDegreeOverallAttendance);
 
     // CERTIFICATE TAB EVENT LISTENERS
     certLocation.addEventListener('change', function() {
@@ -379,6 +443,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const locationText = degreeLocation.options[degreeLocation.selectedIndex]?.text || '';
         const courseText = degreeCourse.options[degreeCourse.selectedIndex]?.text || '';
         const intakeText = degreeIntake.options[degreeIntake.selectedIndex]?.text || '';
+        const specializationText = degreeSpecialization.options[degreeSpecialization.selectedIndex]?.text || '';
         const semesterText = degreeSemester.options[degreeSemester.selectedIndex]?.text || '';
         const moduleText = degreeModule.options[degreeModule.selectedIndex]?.text || '';
         let y = 16;
@@ -391,6 +456,10 @@ document.addEventListener('DOMContentLoaded', function() {
         doc.text(`Course: ${courseText}`, 14, y);
         y += 8;
         doc.text(`Intake: ${intakeText}`, 14, y);
+        if (degreeSpecializationRow && degreeSpecializationRow.style.display !== 'none' && specializationText) {
+            y += 8;
+            doc.text(`Specialization: ${specializationText}`, 14, y);
+        }
         y += 8;
         doc.text(`Semester: ${semesterText}`, 14, y);
         y += 8;
@@ -413,7 +482,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     document.getElementById('degreeExportExcelBtn').addEventListener('click', function() {
-        if (!degreeLocation.value || !degreeCourse.value || !degreeIntake.value || !degreeSemester.value || !degreeModule.value) {
+        if (!degreeLocation.value || !degreeCourse.value || !degreeIntake.value || !degreeSemester.value || !degreeModule.value || !hasDegreeSpecializationSelection()) {
             alert('Please select all filters before exporting to Excel.');
             return;
         }
@@ -421,6 +490,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('location', degreeLocation.value);
         formData.append('course_id', degreeCourse.value);
         formData.append('intake_id', degreeIntake.value);
+        formData.append('specialization', degreeSpecialization.value || '');
         formData.append('semester', degreeSemester.value);
         formData.append('module_id', degreeModule.value);
         formData.append('_token', '{{ csrf_token() }}');
@@ -591,10 +661,11 @@ document.addEventListener('DOMContentLoaded', function() {
             location: degreeLocation.value,
             course_id: degreeCourse.value,
             intake_id: degreeIntake.value,
+            specialization: degreeSpecialization.value,
             semester: degreeSemester.value,
             module_id: degreeModule.value
         };
-        if (Object.values(data).some(v => !v)) {
+        if (!degreeLocation.value || !degreeCourse.value || !degreeIntake.value || !degreeSemester.value || !degreeModule.value || !hasDegreeSpecializationSelection()) {
             degreeSection.style.display = 'none';
             return;
         }

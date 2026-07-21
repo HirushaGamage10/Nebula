@@ -479,6 +479,36 @@ class ExamResultController extends Controller
         return (string) $fallbackNumber;
     }
 
+    private function getCourseSpecializations(Course $course): array
+    {
+        $specializations = $course->specializations ?? [];
+
+        if (is_string($specializations)) {
+            $decoded = json_decode($specializations, true);
+            $specializations = is_array($decoded) ? $decoded : [];
+        }
+
+        if (!is_array($specializations)) {
+            return [];
+        }
+
+        return array_values(array_filter($specializations, function ($specialization) {
+            return is_string($specialization) ? trim($specialization) !== '' : !empty($specialization);
+        }));
+    }
+
+    private function courseHasSpecializations(Course $course): bool
+    {
+        return count($this->getCourseSpecializations($course)) > 0;
+    }
+
+    private function normalizeSpecializationValue(?string $specialization): ?string
+    {
+        $specialization = trim((string) $specialization);
+
+        return $specialization !== '' ? $specialization : null;
+    }
+
     private function getSemesterSequenceNumber(int $courseId, int $intakeId, int $semesterId): int
     {
         $semesterSequence = \App\Models\Semester::where('course_id', $courseId)
@@ -593,6 +623,7 @@ class ExamResultController extends Controller
                 'location' => 'required|string',
                 'semester' => 'required',
                 'module_id' => 'required|integer|exists:modules,module_id',
+                'specialization' => 'nullable|string|max:255',
             ]);
         }
 
@@ -601,7 +632,20 @@ class ExamResultController extends Controller
         $location = $request->location;
         $semesterId = $request->semester;
         $moduleId = $request->module_id;
+        $specialization = $this->normalizeSpecializationValue($request->input('specialization'));
         $certificateModuleId = null;
+        $course = Course::find($courseId);
+
+        if (!$course) {
+            return response()->json(['error' => 'Course not found.'], 404);
+        }
+
+        if (!$isCertificate && $this->courseHasSpecializations($course) && !$specialization) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Specialization is required for this course.'
+            ], 422);
+        }
 
         // For certificate courses, get all enrolled students
         if ($isCertificate) {
@@ -670,11 +714,6 @@ class ExamResultController extends Controller
             return response()->json(['error' => 'Semester not found.'], 404);
         }
 
-        $course = Course::find($courseId);
-        if (!$course) {
-            return response()->json(['error' => 'Course not found.'], 404);
-        }
-
         $semesterLookupValues = $this->getSemesterLookupValues($course, $semester);
 
         // Check if this is a core module (assigned to semester) or elective module
@@ -698,6 +737,9 @@ class ExamResultController extends Controller
                 ->where('intake_id', $intakeId)
                 ->where('location', $location)
                 ->where('status', 'registered')
+                ->when($specialization !== null, function ($query) use ($specialization) {
+                    return $query->where('specialization', $specialization);
+                })
                 ->with('student')
                 ->get()
                 ->map(function($reg) use ($request, $existingResults, $semesterLookupValues, $courseId, $intakeId, $location) {
@@ -748,6 +790,9 @@ class ExamResultController extends Controller
                 ->where('intake_id', $intakeId)
                 ->where('location', $location)
                 ->where('semester', $semester->name)
+                ->when($specialization !== null, function ($query) use ($specialization) {
+                    return $query->where('specialization', $specialization);
+                })
                 ->with('student')
                 ->get()
                 ->map(function($reg) use ($request, $existingResults, $semesterLookupValues, $courseId, $intakeId, $location) {
@@ -817,6 +862,7 @@ class ExamResultController extends Controller
             'course_id' => 'required|integer|exists:courses,course_id',
             'intake_id' => 'required|integer|exists:intakes,intake_id',
             'location' => 'required|string',
+            'specialization' => 'nullable|string|max:255',
         ]);
 
         $course = Course::where('course_id', $validatedBase['course_id'])->first();
@@ -825,6 +871,14 @@ class ExamResultController extends Controller
                 'success' => false,
                 'message' => 'Course not found.'
             ], 404);
+        }
+
+        $specialization = $this->normalizeSpecializationValue($request->input('specialization'));
+        if ($this->courseHasSpecializations($course) && !$specialization) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Specialization is required for this course.'
+            ], 422);
         }
 
         $resultsQuery = ExamResult::where('course_id', $validatedBase['course_id'])
@@ -851,8 +905,40 @@ class ExamResultController extends Controller
                 ], 404);
             }
 
+            $specializedStudentIds = null;
+            if ($specialization !== null) {
+                $isCoreModule = \DB::table('semester_module')
+                    ->where('semester_id', $validatedDegree['semester'])
+                    ->where('module_id', $validatedDegree['module_id'])
+                    ->exists();
+
+                if ($isCoreModule) {
+                    $specializedStudentIds = \App\Models\SemesterRegistration::where('semester_id', $validatedDegree['semester'])
+                        ->where('course_id', $validatedBase['course_id'])
+                        ->where('intake_id', $validatedBase['intake_id'])
+                        ->where('location', $validatedBase['location'])
+                        ->where('status', 'registered')
+                        ->where('specialization', $specialization)
+                        ->pluck('student_id')
+                        ->all();
+                } else {
+                    $specializedStudentIds = \App\Models\ModuleManagement::where('module_id', $validatedDegree['module_id'])
+                        ->where('course_id', $validatedBase['course_id'])
+                        ->where('intake_id', $validatedBase['intake_id'])
+                        ->where('location', $validatedBase['location'])
+                        ->where('semester', $semester->name)
+                        ->where('specialization', $specialization)
+                        ->pluck('student_id')
+                        ->all();
+                }
+            }
+
             $resultsQuery->whereIn('semester', $this->getSemesterLookupValues($course, $semester))
                 ->where('module_id', $validatedDegree['module_id']);
+
+            if (is_array($specializedStudentIds)) {
+                $resultsQuery->whereIn('student_id', $specializedStudentIds);
+            }
         }
 
         $results = $resultsQuery

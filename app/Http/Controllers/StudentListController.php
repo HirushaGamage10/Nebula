@@ -12,6 +12,30 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class StudentListController extends Controller
 {
+    private function normalizeSpecializationValue($value)
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $value = trim($value);
+
+        return $value === '' ? null : $value;
+    }
+
+    private function courseHasSpecializations(?Course $course): bool
+    {
+        if (!$course || empty($course->specializations)) {
+            return false;
+        }
+
+        $specializations = is_array($course->specializations)
+            ? $course->specializations
+            : json_decode($course->specializations, true);
+
+        return is_array($specializations) && count(array_filter($specializations)) > 0;
+    }
+
     public function showStudentList()
     {
         $locations = ['Welisara', 'Moratuwa', 'Peradeniya'];
@@ -27,21 +51,35 @@ class StudentListController extends Controller
             'location'  => 'required|string',
             'course_id' => 'required|integer|exists:courses,course_id',
             'intake_id' => 'required|integer|exists:intakes,intake_id',
+            'specialization' => 'nullable|string',
         ]);
 
         $location  = $request->location;
         $course_id = (int) $request->course_id;
         $intake_id = (int) $request->intake_id;
+        $specialization = $this->normalizeSpecializationValue($request->specialization);
+        $course = Course::find($course_id);
+
+        if ($this->courseHasSpecializations($course) && !$specialization) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please select a specialization for this course.'
+            ], 422);
+        }
 
         $students = DB::table('course_registration as cr')
             ->join('students as s', 's.student_id', '=', 'cr.student_id')
             ->where('cr.location', $location)
             ->where('cr.course_id', $course_id)
             ->where('cr.intake_id', $intake_id)
+            ->when($specialization, function ($query) use ($specialization) {
+                $query->where('cr.specialization', $specialization);
+            })
             ->select([
                 'cr.course_registration_id',
                 's.student_id',
                 DB::raw('COALESCE(s.name_with_initials, s.full_name) as name'),
+                DB::raw('COALESCE(cr.specialization, "") as specialization'),
                 DB::raw('
                     CASE cr.status
                         WHEN "Pending" THEN "pending"
@@ -70,19 +108,32 @@ class StudentListController extends Controller
             'location'  => 'required|string',
             'course_id' => 'required|integer|exists:courses,course_id',
             'intake_id' => 'required|integer|exists:intakes,intake_id',
+            'specialization' => 'nullable|string',
             'status'    => 'nullable|string|in:all,registered,terminated,completed,pending',
         ]);
 
         $location  = $request->location;
         $course_id = (int) $request->course_id;
         $intake_id = (int) $request->intake_id;
+        $specialization = $this->normalizeSpecializationValue($request->specialization);
         $status    = $request->input('status', 'all');
+        $course = Course::find($course_id);
+
+        if ($this->courseHasSpecializations($course) && !$specialization) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please select a specialization for this course.'
+            ], 422);
+        }
 
         $query = DB::table('course_registration as cr')
             ->join('students as s', 's.student_id', '=', 'cr.student_id')
             ->where('cr.location', $location)
             ->where('cr.course_id', $course_id)
             ->where('cr.intake_id', $intake_id);
+        if ($specialization) {
+            $query->where('cr.specialization', $specialization);
+        }
 
         // status filter mapping
         if ($status !== 'all') {
@@ -96,6 +147,7 @@ class StudentListController extends Controller
                 'cr.course_registration_id',
                 's.student_id',
                 DB::raw('COALESCE(s.name_with_initials, s.full_name) as name'),
+                DB::raw('COALESCE(cr.specialization, "") as specialization'),
                 DB::raw('
                     CASE cr.status
                         WHEN "Pending" THEN "pending"
@@ -134,19 +186,32 @@ class StudentListController extends Controller
             'location'  => 'required|string',
             'course_id' => 'required|integer|exists:courses,course_id',
             'intake_id' => 'required|integer|exists:intakes,intake_id',
+            'specialization' => 'nullable|string',
             'status'    => 'nullable|string|in:all,registered,terminated,completed,pending',
         ]);
 
         $location  = $request->location;
         $course_id = (int) $request->course_id;
         $intake_id = (int) $request->intake_id;
+        $specialization = $this->normalizeSpecializationValue($request->specialization);
         $status    = $request->input('status', 'all');
+        $course = Course::find($course_id);
+
+        if ($this->courseHasSpecializations($course) && !$specialization) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please select a specialization for this course.'
+            ], 422);
+        }
 
         $query = DB::table('course_registration as cr')
             ->join('students as s', 's.student_id', '=', 'cr.student_id')
             ->where('cr.location', $location)
             ->where('cr.course_id', $course_id)
             ->where('cr.intake_id', $intake_id);
+        if ($specialization) {
+            $query->where('cr.specialization', $specialization);
+        }
 
         // mapping
         if ($status !== 'all') {
@@ -160,6 +225,7 @@ class StudentListController extends Controller
                 'cr.course_registration_id',
                 's.student_id',
                 DB::raw('COALESCE(s.name_with_initials, s.full_name) as name'),
+                DB::raw('COALESCE(cr.specialization, "") as specialization'),
                 DB::raw('
                     CASE cr.status
                         WHEN "Pending" THEN "pending"
@@ -185,6 +251,7 @@ class StudentListController extends Controller
                 $s->course_registration_id,
                 $s->student_id,
                 $s->name,
+                $s->specialization ?: '-',
                 ucfirst($s->status)
             ];
         }

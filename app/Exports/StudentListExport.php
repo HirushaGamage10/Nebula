@@ -39,6 +39,7 @@ class StudentListExport implements FromArray, WithHeadings, WithStyles, WithColu
             'Course Registration ID',
             'Student ID',
             'Student Name',
+            'Specialization',
             'Status'
         ];
     }
@@ -46,7 +47,7 @@ class StudentListExport implements FromArray, WithHeadings, WithStyles, WithColu
     public function styles(Worksheet $sheet)
     {
         // Style the header row
-        $sheet->getStyle('A1:E1')->applyFromArray([
+        $sheet->getStyle('A1:F1')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF'],
@@ -63,7 +64,7 @@ class StudentListExport implements FromArray, WithHeadings, WithStyles, WithColu
 
         // Add title row
         $sheet->insertNewRowBefore(1, 3);
-        $sheet->mergeCells('A1:E1');
+        $sheet->mergeCells('A1:F1');
         $sheet->setCellValue('A1', 'STUDENT LIST');
         $sheet->getStyle('A1')->applyFromArray([
             'font' => [
@@ -75,7 +76,7 @@ class StudentListExport implements FromArray, WithHeadings, WithStyles, WithColu
             ],
         ]);
 
-        $sheet->mergeCells('A2:E2');
+        $sheet->mergeCells('A2:F2');
         $sheet->setCellValue('A2', 'Course: ' . $this->courseName . ' | Location: ' . $this->location . ' | Intake: ' . $this->intake . ' | Status: ' . ucfirst($this->status));
         $sheet->getStyle('A2')->applyFromArray([
             'font' => [
@@ -88,7 +89,7 @@ class StudentListExport implements FromArray, WithHeadings, WithStyles, WithColu
         ]);
 
         // Style all cells
-        $sheet->getStyle('A4:E' . (count($this->data) + 3))->applyFromArray([
+        $sheet->getStyle('A4:F' . (count($this->data) + 3))->applyFromArray([
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
                 'vertical' => Alignment::VERTICAL_CENTER,
@@ -110,7 +111,8 @@ class StudentListExport implements FromArray, WithHeadings, WithStyles, WithColu
             'B' => 25,
             'C' => 15,
             'D' => 30,
-            'E' => 15,
+            'E' => 22,
+            'F' => 15,
         ];
     }
 }
