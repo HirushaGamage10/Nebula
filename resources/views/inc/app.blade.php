@@ -74,14 +74,7 @@
             @include('components.sidebar')
             <!-- End Sidebar scroll-->
         </aside>
-        <div x-data x-init="
-    $nextTick(() => {
-        const sidebar = document.querySelector('.scroll-sidebar');
-        const activeLink = sidebar?.querySelector('.sidebar-link.active');
-        if (activeLink && sidebar) {
-            activeLink.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    })">
+        <div>
 <script nonce="{{ $cspNonce }}">
     document.addEventListener('DOMContentLoaded', () => {
         const sidebar = document.querySelector('.scroll-sidebar');
@@ -91,6 +84,8 @@
         }
     });
 </script>
+
+        </div>
 
 
         <!--  Sidebar End -->

@@ -1642,6 +1642,8 @@ function loadDiscounts() {
         } else {
             console.error('Failed to load registration fee discounts:', data.message);
         }
+
+        autoSelectFullPaymentDiscount();
     })
     .catch(error => {
         console.error('Error loading registration fee discounts:', error);
@@ -1649,6 +1651,35 @@ function loadDiscounts() {
     .finally(() => {
         window.isLoadingDiscounts = false;
     });
+}
+
+function autoSelectFullPaymentDiscount() {
+    const planType = document.getElementById('payment-plan-type')?.value;
+    const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
+
+    if (!registrationFeeDiscountSelect) {
+        return;
+    }
+
+    if (planType !== 'full') {
+        registrationFeeDiscountSelect.value = '';
+        return;
+    }
+
+    const options = Array.from(registrationFeeDiscountSelect.options || []);
+    const fullPaymentOption = options.find(option => {
+        const label = (option.textContent || '').trim().toLowerCase();
+        return label.includes('full payment discount');
+    });
+
+    if (fullPaymentOption) {
+        registrationFeeDiscountSelect.value = fullPaymentOption.value;
+        calculateFinalAmount();
+
+        if (window.currentStudentData) {
+            calculateAndDisplayInstallments();
+        }
+    }
 }
 
 
@@ -2807,44 +2838,32 @@ function calculateFinalAmount() {
 
 function toggleFullPaymentDiscountFields() {
     const planType = document.getElementById('payment-plan-type')?.value;
-    const isFullPaymentPlan = planType === 'full';
     const discountsContainer = document.getElementById('discounts-container');
     const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
     const addDiscountBtn = document.getElementById('add-discount-btn');
 
     if (discountsContainer) {
         const discountItems = discountsContainer.querySelectorAll('.discount-item');
-        discountItems.forEach((item, index) => {
+        discountItems.forEach((item) => {
             const select = item.querySelector('.discount-select');
             const removeBtn = item.querySelector('.remove-discount-btn');
 
-            if (!isFullPaymentPlan && index > 0) {
-                item.remove();
-                return;
-            }
-
             if (select) {
-                if (!isFullPaymentPlan) {
-                    select.value = '';
-                }
-                select.disabled = !isFullPaymentPlan;
+                select.disabled = false;
             }
 
             if (removeBtn) {
-                removeBtn.disabled = !isFullPaymentPlan;
+                removeBtn.disabled = false;
             }
         });
     }
 
     if (registrationFeeDiscountSelect) {
-        if (!isFullPaymentPlan) {
-            registrationFeeDiscountSelect.value = '';
-        }
-        registrationFeeDiscountSelect.disabled = !isFullPaymentPlan;
+        registrationFeeDiscountSelect.disabled = false;
     }
 
     if (addDiscountBtn) {
-        addDiscountBtn.disabled = !isFullPaymentPlan;
+        addDiscountBtn.disabled = false;
     }
 }
 
@@ -4535,6 +4554,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Recalculate installments when payment plan type changes
         if (e.target.id === 'payment-plan-type') {
             toggleFullPaymentDiscountFields();
+            autoSelectFullPaymentDiscount();
             calculateFinalAmount();
             showInstallmentPreview();
         }
