@@ -753,6 +753,7 @@ public function createPaymentPlan(Request $request)
         }
 
         return \DB::transaction(function () use ($request, $registration) {
+            $isFullPaymentPlan = $request->payment_plan_type === 'full';
 
             // ===== 1) Get fee definition =====
             // Prefer payment_plans; if missing (common for some certificate intakes),
@@ -810,7 +811,7 @@ public function createPaymentPlan(Request $request)
             $pct = 0.0;
             $fixed = 0.0;
 
-            foreach (($request->discounts ?? []) as $d) {
+            foreach (($isFullPaymentPlan ? ($request->discounts ?? []) : []) as $d) {
                 $type = strtolower($d['discount_type'] ?? '');
                 $val  = (float)($d['discount_value'] ?? 0);
                 if ($type === 'percentage') $pct  += $val;
@@ -838,7 +839,7 @@ public function createPaymentPlan(Request $request)
 
             // ===== 3) Registration fee discount (wipe reg fee first, excess → first installment) =====
             $registrationFeeDiscountApplied = [];
-            if ($request->filled('registration_fee_discount')) {
+            if ($isFullPaymentPlan && $request->filled('registration_fee_discount')) {
                 $regDiscount = $request->registration_fee_discount;
 
                 $discountAmount = $regDiscount['discount_type'] === 'percentage'
@@ -903,15 +904,17 @@ public function createPaymentPlan(Request $request)
 
             // save discounts
             foreach (($request->discounts ?? []) as $d) {
-                \App\Models\PaymentPlanDiscount::create([
-                    'payment_plan_id' => $plan->id,
-                    'discount_id'     => $d['discount_id'],
-                    'discount_type'   => $d['discount_type'],
-                    'discount_value'  => $d['discount_value'],
-                ]);
+                if ($isFullPaymentPlan) {
+                    \App\Models\PaymentPlanDiscount::create([
+                        'payment_plan_id' => $plan->id,
+                        'discount_id'     => $d['discount_id'],
+                        'discount_type'   => $d['discount_type'],
+                        'discount_value'  => $d['discount_value'],
+                    ]);
+                }
             }
 
-            if ($request->filled('registration_fee_discount')) {
+            if ($isFullPaymentPlan && $request->filled('registration_fee_discount')) {
                 $regDiscount = $request->registration_fee_discount;
                 \App\Models\PaymentPlanDiscount::create([
                     'payment_plan_id' => $plan->id,

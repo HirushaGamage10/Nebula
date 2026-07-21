@@ -339,9 +339,12 @@ public function update(Request $request, $id)
         $registrationFee = round((float) ($templatePlan->registration_fee ?? 0), 2);
         $localFee = round((float) ($templatePlan->local_fee ?? 0), 2);
         $totalAmount = round($registrationFee + $localFee, 2);
+        $paymentPlanType = $this->resolveStudentPaymentPlanType($templatePlan, $existingPlan);
 
-        $discountSummary = $this->getStudentDiscountSummary($templatePlan, $existingPlan, $registrationFee, $totalAmount);
-        $rows = $this->getTemplateInstallmentRows($templatePlan, $localFee);
+        $discountSummary = $this->getStudentDiscountSummary($templatePlan, $existingPlan, $registrationFee, $totalAmount, $paymentPlanType);
+        $rows = $paymentPlanType === 'full'
+            ? $this->getFullPaymentRows($templatePlan, $totalAmount)
+            : $this->getTemplateInstallmentRows($templatePlan, $localFee);
 
         $lastIndex = count($rows) - 1;
         $discountedBases = array_map(function ($row) {
@@ -401,7 +404,7 @@ public function update(Request $request, $id)
 
         return [
             'attributes' => [
-                'payment_plan_type' => $templatePlan->installment_plan ? 'installments' : 'full',
+                'payment_plan_type' => $paymentPlanType,
                 'slt_loan_applied' => $sltLoanApplied,
                 'slt_loan_amount' => $sltLoanAmount,
                 'slt_loan_start_installment' => $loanStartInstallment,
@@ -415,9 +418,20 @@ public function update(Request $request, $id)
         ];
     }
 
-    private function getStudentDiscountSummary(PaymentPlan $templatePlan, ?StudentPaymentPlan $studentPlan, float $registrationFee, float $totalFeeForDiscount): array
+    private function resolveStudentPaymentPlanType(PaymentPlan $templatePlan, ?StudentPaymentPlan $existingPlan = null): string
     {
-        $normalPercentage = $templatePlan->apply_discount ? (float) ($templatePlan->discount ?? 0) : 0.0;
+        $existingType = strtolower((string) ($existingPlan?->payment_plan_type ?? ''));
+        if (in_array($existingType, ['full', 'installments'], true)) {
+            return $existingType;
+        }
+
+        return $templatePlan->installment_plan ? 'installments' : 'full';
+    }
+
+    private function getStudentDiscountSummary(PaymentPlan $templatePlan, ?StudentPaymentPlan $studentPlan, float $registrationFee, float $totalFeeForDiscount, string $paymentPlanType): array
+    {
+        $isFullPayment = $paymentPlanType === 'full';
+        $normalPercentage = $isFullPayment && $templatePlan->apply_discount ? (float) ($templatePlan->discount ?? 0) : 0.0;
         $normalFixed = 0.0;
         $registrationDiscountAmount = 0.0;
 
@@ -431,11 +445,11 @@ public function update(Request $request, $id)
                 $type = strtolower((string) ($row->discount_type ?? ''));
                 $value = (float) ($row->discount_value ?? 0);
 
-                if ($category === 'registration_fee') {
+                if ($category === 'registration_fee' && $isFullPayment) {
                     $registrationDiscountAmount += $type === 'percentage'
                         ? ($registrationFee * ($value / 100))
                         : $value;
-                } else {
+                } elseif ($isFullPayment) {
                     if ($type === 'percentage') {
                         $normalPercentage += $value;
                     } elseif ($type === 'amount') {
@@ -447,7 +461,7 @@ public function update(Request $request, $id)
 
         $normalDiscountTotal = (($totalFeeForDiscount * $normalPercentage) / 100) + $normalFixed;
         $registrationDiscountExcess = max(0, $registrationDiscountAmount - $registrationFee);
-        $existingRemaining = $studentPlan && $studentPlan->exists
+        $existingRemaining = $isFullPayment && $studentPlan && $studentPlan->exists
             ? (float) ($studentPlan->remaining_registration_discount ?? 0)
             : 0.0;
         $remainingRegistrationDiscount = $existingRemaining > 0
@@ -459,6 +473,27 @@ public function update(Request $request, $id)
             'registration_discount_excess' => round($registrationDiscountExcess, 2),
             'remaining_registration_discount' => $remainingRegistrationDiscount,
         ];
+    }
+
+    private function getFullPaymentRows(PaymentPlan $templatePlan, float $totalAmount): array
+    {
+        $templateRows = is_array($templatePlan->installments)
+            ? $templatePlan->installments
+            : (json_decode($templatePlan->installments ?? '[]', true) ?: []);
+
+        $dueDate = $templateRows[0]['due_date'] ?? null;
+        if (!$dueDate) {
+            $dueDate = $templatePlan->intake && $templatePlan->intake->start_date
+                ? date('Y-m-d', strtotime($templatePlan->intake->start_date))
+                : now()->addDays(7)->toDateString();
+        }
+
+        return [[
+            'installment_number' => 1,
+            'due_date' => $dueDate,
+            'base_amount' => round($totalAmount, 2),
+            'status' => 'pending',
+        ]];
     }
 
     private function allocateSltLoanByStartInstallment(array $rows, array $discountedBases, float $loanAmount, ?int $startInstallment): array

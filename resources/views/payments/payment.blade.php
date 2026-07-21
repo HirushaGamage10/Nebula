@@ -2711,6 +2711,8 @@ function calculateAndDisplayInstallments() {
 function calculateFinalAmount() {
     const totalAmount = getDiscountBaseAmount();
     const discountSelects = document.querySelectorAll('.discount-select');
+    const planType = document.getElementById('payment-plan-type')?.value;
+    const isFullPaymentPlan = planType === 'full';
 
     const sltLoanDropdown = document.getElementById('slt-loan-applied');
     const sltLoanApplied = sltLoanDropdown ? sltLoanDropdown.value : 'no';
@@ -2727,19 +2729,21 @@ function calculateFinalAmount() {
     let breakdownSteps = [`<strong>Base Total (Course Fee + Registration Fee):</strong> LKR ${totalAmount.toLocaleString()}`];
 
     // ===== Normal discounts =====
-    discountSelects.forEach((select) => {
-        if (select.value) {
-            const selectedOption = select.options[select.selectedIndex];
-            const discountType = selectedOption.dataset.type;
-            const discountValue = parseFloat(selectedOption.dataset.value);
+    if (isFullPaymentPlan) {
+        discountSelects.forEach((select) => {
+            if (select.value) {
+                const selectedOption = select.options[select.selectedIndex];
+                const discountType = selectedOption.dataset.type;
+                const discountValue = parseFloat(selectedOption.dataset.value);
 
-            if (discountType === 'percentage') {
-                totalDiscountPercentage += discountValue;
-            } else if (discountType === 'amount') {
-                totalDiscountAmount += discountValue;
+                if (discountType === 'percentage') {
+                    totalDiscountPercentage += discountValue;
+                } else if (discountType === 'amount') {
+                    totalDiscountAmount += discountValue;
+                }
             }
-        }
-    });
+        });
+    }
 
     if (totalDiscountPercentage > 0) {
         const pctReduction = finalAmount * totalDiscountPercentage / 100;
@@ -2754,7 +2758,7 @@ function calculateFinalAmount() {
 
     // ===== Registration Fee Discount =====
     const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
-    if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value) {
+    if (isFullPaymentPlan && registrationFeeDiscountSelect && registrationFeeDiscountSelect.value) {
         const selectedOption = registrationFeeDiscountSelect.options[registrationFeeDiscountSelect.selectedIndex];
         const discountType = selectedOption.dataset.type;
         const discountValue = parseFloat(selectedOption.dataset.value || 0);
@@ -2801,8 +2805,52 @@ function calculateFinalAmount() {
     }
 }
 
+function toggleFullPaymentDiscountFields() {
+    const planType = document.getElementById('payment-plan-type')?.value;
+    const isFullPaymentPlan = planType === 'full';
+    const discountsContainer = document.getElementById('discounts-container');
+    const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
+    const addDiscountBtn = document.getElementById('add-discount-btn');
+
+    if (discountsContainer) {
+        const discountItems = discountsContainer.querySelectorAll('.discount-item');
+        discountItems.forEach((item, index) => {
+            const select = item.querySelector('.discount-select');
+            const removeBtn = item.querySelector('.remove-discount-btn');
+
+            if (!isFullPaymentPlan && index > 0) {
+                item.remove();
+                return;
+            }
+
+            if (select) {
+                if (!isFullPaymentPlan) {
+                    select.value = '';
+                }
+                select.disabled = !isFullPaymentPlan;
+            }
+
+            if (removeBtn) {
+                removeBtn.disabled = !isFullPaymentPlan;
+            }
+        });
+    }
+
+    if (registrationFeeDiscountSelect) {
+        if (!isFullPaymentPlan) {
+            registrationFeeDiscountSelect.value = '';
+        }
+        registrationFeeDiscountSelect.disabled = !isFullPaymentPlan;
+    }
+
+    if (addDiscountBtn) {
+        addDiscountBtn.disabled = !isFullPaymentPlan;
+    }
+}
+
 // 🔗 Bind events once only
 document.addEventListener('DOMContentLoaded', () => {
+    toggleFullPaymentDiscountFields();
     // Registration Fee Discount
     const regFeeDiscount = document.getElementById('registration-fee-discount');
     if (regFeeDiscount) {
@@ -2991,21 +3039,23 @@ function createPaymentPlan() {
 
       // collect discounts
     const selectedDiscounts = [];
-    discountSelects.forEach((select) => {
-        if (select.value) {
-            const opt = select.options[select.selectedIndex];
-            selectedDiscounts.push({
-                discount_id: parseInt(select.value, 10),
-                discount_type: opt.dataset.type,      // "percentage" | "amount"
-                discount_value: parseFloat(opt.dataset.value || '0')
-            });
-        }
-    });
+    if (planType === 'full') {
+        discountSelects.forEach((select) => {
+            if (select.value) {
+                const opt = select.options[select.selectedIndex];
+                selectedDiscounts.push({
+                    discount_id: parseInt(select.value, 10),
+                    discount_type: opt.dataset.type,
+                    discount_value: parseFloat(opt.dataset.value || '0')
+                });
+            }
+        });
+    }
 
     // collect registration fee discount
     const registrationFeeDiscountSelect = document.getElementById('registration-fee-discount');
     let registrationFeeDiscount = null;
-    if (registrationFeeDiscountSelect && registrationFeeDiscountSelect.value) {
+    if (planType === 'full' && registrationFeeDiscountSelect && registrationFeeDiscountSelect.value) {
         const opt = registrationFeeDiscountSelect.options[registrationFeeDiscountSelect.selectedIndex];
         registrationFeeDiscount = {
             discount_id: parseInt(registrationFeeDiscountSelect.value, 10),
@@ -4465,6 +4515,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Recalculate installments when payment plan type changes
         if (e.target.id === 'payment-plan-type') {
+            toggleFullPaymentDiscountFields();
+            calculateFinalAmount();
             showInstallmentPreview();
         }
 
