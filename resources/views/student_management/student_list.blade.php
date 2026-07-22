@@ -246,8 +246,14 @@ document.addEventListener('DOMContentLoaded', () => {
       loadSpecializations(courseId);
   });
 
-  intakeSelect.addEventListener('change', fetchStudents);
-      specializationSelect.addEventListener('change', fetchStudents);
+  intakeSelect.addEventListener('change', () => {
+    if (specializationRow.style.display === 'none' || specializationSelect.value) {
+      fetchStudents();
+    } else {
+      section.style.display = 'none';
+    }
+  });
+  specializationSelect.addEventListener('change', fetchStudents);
 
   function fetchStudents(){
     const location = locationSelect.value;
@@ -255,11 +261,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const intakeId = intakeSelect.value;
     const specialization = specializationSelect.value;
     if(!location || !courseId || !intakeId){ section.style.display='none'; return; }
-    if(specializationRow.style.display !== 'none' && !specialization){
-      showToast('Warning','Please select a specialization first.','bg-warning');
-      section.style.display='none';
-      return;
-    }
 
     showSpinner(true);
     fetch('/get-student-list-data', {

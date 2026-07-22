@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class SpecializationStudentScope
 {
@@ -27,23 +28,29 @@ class SpecializationStudentScope
 
         $studentIds = collect();
 
-        $studentIds = $studentIds->merge(
-            self::baseQuery('course_registration', $courseId, $intakeId, $location)
-                ->where('specialization', $specialization)
-                ->pluck('student_id')
-        );
+        if (Schema::hasColumn('course_registration', 'specialization')) {
+            $studentIds = $studentIds->merge(
+                self::baseQuery('course_registration', $courseId, $intakeId, $location)
+                    ->where('specialization', $specialization)
+                    ->pluck('student_id')
+            );
+        }
 
-        $studentIds = $studentIds->merge(
-            self::baseQuery('semester_registrations', $courseId, $intakeId, $location)
-                ->where('specialization', $specialization)
-                ->pluck('student_id')
-        );
+        if (Schema::hasColumn('semester_registrations', 'specialization')) {
+            $studentIds = $studentIds->merge(
+                self::baseQuery('semester_registrations', $courseId, $intakeId, $location)
+                    ->where('specialization', $specialization)
+                    ->pluck('student_id')
+            );
+        }
 
-        $studentIds = $studentIds->merge(
-            self::baseQuery('module_management', $courseId, $intakeId, $location)
-                ->where('specialization', $specialization)
-                ->pluck('student_id')
-        );
+        if (Schema::hasColumn('module_management', 'specialization')) {
+            $studentIds = $studentIds->merge(
+                self::baseQuery('module_management', $courseId, $intakeId, $location)
+                    ->where('specialization', $specialization)
+                    ->pluck('student_id')
+            );
+        }
 
         return $studentIds
             ->filter(fn ($studentId) => $studentId !== null && $studentId !== '')

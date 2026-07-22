@@ -92,12 +92,7 @@ class StudentListController extends Controller
         $course = Course::find($course_id);
         $hasSpecializationColumn = $this->courseRegistrationHasSpecializationColumn();
 
-        if ($this->courseHasSpecializations($course) && !$specialization) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Please select a specialization for this course.'
-            ], 422);
-        }
+
 
         $query = DB::table('course_registration as cr')
             ->join('students as s', 's.student_id', '=', 'cr.student_id')
@@ -154,12 +149,7 @@ class StudentListController extends Controller
         $course = Course::find($course_id);
         $hasSpecializationColumn = $this->courseRegistrationHasSpecializationColumn();
 
-        if ($this->courseHasSpecializations($course) && !$specialization) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Please select a specialization for this course.'
-            ], 422);
-        }
+
 
         $query = DB::table('course_registration as cr')
             ->join('students as s', 's.student_id', '=', 'cr.student_id')
@@ -233,12 +223,7 @@ class StudentListController extends Controller
         $course = Course::find($course_id);
         $hasSpecializationColumn = $this->courseRegistrationHasSpecializationColumn();
 
-        if ($this->courseHasSpecializations($course) && !$specialization) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Please select a specialization for this course.'
-            ], 422);
-        }
+
 
         $query = DB::table('course_registration as cr')
             ->join('students as s', 's.student_id', '=', 'cr.student_id')
