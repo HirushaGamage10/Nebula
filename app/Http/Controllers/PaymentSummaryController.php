@@ -469,7 +469,11 @@ class PaymentSummaryController extends Controller
      */
     public function export(Request $request)
     {
-        $format = strtolower($request->input('format', 'pdf'));
+        $format = strtolower((string) $request->input('format', 'pdf'));
+        if ($format !== 'pdf') {
+            return response()->json(['error' => 'Only PDF export is supported'], 400);
+        }
+
         $range = $request->input('range', '1y');
         $startDate = $this->getDateFromRange($range);
 
@@ -478,15 +482,7 @@ class PaymentSummaryController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        if ($format === 'pdf') {
-            return $this->exportPDF($payments);
-        }
-
-        if ($format === 'csv') {
-            return $this->exportCSV($payments);
-        }
-
-        return response()->json(['error' => 'Format not supported'], 400);
+        return $this->exportPDF($payments);
     }
 
     private function buildExportPaymentsQuery(Request $request, Carbon $startDate)
@@ -1128,45 +1124,6 @@ class PaymentSummaryController extends Controller
         $case .= "        WHEN {$typeExpr} = 'registration_fee' THEN 'Registration Fee'\n";
         $case .= "        ELSE {$typeExpr}\n";
         $case .= "    END\nEND as type";
-
-        return $case;
-    }
-
-    /**
-     * Helper: Sum a column only if it exists in the payments table
-     */
-    private function sumIfColumnExists($query, string $column)
-    {
-        $table = $this->getPaymentDetailsTable();
-
-        if (!Schema::hasColumn($table, $column)) {
-            return 0;
-        }
-
-        return (clone $query)->sum($column);
-    }
-
-    private function getPaymentDetailsTable(): string
-    {
-        return (new PaymentDetail())->getTable();
-    }
-
-    private function hasPaymentDetailColumn(string $column): bool
-    {
-        return Schema::hasColumn($this->getPaymentDetailsTable(), $column);
-    }
-
-    private function getDashboardDateSqlExpression(string $table): string
-    {
-        $dateColumns = [];
-
-        if ($this->hasPaymentDetailColumn('payment_effective_date')) {
-            $dateColumns[] = "{$table}.payment_effective_date";
-        }
-
-        if ($this->hasPaymentDetailColumn('payment_date')) {
-            $dateColumns[] = "{$table}.payment_date";
-        }
 
         if ($this->hasPaymentDetailColumn('due_date')) {
             $dateColumns[] = "{$table}.due_date";
