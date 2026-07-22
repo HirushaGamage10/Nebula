@@ -20,6 +20,10 @@ class SltLoanReceivableRecord extends Model
         'apply_from_installment',
         'monthly_receivable_amount',
         'payment_effective_date',
+        'payment_method',
+        'receipt_no',
+        'status',
+        'remarks',
     ];
 
     protected $casts = [

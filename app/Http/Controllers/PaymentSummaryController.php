@@ -1242,6 +1242,13 @@ class PaymentSummaryController extends Controller
                 $recordsFromReceivables = SltLoanReceivableRecord::with(['studentPaymentPlan.student', 'studentPaymentPlan.course'])
                     ->whereDate('payment_effective_date', '>=', $startOfMonth->toDateString())
                     ->whereDate('payment_effective_date', '<=', $endOfMonth->toDateString())
+                    ->when(
+                        Schema::hasColumn('slt_loan_receivable_records', 'status'),
+                        fn ($query) => $query->where(function ($statusQuery) {
+                            $statusQuery->whereNull('status')
+                                ->orWhereRaw('LOWER(status) != ?', ['paid']);
+                        })
+                    )
                     ->orderBy('payment_effective_date')
                     ->get()
                     ->map(function ($record) {
@@ -1257,6 +1264,8 @@ class PaymentSummaryController extends Controller
                             ->first();
 
                         return [
+                            'record_id' => $record->id,
+                            'loan_installment_number' => (int) ($record->loan_installment_number ?? 0),
                             'student_name' => optional($student)->full_name ?? 'N/A',
                             'student_id_value' => optional($student)->id_value ?? null,
                             'course_name' => optional($course)->course_name ?? 'N/A',
@@ -1298,11 +1307,18 @@ class PaymentSummaryController extends Controller
                     ->first();
 
                 $installmentAmount = 0;
+                $loanInstallmentCount = 0;
                 if ($plan->slt_loan_amount && $plan->slt_loan_years) {
-                    $installmentAmount = round($plan->slt_loan_amount / ($plan->slt_loan_years * 12), 2);
+                    $loanInstallmentCount = (int) $plan->slt_loan_years * 12;
+                    $installmentAmount = round($plan->slt_loan_amount / $loanInstallmentCount, 2);
                 }
 
+                $existingInstallmentCount = SltLoanReceivableRecord::where('student_payment_plan_id', $plan->id)->count();
+                $loanInstallmentNumber = min($existingInstallmentCount + 1, max($loanInstallmentCount, 1));
+
                 return [
+                    'record_id' => null,
+                    'loan_installment_number' => $loanInstallmentNumber,
                     'student_name' => optional($student)->full_name ?? 'N/A',
                     'student_id_value' => optional($student)->id_value ?? null,
                     'course_name' => optional($course)->course_name ?? 'N/A',

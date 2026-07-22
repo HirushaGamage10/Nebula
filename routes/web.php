@@ -782,6 +782,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::post('/payment/save-record', [PaymentController::class, 'savePaymentRecord'])->name('payment.save.record');
         Route::post('/payment/get-records', [PaymentController::class, 'getPaymentRecords'])->name('payment.get.records');
         Route::post('/payment/update-record', [PaymentController::class, 'updatePaymentRecord'])->name('payment.update.record');
+        Route::post('/payment/slt-loan/get-records', [PaymentController::class, 'getSltLoanRecords'])->name('payment.slt.get.records');
+        Route::post('/payment/slt-loan/update-record', [PaymentController::class, 'updateSltLoanRecord'])->name('payment.slt.update.record');
         Route::post('/payment/delete-record', [PaymentController::class, 'deletePaymentRecord'])->name('payment.delete.record');
         Route::post('/payment/get-summary', [PaymentController::class, 'getPaymentSummary'])->name('payment.get.summary');
         Route::post('/payment/export-summary', [PaymentController::class, 'exportPaymentSummary'])->name('payment.export.summary');

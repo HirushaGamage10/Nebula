@@ -317,11 +317,13 @@
                                     @if($record['student_id_value'] && $record['course_id'])
                                         <button
                                             type="button"
-                                            class="btn btn-sm btn-primary btn-open-update-records"
+                                            class="btn btn-sm btn-primary btn-open-slt-update-records"
                                             data-student-nic="{{ $record['student_id_value'] }}"
                                             data-course-id="{{ $record['course_id'] }}"
                                             data-student-name="{{ $record['student_name'] }}"
                                             data-course-name="{{ $record['course_name'] }}"
+                                            data-loan-installment="{{ $record['loan_installment_number'] ?? '' }}"
+                                            data-effective-date="{{ $record['effective_date'] ?? '' }}"
                                         >
                                             Update Records
                                         </button>
@@ -384,6 +386,55 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="button" class="btn btn-success" id="analyticsUpdatePaymentRecordsBtn">
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="analyticsSltLoanUpdateRecordsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title text-white"><i class="bi bi-bank me-2"></i>Update SLT Loan Recovery Records</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap gap-4 mb-3 p-3 bg-light rounded border">
+                    <div><strong>Student NIC:</strong> <span id="analyticsSltStudentNic">-</span></div>
+                    <div><strong>Student:</strong> <span id="analyticsSltStudentName">-</span></div>
+                    <div><strong>Course:</strong> <span id="analyticsSltCourseName">-</span></div>
+                    <div><strong>Total Loan Amount:</strong> <span id="analyticsSltLoanAmount" class="text-primary fw-bold">-</span></div>
+                    <div><strong>Monthly Receivable:</strong> <span id="analyticsSltMonthlyReceivable" class="text-success fw-bold">-</span></div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Type</th>
+                                <th>Inst.</th>
+                                <th class="text-end">Total Loan</th>
+                                <th class="text-end">Monthly Receivable</th>
+                                <th>Method</th>
+                                <th>Effective Date</th>
+                                <th>Receipt No</th>
+                                <th>Status</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analyticsSltPaymentRecordsTableBody">
+                            <tr>
+                                <td colspan="9" class="text-center text-muted">Load a student record to edit SLT loan recovery payments.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="analyticsUpdateSltPaymentRecordsBtn">
                     Save Changes
                 </button>
             </div>
@@ -455,6 +506,152 @@ document.addEventListener("DOMContentLoaded", () => {
     let analyticsCurrentStudentNic = null;
     let analyticsCurrentCourseId = null;
     let analyticsPaymentRecords = [];
+
+    let analyticsSltStudentNic = null;
+    let analyticsSltCourseId = null;
+    let analyticsSltInstallmentNumber = null;
+    let analyticsSltEffectiveDate = null;
+    let analyticsSltPaymentRecords = [];
+
+    function renderAnalyticsSltLoanRecords() {
+        const tbody = document.getElementById('analyticsSltPaymentRecordsTableBody');
+        if (!tbody) return;
+
+        if (!analyticsSltPaymentRecords.length) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No SLT loan recovery records found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = analyticsSltPaymentRecords.map((record, idx) => {
+            const totalLoan = Number(record.total_loan_amount ?? 0);
+            const monthlyReceivable = Number(record.monthly_receivable_amount ?? 0);
+            const status = String(record.status || 'pending').toLowerCase();
+            const method = String(record.payment_method || 'cash').toLowerCase();
+
+            return `
+                <tr>
+                    <td><span class="badge bg-info text-dark">SLT Loan Recovery</span></td>
+                    <td><strong>Inst. ${record.installment_number ?? '-'}</strong></td>
+                    <td class="text-end">LKR ${totalLoan.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td class="text-end fw-bold text-success">LKR ${monthlyReceivable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td>
+                        <select class="form-select form-select-sm" data-idx="${idx}" data-field="payment_method">
+                            <option value="cash" ${method === 'cash' ? 'selected' : ''}>Cash</option>
+                            <option value="cheque" ${method === 'cheque' ? 'selected' : ''}>Cheque</option>
+                            <option value="bank_transfer" ${method === 'bank_transfer' ? 'selected' : ''}>Bank Transfer</option>
+                            <option value="online" ${method === 'online' ? 'selected' : ''}>Online</option>
+                            <option value="card" ${method === 'card' ? 'selected' : ''}>Card</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="date" class="form-control form-control-sm" value="${record.payment_effective_date || ''}" data-idx="${idx}" data-field="payment_effective_date">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm" value="${record.receipt_no || ''}" data-idx="${idx}" data-field="receipt_no" placeholder="Receipt / Ref">
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm" data-idx="${idx}" data-field="status">
+                            <option value="pending" ${status === 'pending' ? 'selected' : ''}>pending</option>
+                            <option value="paid" ${status === 'paid' ? 'selected' : ''}>paid</option>
+                            <option value="failed" ${status === 'failed' ? 'selected' : ''}>failed</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm" value="${record.remarks || ''}" data-idx="${idx}" data-field="remarks" placeholder="Remarks">
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function loadAnalyticsSltLoanRecords(studentNic, courseId, installmentNumber = null, effectiveDate = null) {
+        const response = await fetch('/payment/slt-loan/get-records', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify({
+                student_nic: studentNic,
+                course_id: courseId,
+                installment_number: installmentNumber || null,
+                effective_date: effectiveDate || null,
+            }),
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to load SLT loan recovery records.');
+        }
+
+        analyticsSltPaymentRecords = Array.isArray(data.records) ? data.records : [];
+        if (data.total_loan_amount !== undefined) {
+            document.getElementById('analyticsSltLoanAmount').textContent = 'LKR ' + Number(data.total_loan_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        if (data.monthly_receivable !== undefined) {
+            document.getElementById('analyticsSltMonthlyReceivable').textContent = 'LKR ' + Number(data.monthly_receivable).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        renderAnalyticsSltLoanRecords();
+    }
+
+    async function saveAnalyticsSltLoanUpdates() {
+        const fields = document.querySelectorAll('#analyticsSltPaymentRecordsTableBody [data-field]');
+        if (!fields.length) {
+            showAnalyticsToast('No editable fields found.', 'error');
+            return;
+        }
+
+        const updates = [];
+
+        fields.forEach((fieldEl) => {
+            const idx = Number(fieldEl.dataset.idx);
+            const key = fieldEl.dataset.field;
+            const value = fieldEl.value;
+            const record = analyticsSltPaymentRecords[idx];
+
+            if (!record?.student_payment_plan_id || !key) {
+                return;
+            }
+
+            if (!updates[idx]) {
+                updates[idx] = {
+                    student_payment_plan_id: record.student_payment_plan_id,
+                    installment_number: record.installment_number,
+                };
+            }
+
+            updates[idx][key] = value;
+        });
+
+        const payload = updates.filter(Boolean);
+        if (!payload.length) {
+            showAnalyticsToast('No valid updates to submit.', 'error');
+            return;
+        }
+
+        const response = await fetch('/payment/slt-loan/update-record', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify({ updates: payload }),
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to update SLT loan recovery records.');
+        }
+
+        showAnalyticsToast(data.message || 'SLT loan recovery records updated successfully!', 'success');
+        await loadAnalyticsSltLoanRecords(
+            analyticsSltStudentNic,
+            analyticsSltCourseId,
+            analyticsSltInstallmentNumber,
+            analyticsSltEffectiveDate
+        );
+    }
 
     function showAnalyticsToast(message, type = 'success') {
         if (window.global_utils?.showToast) {
@@ -697,6 +894,39 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     document.addEventListener('click', async (event) => {
+        const openSltBtn = event.target.closest('.btn-open-slt-update-records');
+        if (openSltBtn) {
+            analyticsSltStudentNic = openSltBtn.dataset.studentNic || null;
+            analyticsSltCourseId = openSltBtn.dataset.courseId || null;
+            analyticsSltInstallmentNumber = openSltBtn.dataset.loanInstallment || null;
+            analyticsSltEffectiveDate = openSltBtn.dataset.effectiveDate || null;
+
+            document.getElementById('analyticsSltStudentNic').textContent = analyticsSltStudentNic || '-';
+            document.getElementById('analyticsSltStudentName').textContent = openSltBtn.dataset.studentName || '-';
+            document.getElementById('analyticsSltCourseName').textContent = openSltBtn.dataset.courseName || '-';
+            document.getElementById('analyticsSltLoanAmount').textContent = '-';
+            document.getElementById('analyticsSltMonthlyReceivable').textContent = '-';
+
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('analyticsSltLoanUpdateRecordsModal'));
+            modal.show();
+
+            document.getElementById('analyticsSltPaymentRecordsTableBody').innerHTML = '<tr><td colspan="9" class="text-center text-muted">Loading SLT loan recovery records...</td></tr>';
+
+            try {
+                await loadAnalyticsSltLoanRecords(
+                    analyticsSltStudentNic,
+                    analyticsSltCourseId,
+                    analyticsSltInstallmentNumber,
+                    analyticsSltEffectiveDate
+                );
+            } catch (error) {
+                document.getElementById('analyticsSltPaymentRecordsTableBody').innerHTML = `<tr><td colspan="9" class="text-center text-danger">${error.message}</td></tr>`;
+                showAnalyticsToast(error.message, 'error');
+            }
+
+            return;
+        }
+
         const openBtn = event.target.closest('.btn-open-update-records');
         if (openBtn) {
             analyticsCurrentStudentNic = openBtn.dataset.studentNic || null;
@@ -726,6 +956,25 @@ document.addEventListener("DOMContentLoaded", () => {
             openAnalyticsPayModal(payBtn.dataset.paymentId, payBtn.dataset.remaining);
         }
     });
+
+    const saveSltUpdatesButton = document.getElementById('analyticsUpdateSltPaymentRecordsBtn');
+    if (saveSltUpdatesButton) {
+        saveSltUpdatesButton.addEventListener('click', async () => {
+            if (!analyticsSltStudentNic || !analyticsSltCourseId) {
+                showAnalyticsToast('Missing student or course context.', 'error');
+                return;
+            }
+
+            saveSltUpdatesButton.disabled = true;
+            try {
+                await saveAnalyticsSltLoanUpdates();
+            } catch (error) {
+                showAnalyticsToast(error.message, 'error');
+            } finally {
+                saveSltUpdatesButton.disabled = false;
+            }
+        });
+    }
 
     const saveUpdatesButton = document.getElementById('analyticsUpdatePaymentRecordsBtn');
     if (saveUpdatesButton) {

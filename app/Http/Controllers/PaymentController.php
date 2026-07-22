@@ -9,6 +9,8 @@ use App\Models\PaymentDetail;
 use App\Models\PaymentPlan;
 use App\Models\CourseRegistration;
 use App\Models\CustomPayment;
+use App\Models\StudentPaymentPlan;
+use App\Models\SltLoanReceivableRecord;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Database\QueryException;
@@ -2168,6 +2170,196 @@ public function updatePaymentRecord(Request $request)
         ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 }
+
+    /**
+     * Get SLT Loan Recovery / Receivable records for a student.
+     */
+    public function getSltLoanRecords(Request $request)
+    {
+        try {
+            $request->validate([
+                'student_nic' => 'required|string',
+                'course_id'   => 'required|integer|exists:courses,course_id',
+                'installment_number' => 'nullable|integer|min:1',
+                'effective_date' => 'nullable|date',
+            ]);
+
+            $student = Student::where('id_value', $request->student_nic)
+                ->orWhere('student_id', $request->student_nic)
+                ->first();
+
+            if (!$student) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Student not found with the provided NIC.'
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            $plan = StudentPaymentPlan::with('course')
+                ->where('student_id', $student->student_id)
+                ->where('course_id', $request->course_id)
+                ->where('status', '!=', 'archived')
+                ->orderByDesc('id')
+                ->first();
+
+            if (!$plan || strtolower($plan->slt_loan_applied ?? 'no') !== 'yes') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active SLT loan plan found for this student.'
+                ], Response::HTTP_NOT_FOUND);
+            }
+
+            $loanAmount = (float) ($plan->slt_loan_amount ?? 0);
+            $years = (int) ($plan->slt_loan_years ?? 0);
+            $installmentCount = $years > 0 ? $years * 12 : 0;
+            $monthlyReceivable = $installmentCount > 0 ? round($loanAmount / $installmentCount, 2) : 0;
+
+            $existingRecords = SltLoanReceivableRecord::where('student_payment_plan_id', $plan->id)
+                ->orderBy('loan_installment_number')
+                ->get()
+                ->keyBy('loan_installment_number');
+
+            $installmentFilter = $request->filled('installment_number')
+                ? (int) $request->installment_number
+                : null;
+
+            if (!$installmentFilter && $request->filled('effective_date')) {
+                $matchingRecord = $existingRecords->first(function ($record) use ($request) {
+                    return optional($record->payment_effective_date)->format('Y-m-d') === $request->effective_date;
+                });
+
+                if ($matchingRecord) {
+                    $installmentFilter = (int) $matchingRecord->loan_installment_number;
+                } elseif ($installmentCount > 0) {
+                    $installmentFilter = min($existingRecords->count() + 1, $installmentCount);
+                }
+            }
+
+            if ($installmentCount <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'SLT loan installment schedule is not configured for this student.'
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            $startInstallment = $installmentFilter ?: 1;
+            $endInstallment = $installmentFilter ?: $installmentCount;
+
+            $records = [];
+            for ($i = $startInstallment; $i <= $endInstallment; $i++) {
+                $record = $existingRecords->get($i);
+                $isPaid = $record && strtolower($record->status ?? '') === 'paid';
+                $records[] = [
+                    'id'                        => $record?->id,
+                    'payment_id'                => $record?->id,
+                    'student_payment_plan_id'   => $plan->id,
+                    'student_id'                => $student->student_id,
+                    'course_id'                 => $request->course_id,
+                    'payment_type'              => 'SLT Loan Recovery',
+                    'installment_number'        => $i,
+                    'total_loan_amount'         => $loanAmount,
+                    'monthly_receivable_amount' => $monthlyReceivable,
+                    'amount'                    => $monthlyReceivable,
+                    'total_fee'                 => $monthlyReceivable,
+                    'remaining_amount'          => $isPaid ? 0.00 : $monthlyReceivable,
+                    'payment_effective_date'    => $record?->payment_effective_date?->format('Y-m-d') ?? optional($plan->slt_receivable_effective_date)->format('Y-m-d') ?? date('Y-m-d'),
+                    'payment_date'              => $record?->payment_effective_date?->format('Y-m-d') ?? optional($plan->slt_receivable_effective_date)->format('Y-m-d') ?? date('Y-m-d'),
+                    'payment_method'            => $record?->payment_method ?? 'cash',
+                    'receipt_no'                => $record?->receipt_no ?? '',
+                    'status'                    => $record?->status ?? 'pending',
+                    'remarks'                   => $record?->remarks ?? '',
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'student_name' => $student->full_name,
+                'student_nic' => $student->id_value,
+                'course_name' => optional($plan->course)->course_name ?? '',
+                'total_loan_amount' => $loanAmount,
+                'monthly_receivable' => $monthlyReceivable,
+                'records' => $records
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred: ' . $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Update SLT Loan Recovery / Receivable record(s).
+     */
+    public function updateSltLoanRecord(Request $request)
+    {
+        try {
+            $updates = $request->has('updates')
+                ? $request->input('updates', [])
+                : [$request->all()];
+
+            if (!is_array($updates) || empty($updates)) {
+                return response()->json(['success' => false, 'message' => 'No update payload provided.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+
+            $updatedCount = 0;
+            foreach ($updates as $payload) {
+                if (!is_array($payload)) continue;
+
+                $planId = $payload['student_payment_plan_id'] ?? null;
+                $installmentNo = $payload['installment_number'] ?? null;
+
+                if (!$planId || !$installmentNo) continue;
+
+                $plan = StudentPaymentPlan::find($planId);
+                if (!$plan) continue;
+
+                $loanAmount = (float) ($plan->slt_loan_amount ?? 0);
+                $years = (int) ($plan->slt_loan_years ?? 0);
+                $installmentCount = $years > 0 ? $years * 12 : 0;
+                $monthlyReceivable = $installmentCount > 0 ? round($loanAmount / $installmentCount, 2) : 0;
+
+                $effectiveDate = $payload['payment_effective_date'] ?? $payload['payment_date'] ?? date('Y-m-d');
+                $method = $payload['payment_method'] ?? 'cash';
+                $receiptNo = $payload['receipt_no'] ?? null;
+                $status = $payload['status'] ?? 'pending';
+                $remarks = $payload['remarks'] ?? null;
+
+                SltLoanReceivableRecord::updateOrCreate(
+                    [
+                        'student_payment_plan_id' => $planId,
+                        'loan_installment_number' => $installmentNo,
+                    ],
+                    [
+                        'student_id'                => $plan->student_id,
+                        'course_id'                 => $plan->course_id,
+                        'total_loan_amount'         => $loanAmount,
+                        'loan_taken_years'          => $years,
+                        'loan_installment_count'    => $installmentCount,
+                        'apply_from_installment'    => $plan->slt_loan_start_installment ?? 1,
+                        'monthly_receivable_amount' => $monthlyReceivable,
+                        'payment_effective_date'    => $effectiveDate,
+                        'payment_method'            => $method,
+                        'receipt_no'                => $receiptNo,
+                        'status'                    => $status,
+                        'remarks'                   => $remarks,
+                    ]
+                );
+                $updatedCount++;
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $updatedCount > 0 ? 'SLT loan recovery record(s) updated successfully.' : 'No changes saved.',
+                'updated_count' => $updatedCount
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred: ' . $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
 
 
     /**
