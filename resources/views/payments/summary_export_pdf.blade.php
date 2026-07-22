@@ -44,7 +44,13 @@
 </head>
 <body>
     <h2>Payment Dashboard Export</h2>
-    <div class="meta">Generated at: {{ $generatedAt->format('Y-m-d H:i:s') }}</div>
+    <div class="meta">
+        Generated at: {{ $generatedAt->format('Y-m-d H:i:s') }}
+        · {{ number_format($rows->count()) }} of {{ number_format($totalRecords) }} matching payment{{ $totalRecords === 1 ? '' : 's' }} included.
+        @if($isTruncated)
+            Apply a narrower dashboard date range to export the remaining records.
+        @endif
+    </div>
 
     <table>
         <thead>

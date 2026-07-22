@@ -15,10 +15,10 @@
         </a>
     </div>
 
-    <div class="row mb-3">
-        <div class="col-auto">
-            <label class="form-label small text-muted">Month</label>
-            <input type="month" id="analyticsMonthFilter" class="form-control" value="{{ request()->input('month', \Carbon\Carbon::now()->format('Y-m')) }}">
+    <div class="row mb-4">
+        <div class="col-sm-4 col-md-3">
+            <label class="form-label fw-semibold text-dark" for="analyticsMonthFilter">Analytics month</label>
+            <input type="month" id="analyticsMonthFilter" class="form-control analytics-month-filter" value="{{ $startOfMonth->format('Y-m') }}" aria-label="Analytics month">
         </div>
     </div>
 
@@ -117,9 +117,9 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
                         <div>
-                            <div class="text-muted small mb-1">Current month total</div>
+                            <div class="text-muted small mb-1">Selected month total</div>
                             <div class="display-6 fw-bold text-primary mb-1">LKR {{ number_format($newRegistrationsAmount ?? 0, 2) }}</div>
-                            <div class="text-muted small">{{ number_format($newRegistrationsCount ?? 0) }} new registrations this month</div>
+                            <div class="text-muted small">{{ number_format($newRegistrationsCount ?? 0) }} new registrations in {{ $startOfMonth->format('F Y') }}</div>
                         </div>
                         <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-3">
                             <i class="bi bi-journal-plus fs-3"></i>
@@ -133,7 +133,7 @@
                             <option value="{{ $course->course_id }}" {{ (isset($selectedNewRegistrationCourseId) && $selectedNewRegistrationCourseId == $course->course_id) ? 'selected' : '' }}>{{ $course->course_name }}</option>
                         @endforeach
                     </select>
-                    <small class="text-muted d-block mt-2">Select one course to recalculate the current month registration fee total.</small>
+                    <small class="text-muted d-block mt-2">Select one course to recalculate the selected month registration fee total.</small>
                 </div>
             </div>
         </div>
@@ -150,7 +150,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
                         <div>
-                            <div class="text-muted small mb-1">Current month collected</div>
+                            <div class="text-muted small mb-1">Selected month collected</div>
                             <div class="display-6 fw-bold text-success mb-1">LKR {{ number_format($ongoingCoursesAmount ?? 0, 2) }}</div>
                             <div class="text-muted small">{{ number_format($ongoingCoursesCount ?? 0) }} ongoing registrations</div>
                         </div>
@@ -166,7 +166,7 @@
                             <option value="{{ $course->course_id }}" {{ (isset($selectedOngoingCourseId) && $selectedOngoingCourseId == $course->course_id) ? 'selected' : '' }}>{{ $course->course_name }}</option>
                         @endforeach
                     </select>
-                    <small class="text-muted d-block mt-2">Select one course to recalculate the current month collected payment total.</small>
+                    <small class="text-muted d-block mt-2">Select one course to recalculate the selected month collected payment total.</small>
                 </div>
             </div>
         </div>
@@ -442,6 +442,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
 .table-hover tbody tr:hover {
     background-color: rgba(102, 126, 234, 0.05);
+}
+
+.analytics-month-filter {
+    background-color: #fff !important;
+    border: 1px solid #0d6efd;
+    color: #212529 !important;
+    min-height: 44px;
+}
+
+.analytics-month-filter::-webkit-calendar-picker-indicator {
+    opacity: 1;
+    cursor: pointer;
 }
 </style>
 

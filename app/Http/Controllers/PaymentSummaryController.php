@@ -241,8 +241,6 @@ class PaymentSummaryController extends Controller
      */
     public function analytics(Request $request)
     {
-        $range = $request->input('range', '1y');
-        $startDate = $this->getDateFromRange($range);
         $selectedLocation = $request->input('location') ?? auth()->user()->user_location ?? null;
 
         // Support an explicit month filter (format: YYYY-MM)
@@ -260,7 +258,10 @@ class PaymentSummaryController extends Controller
             $endOfMonth = Carbon::now()->endOfMonth();
         }
 
-        $query = PaymentDetail::query()->where('created_at', '>=', $startDate);
+        // Every analytics KPI on this page is period based.  Keep one shared
+        // month query so the cards, chart, and course summary cannot drift.
+        $query = PaymentDetail::query()
+            ->whereBetween('created_at', [$startOfMonth, $endOfMonth]);
 
         // Revenue Analytics
         $revenueByDay = (clone $query)
@@ -368,8 +369,9 @@ class PaymentSummaryController extends Controller
                 DB::raw('COUNT(*) as total_registrations'),
                 DB::raw("SUM(CASE WHEN status = 'Registered' THEN 1 ELSE 0 END) as ongoing_courses"),
                 DB::raw("SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending_registrations"),
-                DB::raw("SUM(CASE WHEN registration_date >= '{$startOfMonth->toDateString()}' THEN 1 ELSE 0 END) as new_registrations")
+                DB::raw("SUM(CASE WHEN registration_date BETWEEN '{$startOfMonth->toDateString()}' AND '{$endOfMonth->toDateString()}' THEN 1 ELSE 0 END) as new_registrations")
             )
+            ->whereDate('registration_date', '<=', $endOfMonth->toDateString())
             ->groupBy('course_id')
             ->get()
             ->keyBy('course_id');
@@ -381,6 +383,7 @@ class PaymentSummaryController extends Controller
                 DB::raw("SUM(CASE WHEN payment_details.status = 'pending' THEN payment_details.amount ELSE 0 END) as pending_amount"),
                 DB::raw('COUNT(payment_details.id) as payment_count')
             )
+            ->whereBetween('payment_details.created_at', [$startOfMonth, $endOfMonth])
             ->groupBy('course_registration.course_id')
             ->get()
             ->keyBy('course_id');
@@ -440,7 +443,11 @@ class PaymentSummaryController extends Controller
             ->where('status', 'Registered')
             ->when($selectedOngoingCourseId, function ($query) use ($selectedOngoingCourseId) {
                 $query->where('course_id', $selectedOngoingCourseId);
-            });
+            })
+            ->whereIn('id', PaymentDetail::query()
+                ->select('course_registration_id')
+                ->where('status', 'paid')
+                ->whereBetween('created_at', [$startOfMonth, $endOfMonth]));
 
         $ongoingCoursesCount = (clone $ongoingCoursesQuery)->count();
 
@@ -460,7 +467,7 @@ class PaymentSummaryController extends Controller
             'totalSltLoanRecoveries', 'totalSltRecoveryAmount',
             'courseWiseSummary', 'newRegistrationsCount', 'newRegistrationsAmount',
             'ongoingCoursesCount', 'ongoingCoursesAmount', 'courses',
-            'selectedNewRegistrationCourseId', 'selectedOngoingCourseId'
+            'selectedNewRegistrationCourseId', 'selectedOngoingCourseId', 'startOfMonth'
         ));
     }
 
@@ -477,12 +484,20 @@ class PaymentSummaryController extends Controller
         $range = $request->input('range', '1y');
         $startDate = $this->getDateFromRange($range);
 
-        $payments = $this->buildExportPaymentsQuery($request, $startDate)
+        // DomPDF holds the complete document tree in memory.  Rendering every
+        // transaction in a long date range can exhaust PHP memory, so keep the
+        // report to a practical, readable size and state that in the PDF.
+        $maxExportRows = 250;
+        $exportQuery = $this->buildExportPaymentsQuery($request, $startDate);
+        $totalRecords = (clone $exportQuery)->count();
+
+        $payments = $exportQuery
             ->orderByDesc('payment_effective_date')
             ->orderByDesc('created_at')
+            ->limit($maxExportRows)
             ->get();
 
-        return $this->exportPDF($payments);
+        return $this->exportPDF($payments, $totalRecords);
     }
 
     private function buildExportPaymentsQuery(Request $request, Carbon $startDate)
@@ -551,7 +566,7 @@ class PaymentSummaryController extends Controller
         return $query;
     }
 
-    private function exportPDF($payments)
+    private function exportPDF($payments, int $totalRecords)
     {
         $rows = $payments->map(function ($payment) {
             return [
@@ -569,6 +584,8 @@ class PaymentSummaryController extends Controller
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payments.summary_export_pdf', [
             'rows' => $rows,
             'generatedAt' => Carbon::now(),
+            'totalRecords' => $totalRecords,
+            'isTruncated' => $totalRecords > $payments->count(),
         ])->setPaper('a4', 'landscape');
 
         return $pdf->download('payment_report_' . now()->format('Y-m-d_His') . '.pdf');
@@ -1125,11 +1142,51 @@ class PaymentSummaryController extends Controller
         $case .= "        ELSE {$typeExpr}\n";
         $case .= "    END\nEND as type";
 
-        if ($this->hasPaymentDetailColumn('due_date')) {
-            $dateColumns[] = "{$table}.due_date";
+        return $case;
+    }
+
+    /**
+     * Return the configured payment-details table name in one place.
+     */
+    private function getPaymentDetailsTable(): string
+    {
+        return (new PaymentDetail())->getTable();
+    }
+
+    /**
+     * Safely support installations whose payment_details schema differs.
+     */
+    private function hasPaymentDetailColumn(string $column): bool
+    {
+        return Schema::hasColumn($this->getPaymentDetailsTable(), $column);
+    }
+
+    /**
+     * Sum optional legacy columns without breaking dashboards on installations
+     * that do not yet have them.
+     */
+    private function sumIfColumnExists($query, string $column)
+    {
+        if (!$this->hasPaymentDetailColumn($column)) {
+            return 0;
         }
 
-        // Final fallback so old rows still participate in reports.
+        return (clone $query)->sum($column);
+    }
+
+    /**
+     * Use the best available payment date, with created_at as a safe fallback.
+     */
+    private function getDashboardDateSqlExpression(string $table): string
+    {
+        $dateColumns = [];
+
+        foreach (['payment_effective_date', 'payment_date', 'due_date'] as $column) {
+            if (Schema::hasColumn($table, $column)) {
+                $dateColumns[] = "{$table}.{$column}";
+            }
+        }
+
         $dateColumns[] = "{$table}.created_at";
 
         return 'COALESCE(' . implode(', ', $dateColumns) . ')';
@@ -1154,43 +1211,4 @@ class PaymentSummaryController extends Controller
         ]);
     }
 
-    /**
-     * Helper: Export to CSV
-     */
-    private function exportCSV($payments)
-    {
-        $filename = 'payment_report_' . date('Y-m-d') . '.csv';
-        
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ];
-
-        $callback = function() use ($payments) {
-            $file = fopen('php://output', 'w');
-            
-            fputcsv($file, [
-                'ID', 'Student ID', 'Type', 'Method', 'Amount', 'Status', 
-                'Late Fee', 'Discount', 'Date'
-            ]);
-
-            foreach ($payments as $payment) {
-                fputcsv($file, [
-                    $payment->id,
-                    $payment->student_id,
-                    $payment->installment_type ?? 'Misc',
-                    $payment->payment_method,
-                    $payment->total_fee,
-                    $payment->status,
-                    $payment->late_fee,
-                    $payment->registration_fee_discount_applied,
-                    $payment->created_at->format('Y-m-d'),
-                ]);
-            }
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
-    }
 }
