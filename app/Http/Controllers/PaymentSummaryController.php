@@ -282,70 +282,7 @@ class PaymentSummaryController extends Controller
         $currentMonthStart = $startOfMonth->toDateString();
         $currentMonthEnd = $endOfMonth->toDateString();
 
-        $pendingSltLoanRecoveries = null;
-        if (Schema::hasTable('slt_loan_receivable_records')) {
-            try {
-                $pendingSltLoanRecoveries = SltLoanReceivableRecord::with(['studentPaymentPlan.student', 'studentPaymentPlan.course'])
-                    ->whereBetween('payment_effective_date', [$startOfMonth, $endOfMonth])
-                    ->orderBy('payment_effective_date')
-                    ->get()
-                    ->map(function ($record) {
-                        $plan = $record->studentPaymentPlan;
-                        $student = optional($plan)->student;
-                        $course = optional($plan)->course;
-                        $registration = CourseRegistration::where('student_id', optional($plan)->student_id)
-                            ->where('course_id', optional($plan)->course_id)
-                            ->orderByDesc('id')
-                            ->first();
-
-                        return [
-                            'student_name' => optional($student)->full_name ?? 'N/A',
-                            'student_id_value' => optional($student)->id_value ?? null,
-                            'course_name' => optional($course)->course_name ?? 'N/A',
-                            'intake' => optional($registration?->intake)->batch ?? 'N/A',
-                            'loan_amount' => (float) ($plan->slt_loan_amount ?? 0),
-                            'installment_amount' => (float) ($record->monthly_receivable_amount ?? 0),
-                            'effective_date' => optional($record->payment_effective_date)->format('Y-m-d'),
-                            'course_id' => optional($plan)->course_id,
-                        ];
-                    });
-            } catch (\Throwable $e) {
-                \Log::warning("slt_loan_receivable_records table query failed, falling back to student_payment_plans: " . $e->getMessage());
-                $pendingSltLoanRecoveries = null;
-            }
-        }
-
-        if (is_null($pendingSltLoanRecoveries)) {
-            $pendingSltLoanRecoveries = StudentPaymentPlan::with(['student', 'course'])
-                ->where('slt_loan_applied', 'yes')
-                ->whereBetween('slt_receivable_effective_date', [$startOfMonth, $endOfMonth])
-                ->orderBy('slt_receivable_effective_date')
-                ->get()
-                ->map(function ($plan) {
-                    $student = optional($plan)->student;
-                    $course = optional($plan)->course;
-                    $registration = CourseRegistration::where('student_id', optional($plan)->student_id)
-                        ->where('course_id', optional($plan)->course_id)
-                        ->orderByDesc('id')
-                        ->first();
-
-                    $installmentAmount = 0;
-                    if ($plan->slt_loan_amount && $plan->slt_loan_years) {
-                        $installmentAmount = round($plan->slt_loan_amount / ($plan->slt_loan_years * 12), 2);
-                    }
-
-                    return [
-                        'student_name' => optional($student)->full_name ?? 'N/A',
-                        'student_id_value' => optional($student)->id_value ?? null,
-                        'course_name' => optional($course)->course_name ?? 'N/A',
-                        'intake' => optional($registration?->intake)->batch ?? 'N/A',
-                        'loan_amount' => (float) ($plan->slt_loan_amount ?? 0),
-                        'installment_amount' => $installmentAmount,
-                        'effective_date' => optional($plan->slt_receivable_effective_date)->format('Y-m-d'),
-                        'course_id' => optional($plan)->course_id,
-                    ];
-                });
-        }
+        $pendingSltLoanRecoveries = $this->fetchPendingSltLoanRecoveries($startOfMonth, $endOfMonth);
 
         $selectedNewRegistrationCourseId = $request->input('new_registration_course_id');
         $selectedOngoingCourseId = $request->input('ongoing_course_id');
@@ -407,22 +344,33 @@ class PaymentSummaryController extends Controller
             ];
         })->sortByDesc('paid_amount')->values();
 
-        $newRegistrationsCurrentMonthQuery = CourseRegistration::query()
+        $paymentTable = $this->getPaymentDetailsTable();
+        $paidDateExpr = $this->getPaidDateSqlExpression($paymentTable);
+
+        // This KPI must represent actual paid registration-fee transactions
+        // captured via Payment Management / Update Records, not eligibility
+        // registrations.
+        $newRegistrationsCurrentMonthQuery = PaymentDetail::query()
+            ->whereNotNull('course_registration_id')
+            ->where('status', 'paid')
             ->when($selectedNewRegistrationCourseId, function ($query) use ($selectedNewRegistrationCourseId) {
-                $query->where('course_id', $selectedNewRegistrationCourseId);
-            })
-            ->whereDate('registration_date', '>=', $startOfMonth->toDateString())
-            ->whereDate('registration_date', '<=', $endOfMonth->toDateString());
+                $query->whereHas('registration', function ($registrationQuery) use ($selectedNewRegistrationCourseId) {
+                    $registrationQuery->where('course_id', $selectedNewRegistrationCourseId);
+                });
+            });
 
-        $newRegistrationsCount = (clone $newRegistrationsCurrentMonthQuery)->count();
+        $this->applyRegistrationFeeTypeFilter($newRegistrationsCurrentMonthQuery, $paymentTable);
 
-        // Registration fees are stored on course registrations. Legacy payment
-        // rows frequently lack a registration_fee type, which made this KPI
-        // show zero even when registrations existed.
+        $newRegistrationsCurrentMonthQuery
+            ->whereRaw("DATE({$paidDateExpr}) >= ?", [$startOfMonth->toDateString()])
+            ->whereRaw("DATE({$paidDateExpr}) <= ?", [$endOfMonth->toDateString()]);
+
+        $newRegistrationsCount = (clone $newRegistrationsCurrentMonthQuery)
+            ->distinct()
+            ->count('course_registration_id');
+
         $newRegistrationsAmount = (float) (clone $newRegistrationsCurrentMonthQuery)
-            ->with('intake')
-            ->get()
-            ->sum(fn ($registration) => $this->getRegistrationFeeAmount($registration));
+            ->sum(DB::raw("COALESCE({$paymentTable}.total_fee, {$paymentTable}.amount, 0)"));
 
         $ongoingCoursesQuery = CourseRegistration::query()
             ->where('status', 'Registered')
@@ -473,23 +421,37 @@ class PaymentSummaryController extends Controller
         $courseId = $request->input('course_id');
 
         if ($metric === 'new_registrations') {
-            $records = CourseRegistration::with(['student', 'course', 'intake'])
-                ->when($courseId, fn ($query) => $query->where('course_id', $courseId))
-                ->whereDate('registration_date', '>=', $startOfMonth->toDateString())
-                ->whereDate('registration_date', '<=', $endOfMonth->toDateString())
-                ->orderBy('registration_date')
-                ->get();
-            $rows = $records->map(fn ($record) => [
-                'student_name' => optional($record->student)->full_name ?? 'N/A',
-                'nic' => optional($record->student)->id_value ?? 'N/A',
-                'course' => optional($record->course)->course_name ?? 'N/A',
-                'intake' => optional($record->intake)->batch ?? 'N/A',
-                'reference' => $record->course_registration_id ?? ('Registration #' . $record->id),
-                'date' => optional($record->registration_date)->format('Y-m-d') ?? 'N/A',
-                'amount' => $this->getRegistrationFeeAmount($record),
-            ]);
-            $title = 'New Registrations Audit';
-            $amountLabel = 'Registration Fee';
+            $paymentTable = $this->getPaymentDetailsTable();
+            $paidDateExpr = $this->getPaidDateSqlExpression($paymentTable);
+
+            $recordsQuery = PaymentDetail::with(['student', 'registration.course', 'registration.intake'])
+                ->whereNotNull('course_registration_id')
+                ->where('status', 'paid')
+                ->when($courseId, function ($query) use ($courseId) {
+                    $query->whereHas('registration', function ($registrationQuery) use ($courseId) {
+                        $registrationQuery->where('course_id', $courseId);
+                    });
+                })
+                ->whereRaw("DATE({$paidDateExpr}) >= ?", [$startOfMonth->toDateString()])
+                ->whereRaw("DATE({$paidDateExpr}) <= ?", [$endOfMonth->toDateString()])
+                ->orderByRaw("DATE({$paidDateExpr})");
+
+            $this->applyRegistrationFeeTypeFilter($recordsQuery, $paymentTable);
+
+            $records = $recordsQuery->get();
+            $rows = $records->map(function ($record) {
+                return [
+                    'student_name' => optional($record->student)->full_name ?? 'N/A',
+                    'nic' => optional($record->student)->id_value ?? 'N/A',
+                    'course' => optional(optional($record->registration)->course)->course_name ?? 'N/A',
+                    'intake' => optional(optional($record->registration)->intake)->batch ?? 'N/A',
+                    'reference' => $record->transaction_id ?? ('Payment #' . $record->id),
+                    'date' => $this->resolveEffectivePaidDateForExport($record),
+                    'amount' => (float) ($record->total_fee ?? $record->amount ?? 0),
+                ];
+            });
+            $title = 'Registration Fee Payments Audit';
+            $amountLabel = 'Registration Fee Paid';
         } else {
             $records = PaymentDetail::with(['student', 'registration.course', 'registration.intake'])
                 ->where('status', 'paid')
@@ -1228,19 +1190,129 @@ class PaymentSummaryController extends Controller
         return (clone $query)->sum($column);
     }
 
-    /**
-     * Older registrations commonly retain a zero fee while their intake holds
-     * the configured fee. Use the registration override when present, then the
-     * intake amount, so KPI and audit exports reconcile.
-     */
-    private function getRegistrationFeeAmount(CourseRegistration $registration): float
+    private function applyRegistrationFeeTypeFilter($query, string $table): void
     {
-        $registrationFee = (float) ($registration->registration_fee ?? 0);
-        if ($registrationFee > 0) {
-            return $registrationFee;
+        $hasInstallmentType = $this->hasPaymentDetailColumn('installment_type');
+        $hasPaymentType = $this->hasPaymentDetailColumn('payment_type');
+
+        if ($hasInstallmentType && $hasPaymentType) {
+            $query->where(function ($typeQuery) use ($table) {
+                $typeQuery->where($table . '.installment_type', 'registration_fee')
+                    ->orWhere($table . '.payment_type', 'registration_fee');
+            });
+            return;
         }
 
-        return (float) (optional($registration->intake)->registration_fee ?? 0);
+        if ($hasInstallmentType) {
+            $query->where($table . '.installment_type', 'registration_fee');
+            return;
+        }
+
+        if ($hasPaymentType) {
+            $query->where($table . '.payment_type', 'registration_fee');
+            return;
+        }
+
+        // If the schema has neither type column, force empty results to avoid
+        // mixing non-registration payments into this KPI.
+        $query->whereRaw('1 = 0');
+    }
+
+    private function getPaidDateSqlExpression(string $table): string
+    {
+        $dateColumns = [];
+
+        foreach (['payment_effective_date', 'payment_date'] as $column) {
+            if ($this->hasPaymentDetailColumn($column)) {
+                $dateColumns[] = "{$table}.{$column}";
+            }
+        }
+
+        $dateColumns[] = "{$table}.created_at";
+
+        return 'COALESCE(' . implode(', ', $dateColumns) . ')';
+    }
+
+    private function fetchPendingSltLoanRecoveries(Carbon $startOfMonth, Carbon $endOfMonth)
+    {
+        $recordsFromReceivables = collect();
+
+        if (Schema::hasTable('slt_loan_receivable_records')) {
+            try {
+                $recordsFromReceivables = SltLoanReceivableRecord::with(['studentPaymentPlan.student', 'studentPaymentPlan.course'])
+                    ->whereDate('payment_effective_date', '>=', $startOfMonth->toDateString())
+                    ->whereDate('payment_effective_date', '<=', $endOfMonth->toDateString())
+                    ->orderBy('payment_effective_date')
+                    ->get()
+                    ->map(function ($record) {
+                        $plan = $record->studentPaymentPlan;
+                        $studentId = optional($plan)->student_id ?? $record->student_id;
+                        $courseId = optional($plan)->course_id ?? $record->course_id;
+                        $student = optional($plan)->student ?? Student::where('student_id', $studentId)->first();
+                        $course = optional($plan)->course ?? Course::where('course_id', $courseId)->first();
+                        $registration = CourseRegistration::with('intake')
+                            ->where('student_id', $studentId)
+                            ->where('course_id', $courseId)
+                            ->orderByDesc('id')
+                            ->first();
+
+                        return [
+                            'student_name' => optional($student)->full_name ?? 'N/A',
+                            'student_id_value' => optional($student)->id_value ?? null,
+                            'course_name' => optional($course)->course_name ?? 'N/A',
+                            'intake' => optional($registration?->intake)->batch ?? 'N/A',
+                            'loan_amount' => (float) (optional($plan)->slt_loan_amount ?? $record->total_loan_amount ?? 0),
+                            'installment_amount' => (float) ($record->monthly_receivable_amount ?? 0),
+                            'effective_date' => optional($record->payment_effective_date)->format('Y-m-d'),
+                            'course_id' => $courseId,
+                        ];
+                    });
+            } catch (\Throwable $e) {
+                \Log::warning('slt_loan_receivable_records query failed, falling back to student_payment_plans: ' . $e->getMessage());
+                $recordsFromReceivables = collect();
+            }
+        }
+
+        if ($recordsFromReceivables->isNotEmpty()) {
+            return $recordsFromReceivables;
+        }
+
+        return StudentPaymentPlan::with(['student', 'course'])
+            ->where(function ($query) {
+                $query->whereRaw('LOWER(COALESCE(slt_loan_applied, "")) = ?', ['yes'])
+                    ->orWhere('slt_loan_applied', '1')
+                    ->orWhere('slt_loan_applied', 1)
+                    ->orWhere('slt_loan_applied', true);
+            })
+            ->whereDate('slt_receivable_effective_date', '>=', $startOfMonth->toDateString())
+            ->whereDate('slt_receivable_effective_date', '<=', $endOfMonth->toDateString())
+            ->orderBy('slt_receivable_effective_date')
+            ->get()
+            ->map(function ($plan) {
+                $student = optional($plan)->student;
+                $course = optional($plan)->course;
+                $registration = CourseRegistration::with('intake')
+                    ->where('student_id', optional($plan)->student_id)
+                    ->where('course_id', optional($plan)->course_id)
+                    ->orderByDesc('id')
+                    ->first();
+
+                $installmentAmount = 0;
+                if ($plan->slt_loan_amount && $plan->slt_loan_years) {
+                    $installmentAmount = round($plan->slt_loan_amount / ($plan->slt_loan_years * 12), 2);
+                }
+
+                return [
+                    'student_name' => optional($student)->full_name ?? 'N/A',
+                    'student_id_value' => optional($student)->id_value ?? null,
+                    'course_name' => optional($course)->course_name ?? 'N/A',
+                    'intake' => optional($registration?->intake)->batch ?? 'N/A',
+                    'loan_amount' => (float) ($plan->slt_loan_amount ?? 0),
+                    'installment_amount' => $installmentAmount,
+                    'effective_date' => optional($plan->slt_receivable_effective_date)->format('Y-m-d'),
+                    'course_id' => optional($plan)->course_id,
+                ];
+            });
     }
 
     /**

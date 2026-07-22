@@ -113,21 +113,26 @@
                 <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
                         <h6 class="fw-bold mb-0">🆕 New Registrations</h6>
-                        <small class="text-muted">Current month registrations by course</small>
+                        <small class="text-muted">Current month paid registration-fee records (Update Records)</small>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <a class="btn btn-sm btn-outline-primary" href="{{ route('payment.analytics.export', ['metric' => 'new_registrations', 'month' => $startOfMonth->format('Y-m'), 'course_id' => $selectedNewRegistrationCourseId]) }}">
+                        <a
+                            id="newRegistrationsExportLink"
+                            class="btn btn-sm btn-outline-primary"
+                            data-metric="new_registrations"
+                            href="{{ route('payment.analytics.export', ['metric' => 'new_registrations', 'month' => $startOfMonth->format('Y-m'), 'course_id' => $selectedNewRegistrationCourseId]) }}"
+                        >
                             <i class="bi bi-file-earmark-pdf"></i> Export audit
                         </a>
                         <span class="badge bg-primary">{{ number_format($newRegistrationsCount ?? 0) }} regs</span>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+                    <div class="d-flex justify-content-between align-items-start gap-3 mb-4 analytics-kpi-header">
                         <div>
-                            <div class="text-muted small mb-1">Selected month total</div>
-                            <div class="display-6 fw-bold text-primary mb-1">LKR {{ number_format($newRegistrationsAmount ?? 0, 2) }}</div>
-                            <div class="text-muted small">{{ number_format($newRegistrationsCount ?? 0) }} new registrations in {{ $startOfMonth->format('F Y') }}</div>
+                            <div class="text-muted small mb-1">Selected month paid registration fees</div>
+                            <div class="display-6 fw-bold text-primary mb-1 analytics-kpi-amount">LKR {{ number_format($newRegistrationsAmount ?? 0, 2) }}</div>
+                            <div class="text-muted small">{{ number_format($newRegistrationsCount ?? 0) }} paid registration-fee records in {{ $startOfMonth->format('F Y') }}</div>
                         </div>
                         <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-3">
                             <i class="bi bi-journal-plus fs-3"></i>
@@ -141,8 +146,8 @@
                             <option value="{{ $course->course_id }}" {{ (isset($selectedNewRegistrationCourseId) && $selectedNewRegistrationCourseId == $course->course_id) ? 'selected' : '' }}>{{ $course->course_name }}</option>
                         @endforeach
                     </select>
-                    <div class="d-flex justify-content-between align-items-center gap-2 mt-2">
-                        <small class="text-muted">Select one course to recalculate the selected month registration fee total.</small>
+                    <div class="d-flex justify-content-between align-items-center gap-2 mt-2 analytics-filter-actions">
+                        <small class="text-muted">Select one course to recalculate paid registration-fee totals for the selected month.</small>
                         <button type="submit" form="analyticsFiltersForm" class="btn btn-sm btn-outline-primary text-nowrap">Apply</button>
                     </div>
                 </div>
@@ -157,17 +162,22 @@
                         <small class="text-muted">Current month collected amount from active registrations</small>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <a class="btn btn-sm btn-outline-success" href="{{ route('payment.analytics.export', ['metric' => 'ongoing_courses', 'month' => $startOfMonth->format('Y-m'), 'course_id' => $selectedOngoingCourseId]) }}">
+                        <a
+                            id="ongoingCoursesExportLink"
+                            class="btn btn-sm btn-outline-success"
+                            data-metric="ongoing_courses"
+                            href="{{ route('payment.analytics.export', ['metric' => 'ongoing_courses', 'month' => $startOfMonth->format('Y-m'), 'course_id' => $selectedOngoingCourseId]) }}"
+                        >
                             <i class="bi bi-file-earmark-pdf"></i> Export audit
                         </a>
                         <span class="badge bg-success">{{ number_format($ongoingCoursesCount ?? 0) }} active</span>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+                    <div class="d-flex justify-content-between align-items-start gap-3 mb-4 analytics-kpi-header">
                         <div>
                             <div class="text-muted small mb-1">Selected month collected</div>
-                            <div class="display-6 fw-bold text-success mb-1">LKR {{ number_format($ongoingCoursesAmount ?? 0, 2) }}</div>
+                            <div class="display-6 fw-bold text-success mb-1 analytics-kpi-amount">LKR {{ number_format($ongoingCoursesAmount ?? 0, 2) }}</div>
                             <div class="text-muted small">{{ number_format($ongoingCoursesCount ?? 0) }} ongoing registrations</div>
                         </div>
                         <div class="bg-success bg-opacity-10 text-success rounded-3 p-3">
@@ -182,7 +192,7 @@
                             <option value="{{ $course->course_id }}" {{ (isset($selectedOngoingCourseId) && $selectedOngoingCourseId == $course->course_id) ? 'selected' : '' }}>{{ $course->course_name }}</option>
                         @endforeach
                     </select>
-                    <div class="d-flex justify-content-between align-items-center gap-2 mt-2">
+                    <div class="d-flex justify-content-between align-items-center gap-2 mt-2 analytics-filter-actions">
                         <small class="text-muted">Select one course to recalculate the selected month collected payment total.</small>
                         <button type="submit" form="analyticsFiltersForm" class="btn btn-sm btn-outline-success text-nowrap">Apply</button>
                     </div>
@@ -330,38 +340,44 @@
 <script nonce="{{ $cspNonce }}">
 document.addEventListener("DOMContentLoaded", () => {
     const revenueByDay = @json($revenueByDay);
-
+    const analyticsForm = document.getElementById('analyticsFiltersForm');
+    const analyticsMonthFilter = document.getElementById('analyticsMonthFilter');
     const newRegistrationCourseFilter = document.getElementById('newRegistrationCourseFilter');
     const ongoingCourseFilter = document.getElementById('ongoingCourseFilter');
+    const newRegistrationExportLink = document.getElementById('newRegistrationsExportLink');
+    const ongoingCoursesExportLink = document.getElementById('ongoingCoursesExportLink');
 
-    function applyAnalyticsCourseFilters() {
-        const url = new URL(window.location.href);
-
-        if (newRegistrationCourseFilter) {
-            if (newRegistrationCourseFilter.value) {
-                url.searchParams.set('new_registration_course_id', newRegistrationCourseFilter.value);
-            } else {
-                url.searchParams.delete('new_registration_course_id');
-            }
+    function updateAuditExportLink(linkEl, metric, courseFilterEl) {
+        if (!linkEl) {
+            return;
         }
 
-        if (ongoingCourseFilter) {
-            if (ongoingCourseFilter.value) {
-                url.searchParams.set('ongoing_course_id', ongoingCourseFilter.value);
-            } else {
-                url.searchParams.delete('ongoing_course_id');
-            }
+        const url = new URL(linkEl.href, window.location.origin);
+        url.searchParams.set('metric', metric);
+
+        if (analyticsMonthFilter && analyticsMonthFilter.value) {
+            url.searchParams.set('month', analyticsMonthFilter.value);
+        } else {
+            url.searchParams.delete('month');
         }
 
-        if (newRegistrationCourseFilter || ongoingCourseFilter) {
-            window.location.href = url.toString();
+        if (courseFilterEl && courseFilterEl.value) {
+            url.searchParams.set('course_id', courseFilterEl.value);
+        } else {
+            url.searchParams.delete('course_id');
         }
+
+        linkEl.href = url.toString();
     }
 
-    // Include month filter when applying course filters
-    const analyticsMonthFilter = document.getElementById('analyticsMonthFilter');
+    function updateAllAuditExportLinks() {
+        updateAuditExportLink(newRegistrationExportLink, 'new_registrations', newRegistrationCourseFilter);
+        updateAuditExportLink(ongoingCoursesExportLink, 'ongoing_courses', ongoingCourseFilter);
+    }
+
     function applyAnalyticsFilters() {
         const url = new URL(window.location.href);
+
         if (analyticsMonthFilter && analyticsMonthFilter.value) {
             url.searchParams.set('month', analyticsMonthFilter.value);
         } else if (analyticsMonthFilter) {
@@ -383,65 +399,83 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.href = url.toString();
     }
 
+    if (analyticsForm) {
+        analyticsForm.addEventListener('submit', () => {
+            updateAllAuditExportLinks();
+        });
+    }
+
     if (newRegistrationCourseFilter) {
-        newRegistrationCourseFilter.addEventListener('change', applyAnalyticsFilters);
+        newRegistrationCourseFilter.addEventListener('change', () => {
+            updateAllAuditExportLinks();
+            applyAnalyticsFilters();
+        });
     }
 
     if (ongoingCourseFilter) {
-        ongoingCourseFilter.addEventListener('change', applyAnalyticsFilters);
+        ongoingCourseFilter.addEventListener('change', () => {
+            updateAllAuditExportLinks();
+            applyAnalyticsFilters();
+        });
     }
 
     if (analyticsMonthFilter) {
-        analyticsMonthFilter.addEventListener('change', applyAnalyticsFilters);
+        analyticsMonthFilter.addEventListener('change', () => {
+            updateAllAuditExportLinks();
+            applyAnalyticsFilters();
+        });
     }
+
+    updateAllAuditExportLinks();
 
     // Revenue Trend Chart
     const revenueChartElement = document.getElementById('revenueChart');
     if (revenueChartElement) {
         new Chart(revenueChartElement, {
-        type: 'bar',
-        data: {
-            labels: revenueByDay.map(r => r.date),
-            datasets: [{
-                label: 'Daily Revenue',
-                data: revenueByDay.map(r => r.revenue),
-                backgroundColor: 'rgba(102, 126, 234, 0.8)',
-                borderColor: '#667eea',
-                borderWidth: 2,
-                borderRadius: 5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    padding: 15,
-                    callbacks: {
-                        label: function(context) {
-                            return 'Revenue: LKR ' + new Intl.NumberFormat().format(context.parsed.y);
-                        }
-                    }
-                }
+            type: 'bar',
+            data: {
+                labels: revenueByDay.map((r) => r.date),
+                datasets: [{
+                    label: 'Daily Revenue',
+                    data: revenueByDay.map((r) => r.revenue),
+                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                    borderColor: '#667eea',
+                    borderWidth: 2,
+                    borderRadius: 5
+                }]
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(0,0,0,0.05)' },
-                    ticks: {
-                        callback: function(value) {
-                            return 'LKR ' + new Intl.NumberFormat().format(value);
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        padding: 15,
+                        callbacks: {
+                            label: function(context) {
+                                return 'Revenue: LKR ' + new Intl.NumberFormat().format(context.parsed.y);
+                            }
                         }
                     }
                 },
-                x: {
-                    grid: { display: false }
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.05)' },
+                        ticks: {
+                            callback: function(value) {
+                                return 'LKR ' + new Intl.NumberFormat().format(value);
+                            }
+                        }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
                 }
             }
-        }
-    });
+        });
+    }
 });
 </script>
 
@@ -473,6 +507,32 @@ document.addEventListener("DOMContentLoaded", () => {
 .analytics-month-filter::-webkit-calendar-picker-indicator {
     opacity: 1;
     cursor: pointer;
+}
+
+@media (max-width: 991.98px) {
+    .analytics-kpi-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+
+    .analytics-kpi-header > div:last-child {
+        align-self: flex-end;
+    }
+
+    .analytics-kpi-amount {
+        font-size: clamp(1.65rem, 6vw, 2.3rem);
+        line-height: 1.1;
+        word-break: break-word;
+    }
+
+    .analytics-filter-actions {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .analytics-filter-actions .btn {
+        width: 100%;
+    }
 }
 </style>
 
