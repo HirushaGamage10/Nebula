@@ -616,9 +616,19 @@ class StudentProfileController extends Controller
             ->pluck('semester')
             ->toArray();
 
-        // Merge and get unique values
+        $semestersList = \App\Models\Semester::where('course_id', (int)$courseId)->get();
+
+        // Merge and get unique values, mapping IDs to names if applicable
         $allSemesters = collect(array_merge($examSemesters, $attendanceSemesters))
             ->filter() // Remove nulls
+            ->map(function ($sem) use ($semestersList) {
+                foreach ($semestersList as $sModel) {
+                    if ((string)$sModel->id === (string)$sem) {
+                        return trim((string)$sModel->name);
+                    }
+                }
+                return (string)$sem;
+            })
             ->unique()
             ->sort()
             ->values();
@@ -1080,10 +1090,23 @@ class StudentProfileController extends Controller
                 ]
             ]);
 
+            $semesterName = (string)$semester;
+            $semestersList = \App\Models\Semester::where('course_id', (int)$courseId)->get();
+            $semesterLookupValues = [$semesterName];
+
+            foreach ($semestersList as $sModel) {
+                if ((string)$sModel->id === $semesterName) {
+                    $semesterLookupValues[] = trim((string)$sModel->name);
+                } elseif (trim((string)$sModel->name) === $semesterName) {
+                    $semesterLookupValues[] = (string)$sModel->id;
+                }
+            }
+            $semesterLookupValues = array_values(array_unique($semesterLookupValues));
+
             // Build the query to fetch attendance records
             $query = \App\Models\Attendance::where('student_id', (int)$studentId)
                 ->where('course_id', (int)$courseId)
-                ->where('semester', (string)$semester)
+                ->whereIn('semester', $semesterLookupValues)
                 ->with('module');
 
             $attendanceRecords = $query->get();

@@ -1182,6 +1182,14 @@ class AttendanceController extends Controller
         if (!$semester) {
             return response()->json(['error' => 'Semester not found.'], 404);
         }
+        $semesterStorageValue = $this->getAttendanceSemesterStorageValue($semester);
+        $semesterLookupValues = $this->getAttendanceSemesterLookupValues($semester);
+        $this->normalizeLegacyAttendanceSemesterValues([
+            'course_id' => $courseId,
+            'intake_id' => $intakeId,
+            'location' => $location,
+            'module_id' => $moduleId,
+        ], $semesterLookupValues, $semesterStorageValue);
 
         // Check if this is a core module (assigned to semester) or elective module
         $isCoreModule = DB::table('semester_module')
