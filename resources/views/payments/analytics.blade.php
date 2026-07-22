@@ -315,9 +315,16 @@
                                 <td>{{ $record['effective_date'] }}</td>
                                 <td class="text-center">
                                     @if($record['student_id_value'] && $record['course_id'])
-                                        <a href="{{ route('payment.index') }}?student_nic={{ urlencode($record['student_id_value']) }}&course_id={{ $record['course_id'] }}" class="btn btn-sm btn-primary">
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-primary btn-open-update-records"
+                                            data-student-nic="{{ $record['student_id_value'] }}"
+                                            data-course-id="{{ $record['course_id'] }}"
+                                            data-student-name="{{ $record['student_name'] }}"
+                                            data-course-name="{{ $record['course_name'] }}"
+                                        >
                                             Update Records
-                                        </a>
+                                        </button>
                                     @else
                                         <span class="text-muted">Not available</span>
                                     @endif
@@ -336,10 +343,324 @@
 
 </div>
 
+<div class="modal fade" id="analyticsUpdateRecordsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Payment Records</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap gap-3 mb-3">
+                    <div><strong>Student NIC:</strong> <span id="analyticsUpdateStudentNic">-</span></div>
+                    <div><strong>Student:</strong> <span id="analyticsUpdateStudentName">-</span></div>
+                    <div><strong>Course:</strong> <span id="analyticsUpdateCourseName">-</span></div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Type</th>
+                                <th>Inst.</th>
+                                <th class="text-end">Total</th>
+                                <th class="text-end">Remaining</th>
+                                <th>Method</th>
+                                <th>Paid Date</th>
+                                <th>Receipt No</th>
+                                <th>Status</th>
+                                <th>Remarks</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analyticsPaymentRecordsTableBody">
+                            <tr>
+                                <td colspan="10" class="text-center text-muted">Load a student record to edit payments.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="analyticsUpdatePaymentRecordsBtn">
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="analyticsPayModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Record Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="analyticsPayPaymentId">
+
+                <div class="mb-3">
+                    <label class="form-label" for="analyticsPayAmount">Amount</label>
+                    <input type="number" class="form-control" id="analyticsPayAmount" step="0.01" readonly>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="analyticsPayMethod">Payment Method</label>
+                    <select class="form-select" id="analyticsPayMethod">
+                        <option value="cash">Cash</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="online">Online</option>
+                        <option value="card">Card</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="analyticsPayDate">Payment Date</label>
+                    <input type="date" class="form-control" id="analyticsPayDate">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label" for="analyticsPayRemarks">Remarks</label>
+                    <textarea class="form-control" id="analyticsPayRemarks" rows="2"></textarea>
+                </div>
+
+                <div class="mb-0">
+                    <label class="form-label" for="analyticsPaySlip">Slip (optional)</label>
+                    <input type="file" class="form-control" id="analyticsPaySlip" accept=".jpg,.jpeg,.png,.pdf">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="analyticsSubmitPaymentBtn">Submit Payment</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script nonce="{{ $cspNonce }}" src="{{ asset('libs/chartjs/chart.min.js') }}"></script>
 <script nonce="{{ $cspNonce }}">
 document.addEventListener("DOMContentLoaded", () => {
     const revenueByDay = @json($revenueByDay);
+    const csrfToken = '{{ csrf_token() }}';
+    const paymentTypeLabels = {
+        course_fee: 'Course Fee',
+        franchise_fee: 'Franchise Fee',
+        registration_fee: 'Registration Fee',
+        other: 'Other'
+    };
+
+    let analyticsCurrentStudentNic = null;
+    let analyticsCurrentCourseId = null;
+    let analyticsPaymentRecords = [];
+
+    function showAnalyticsToast(message, type = 'success') {
+        if (window.global_utils?.showToast) {
+            window.global_utils.showToast(type, message);
+            return;
+        }
+
+        if (type === 'error') {
+            window.alert(message);
+        }
+    }
+
+    function formatPaymentType(type) {
+        if (!type) {
+            return 'N/A';
+        }
+
+        return paymentTypeLabels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+
+    function renderAnalyticsPaymentRecords() {
+        const tbody = document.getElementById('analyticsPaymentRecordsTableBody');
+        if (!tbody) {
+            return;
+        }
+
+        if (!analyticsPaymentRecords.length) {
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No payment records found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = analyticsPaymentRecords.map((record, idx) => {
+            const totalFee = Number(record.total_fee ?? 0);
+            const remaining = Number(record.remaining_amount ?? 0);
+            const isPaid = String(record.status || '').toLowerCase() === 'paid';
+
+            return `
+                <tr>
+                    <td>${formatPaymentType(record.payment_type)}</td>
+                    <td>${record.installment_number ?? '-'}</td>
+                    <td class="text-end">${totalFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td class="text-end">${remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td>
+                        <select class="form-select form-select-sm" data-idx="${idx}" data-field="payment_method">
+                            <option value="cash" ${record.payment_method === 'cash' ? 'selected' : ''}>Cash</option>
+                            <option value="cheque" ${record.payment_method === 'cheque' ? 'selected' : ''}>Cheque</option>
+                            <option value="bank_transfer" ${record.payment_method === 'bank_transfer' ? 'selected' : ''}>Bank Transfer</option>
+                            <option value="online" ${record.payment_method === 'online' ? 'selected' : ''}>Online</option>
+                            <option value="card" ${record.payment_method === 'card' ? 'selected' : ''}>Card</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="date" class="form-control form-control-sm" value="${record.payment_date || ''}" data-idx="${idx}" data-field="payment_date">
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm" value="${record.receipt_no || ''}" data-idx="${idx}" data-field="receipt_no">
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm" data-idx="${idx}" data-field="status">
+                            <option value="pending" ${record.status === 'pending' ? 'selected' : ''}>pending</option>
+                            <option value="paid" ${record.status === 'paid' ? 'selected' : ''}>paid</option>
+                            <option value="failed" ${record.status === 'failed' ? 'selected' : ''}>failed</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm" value="${record.remarks || ''}" data-idx="${idx}" data-field="remarks">
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-primary btn-analytics-pay" data-payment-id="${record.payment_id}" data-remaining="${remaining}" ${isPaid || remaining <= 0 ? 'disabled' : ''}>
+                            Pay
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function loadAnalyticsPaymentRecords(studentNic, courseId) {
+        const response = await fetch('/payment/get-records', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify({
+                student_nic: studentNic,
+                course_id: courseId,
+            }),
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to load payment records.');
+        }
+
+        analyticsPaymentRecords = Array.isArray(data.records) ? data.records : [];
+        renderAnalyticsPaymentRecords();
+    }
+
+    async function saveAnalyticsPaymentUpdates() {
+        const fields = document.querySelectorAll('#analyticsPaymentRecordsTableBody [data-field]');
+        if (!fields.length) {
+            showAnalyticsToast('No editable fields found.', 'error');
+            return;
+        }
+
+        const updates = [];
+
+        fields.forEach((fieldEl) => {
+            const idx = Number(fieldEl.dataset.idx);
+            const key = fieldEl.dataset.field;
+            const value = fieldEl.value;
+            const record = analyticsPaymentRecords[idx];
+
+            if (!record?.payment_id || !key) {
+                return;
+            }
+
+            if (!updates[idx]) {
+                updates[idx] = { id: record.payment_id };
+            }
+
+            updates[idx][key] = value;
+        });
+
+        const payload = updates.filter(Boolean);
+        if (!payload.length) {
+            showAnalyticsToast('No valid updates to submit.', 'error');
+            return;
+        }
+
+        const response = await fetch('/payment/update-record', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify({ updates: payload }),
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to update payment records.');
+        }
+
+        showAnalyticsToast(data.message || 'Payment records updated successfully!', 'success');
+        await loadAnalyticsPaymentRecords(analyticsCurrentStudentNic, analyticsCurrentCourseId);
+    }
+
+    function openAnalyticsPayModal(paymentId, remaining) {
+        const amount = Number(remaining || 0);
+        if (amount <= 0) {
+            showAnalyticsToast('No remaining amount to pay for this record.', 'error');
+            return;
+        }
+
+        document.getElementById('analyticsPayPaymentId').value = paymentId;
+        document.getElementById('analyticsPayAmount').value = amount.toFixed(2);
+        document.getElementById('analyticsPayDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('analyticsPayRemarks').value = '';
+        document.getElementById('analyticsPaySlip').value = '';
+
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('analyticsPayModal'));
+        modal.show();
+    }
+
+    async function submitAnalyticsPayment() {
+        const paymentId = document.getElementById('analyticsPayPaymentId').value;
+        const amount = Number(document.getElementById('analyticsPayAmount').value || 0);
+        const paymentMethod = document.getElementById('analyticsPayMethod').value;
+        const paymentDate = document.getElementById('analyticsPayDate').value;
+        const remarks = document.getElementById('analyticsPayRemarks').value;
+        const slipFile = document.getElementById('analyticsPaySlip').files?.[0] || null;
+
+        if (!paymentId || amount <= 0 || !paymentDate) {
+            showAnalyticsToast('Missing payment details.', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('payment_id', paymentId);
+        formData.append('amount', amount.toString());
+        formData.append('payment_method', paymentMethod);
+        formData.append('payment_date', paymentDate);
+        formData.append('remarks', remarks || '');
+        if (slipFile) {
+            formData.append('slip', slipFile);
+        }
+
+        const response = await fetch('/payment/make-payment', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: formData,
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to submit payment.');
+        }
+
+        showAnalyticsToast(data.message || 'Payment submitted successfully!', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('analyticsPayModal'))?.hide();
+        await loadAnalyticsPaymentRecords(analyticsCurrentStudentNic, analyticsCurrentCourseId);
+    }
     const analyticsForm = document.getElementById('analyticsFiltersForm');
     const analyticsMonthFilter = document.getElementById('analyticsMonthFilter');
     const newRegistrationCourseFilter = document.getElementById('newRegistrationCourseFilter');
@@ -373,6 +694,70 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateAllAuditExportLinks() {
         updateAuditExportLink(newRegistrationExportLink, 'new_registrations', newRegistrationCourseFilter);
         updateAuditExportLink(ongoingCoursesExportLink, 'ongoing_courses', ongoingCourseFilter);
+    }
+
+    document.addEventListener('click', async (event) => {
+        const openBtn = event.target.closest('.btn-open-update-records');
+        if (openBtn) {
+            analyticsCurrentStudentNic = openBtn.dataset.studentNic || null;
+            analyticsCurrentCourseId = openBtn.dataset.courseId || null;
+
+            document.getElementById('analyticsUpdateStudentNic').textContent = analyticsCurrentStudentNic || '-';
+            document.getElementById('analyticsUpdateStudentName').textContent = openBtn.dataset.studentName || '-';
+            document.getElementById('analyticsUpdateCourseName').textContent = openBtn.dataset.courseName || '-';
+
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('analyticsUpdateRecordsModal'));
+            modal.show();
+
+            document.getElementById('analyticsPaymentRecordsTableBody').innerHTML = '<tr><td colspan="10" class="text-center text-muted">Loading payment records...</td></tr>';
+
+            try {
+                await loadAnalyticsPaymentRecords(analyticsCurrentStudentNic, analyticsCurrentCourseId);
+            } catch (error) {
+                document.getElementById('analyticsPaymentRecordsTableBody').innerHTML = `<tr><td colspan="10" class="text-center text-danger">${error.message}</td></tr>`;
+                showAnalyticsToast(error.message, 'error');
+            }
+
+            return;
+        }
+
+        const payBtn = event.target.closest('.btn-analytics-pay');
+        if (payBtn) {
+            openAnalyticsPayModal(payBtn.dataset.paymentId, payBtn.dataset.remaining);
+        }
+    });
+
+    const saveUpdatesButton = document.getElementById('analyticsUpdatePaymentRecordsBtn');
+    if (saveUpdatesButton) {
+        saveUpdatesButton.addEventListener('click', async () => {
+            if (!analyticsCurrentStudentNic || !analyticsCurrentCourseId) {
+                showAnalyticsToast('Missing student or course context.', 'error');
+                return;
+            }
+
+            saveUpdatesButton.disabled = true;
+            try {
+                await saveAnalyticsPaymentUpdates();
+            } catch (error) {
+                showAnalyticsToast(error.message, 'error');
+            } finally {
+                saveUpdatesButton.disabled = false;
+            }
+        });
+    }
+
+    const submitPaymentButton = document.getElementById('analyticsSubmitPaymentBtn');
+    if (submitPaymentButton) {
+        submitPaymentButton.addEventListener('click', async () => {
+            submitPaymentButton.disabled = true;
+            try {
+                await submitAnalyticsPayment();
+            } catch (error) {
+                showAnalyticsToast(error.message, 'error');
+            } finally {
+                submitPaymentButton.disabled = false;
+            }
+        });
     }
 
     function applyAnalyticsFilters() {
