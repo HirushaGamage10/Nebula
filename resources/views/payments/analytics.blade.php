@@ -15,12 +15,15 @@
         </a>
     </div>
 
-    <div class="row mb-4">
+    <form id="analyticsFiltersForm" method="GET" action="{{ route('payment.analytics') }}" class="row mb-4 g-2 align-items-end">
         <div class="col-sm-4 col-md-3">
             <label class="form-label fw-semibold text-dark" for="analyticsMonthFilter">Analytics month</label>
-            <input type="month" id="analyticsMonthFilter" class="form-control analytics-month-filter" value="{{ $startOfMonth->format('Y-m') }}" aria-label="Analytics month">
+            <input type="month" id="analyticsMonthFilter" name="month" class="form-control analytics-month-filter" value="{{ $startOfMonth->format('Y-m') }}" aria-label="Analytics month">
         </div>
-    </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Apply filters</button>
+        </div>
+    </form>
 
     {{-- Summary KPI Cards --}}
     <div class="row g-3 mb-4">
@@ -112,7 +115,12 @@
                         <h6 class="fw-bold mb-0">🆕 New Registrations</h6>
                         <small class="text-muted">Current month registrations by course</small>
                     </div>
-                    <span class="badge bg-primary">{{ number_format($newRegistrationsCount ?? 0) }} regs</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <a class="btn btn-sm btn-outline-primary" href="{{ route('payment.analytics.export', ['metric' => 'new_registrations', 'month' => $startOfMonth->format('Y-m'), 'course_id' => $selectedNewRegistrationCourseId]) }}">
+                            <i class="bi bi-file-earmark-pdf"></i> Export audit
+                        </a>
+                        <span class="badge bg-primary">{{ number_format($newRegistrationsCount ?? 0) }} regs</span>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
@@ -127,13 +135,16 @@
                     </div>
 
                     <label class="form-label small text-muted" for="newRegistrationCourseFilter">Filter by course</label>
-                    <select class="form-select" id="newRegistrationCourseFilter" name="new_registration_course_id">
+                    <select class="form-select" id="newRegistrationCourseFilter" name="new_registration_course_id" form="analyticsFiltersForm">
                         <option value="">All courses</option>
                         @foreach(($courses ?? []) as $course)
                             <option value="{{ $course->course_id }}" {{ (isset($selectedNewRegistrationCourseId) && $selectedNewRegistrationCourseId == $course->course_id) ? 'selected' : '' }}>{{ $course->course_name }}</option>
                         @endforeach
                     </select>
-                    <small class="text-muted d-block mt-2">Select one course to recalculate the selected month registration fee total.</small>
+                    <div class="d-flex justify-content-between align-items-center gap-2 mt-2">
+                        <small class="text-muted">Select one course to recalculate the selected month registration fee total.</small>
+                        <button type="submit" form="analyticsFiltersForm" class="btn btn-sm btn-outline-primary text-nowrap">Apply</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -145,7 +156,12 @@
                         <h6 class="fw-bold mb-0">📚 Ongoing Courses</h6>
                         <small class="text-muted">Current month collected amount from active registrations</small>
                     </div>
-                    <span class="badge bg-success">{{ number_format($ongoingCoursesCount ?? 0) }} active</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <a class="btn btn-sm btn-outline-success" href="{{ route('payment.analytics.export', ['metric' => 'ongoing_courses', 'month' => $startOfMonth->format('Y-m'), 'course_id' => $selectedOngoingCourseId]) }}">
+                            <i class="bi bi-file-earmark-pdf"></i> Export audit
+                        </a>
+                        <span class="badge bg-success">{{ number_format($ongoingCoursesCount ?? 0) }} active</span>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
@@ -160,13 +176,16 @@
                     </div>
 
                     <label class="form-label small text-muted" for="ongoingCourseFilter">Filter by course</label>
-                    <select class="form-select" id="ongoingCourseFilter" name="ongoing_course_id">
+                    <select class="form-select" id="ongoingCourseFilter" name="ongoing_course_id" form="analyticsFiltersForm">
                         <option value="">All courses</option>
                         @foreach(($courses ?? []) as $course)
                             <option value="{{ $course->course_id }}" {{ (isset($selectedOngoingCourseId) && $selectedOngoingCourseId == $course->course_id) ? 'selected' : '' }}>{{ $course->course_name }}</option>
                         @endforeach
                     </select>
-                    <small class="text-muted d-block mt-2">Select one course to recalculate the selected month collected payment total.</small>
+                    <div class="d-flex justify-content-between align-items-center gap-2 mt-2">
+                        <small class="text-muted">Select one course to recalculate the selected month collected payment total.</small>
+                        <button type="submit" form="analyticsFiltersForm" class="btn btn-sm btn-outline-success text-nowrap">Apply</button>
+                    </div>
                 </div>
             </div>
         </div>

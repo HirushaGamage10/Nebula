@@ -735,6 +735,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/payments/summary/intakes-by-location-course', [PaymentSummaryController::class, 'getIntakesByLocationAndCourse'])->name('payment.summary.intakes.by.location.course');
         Route::get('/payments/summary/student/{studentId}', [PaymentSummaryController::class, 'studentSummary'])->name('payment.summary.student');
         Route::get('/payments/analytics', [PaymentSummaryController::class, 'analytics'])->name('payment.analytics');
+        Route::get('/payments/analytics/export', [PaymentSummaryController::class, 'exportAnalyticsKpi'])->name('payment.analytics.export');
         Route::get('/payments/comparison', [PaymentSummaryController::class, 'comparison'])->name('payment.comparison');
         Route::get('/payments/export', [PaymentSummaryController::class, 'export'])->name('payment.export');
         Route::get('/payments/live-feed', [PaymentSummaryController::class, 'liveFeed'])->name('payment.live.feed');

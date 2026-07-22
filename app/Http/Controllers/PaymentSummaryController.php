@@ -416,28 +416,13 @@ class PaymentSummaryController extends Controller
 
         $newRegistrationsCount = (clone $newRegistrationsCurrentMonthQuery)->count();
 
-        // Compute registration fees collected (payments of type registration_fee) within the selected month
-        $dashboardDateExpr = $this->getDashboardDateSqlExpression($this->getPaymentDetailsTable());
-        $registrationFeesCollected = (float) PaymentDetail::query()
-            ->when($selectedLocation, function ($q) use ($selectedLocation) {
-                $q->whereHas('registration', fn($r) => $r->where('location', $selectedLocation));
-            })
-            ->when($selectedNewRegistrationCourseId, function ($q) use ($selectedNewRegistrationCourseId) {
-                $q->whereHas('registration', fn($r) => $r->where('course_id', $selectedNewRegistrationCourseId));
-            })
-            ->whereRaw("DATE({$dashboardDateExpr}) >= ?", [$startOfMonth->toDateString()])
-            ->whereRaw("DATE({$dashboardDateExpr}) <= ?", [$endOfMonth->toDateString()])
-            ->where(function($q) {
-                $q->where('installment_type', 'registration_fee');
-                if ($this->hasPaymentDetailColumn('payment_type')) {
-                    $q->orWhere('payment_type', 'registration_fee');
-                }
-            })
-            ->where('status', 'paid')
-            ->sum('total_fee');
-
-        // For backwards compatibility reuse variable name expected in view
-        $newRegistrationsAmount = $registrationFeesCollected;
+        // Registration fees are stored on course registrations. Legacy payment
+        // rows frequently lack a registration_fee type, which made this KPI
+        // show zero even when registrations existed.
+        $newRegistrationsAmount = (float) (clone $newRegistrationsCurrentMonthQuery)
+            ->with('intake')
+            ->get()
+            ->sum(fn ($registration) => $this->getRegistrationFeeAmount($registration));
 
         $ongoingCoursesQuery = CourseRegistration::query()
             ->where('status', 'Registered')
@@ -469,6 +454,75 @@ class PaymentSummaryController extends Controller
             'ongoingCoursesCount', 'ongoingCoursesAmount', 'courses',
             'selectedNewRegistrationCourseId', 'selectedOngoingCourseId', 'startOfMonth'
         ));
+    }
+
+    /** Export the source records that make up an analytics KPI card. */
+    public function exportAnalyticsKpi(Request $request)
+    {
+        $request->validate([
+            'metric' => 'required|in:new_registrations,ongoing_courses',
+            'month' => 'nullable|date_format:Y-m',
+            'course_id' => 'nullable|integer|exists:courses,course_id',
+        ]);
+
+        $startOfMonth = $request->filled('month')
+            ? Carbon::createFromFormat('Y-m', $request->input('month'))->startOfMonth()
+            : Carbon::now()->startOfMonth();
+        $endOfMonth = (clone $startOfMonth)->endOfMonth();
+        $metric = $request->input('metric');
+        $courseId = $request->input('course_id');
+
+        if ($metric === 'new_registrations') {
+            $records = CourseRegistration::with(['student', 'course', 'intake'])
+                ->when($courseId, fn ($query) => $query->where('course_id', $courseId))
+                ->whereDate('registration_date', '>=', $startOfMonth->toDateString())
+                ->whereDate('registration_date', '<=', $endOfMonth->toDateString())
+                ->orderBy('registration_date')
+                ->get();
+            $rows = $records->map(fn ($record) => [
+                'student_name' => optional($record->student)->full_name ?? 'N/A',
+                'nic' => optional($record->student)->id_value ?? 'N/A',
+                'course' => optional($record->course)->course_name ?? 'N/A',
+                'intake' => optional($record->intake)->batch ?? 'N/A',
+                'reference' => $record->course_registration_id ?? ('Registration #' . $record->id),
+                'date' => optional($record->registration_date)->format('Y-m-d') ?? 'N/A',
+                'amount' => $this->getRegistrationFeeAmount($record),
+            ]);
+            $title = 'New Registrations Audit';
+            $amountLabel = 'Registration Fee';
+        } else {
+            $records = PaymentDetail::with(['student', 'registration.course', 'registration.intake'])
+                ->where('status', 'paid')
+                ->whereHas('registration', function ($query) use ($courseId) {
+                    $query->where('status', 'Registered')
+                        ->when($courseId, fn ($registrationQuery) => $registrationQuery->where('course_id', $courseId));
+                })
+                ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+                ->orderBy('created_at')
+                ->get();
+            $rows = $records->map(fn ($record) => [
+                'student_name' => optional($record->student)->full_name ?? 'N/A',
+                'nic' => optional($record->student)->id_value ?? 'N/A',
+                'course' => optional(optional($record->registration)->course)->course_name ?? 'N/A',
+                'intake' => optional(optional($record->registration)->intake)->batch ?? 'N/A',
+                'reference' => $record->transaction_id ?? ('Payment #' . $record->id),
+                'date' => optional($record->created_at)->format('Y-m-d') ?? 'N/A',
+                'amount' => (float) ($record->amount ?? 0),
+            ]);
+            $title = 'Ongoing Courses Collection Audit';
+            $amountLabel = 'Paid Amount';
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payments.analytics_kpi_export_pdf', [
+            'title' => $title,
+            'amountLabel' => $amountLabel,
+            'month' => $startOfMonth,
+            'rows' => $rows,
+            'totalAmount' => $rows->sum('amount'),
+            'generatedAt' => Carbon::now(),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download(str($metric)->replace('_', '-') . '-audit-' . $startOfMonth->format('Y-m') . '.pdf');
     }
 
     /**
@@ -1172,6 +1226,21 @@ class PaymentSummaryController extends Controller
         }
 
         return (clone $query)->sum($column);
+    }
+
+    /**
+     * Older registrations commonly retain a zero fee while their intake holds
+     * the configured fee. Use the registration override when present, then the
+     * intake amount, so KPI and audit exports reconcile.
+     */
+    private function getRegistrationFeeAmount(CourseRegistration $registration): float
+    {
+        $registrationFee = (float) ($registration->registration_fee ?? 0);
+        if ($registrationFee > 0) {
+            return $registrationFee;
+        }
+
+        return (float) (optional($registration->intake)->registration_fee ?? 0);
     }
 
     /**
