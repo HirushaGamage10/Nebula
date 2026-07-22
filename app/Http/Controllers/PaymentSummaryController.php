@@ -469,19 +469,154 @@ class PaymentSummaryController extends Controller
      */
     public function export(Request $request)
     {
-        $format = $request->input('format', 'csv');
+        $format = strtolower($request->input('format', 'pdf'));
         $range = $request->input('range', '1y');
         $startDate = $this->getDateFromRange($range);
 
-        $payments = PaymentDetail::where('created_at', '>=', $startDate)
-            ->with(['student', 'registration'])
+        $payments = $this->buildExportPaymentsQuery($request, $startDate)
+            ->orderByDesc('payment_effective_date')
+            ->orderByDesc('created_at')
             ->get();
+
+        if ($format === 'pdf') {
+            return $this->exportPDF($payments);
+        }
 
         if ($format === 'csv') {
             return $this->exportCSV($payments);
         }
 
         return response()->json(['error' => 'Format not supported'], 400);
+    }
+
+    private function buildExportPaymentsQuery(Request $request, Carbon $startDate)
+    {
+        $table = $this->getPaymentDetailsTable();
+        $dashboardDateExpr = $this->getDashboardDateSqlExpression($table);
+        $query = PaymentDetail::query()->with(['student', 'registration.course', 'registration.intake']);
+
+        $studentSearch = trim((string) $request->input('student_id', ''));
+        if ($studentSearch !== '') {
+            $matchingStudentIds = Student::query()
+                ->where('id_value', $studentSearch)
+                ->orWhere('student_id', $studentSearch)
+                ->pluck('student_id')
+                ->unique()
+                ->values();
+
+            if ($matchingStudentIds->isEmpty()) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->whereIn($table . '.student_id', $matchingStudentIds->all());
+            }
+        }
+
+        $startDateInput = !empty($request->input('start_date')) ? Carbon::parse($request->input('start_date'))->toDateString() : null;
+        $endDateInput = !empty($request->input('end_date')) ? Carbon::parse($request->input('end_date'))->toDateString() : null;
+
+        if ($startDateInput || $endDateInput) {
+            if ($startDateInput) {
+                $query->whereRaw("DATE({$dashboardDateExpr}) >= ?", [$startDateInput]);
+            }
+
+            if ($endDateInput) {
+                $query->whereRaw("DATE({$dashboardDateExpr}) <= ?", [$endDateInput]);
+            }
+        } else {
+            $query->whereRaw("DATE({$dashboardDateExpr}) >= ?", [$startDate->toDateString()]);
+        }
+
+        if (!empty($request->input('location'))) {
+            $query->whereHas('registration', function ($q) use ($request) {
+                $q->where('location', $request->input('location'));
+            });
+        }
+
+        if (!empty($request->input('course_id'))) {
+            $query->whereHas('registration', function ($q) use ($request) {
+                $q->where('course_id', (int) $request->input('course_id'));
+            });
+        }
+
+        if (!empty($request->input('intake_id'))) {
+            $query->whereHas('registration', function ($q) use ($request) {
+                $q->where('intake_id', (int) $request->input('intake_id'));
+            });
+        }
+
+        if (!empty($request->input('payment_method'))) {
+            $query->where($table . '.payment_method', $request->input('payment_method'));
+        }
+
+        if (!empty($request->input('status')) && $this->hasPaymentDetailColumn('status')) {
+            $query->where($table . '.status', $request->input('status'));
+        }
+
+        return $query;
+    }
+
+    private function exportPDF($payments)
+    {
+        $rows = $payments->map(function ($payment) {
+            return [
+                'student_name' => optional($payment->student)->full_name ?? 'N/A',
+                'nic' => optional($payment->student)->id_value ?? 'N/A',
+                'course' => optional(optional($payment->registration)->course)->course_name ?? 'N/A',
+                'intake' => optional(optional($payment->registration)->intake)->batch ?? 'N/A',
+                'location' => optional($payment->registration)->location ?? optional($payment->student)->institute_location ?? 'N/A',
+                'payment_type' => $this->formatPaymentTypeForExport($payment),
+                'amount' => (float) ($payment->total_fee ?? $payment->amount ?? 0),
+                'effective_paid_date' => $this->resolveEffectivePaidDateForExport($payment),
+            ];
+        });
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payments.summary_export_pdf', [
+            'rows' => $rows,
+            'generatedAt' => Carbon::now(),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('payment_report_' . now()->format('Y-m-d_His') . '.pdf');
+    }
+
+    private function formatPaymentTypeForExport($payment): string
+    {
+        $rawType = $payment->installment_type ?? $payment->payment_type ?? null;
+
+        if (empty($rawType) && !empty($payment->misc_category)) {
+            return 'Miscellaneous';
+        }
+
+        return match ($rawType) {
+            'course_fee' => 'Course Fee',
+            'registration_fee' => 'Registration Fee',
+            'franchise_fee' => 'Franchise Fee',
+            null, '' => 'Unknown',
+            default => ucwords(str_replace('_', ' ', (string) $rawType)),
+        };
+    }
+
+    private function resolveEffectivePaidDateForExport($payment): string
+    {
+        $candidates = [
+            $payment->payment_effective_date ?? null,
+            $payment->payment_date ?? null,
+            $payment->due_date ?? null,
+            $payment->created_at ?? null,
+        ];
+
+        foreach ($candidates as $dateValue) {
+            if (empty($dateValue)) {
+                continue;
+            }
+
+            try {
+                return Carbon::parse($dateValue)->format('Y-m-d');
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+
+        return 'N/A';
     }
 
     /**

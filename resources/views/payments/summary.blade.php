@@ -19,7 +19,7 @@
                     <i class="bi bi-bar-chart"></i> Comparison
                 </a>
                 <button class="btn btn-light btn-export-data">
-                    <i class="bi bi-download"></i> Export
+                    <i class="bi bi-file-earmark-pdf"></i> Export PDF
                 </button>
             </div>
         </div>
@@ -481,7 +481,7 @@ function exportData() {
     const breakdownScope = document.getElementById('breakdownScopeFilter').value;
 
     const params = new URLSearchParams();
-    params.append('format', 'csv');
+    params.append('format', 'pdf');
     params.append('range', range);
     if (method) params.append('payment_method', method);
     if (status) params.append('status', status);
