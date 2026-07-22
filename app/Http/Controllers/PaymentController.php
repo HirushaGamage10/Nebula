@@ -16,6 +16,7 @@ use Illuminate\Http\Response;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class PaymentController extends Controller
@@ -2298,61 +2299,87 @@ public function updatePaymentRecord(Request $request)
                 ? $request->input('updates', [])
                 : [$request->all()];
 
-            if (!is_array($updates) || empty($updates)) {
-                return response()->json(['success' => false, 'message' => 'No update payload provided.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+            $validator = Validator::make(['updates' => $updates], [
+                'updates'                                => 'required|array|min:1',
+                'updates.*.student_payment_plan_id'      => 'required|integer|exists:student_payment_plans,id',
+                'updates.*.installment_number'            => 'required|integer|min:1',
+                'updates.*.payment_effective_date'        => 'nullable|date',
+                'updates.*.payment_date'                  => 'nullable|date',
+                'updates.*.payment_method'                => 'nullable|in:cash,cheque,bank_transfer,online,card',
+                'updates.*.receipt_no'                    => 'nullable|string|max:255',
+                'updates.*.status'                        => 'nullable|in:pending,paid,failed',
+                'updates.*.remarks'                       => 'nullable|string|max:5000',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The SLT loan recovery details are invalid.',
+                    'errors' => $validator->errors(),
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
 
-            $updatedCount = 0;
-            foreach ($updates as $payload) {
-                if (!is_array($payload)) continue;
+            $updatedCount = DB::transaction(function () use ($updates) {
+                $updatedCount = 0;
+                foreach ($updates as $payload) {
+                    $planId = (int) $payload['student_payment_plan_id'];
+                    $installmentNo = (int) $payload['installment_number'];
 
-                $planId = $payload['student_payment_plan_id'] ?? null;
-                $installmentNo = $payload['installment_number'] ?? null;
+                    $plan = StudentPaymentPlan::lockForUpdate()->findOrFail($planId);
+                    if (strtolower($plan->slt_loan_applied ?? 'no') !== 'yes') {
+                        throw new \InvalidArgumentException('The selected payment plan does not have an SLT loan applied.');
+                    }
 
-                if (!$planId || !$installmentNo) continue;
+                    $loanAmount = (float) ($plan->slt_loan_amount ?? 0);
+                    $years = (int) ($plan->slt_loan_years ?? 0);
+                    $installmentCount = $years > 0 ? $years * 12 : 0;
+                    if ($installmentCount <= 0 || $installmentNo > $installmentCount) {
+                        throw new \InvalidArgumentException('The selected SLT loan installment is outside the configured repayment schedule.');
+                    }
+                    $monthlyReceivable = round($loanAmount / $installmentCount, 2);
 
-                $plan = StudentPaymentPlan::find($planId);
-                if (!$plan) continue;
+                    $effectiveDate = $payload['payment_effective_date'] ?? $payload['payment_date'] ?? date('Y-m-d');
+                    $method = $payload['payment_method'] ?? 'cash';
+                    $receiptNo = $payload['receipt_no'] ?? null;
+                    $status = $payload['status'] ?? 'pending';
+                    $remarks = $payload['remarks'] ?? null;
 
-                $loanAmount = (float) ($plan->slt_loan_amount ?? 0);
-                $years = (int) ($plan->slt_loan_years ?? 0);
-                $installmentCount = $years > 0 ? $years * 12 : 0;
-                $monthlyReceivable = $installmentCount > 0 ? round($loanAmount / $installmentCount, 2) : 0;
+                    SltLoanReceivableRecord::updateOrCreate(
+                        [
+                            'student_payment_plan_id' => $planId,
+                            'loan_installment_number' => $installmentNo,
+                        ],
+                        [
+                            'student_id'                => $plan->student_id,
+                            'course_id'                 => $plan->course_id,
+                            'total_loan_amount'         => $loanAmount,
+                            'loan_taken_years'          => $years,
+                            'loan_installment_count'    => $installmentCount,
+                            'apply_from_installment'    => $plan->slt_loan_start_installment ?? 1,
+                            'monthly_receivable_amount' => $monthlyReceivable,
+                            'payment_effective_date'    => $effectiveDate,
+                            'payment_method'            => $method,
+                            'receipt_no'                => $receiptNo,
+                            'status'                    => $status,
+                            'remarks'                   => $remarks,
+                        ]
+                    );
+                    $updatedCount++;
+                }
 
-                $effectiveDate = $payload['payment_effective_date'] ?? $payload['payment_date'] ?? date('Y-m-d');
-                $method = $payload['payment_method'] ?? 'cash';
-                $receiptNo = $payload['receipt_no'] ?? null;
-                $status = $payload['status'] ?? 'pending';
-                $remarks = $payload['remarks'] ?? null;
-
-                SltLoanReceivableRecord::updateOrCreate(
-                    [
-                        'student_payment_plan_id' => $planId,
-                        'loan_installment_number' => $installmentNo,
-                    ],
-                    [
-                        'student_id'                => $plan->student_id,
-                        'course_id'                 => $plan->course_id,
-                        'total_loan_amount'         => $loanAmount,
-                        'loan_taken_years'          => $years,
-                        'loan_installment_count'    => $installmentCount,
-                        'apply_from_installment'    => $plan->slt_loan_start_installment ?? 1,
-                        'monthly_receivable_amount' => $monthlyReceivable,
-                        'payment_effective_date'    => $effectiveDate,
-                        'payment_method'            => $method,
-                        'receipt_no'                => $receiptNo,
-                        'status'                    => $status,
-                        'remarks'                   => $remarks,
-                    ]
-                );
-                $updatedCount++;
-            }
+                return $updatedCount;
+            });
 
             return response()->json([
                 'success' => true,
                 'message' => $updatedCount > 0 ? 'SLT loan recovery record(s) updated successfully.' : 'No changes saved.',
                 'updated_count' => $updatedCount
             ]);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

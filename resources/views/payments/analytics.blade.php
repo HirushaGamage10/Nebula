@@ -503,6 +503,12 @@ document.addEventListener("DOMContentLoaded", () => {
         other: 'Other'
     };
 
+    const savedSltRecoveryMessage = window.sessionStorage.getItem('analytics-slt-recovery-saved');
+    if (savedSltRecoveryMessage) {
+        window.sessionStorage.removeItem('analytics-slt-recovery-saved');
+        window.setTimeout(() => showAnalyticsToast(savedSltRecoveryMessage, 'success'), 0);
+    }
+
     let analyticsCurrentStudentNic = null;
     let analyticsCurrentCourseId = null;
     let analyticsPaymentRecords = [];
@@ -644,13 +650,12 @@ document.addEventListener("DOMContentLoaded", () => {
             throw new Error(data.message || 'Failed to update SLT loan recovery records.');
         }
 
-        showAnalyticsToast(data.message || 'SLT loan recovery records updated successfully!', 'success');
-        await loadAnalyticsSltLoanRecords(
-            analyticsSltStudentNic,
-            analyticsSltCourseId,
-            analyticsSltInstallmentNumber,
-            analyticsSltEffectiveDate
-        );
+        const successMessage = data.message || 'SLT loan recovery records updated successfully!';
+        bootstrap.Modal.getInstance(document.getElementById('analyticsSltLoanUpdateRecordsModal'))?.hide();
+        window.sessionStorage.setItem('analytics-slt-recovery-saved', successMessage);
+        // Reload the analytics page so paid records leave the pending list and all
+        // counts and totals are recalculated from the data that was just saved.
+        window.location.reload();
     }
 
     function showAnalyticsToast(message, type = 'success') {
@@ -659,9 +664,22 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        if (type === 'error') {
-            window.alert(message);
-        }
+        const toastContainer = document.getElementById('analyticsToastContainer') || (() => {
+            const container = document.createElement('div');
+            container.id = 'analyticsToastContainer';
+            container.className = 'toast-container position-fixed top-0 end-0 p-3';
+            container.style.zIndex = '1090';
+            document.body.appendChild(container);
+            return container;
+        })();
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-bg-${type === 'error' ? 'danger' : type} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = '<div class="d-flex"><div class="toast-body"></div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>';
+        toast.querySelector('.toast-body').textContent = message;
+        toastContainer.appendChild(toast);
+        toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        bootstrap.Toast.getOrCreateInstance(toast, { delay: 3500 }).show();
     }
 
     function formatPaymentType(type) {

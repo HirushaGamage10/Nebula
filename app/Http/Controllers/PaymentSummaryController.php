@@ -1236,21 +1236,28 @@ class PaymentSummaryController extends Controller
     private function fetchPendingSltLoanRecoveries(Carbon $startOfMonth, Carbon $endOfMonth)
     {
         $recordsFromReceivables = collect();
+        $plansWithReceivableRecords = collect();
 
         if (Schema::hasTable('slt_loan_receivable_records')) {
             try {
-                $recordsFromReceivables = SltLoanReceivableRecord::with(['studentPaymentPlan.student', 'studentPaymentPlan.course'])
+                // Keep track of plans that already have a recovery record for this
+                // month, including paid records.  Otherwise a paid record disappears
+                // from this query and the fallback below incorrectly shows the plan as
+                // pending again.
+                $receivableRecords = SltLoanReceivableRecord::with(['studentPaymentPlan.student', 'studentPaymentPlan.course'])
                     ->whereDate('payment_effective_date', '>=', $startOfMonth->toDateString())
                     ->whereDate('payment_effective_date', '<=', $endOfMonth->toDateString())
-                    ->when(
-                        Schema::hasColumn('slt_loan_receivable_records', 'status'),
-                        fn ($query) => $query->where(function ($statusQuery) {
-                            $statusQuery->whereNull('status')
-                                ->orWhereRaw('LOWER(status) != ?', ['paid']);
-                        })
-                    )
                     ->orderBy('payment_effective_date')
-                    ->get()
+                    ->get();
+
+                $plansWithReceivableRecords = $receivableRecords
+                    ->pluck('student_payment_plan_id')
+                    ->filter()
+                    ->unique()
+                    ->values();
+
+                $recordsFromReceivables = $receivableRecords
+                    ->filter(fn ($record) => strtolower($record->status ?? 'pending') !== 'paid')
                     ->map(function ($record) {
                         $plan = $record->studentPaymentPlan;
                         $studentId = optional($plan)->student_id ?? $record->student_id;
@@ -1282,11 +1289,7 @@ class PaymentSummaryController extends Controller
             }
         }
 
-        if ($recordsFromReceivables->isNotEmpty()) {
-            return $recordsFromReceivables;
-        }
-
-        return StudentPaymentPlan::with(['student', 'course'])
+        $plansWithoutReceivableRecords = StudentPaymentPlan::with(['student', 'course'])
             ->where(function ($query) {
                 $query->whereRaw('LOWER(COALESCE(slt_loan_applied, "")) = ?', ['yes'])
                     ->orWhere('slt_loan_applied', '1')
@@ -1295,6 +1298,10 @@ class PaymentSummaryController extends Controller
             })
             ->whereDate('slt_receivable_effective_date', '>=', $startOfMonth->toDateString())
             ->whereDate('slt_receivable_effective_date', '<=', $endOfMonth->toDateString())
+            ->when(
+                $plansWithReceivableRecords->isNotEmpty(),
+                fn ($query) => $query->whereNotIn('id', $plansWithReceivableRecords)
+            )
             ->orderBy('slt_receivable_effective_date')
             ->get()
             ->map(function ($plan) {
@@ -1329,6 +1336,11 @@ class PaymentSummaryController extends Controller
                     'course_id' => optional($plan)->course_id,
                 ];
             });
+
+        return $recordsFromReceivables
+            ->concat($plansWithoutReceivableRecords)
+            ->sortBy('effective_date')
+            ->values();
     }
 
     /**
