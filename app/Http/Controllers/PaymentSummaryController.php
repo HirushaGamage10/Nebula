@@ -1362,6 +1362,85 @@ class PaymentSummaryController extends Controller
     }
 
     /**
+     * 🔹 Installment KPI – returns aggregated totals for a specific
+     *     location / course / intake / payment-type / installment-number combo.
+     *
+     * Called via AJAX from the Payment Dashboard KPI card.
+     */
+    public function getInstallmentKpi(Request $request)
+    {
+        $location        = $request->input('location');
+        $courseId        = $request->input('course_id') ? (int) $request->input('course_id') : null;
+        $intakeId        = $request->input('intake_id') ? (int) $request->input('intake_id') : null;
+        $paymentType     = $request->input('payment_type');       // franchise_fee | course_fee | registration_fee
+        $installmentNo   = $request->input('installment_no') !== null && $request->input('installment_no') !== ''
+                            ? (int) $request->input('installment_no')
+                            : null;
+
+        $table = $this->getPaymentDetailsTable();
+
+        // ── Build base query joining payment_details → course_registration ──
+        $base = PaymentDetail::query()
+            ->join('course_registration', 'payment_details.course_registration_id', '=', 'course_registration.id')
+            ->when($location, fn ($q) => $q->where('course_registration.location', $location))
+            ->when($courseId, fn ($q) => $q->where('course_registration.course_id', $courseId))
+            ->when($intakeId, fn ($q) => $q->where('course_registration.intake_id', $intakeId));
+
+        // ── Payment-type filter ──────────────────────────────────────────────
+        if ($paymentType) {
+            $hasInstallmentType = $this->hasPaymentDetailColumn('installment_type');
+            $hasPaymentType     = $this->hasPaymentDetailColumn('payment_type');
+
+            if ($hasInstallmentType && $hasPaymentType) {
+                $base->where(function ($q) use ($table, $paymentType) {
+                    $q->where("{$table}.installment_type", $paymentType)
+                      ->orWhere("{$table}.payment_type", $paymentType);
+                });
+            } elseif ($hasInstallmentType) {
+                $base->where("{$table}.installment_type", $paymentType);
+            } elseif ($hasPaymentType) {
+                $base->where("{$table}.payment_type", $paymentType);
+            }
+        }
+
+        // ── Installment-number filter ────────────────────────────────────────
+        if ($installmentNo !== null) {
+            $base->where("{$table}.installment_number", $installmentNo);
+        }
+
+        // ── Aggregate ───────────────────────────────────────────────────────
+        $paidTotal    = (float) (clone $base)->where("{$table}.status", 'paid')->sum("{$table}.total_fee");
+        $pendingTotal = (float) (clone $base)->where("{$table}.status", 'pending')->sum("{$table}.total_fee");
+        $totalCount   = (clone $base)->count();
+        $paidCount    = (clone $base)->where("{$table}.status", 'paid')->count();
+
+        // ── Distinct installment numbers available for this filter combo ─────
+        $availableInstallmentNos = (clone $base)
+            ->select("{$table}.installment_number")
+            ->distinct()
+            ->orderBy("{$table}.installment_number")
+            ->pluck('installment_number')
+            ->filter(fn ($v) => $v !== null)
+            ->values();
+
+        return response()->json([
+            'success'          => true,
+            'paid_total'       => $paidTotal,
+            'pending_total'    => $pendingTotal,
+            'total_count'      => $totalCount,
+            'paid_count'       => $paidCount,
+            'available_installment_nos' => $availableInstallmentNos,
+            'filters' => [
+                'location'       => $location,
+                'course_id'      => $courseId,
+                'intake_id'      => $intakeId,
+                'payment_type'   => $paymentType,
+                'installment_no' => $installmentNo,
+            ],
+        ]);
+    }
+
+    /**
      * 🔹 Live Payment Feed (for real-time updates)
      */
     public function liveFeed(Request $request)

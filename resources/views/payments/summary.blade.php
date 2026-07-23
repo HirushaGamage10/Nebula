@@ -119,7 +119,6 @@
             </div>
         </div>
     </div>
-
     {{-- Primary KPIs --}}
     <div class="row g-3 mb-4" id="kpiSection">
         <div class="col-xl-3 col-md-6">
@@ -230,6 +229,168 @@
             </div>
         </div>
     </div>
+
+    {{-- ── Installment Amount Lookup KPI ────────────────────────────────────── --}}
+    <div class="card shadow-sm border-0 mb-4" id="installmentKpiCard">
+        <div class="card-header bg-white border-0 pt-3 pb-0 px-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <div class="rounded p-2" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);">
+                    <i class="bi bi-layers-half text-white"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0">Installment Amount Lookup</h6>
+                    <small class="text-muted">Select filters to view paid &amp; pending totals for a specific installment</small>
+                </div>
+            </div>
+        </div>
+        <div class="card-body px-4 pb-4 pt-3">
+
+            {{-- Filter row --}}
+            <div class="row g-3 align-items-end mb-3" id="kpiFilterRow">
+
+                {{-- Location --}}
+                <div class="col-xl-2 col-lg-2 col-md-4 col-sm-6">
+                    <label class="form-label small text-muted mb-1">Location</label>
+                    <select class="form-select form-select-sm" id="kpiLocation">
+                        <option value="">All Locations</option>
+                        <option value="Welisara">Welisara</option>
+                        <option value="Moratuwa">Moratuwa</option>
+                        <option value="Peradeniya">Peradeniya</option>
+                    </select>
+                </div>
+
+                {{-- Course --}}
+                <div class="col-xl-3 col-lg-3 col-md-4 col-sm-6">
+                    <label class="form-label small text-muted mb-1">Course</label>
+                    <select class="form-select form-select-sm" id="kpiCourse" disabled>
+                        <option value="">— select location first —</option>
+                    </select>
+                </div>
+
+                {{-- Intake --}}
+                <div class="col-xl-2 col-lg-2 col-md-4 col-sm-6">
+                    <label class="form-label small text-muted mb-1">Intake / Batch</label>
+                    <select class="form-select form-select-sm" id="kpiIntake" disabled>
+                        <option value="">— select course first —</option>
+                    </select>
+                </div>
+
+                {{-- Payment Type --}}
+                <div class="col-xl-2 col-lg-2 col-md-4 col-sm-6">
+                    <label class="form-label small text-muted mb-1">Payment Type</label>
+                    <select class="form-select form-select-sm" id="kpiPaymentType">
+                        <option value="">All Types</option>
+                        <option value="franchise_fee">Franchise Fee</option>
+                        <option value="course_fee">Course Fee</option>
+                        <option value="registration_fee">Registration Fee</option>
+                    </select>
+                </div>
+
+                {{-- Installment No --}}
+                <div class="col-xl-1 col-lg-1 col-md-4 col-sm-6">
+                    <label class="form-label small text-muted mb-1">Installment No.</label>
+                    <select class="form-select form-select-sm" id="kpiInstallmentNo">
+                        <option value="">All</option>
+                    </select>
+                </div>
+
+                {{-- Fetch Button --}}
+                <div class="col-xl-2 col-lg-2 col-md-4">
+                    <button class="btn btn-sm btn-primary w-100" id="kpiFetchBtn">
+                        <i class="bi bi-search me-1"></i> Get Totals
+                    </button>
+                </div>
+            </div>
+
+            {{-- Placeholder --}}
+            <div id="kpiPlaceholder" class="text-center py-3">
+                <i class="bi bi-sliders text-muted fs-3 d-block mb-1"></i>
+                <p class="text-muted small mb-0">Select filters above and click <strong>Get Totals</strong> to see the installment breakdown.</p>
+            </div>
+
+            {{-- Loading --}}
+            <div id="kpiLoading" class="text-center py-3 d-none">
+                <div class="spinner-border text-primary" role="status" style="width:1.75rem;height:1.75rem;">
+                    <span class="visually-hidden">Loading…</span>
+                </div>
+                <p class="text-muted small mt-2 mb-0">Fetching data…</p>
+            </div>
+
+            {{-- Error --}}
+            <div id="kpiError" class="d-none">
+                <div class="alert alert-danger mb-0 py-2" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <span id="kpiErrorMsg">Something went wrong. Please try again.</span>
+                </div>
+            </div>
+
+            {{-- Results --}}
+            <div id="kpiResultArea" class="d-none">
+                <div class="row g-3">
+
+                    {{-- Paid --}}
+                    <div class="col-xl-4 col-md-6">
+                        <div class="card border-0 shadow-sm bg-light h-100 border-start border-success" style="border-left-width: 4px !important;">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <p class="mb-1 text-muted small fw-bold text-uppercase" style="letter-spacing: 0.05em;">Total Collected (Paid)</p>
+                                        <h4 class="fw-bold text-dark mb-0" id="kpiPaidTotal">LKR 0.00</h4>
+                                        <small class="text-muted"><span id="kpiPaidCount">0</span> paid transactions</small>
+                                    </div>
+                                    <div class="bg-success bg-opacity-10 text-success p-2 rounded-circle d-flex align-items-center justify-content-center" style="width:40px; height:40px;">
+                                        <i class="bi bi-check-circle-fill fs-5"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Pending --}}
+                    <div class="col-xl-4 col-md-6">
+                        <div class="card border-0 shadow-sm bg-light h-100 border-start border-danger" style="border-left-width: 4px !important;">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <p class="mb-1 text-muted small fw-bold text-uppercase" style="letter-spacing: 0.05em;">Total Pending</p>
+                                        <h4 class="fw-bold text-dark mb-0" id="kpiPendingTotal">LKR 0.00</h4>
+                                        <small class="text-muted">Awaiting collection</small>
+                                    </div>
+                                    <div class="bg-danger bg-opacity-10 text-danger p-2 rounded-circle d-flex align-items-center justify-content-center" style="width:40px; height:40px;">
+                                        <i class="bi bi-clock-history fs-5"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Grand Total --}}
+                    <div class="col-xl-4 col-md-6">
+                        <div class="card border-0 shadow-sm bg-light h-100 border-start border-primary" style="border-left-width: 4px !important;">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <p class="mb-1 text-muted small fw-bold text-uppercase" style="letter-spacing: 0.05em;">Grand Total (Paid + Pending)</p>
+                                        <h4 class="fw-bold text-dark mb-0" id="kpiGrandTotal">LKR 0.00</h4>
+                                        <small class="text-muted"><span id="kpiTotalCount">0</span> records matched</small>
+                                    </div>
+                                    <div class="bg-primary bg-opacity-10 text-primary p-2 rounded-circle d-flex align-items-center justify-content-center" style="width:40px; height:40px;">
+                                        <i class="bi bi-cash-coin fs-5"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                {{-- Active filter badges --}}
+                <div class="mt-3 d-flex flex-wrap gap-2" id="kpiFilterBadges"></div>
+            </div>
+
+        </div>
+    </div>
+    {{-- / Installment KPI Card --}}
 
     <div class="row g-4 mb-4">
         <div class="col-lg-8">
@@ -402,6 +563,8 @@
             </div>
         </div>
     </div>
+
+
 
 </div>
 
@@ -1122,6 +1285,215 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('weeklyLastWeekVal').textContent = 'LKR 0.00';
     }
 });
+</script>
+
+<script nonce="{{ $cspNonce }}">
+// ============================================================
+//  Installment KPI Card Logic
+// ============================================================
+(function () {
+    'use strict';
+
+    const kpiUrl  = "{{ route('payment.summary.installment.kpi') }}";
+    const coursesUrl = "{{ route('payment.summary.courses.by.location') }}";
+    const intakesUrl = "{{ route('payment.summary.intakes.by.location.course') }}";
+
+    const elLoc     = document.getElementById('kpiLocation');
+    const elCourse  = document.getElementById('kpiCourse');
+    const elIntake  = document.getElementById('kpiIntake');
+    const elType    = document.getElementById('kpiPaymentType');
+    const elInstNo  = document.getElementById('kpiInstallmentNo');
+    const elBtn     = document.getElementById('kpiFetchBtn');
+
+    const elResult    = document.getElementById('kpiResultArea');
+    const elHolder    = document.getElementById('kpiPlaceholder');
+    const elLoading   = document.getElementById('kpiLoading');
+    const elError     = document.getElementById('kpiError');
+    const elErrMsg    = document.getElementById('kpiErrorMsg');
+    const elPaid      = document.getElementById('kpiPaidTotal');
+    const elPending   = document.getElementById('kpiPendingTotal');
+    const elGrand     = document.getElementById('kpiGrandTotal');
+    const elPaidCnt   = document.getElementById('kpiPaidCount');
+    const elTotalCnt  = document.getElementById('kpiTotalCount');
+    const elBadges    = document.getElementById('kpiFilterBadges');
+
+    if (!elLoc) return; // guard if element missing
+
+    const fmt = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmtLKR = v => `LKR ${fmt.format(Number(v || 0))}`;
+
+    function showState(state) {
+        elHolder.classList.add('d-none');
+        elLoading.classList.add('d-none');
+        elError.classList.add('d-none');
+        elResult.classList.add('d-none');
+        if (state === 'placeholder') elHolder.classList.remove('d-none');
+        else if (state === 'loading')  elLoading.classList.remove('d-none');
+        else if (state === 'error')    elError.classList.remove('d-none');
+        else if (state === 'result')   elResult.classList.remove('d-none');
+    }
+
+    // ── Dependent: Location → load courses ──────────────────────────────
+    elLoc.addEventListener('change', async function () {
+        const loc = this.value;
+
+        // Reset downstream selects
+        elCourse.innerHTML  = '<option value="">All Courses</option>';
+        elIntake.innerHTML  = '<option value="">All Intakes</option>';
+        elInstNo.innerHTML  = '<option value="">All</option>';
+        elCourse.disabled   = !loc;
+        elIntake.disabled   = true;
+
+        if (!loc) return;
+
+        elCourse.innerHTML = '<option value="">Loading…</option>';
+        elCourse.disabled  = true;
+
+        try {
+            const res  = await fetch(`${coursesUrl}?location=${encodeURIComponent(loc)}`);
+            const json = await res.json();
+            elCourse.innerHTML = '<option value="">All Courses</option>';
+            if (json.success && Array.isArray(json.data)) {
+                json.data.forEach(c => {
+                    const o = document.createElement('option');
+                    o.value = c.course_id;
+                    o.textContent = c.course_name;
+                    elCourse.appendChild(o);
+                });
+            }
+            elCourse.disabled = false;
+        } catch (e) {
+            elCourse.innerHTML = '<option value="">Error loading courses</option>';
+            elCourse.disabled  = false;
+        }
+    });
+
+    // ── Dependent: Course → load intakes ─────────────────────────────────
+    elCourse.addEventListener('change', async function () {
+        const loc      = elLoc.value;
+        const courseId = this.value;
+
+        elIntake.innerHTML = '<option value="">All Intakes</option>';
+        elInstNo.innerHTML = '<option value="">All</option>';
+        elIntake.disabled  = !courseId;
+
+        if (!loc || !courseId) return;
+
+        elIntake.innerHTML = '<option value="">Loading…</option>';
+        elIntake.disabled  = true;
+
+        try {
+            const res  = await fetch(`${intakesUrl}?location=${encodeURIComponent(loc)}&course_id=${encodeURIComponent(courseId)}`);
+            const json = await res.json();
+            elIntake.innerHTML = '<option value="">All Intakes</option>';
+            if (json.success && Array.isArray(json.data)) {
+                json.data.forEach(i => {
+                    const o = document.createElement('option');
+                    o.value = i.intake_id;
+                    o.textContent = i.intake_name;
+                    elIntake.appendChild(o);
+                });
+            }
+            elIntake.disabled = false;
+        } catch (e) {
+            elIntake.innerHTML = '<option value="">Error loading intakes</option>';
+            elIntake.disabled  = false;
+        }
+    });
+
+    // ── When intake or type changes, refresh available installment numbers ─
+    async function refreshInstallmentNos() {
+        const loc      = elLoc.value;
+        const courseId = elCourse.value;
+        const intakeId = elIntake.value;
+        const ptype    = elType.value;
+
+        const params = new URLSearchParams();
+        if (loc)      params.append('location',     loc);
+        if (courseId) params.append('course_id',    courseId);
+        if (intakeId) params.append('intake_id',    intakeId);
+        if (ptype)    params.append('payment_type', ptype);
+
+        try {
+            const res  = await fetch(`${kpiUrl}?${params.toString()}`);
+            const json = await res.json();
+            const current = elInstNo.value;
+            elInstNo.innerHTML = '<option value="">All</option>';
+            if (json.success && Array.isArray(json.available_installment_nos)) {
+                json.available_installment_nos.forEach(n => {
+                    const o = document.createElement('option');
+                    o.value = n;
+                    o.textContent = `Installment ${n}`;
+                    if (String(n) === String(current)) o.selected = true;
+                    elInstNo.appendChild(o);
+                });
+            }
+        } catch (_) { /* silent */ }
+    }
+
+    elIntake.addEventListener('change', refreshInstallmentNos);
+    elType.addEventListener('change', refreshInstallmentNos);
+
+    // ── Fetch & render KPI totals ─────────────────────────────────────────
+    elBtn.addEventListener('click', async function () {
+        showState('loading');
+
+        const params = new URLSearchParams();
+        const loc      = elLoc.value;
+        const courseId = elCourse.value;
+        const intakeId = elIntake.value;
+        const ptype    = elType.value;
+        const instNo   = elInstNo.value;
+
+        if (loc)      params.append('location',       loc);
+        if (courseId) params.append('course_id',      courseId);
+        if (intakeId) params.append('intake_id',      intakeId);
+        if (ptype)    params.append('payment_type',   ptype);
+        if (instNo)   params.append('installment_no', instNo);
+
+        try {
+            const res  = await fetch(`${kpiUrl}?${params.toString()}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+            if (!json.success) throw new Error('Server returned an error');
+
+            elPaid.textContent    = fmtLKR(json.paid_total);
+            elPending.textContent = fmtLKR(json.pending_total);
+            elGrand.textContent   = fmtLKR(json.paid_total + json.pending_total);
+            elPaidCnt.textContent = (json.paid_count || 0).toLocaleString();
+            elTotalCnt.textContent= (json.total_count || 0).toLocaleString();
+
+            // Filter badges
+            const typeLabels = {
+                franchise_fee: 'Franchise Fee',
+                course_fee: 'Course Fee',
+                registration_fee: 'Registration Fee',
+            };
+            const badges = [];
+            const f = json.filters || {};
+            if (f.location)       badges.push(['📍 Location',   f.location]);
+            if (f.course_id)      badges.push(['📚 Course',     elCourse.options[elCourse.selectedIndex]?.text || f.course_id]);
+            if (f.intake_id)      badges.push(['📋 Intake',     elIntake.options[elIntake.selectedIndex]?.text || f.intake_id]);
+            if (f.payment_type)   badges.push(['💳 Type',       typeLabels[f.payment_type] || f.payment_type]);
+            if (f.installment_no !== null && f.installment_no !== undefined)
+                                  badges.push(['#️⃣ Installment', `No. ${f.installment_no}`]);
+
+            elBadges.innerHTML = badges.map(([label, val]) =>
+                `<span class="badge bg-light text-dark border border-secondary-subtle rounded-pill px-3 py-2 fw-normal small">
+                    <span class="text-muted">${label}:</span>&nbsp;<strong>${val}</strong>
+                 </span>`
+            ).join('');
+
+            showState('result');
+        } catch (err) {
+            elErrMsg.textContent = err.message || 'Failed to fetch data. Please try again.';
+            showState('error');
+        }
+    });
+
+    // Initialise state
+    showState('placeholder');
+})();
 </script>
 
 <style nonce="{{ $cspNonce }}">
