@@ -1441,6 +1441,83 @@ class PaymentSummaryController extends Controller
     }
 
     /**
+     * 🔹 Export Installment KPI transactions to PDF
+     */
+    public function exportInstallmentPdf(Request $request)
+    {
+        $location        = $request->input('location');
+        $courseId        = $request->input('course_id') ? (int) $request->input('course_id') : null;
+        $intakeId        = $request->input('intake_id') ? (int) $request->input('intake_id') : null;
+        $paymentType     = $request->input('payment_type');
+        $installmentNo   = $request->input('installment_no') !== null && $request->input('installment_no') !== ''
+                            ? (int) $request->input('installment_no')
+                            : null;
+        $statusFilter    = $request->input('status', 'all');
+
+        $table = $this->getPaymentDetailsTable();
+
+        $query = PaymentDetail::query()
+            ->with(['student', 'registration.course', 'registration.intake'])
+            ->join('course_registration', 'payment_details.course_registration_id', '=', 'course_registration.id')
+            ->select('payment_details.*')
+            ->when($location, fn ($q) => $q->where('course_registration.location', $location))
+            ->when($courseId, fn ($q) => $q->where('course_registration.course_id', $courseId))
+            ->when($intakeId, fn ($q) => $q->where('course_registration.intake_id', $intakeId));
+
+        if ($paymentType) {
+            $hasInstallmentType = $this->hasPaymentDetailColumn('installment_type');
+            $hasPaymentType     = $this->hasPaymentDetailColumn('payment_type');
+
+            if ($hasInstallmentType && $hasPaymentType) {
+                $query->where(function ($q) use ($table, $paymentType) {
+                    $q->where("{$table}.installment_type", $paymentType)
+                      ->orWhere("{$table}.payment_type", $paymentType);
+                });
+            } elseif ($hasInstallmentType) {
+                $query->where("{$table}.installment_type", $paymentType);
+            } elseif ($hasPaymentType) {
+                $query->where("{$table}.payment_type", $paymentType);
+            }
+        }
+
+        if ($installmentNo !== null) {
+            $query->where("{$table}.installment_number", $installmentNo);
+        }
+
+        if ($statusFilter !== 'all') {
+            $query->where("{$table}.status", $statusFilter);
+        }
+
+        $query->orderBy("{$table}.created_at", 'desc');
+
+        $transactions = $query->get();
+        
+        $paidTotal    = $transactions->where('status', 'paid')->sum('total_fee');
+        $pendingTotal = $transactions->where('status', 'pending')->sum('total_fee');
+        $grandTotal   = $transactions->sum('total_fee');
+
+        $courseName = $courseId ? \App\Models\Course::find($courseId)?->course_name : 'All Courses';
+        $intakeName = $intakeId ? \App\Models\Intake::find($intakeId)?->intake_name : 'All Intakes';
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payments.pdf.installment_report', [
+            'transactions' => $transactions,
+            'filters'      => [
+                'location'       => $location ?: 'All Locations',
+                'course'         => $courseName,
+                'intake'         => $intakeName,
+                'payment_type'   => $paymentType ?: 'All Types',
+                'installment_no' => $installmentNo !== null ? $installmentNo : 'All',
+                'status'         => ucfirst($statusFilter)
+            ],
+            'paidTotal'    => $paidTotal,
+            'pendingTotal' => $pendingTotal,
+            'grandTotal'   => $grandTotal,
+        ]);
+
+        return $pdf->download('installment_report_' . strtolower($statusFilter) . '_' . date('Ymd_His') . '.pdf');
+    }
+
+    /**
      * 🔹 Live Payment Feed (for real-time updates)
      */
     public function liveFeed(Request $request)

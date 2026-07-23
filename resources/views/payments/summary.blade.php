@@ -331,7 +331,7 @@
                     {{-- Paid --}}
                     <div class="col-xl-4 col-md-6">
                         <div class="card border-0 shadow-sm bg-light h-100 border-start border-success" style="border-left-width: 4px !important;">
-                            <div class="card-body">
+                            <div class="card-body d-flex flex-column justify-content-between">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
                                         <p class="mb-1 text-muted small fw-bold text-uppercase" style="letter-spacing: 0.05em;">Total Collected (Paid)</p>
@@ -342,6 +342,11 @@
                                         <i class="bi bi-check-circle-fill fs-5"></i>
                                     </div>
                                 </div>
+                                <div class="mt-3 text-end">
+                                    <a href="#" class="btn btn-sm btn-outline-success kpi-pdf-btn" data-status="paid" style="font-size: 0.75rem;">
+                                        <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -349,7 +354,7 @@
                     {{-- Pending --}}
                     <div class="col-xl-4 col-md-6">
                         <div class="card border-0 shadow-sm bg-light h-100 border-start border-danger" style="border-left-width: 4px !important;">
-                            <div class="card-body">
+                            <div class="card-body d-flex flex-column justify-content-between">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
                                         <p class="mb-1 text-muted small fw-bold text-uppercase" style="letter-spacing: 0.05em;">Total Pending</p>
@@ -360,6 +365,11 @@
                                         <i class="bi bi-clock-history fs-5"></i>
                                     </div>
                                 </div>
+                                <div class="mt-3 text-end">
+                                    <a href="#" class="btn btn-sm btn-outline-danger kpi-pdf-btn" data-status="pending" style="font-size: 0.75rem;">
+                                        <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -367,7 +377,7 @@
                     {{-- Grand Total --}}
                     <div class="col-xl-4 col-md-6">
                         <div class="card border-0 shadow-sm bg-light h-100 border-start border-primary" style="border-left-width: 4px !important;">
-                            <div class="card-body">
+                            <div class="card-body d-flex flex-column justify-content-between">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
                                         <p class="mb-1 text-muted small fw-bold text-uppercase" style="letter-spacing: 0.05em;">Grand Total (Paid + Pending)</p>
@@ -377,6 +387,11 @@
                                     <div class="bg-primary bg-opacity-10 text-primary p-2 rounded-circle d-flex align-items-center justify-content-center" style="width:40px; height:40px;">
                                         <i class="bi bi-cash-coin fs-5"></i>
                                     </div>
+                                </div>
+                                <div class="mt-3 text-end">
+                                    <a href="#" class="btn btn-sm btn-outline-primary kpi-pdf-btn" data-status="all" style="font-size: 0.75rem;">
+                                        <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -1483,6 +1498,15 @@ document.addEventListener("DOMContentLoaded", () => {
                     <span class="text-muted">${label}:</span>&nbsp;<strong>${val}</strong>
                  </span>`
             ).join('');
+
+            // Update PDF export links
+            const pdfUrlBase = "{{ route('payment.summary.installment.pdf') }}";
+            document.querySelectorAll('.kpi-pdf-btn').forEach(btn => {
+                const status = btn.getAttribute('data-status');
+                const pdfParams = new URLSearchParams(params);
+                pdfParams.set('status', status);
+                btn.href = `${pdfUrlBase}?${pdfParams.toString()}`;
+            });
 
             showState('result');
         } catch (err) {
