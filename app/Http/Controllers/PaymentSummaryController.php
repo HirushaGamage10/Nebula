@@ -1497,7 +1497,7 @@ class PaymentSummaryController extends Controller
         $grandTotal   = $transactions->sum('total_fee');
 
         $courseName = $courseId ? \App\Models\Course::find($courseId)?->course_name : 'All Courses';
-        $intakeName = $intakeId ? \App\Models\Intake::find($intakeId)?->intake_name : 'All Intakes';
+        $intakeName = $intakeId ? \App\Models\Intake::find($intakeId)?->batch : 'All Intakes';
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payments.pdf.installment_report', [
             'transactions' => $transactions,

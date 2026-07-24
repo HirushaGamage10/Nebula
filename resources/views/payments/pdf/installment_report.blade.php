@@ -70,7 +70,7 @@
                 <tr>
                     <td>{{ $index + 1 }}</td>
                     <td>{{ $tx->student ? $tx->student->student_id : 'N/A' }}</td>
-                    <td>{{ $tx->student ? $tx->student->initials . ' ' . $tx->student->last_name : 'Unknown' }}</td>
+                    <td>{{ $tx->student ? ($tx->student->name_with_initials ?: $tx->student->full_name) : 'Unknown' }}</td>
                     <td>No. {{ $tx->installment_number ?? '-' }}</td>
                     <td>{{ $tx->payment_type ?? $tx->installment_type ?? 'N/A' }}</td>
                     <td class="text-center">
