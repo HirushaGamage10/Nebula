@@ -37,6 +37,8 @@ class DGMDashboardController extends Controller
 
         // Build date filter
         $dateFilter = $this->buildDateFilter($year, $month, $day);
+        $prevYear = $year - 1;
+        $prevDateFilter = $this->buildDateFilter($prevYear, $month, $day);
 
         // Total Students
         $studentsQuery = Student::query();
@@ -80,28 +82,16 @@ class DGMDashboardController extends Controller
         }
 
         $payments = $paymentBaseQuery->get();
-        $partialPaymentsRevenue = 0;
+        $partialPaymentsRevenue = 0.0;
 
         foreach ($payments as $payment) {
-            if (!empty($payment->partial_payments) && is_array($payment->partial_payments)) {
-                foreach ($payment->partial_payments as $partial) {
-                    $paymentDate = Carbon::parse($partial['date'] ?? $partial['payment_date'] ?? $partial['paid_at'] ?? $payment->created_at);
-                    if ($paymentDate->year == $year) {
-                        if (!$month || $paymentDate->month == $month) {
-                            if (!$day || $paymentDate->day == $day) {
-                                $partialPaymentsRevenue += floatval($partial['amount'] ?? 0);
-                            }
-                        }
-                    }
-                }
-            }
+            $partialPaymentsRevenue += $this->getPaymentContributionForPeriod($payment, $dateFilter['start'], $dateFilter['end']);
         }
 
         // Total current year revenue
         $yearlyRevenue = $bulkRevenue + $partialPaymentsRevenue;
 
         // Calculate Previous Year Revenue
-        $prevYear = $year - 1;
 
         // 1. Previous year bulk revenue
         $prevBulkRevenue = DB::table('bulk_revenue_uploads')
@@ -113,20 +103,9 @@ class DGMDashboardController extends Controller
             ->sum('revenue');
 
         // 2. Previous year partial payments
-        $prevPartialPaymentsRevenue = 0;
+        $prevPartialPaymentsRevenue = 0.0;
         foreach ($payments as $payment) {
-            if (!empty($payment->partial_payments) && is_array($payment->partial_payments)) {
-                foreach ($payment->partial_payments as $partial) {
-                    $paymentDate = Carbon::parse($partial['date'] ?? $partial['payment_date'] ?? $partial['paid_at'] ?? $payment->created_at);
-                    if ($paymentDate->year == $prevYear) {
-                        if (!$month || $paymentDate->month == $month) {
-                            if (!$day || $paymentDate->day == $day) {
-                                $prevPartialPaymentsRevenue += floatval($partial['amount'] ?? 0);
-                            }
-                        }
-                    }
-                }
-            }
+            $prevPartialPaymentsRevenue += $this->getPaymentContributionForPeriod($payment, $prevDateFilter['start'], $prevDateFilter['end']);
         }
 
         $prevYearRevenue = $prevBulkRevenue + $prevPartialPaymentsRevenue;
@@ -191,24 +170,13 @@ class DGMDashboardController extends Controller
                 ->sum('revenue');
 
             // Current year partial payments
-            $currPartialRev = 0;
+            $currPartialRev = 0.0;
             $locPayments = PaymentDetail::whereHas('student', fn($q) => $q->where('institute_location', $loc))
                 ->when($course !== 'all', fn($q) => $q->whereHas('registration.course', fn($qq) => $qq->where('course_id', $course)))
                 ->get();
 
             foreach ($locPayments as $p) {
-                if (!empty($p->partial_payments) && is_array($p->partial_payments)) {
-                    foreach ($p->partial_payments as $partial) {
-                        $paymentDate = Carbon::parse($partial['date'] ?? $partial['payment_date'] ?? $partial['paid_at'] ?? $p->created_at);
-                        if ($paymentDate->year == $year) {
-                            if (!$month || $paymentDate->month == $month) {
-                                if (!$day || $paymentDate->day == $day) {
-                                    $currPartialRev += floatval($partial['amount'] ?? 0);
-                                }
-                            }
-                        }
-                    }
-                }
+                $currPartialRev += $this->getPaymentContributionForPeriod($p, $dateFilter['start'], $dateFilter['end']);
             }
 
             // Previous year calculations
@@ -218,20 +186,9 @@ class DGMDashboardController extends Controller
                 ->when($course !== 'all', fn($q) => $q->where('course', $course))
                 ->sum('revenue');
 
-            $prevPartialRev = 0;
+            $prevPartialRev = 0.0;
             foreach ($locPayments as $p) {
-                if (!empty($p->partial_payments) && is_array($p->partial_payments)) {
-                    foreach ($p->partial_payments as $partial) {
-                        $paymentDate = Carbon::parse($partial['date'] ?? $partial['payment_date'] ?? $partial['paid_at'] ?? $p->created_at);
-                        if ($paymentDate->year == $prevYear) {
-                            if (!$month || $paymentDate->month == $month) {
-                                if (!$day || $paymentDate->day == $day) {
-                                    $prevPartialRev += floatval($partial['amount'] ?? 0);
-                                }
-                            }
-                        }
-                    }
-                }
+                $prevPartialRev += $this->getPaymentContributionForPeriod($p, $prevDateFilter['start'], $prevDateFilter['end']);
             }
 
             // Outstanding from payment_plans
@@ -709,53 +666,22 @@ class DGMDashboardController extends Controller
                     $payments = $paymentQ->get();
 
                     foreach ($payments as $p) {
-                        // if partial_payments array exists, iterate and match by partial date
-                        if (!empty($p->partial_payments) && is_array($p->partial_payments)) {
-                            foreach ($p->partial_payments as $partial) {
-                                $partialDateRaw = $partial['date'] ?? $partial['payment_date'] ?? $partial['paid_at'] ?? null;
-                                if (!$partialDateRaw) {
-                                    // fallback to parent created_at
-                                    $partialDate = $p->created_at;
-                                } else {
-                                    try {
-                                        $partialDate = Carbon::parse($partialDateRaw);
-                                    } catch (\Exception $ex) {
-                                        // skip unparsable dates
-                                        continue;
-                                    }
-                                }
+                    $contribution = $this->getPaymentContributionForPeriod($p, $periodStart, $periodEnd);
+                    if ($contribution <= 0) {
+                        continue;
+                    }
 
-                                if ($partialDate->between($periodStart, $periodEnd)) {
-                                    $key = "{$y}|{$loc}|{$courseName}";
-                                    if (!isset($aggregate[$key])) {
-                                        $aggregate[$key] = [
-                                            'year' => (int) $y,
-                                            'location' => $loc,
-                                            'course_name' => $courseName,
-                                            'revenue' => 0.0
-                                        ];
-                                    }
-                                    $aggregate[$key]['revenue'] += floatval($partial['amount'] ?? 0);
-                                }
-                            }
-                        } else {
-                            // no partials: treat whole payment as single entry at created_at
-                            if ($p->created_at && $p->created_at->between($periodStart, $periodEnd)) {
-                                $key = "{$y}|{$loc}|{$courseName}";
-                                if (!isset($aggregate[$key])) {
-                                    $aggregate[$key] = [
-                                        'year' => (int) $y,
-                                        'location' => $loc,
-                                        'course_name' => $courseName,
-                                        'revenue' => 0.0
-                                    ];
-                                }
-                                // amount field fallback: amount / total_amount / 0
-                                $amount = floatval($p->amount ?? $p->total_amount ?? 0);
-                                $aggregate[$key]['revenue'] += $amount;
-                            }
-                        }
-                    } // end payments loop
+                    $key = "{$y}|{$loc}|{$courseName}";
+                    if (!isset($aggregate[$key])) {
+                        $aggregate[$key] = [
+                            'year' => (int) $y,
+                            'location' => $loc,
+                            'course_name' => $courseName,
+                            'revenue' => 0.0
+                        ];
+                    }
+                    $aggregate[$key]['revenue'] += $contribution;
+                } // end payments loop
                 } // end courses loop
 
             } // end locations
@@ -921,6 +847,48 @@ class DGMDashboardController extends Controller
     /**
      * Helper method to build date filter
      */
+    protected function getPaymentContributionForPeriod(PaymentDetail $payment, Carbon $periodStart, Carbon $periodEnd): float
+    {
+        $partials = $payment->partial_payments ?? [];
+        if (is_string($partials)) {
+            $partials = json_decode($partials, true) ?? [];
+        }
+
+        if (is_array($partials) && !empty($partials)) {
+            $contribution = 0.0;
+            foreach ($partials as $partial) {
+                $dateValue = $partial['date'] ?? $partial['payment_date'] ?? $partial['paid_at'] ?? null;
+                if (!$dateValue) {
+                    $dateValue = $payment->payment_effective_date ?? $payment->created_at;
+                }
+
+                try {
+                    $partialDate = Carbon::parse($dateValue);
+                } catch (\Throwable $e) {
+                    continue;
+                }
+
+                if ($partialDate->between($periodStart, $periodEnd)) {
+                    $contribution += (float) ($partial['amount'] ?? 0);
+                }
+            }
+
+            if ($contribution > 0) {
+                return $contribution;
+            }
+        }
+
+        $referenceDate = $payment->payment_effective_date
+            ? Carbon::parse($payment->payment_effective_date)
+            : ($payment->created_at ? Carbon::parse($payment->created_at) : null);
+
+        if ($referenceDate && $referenceDate->between($periodStart, $periodEnd)) {
+            return (float) ($payment->amount ?? $payment->total_fee ?? 0);
+        }
+
+        return 0.0;
+    }
+
     private function buildDateFilter($year, $month = null, $day = null)
     {
         $date = Carbon::create($year, $month ?: 1, $day ?: 1);
@@ -1217,15 +1185,11 @@ class DGMDashboardController extends Controller
                     ->sum('revenue');
                 
                 // Get partial payments revenue
-                $partialRev = 0;
+                $partialRev = 0.0;
                 $payments = PaymentDetail::whereYear('created_at', $year)->get();
-                
+
                 foreach ($payments as $payment) {
-                    if (!empty($payment->partial_payments) && is_array($payment->partial_payments)) {
-                        foreach ($payment->partial_payments as $partial) {
-                            $partialRev += floatval($partial['amount'] ?? 0);
-                        }
-                    }
+                    $partialRev += $this->getPaymentContributionForPeriod($payment, Carbon::create($year, 1, 1)->startOfYear(), Carbon::create($year, 12, 31)->endOfYear());
                 }
                 
                 $yearlyRevenue[$year] = $bulkRev + $partialRev;
@@ -1301,22 +1265,15 @@ class DGMDashboardController extends Controller
                 ->sum('revenue');
             
             // Partial payments
-            $partialRevenue = 0;
+            $partialRevenue = 0.0;
             $payments = PaymentDetail::whereHas('student', function ($q) use ($location) {
                 $q->where('institute_location', $location);
             })
             ->whereYear('created_at', $year)
             ->get();
-            
+
             foreach ($payments as $payment) {
-                if (!empty($payment->partial_payments) && is_array($payment->partial_payments)) {
-                    foreach ($payment->partial_payments as $partial) {
-                        $paymentDate = Carbon::parse($partial['date'] ?? $partial['payment_date'] ?? $payment->created_at);
-                        if ($paymentDate->year == $year) {
-                            $partialRevenue += floatval($partial['amount'] ?? 0);
-                        }
-                    }
-                }
+                $partialRevenue += $this->getPaymentContributionForPeriod($payment, Carbon::create($year, 1, 1)->startOfYear(), Carbon::create($year, 12, 31)->endOfYear());
             }
             
             $data[] = [
@@ -1383,20 +1340,13 @@ class DGMDashboardController extends Controller
                 ->sum('revenue');
             
             // Partial payments for month
-            $partialRevenue = 0;
+            $partialRevenue = 0.0;
             $payments = PaymentDetail::whereYear('created_at', $year)
                 ->whereMonth('created_at', $month)
                 ->get();
-            
+
             foreach ($payments as $payment) {
-                if (!empty($payment->partial_payments) && is_array($payment->partial_payments)) {
-                    foreach ($payment->partial_payments as $partial) {
-                        $paymentDate = Carbon::parse($partial['date'] ?? $partial['payment_date'] ?? $payment->created_at);
-                        if ($paymentDate->year == $year && $paymentDate->month == $month) {
-                            $partialRevenue += floatval($partial['amount'] ?? 0);
-                        }
-                    }
-                }
+                $partialRevenue += $this->getPaymentContributionForPeriod($payment, Carbon::create($year, $month, 1)->startOfMonth(), Carbon::create($year, $month, 1)->endOfMonth());
             }
             
             $months[] = [
