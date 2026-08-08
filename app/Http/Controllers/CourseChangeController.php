@@ -604,7 +604,6 @@ private function buildPaymentHistoryPreview($paymentDetails): array
         $tablesToSync = [
             'semester_registrations',
             'module_management',
-            'student_lists',
             'course_badges',
         ];
 

@@ -14,11 +14,6 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class StudentListController extends Controller
 {
-    private function courseRegistrationHasSpecializationColumn(): bool
-    {
-        return Schema::hasColumn('course_registration', 'specialization');
-    }
-
     private function normalizeSpecializationValue($value)
     {
         if (!is_string($value)) {
@@ -52,15 +47,28 @@ class StudentListController extends Controller
         return SpecializationStudentScope::applyToQuery($query, 'cr.student_id', $courseId, $intakeId, $location, $specialization);
     }
 
-    private function fillSelectedSpecialization($students, ?string $specialization)
+    private function fillDisplayedSpecializations($students, int $courseId, int $intakeId, string $location)
     {
-        if ($specialization === null) {
+        if ($students->isEmpty() || !Schema::hasTable('specialization_registrations')) {
             return $students;
         }
 
-        return $students->map(function ($student) use ($specialization) {
-            if (trim((string) ($student->specialization ?? '')) === '') {
-                $student->specialization = $specialization;
+        $specializations = DB::table('specialization_registrations')
+            ->where('course_id', $courseId)
+            ->where('intake_id', $intakeId)
+            ->where('location', $location)
+            ->whereIn('student_id', $students->pluck('student_id'))
+            ->whereNotNull('specialization')
+            ->where('specialization', '<>', '')
+            ->where('status', 'registered')
+            ->orderByDesc('id')
+            ->get(['student_id', 'specialization'])
+            ->unique('student_id')
+            ->pluck('specialization', 'student_id');
+
+        return $students->map(function ($student) use ($specializations) {
+            if ($specializations->has($student->student_id)) {
+                $student->specialization = $specializations->get($student->student_id);
             }
 
             return $student;
@@ -90,7 +98,6 @@ class StudentListController extends Controller
         $intake_id = (int) $request->intake_id;
         $specialization = $this->normalizeSpecializationValue($request->specialization);
         $course = Course::find($course_id);
-        $hasSpecializationColumn = $this->courseRegistrationHasSpecializationColumn();
 
 
 
@@ -106,7 +113,7 @@ class StudentListController extends Controller
                 'cr.course_registration_id',
                 's.student_id',
                 DB::raw('COALESCE(s.name_with_initials, s.full_name) as name'),
-                DB::raw($hasSpecializationColumn ? 'COALESCE(cr.specialization, "") as specialization' : '"" as specialization'),
+                DB::raw('"" as specialization'),
                 DB::raw('
                     CASE cr.status
                         WHEN "Pending" THEN "pending"
@@ -120,7 +127,7 @@ class StudentListController extends Controller
             ->orderBy('s.name_with_initials')
             ->get();
 
-        $students = $this->fillSelectedSpecialization($students, $specialization);
+        $students = $this->fillDisplayedSpecializations($students, $course_id, $intake_id, $location);
 
         return response()->json([
             'success'  => true,
@@ -147,7 +154,6 @@ class StudentListController extends Controller
         $specialization = $this->normalizeSpecializationValue($request->specialization);
         $status    = $request->input('status', 'all');
         $course = Course::find($course_id);
-        $hasSpecializationColumn = $this->courseRegistrationHasSpecializationColumn();
 
 
 
@@ -170,7 +176,7 @@ class StudentListController extends Controller
                 'cr.course_registration_id',
                 's.student_id',
                 DB::raw('COALESCE(s.name_with_initials, s.full_name) as name'),
-            DB::raw($hasSpecializationColumn ? 'COALESCE(cr.specialization, "") as specialization' : '"" as specialization'),
+            DB::raw('"" as specialization'),
                 DB::raw('
                     CASE cr.status
                         WHEN "Pending" THEN "pending"
@@ -184,7 +190,7 @@ class StudentListController extends Controller
             ->orderBy('s.name_with_initials')
             ->get();
 
-        $students = $this->fillSelectedSpecialization($students, $specialization);
+        $students = $this->fillDisplayedSpecializations($students, $course_id, $intake_id, $location);
 
         $course = Course::find($course_id);
         $intake = Intake::find($intake_id);
@@ -221,7 +227,6 @@ class StudentListController extends Controller
         $specialization = $this->normalizeSpecializationValue($request->specialization);
         $status    = $request->input('status', 'all');
         $course = Course::find($course_id);
-        $hasSpecializationColumn = $this->courseRegistrationHasSpecializationColumn();
 
 
 
@@ -244,7 +249,7 @@ class StudentListController extends Controller
                 'cr.course_registration_id',
                 's.student_id',
                 DB::raw('COALESCE(s.name_with_initials, s.full_name) as name'),
-            DB::raw($hasSpecializationColumn ? 'COALESCE(cr.specialization, "") as specialization' : '"" as specialization'),
+            DB::raw('"" as specialization'),
                 DB::raw('
                     CASE cr.status
                         WHEN "Pending" THEN "pending"
@@ -258,7 +263,7 @@ class StudentListController extends Controller
             ->orderBy('s.name_with_initials')
             ->get();
 
-        $students = $this->fillSelectedSpecialization($students, $specialization);
+        $students = $this->fillDisplayedSpecializations($students, $course_id, $intake_id, $location);
 
         $course = Course::find($course_id);
         $intake = Intake::find($intake_id);

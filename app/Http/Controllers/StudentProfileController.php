@@ -344,6 +344,11 @@ class StudentProfileController extends Controller
             'specialization' => 'nullable|string|max:255',
         ]);
 
+        // Specialization membership is maintained only on the dedicated
+        // Specialization Registration page. Keep accepting this legacy field
+        // so older clients can still update a grade, but never persist it here.
+        unset($validated['specialization']);
+
         $registration = \App\Models\CourseRegistration::find($id);
         if (!$registration) {
             return response()->json(['success' => false, 'message' => 'Registration not found.'], 404);

@@ -10,7 +10,6 @@ use App\Models\Course;
 use App\Models\Student;
 use App\Models\Intake;
 use App\Models\CourseRegistration;
-use App\Models\StudentList;
 use App\Models\StudentOtherInformation;
 use App\Models\Attendance;
 use App\Models\ExamResult;

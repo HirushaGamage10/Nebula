@@ -33,7 +33,7 @@ class CourseRegistration extends Model
         'special_approval_pdf',
         'dgm_comment',
         'uh_index_number',
-        'full_grade'
+        'full_grade',
     ];
 
     protected $casts = [
@@ -188,4 +188,4 @@ class CourseRegistration extends Model
     }
 
 
-} 
+}

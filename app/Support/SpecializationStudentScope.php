@@ -26,34 +26,14 @@ class SpecializationStudentScope
             return [];
         }
 
-        $studentIds = collect();
-
-        if (Schema::hasColumn('course_registration', 'specialization')) {
-            $studentIds = $studentIds->merge(
-                self::baseQuery('course_registration', $courseId, $intakeId, $location)
-                    ->where('specialization', $specialization)
-                    ->pluck('student_id')
-            );
+        if (!Schema::hasTable('specialization_registrations')) {
+            return [];
         }
 
-        if (Schema::hasColumn('semester_registrations', 'specialization')) {
-            $studentIds = $studentIds->merge(
-                self::baseQuery('semester_registrations', $courseId, $intakeId, $location)
-                    ->where('specialization', $specialization)
-                    ->pluck('student_id')
-            );
-        }
-
-        if (Schema::hasColumn('module_management', 'specialization')) {
-            $studentIds = $studentIds->merge(
-                self::baseQuery('module_management', $courseId, $intakeId, $location)
-                    ->where('specialization', $specialization)
-                    ->pluck('student_id')
-            );
-        }
-
-        return $studentIds
-            ->filter(fn ($studentId) => $studentId !== null && $studentId !== '')
+        return self::baseQuery('specialization_registrations', $courseId, $intakeId, $location)
+            ->where('specialization', $specialization)
+            ->where('status', 'registered')
+            ->pluck('student_id')
             ->unique()
             ->values()
             ->all();

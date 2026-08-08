@@ -737,8 +737,15 @@ class ExamResultController extends Controller
                 ->where('intake_id', $intakeId)
                 ->where('location', $location)
                 ->where('status', 'registered')
-                ->when($specialization !== null, function ($query) use ($specialization) {
-                    return $query->where('specialization', $specialization);
+                ->when($specialization !== null, function ($query) use ($specialization, $courseId, $intakeId, $location) {
+                    return \App\Support\SpecializationStudentScope::applyToQuery(
+                        $query,
+                        'student_id',
+                        (int) $courseId,
+                        (int) $intakeId,
+                        $location,
+                        $specialization
+                    );
                 })
                 ->with('student')
                 ->get()
@@ -790,8 +797,15 @@ class ExamResultController extends Controller
                 ->where('intake_id', $intakeId)
                 ->where('location', $location)
                 ->where('semester', $semester->name)
-                ->when($specialization !== null, function ($query) use ($specialization) {
-                    return $query->where('specialization', $specialization);
+                ->when($specialization !== null, function ($query) use ($specialization, $courseId, $intakeId, $location) {
+                    return \App\Support\SpecializationStudentScope::applyToQuery(
+                        $query,
+                        'student_id',
+                        (int) $courseId,
+                        (int) $intakeId,
+                        $location,
+                        $specialization
+                    );
                 })
                 ->with('student')
                 ->get()

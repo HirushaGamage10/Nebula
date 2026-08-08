@@ -188,6 +188,12 @@
                         <span class="hide-menu">Semester Registration</span>
                     </a>
                 </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link {{ Route::currentRouteName() == 'specialization.registration' ? 'active' : '' }}" href="{{ route('specialization.registration') }}">
+                        <span><i class="ti ti-user-check"></i></span>
+                        <span class="hide-menu">Specialization Registration</span>
+                    </a>
+                </li>
             @endif
             @if(RoleHelper::hasPermission($role, 'module.management'))
                 <li class="sidebar-item">

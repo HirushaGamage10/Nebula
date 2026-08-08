@@ -39,6 +39,7 @@ use App\Http\Controllers\{
     PaymentController,
     LatePaymentController,
     SemesterRegistrationController,
+    SpecializationRegistrationController,
     LateFeeApprovalController,
     MiscPaymentController,
     PaymentSummaryController,
@@ -392,6 +393,11 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // SEMESTER REGISTRATION
     // ========================================================================
     Route::middleware(['role:Program Administrator (level 01),Program Administrator (level 02),Developer'])->group(function () {
+        Route::get('/specialization-registration', [SpecializationRegistrationController::class, 'index'])->name('specialization.registration');
+        Route::post('/specialization-registration/courses', [SpecializationRegistrationController::class, 'courses']);
+        Route::post('/specialization-registration/intakes', [SpecializationRegistrationController::class, 'intakes']);
+        Route::post('/specialization-registration/students', [SpecializationRegistrationController::class, 'students']);
+        Route::post('/specialization-registration/store', [SpecializationRegistrationController::class, 'store']);
         Route::get('/semester-registration', [SemesterRegistrationController::class, 'index'])->name('semester.registration');
         Route::post('/semester-registration/store', [SemesterRegistrationController::class, 'store'])->name('semester.registration.store');
         Route::get('/semester-registration/get-courses-by-location', [SemesterRegistrationController::class, 'getCoursesByLocation'])->name('semester.registration.getCoursesByLocation');

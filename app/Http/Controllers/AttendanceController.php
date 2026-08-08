@@ -436,7 +436,16 @@ class AttendanceController extends Controller
                 ->where('semester_registrations.location', $location)
                 ->where('semester_registrations.status', 'registered')
                 ->when($specialization !== null, function ($query) use ($specialization) {
-                    return $query->where('semester_registrations.specialization', $specialization);
+                    return $query->whereExists(function ($specializationQuery) use ($specialization) {
+                        $specializationQuery->selectRaw('1')
+                            ->from('specialization_registrations as sr')
+                            ->whereColumn('sr.student_id', 'semester_registrations.student_id')
+                            ->whereColumn('sr.course_id', 'semester_registrations.course_id')
+                            ->whereColumn('sr.intake_id', 'semester_registrations.intake_id')
+                            ->whereColumn('sr.location', 'semester_registrations.location')
+                            ->where('sr.specialization', $specialization)
+                            ->where('sr.status', 'registered');
+                    });
                 })
                 ->leftJoin('course_registration as cr', function($join) {
                     $join->on('semester_registrations.student_id', '=', 'cr.student_id')
@@ -476,7 +485,16 @@ class AttendanceController extends Controller
                 ->where('module_management.location', $location)
                 ->where('module_management.semester', $semester->name)
                 ->when($specialization !== null, function ($query) use ($specialization) {
-                    return $query->where('module_management.specialization', $specialization);
+                    return $query->whereExists(function ($specializationQuery) use ($specialization) {
+                        $specializationQuery->selectRaw('1')
+                            ->from('specialization_registrations as sr')
+                            ->whereColumn('sr.student_id', 'module_management.student_id')
+                            ->whereColumn('sr.course_id', 'module_management.course_id')
+                            ->whereColumn('sr.intake_id', 'module_management.intake_id')
+                            ->whereColumn('sr.location', 'module_management.location')
+                            ->where('sr.specialization', $specialization)
+                            ->where('sr.status', 'registered');
+                    });
                 })
                 ->leftJoin('course_registration as cr', function($join) {
                     $join->on('module_management.student_id', '=', 'cr.student_id')
@@ -1668,4 +1686,4 @@ class AttendanceController extends Controller
             return response()->json(['success' => false, 'message' => 'Failed to import attendance: ' . $e->getMessage()], 500);
         }
     }
-} 
+}

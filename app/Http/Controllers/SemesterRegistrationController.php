@@ -13,6 +13,7 @@ use App\Models\SemesterRegistration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\ClearanceRequest;
+use App\Support\SpecializationStudentScope;
 
 
 class SemesterRegistrationController extends Controller
@@ -38,7 +39,8 @@ class SemesterRegistrationController extends Controller
     {
         Log::info('Semester registration store method called', $request->all());
 
-        // Enhanced validation: Explicitly allow 'holding'
+        // A pending record means the student is not registered for this semester
+        // and has not been placed on hold or terminated.
         $request->validate([
             'course_id'         => 'required|exists:courses,course_id',
             'intake_id'         => 'required|exists:intakes,intake_id',
@@ -75,12 +77,12 @@ class SemesterRegistrationController extends Controller
                     ], 400);
                 }
                 // Ensure status is one of the allowed values
-                $allowedStatuses = ['registered', 'holding', 'terminated'];
+                $allowedStatuses = ['pending', 'registered', 'holding', 'terminated'];
                 if (!in_array(strtolower($entry['status']), $allowedStatuses)) {
                     Log::warning('Invalid status provided.', ['status' => $entry['status']]);
                     return response()->json([
                         'success' => false,
-                        'message' => 'Invalid status. Allowed: registered, holding, terminated.'
+                        'message' => 'Invalid status. Allowed: pending, registered, holding, terminated.'
                     ], 400);
                 }
             }
@@ -107,7 +109,7 @@ class SemesterRegistrationController extends Controller
             DB::transaction(function () use ($selectedStudents, $request, $saReasons, $saFiles, &$messages) {
                 foreach ($selectedStudents as $entry) {
                     $studentId    = (int) $entry['student_id'];
-                    $newStatus    = strtolower($entry['status']); // 'registered' | 'holding' | 'terminated'
+                    $newStatus    = strtolower($entry['status']); // pending | registered | holding | terminated
                     $origFromUI   = strtolower($entry['original_status'] ?? '');
 
                     // Current semester registration (if any) for this student/intake/semester
@@ -301,18 +303,27 @@ class SemesterRegistrationController extends Controller
     {
         $courseId = $request->input('course_id');
         $intakeId = $request->input('intake_id');
+        $semesterId = $request->input('semester_id');
+        $location = $request->input('location');
+        $specialization = trim((string) $request->input('specialization')) ?: null;
 
         $students = CourseRegistration::where('course_id', $courseId)
             ->where('intake_id', $intakeId)
+            ->when($location, fn ($query) => $query->where('location', $location))
             ->where(function ($query) {
                 $query->where('status', 'Registered')
                     ->orWhere('approval_status', 'Approved by DGM');
             })
+            ->when($specialization, function ($query) use ($courseId, $intakeId, $location, $specialization) {
+                return SpecializationStudentScope::applyToQuery($query, 'student_id', (int) $courseId, (int) $intakeId, $location, $specialization);
+            })
             ->with('student')
             ->get()
-            ->map(function ($reg) {
+            ->map(function ($reg) use ($semesterId) {
                 $semReg = SemesterRegistration::where('student_id', $reg->student->student_id)
+                    ->where('course_id', $reg->course_id)
                     ->where('intake_id', $reg->intake_id)
+                    ->when($semesterId, fn ($query) => $query->where('semester_id', $semesterId))
                     ->latest()
                     ->first();
 
@@ -371,7 +382,7 @@ class SemesterRegistrationController extends Controller
             'student_id'  => 'required|integer',
             'semester_id' => 'required|integer',
             'intake_id'   => 'required|integer',
-            'status'      => 'required|in:registered,terminated',
+            'status'      => 'required|in:pending,registered,holding,terminated',
         ]);
 
         SemesterRegistration::updateOrCreate(

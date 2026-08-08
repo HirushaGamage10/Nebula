@@ -65,6 +65,9 @@
                                 <a class="nav-link active" href="#" data-status="all">All</a>
                             </li>
                             <li class="nav-item">
+                                <a class="nav-link" href="#" data-status="pending">Not Registered</a>
+                            </li>
+                            <li class="nav-item">
                                 <a class="nav-link" href="#" data-status="registered">Registered</a>
                             </li>
                             <li class="nav-item">
@@ -293,7 +296,7 @@
                 document.getElementById('students_table_row').style.display = 'none';
 
                 if (courseSelect.value && intakeSelect.value && semesterSelect.value) {
-                    fetch(`/semester-registration/get-eligible-students?course_id=${encodeURIComponent(courseSelect.value)}&intake_id=${encodeURIComponent(intakeSelect.value)}`)
+                    fetch(`/semester-registration/get-eligible-students?course_id=${encodeURIComponent(courseSelect.value)}&intake_id=${encodeURIComponent(intakeSelect.value)}&semester_id=${encodeURIComponent(semesterSelect.value)}&location=${encodeURIComponent(locationSelect.value)}&specialization=${encodeURIComponent(document.getElementById('specialization').value || '')}`)
                         .then(res => res.json())
                         .then(data => {
                             if (data.success && data.students.length > 0) {
@@ -314,6 +317,7 @@
                                         <td>
                                             <div class="btn-group" role="group">
                                                 <button type="button" class="btn btn-outline-success btn-sm toggle-selection ${student.status === 'registered' ? 'active' : ''}" data-action="registered">Register</button>
+                                                <button type="button" class="btn btn-outline-secondary btn-sm toggle-selection ${student.status === 'pending' ? 'active' : ''}" data-action="pending">Not Register</button>
                                                 <button type="button" class="btn btn-outline-warning btn-sm toggle-selection ${student.status === 'holding' ? 'active' : ''}" data-action="holding">Hold</button>
                                                 <button type="button" class="btn btn-outline-danger btn-sm toggle-selection ${student.status === 'terminated' ? 'active' : ''}" data-action="terminated">Terminate</button>
                                             </div>
@@ -496,7 +500,7 @@
 
                 // Build student selection payload
                 const selectedStudents = [];
-                const allowedStatuses = ['registered', 'holding', 'terminated'];
+                const allowedStatuses = ['pending', 'registered', 'holding', 'terminated'];
 
                document.querySelectorAll('#students_table tbody tr').forEach(row => {
                     const studentId = row.dataset.studentId;
