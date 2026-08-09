@@ -152,4 +152,18 @@ class StudentViewController extends Controller
         ]);
     }
 
+    public function getCourseIntakes(Request $request)
+    {
+        $request->validate(['course_id' => 'required|integer|exists:courses,course_id']);
+
+        $course = Course::findOrFail($request->course_id);
+
+        return response()->json([
+            'success' => true,
+            'intakes' => Intake::forCourse($course)
+                ->orderBy('batch')
+                ->get(['intake_id', 'batch']),
+        ]);
+    }
+
 }

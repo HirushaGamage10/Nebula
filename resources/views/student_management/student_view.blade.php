@@ -30,9 +30,6 @@
           <label class="form-label">Intake</label>
           <select id="intakeSelect" name="intake_id" class="form-select">
             <option value="">All Intakes</option>
-            @foreach(\App\Models\Intake::orderBy('batch')->get() as $intake)
-              <option value="{{ $intake->intake_id }}">{{ $intake->batch }}</option>
-            @endforeach
           </select>
         </div>
 
@@ -368,7 +365,24 @@ document.getElementById('student_id').addEventListener('change', async e => {
 });
 
 document.getElementById('courseSelect').addEventListener('change', () => {
-  loadSpecializations(document.getElementById('courseSelect').value);
+  const courseId = document.getElementById('courseSelect').value;
+  const intakeSelect = document.getElementById('intakeSelect');
+  intakeSelect.innerHTML = '<option value="">All Intakes</option>';
+  loadSpecializations(courseId);
+
+  if (!courseId) return;
+
+  fetch(`{{ route('student_management.intakes') }}?course_id=${encodeURIComponent(courseId)}`)
+    .then(response => response.json())
+    .then(data => {
+      if (!data.success || !Array.isArray(data.intakes)) return;
+      data.intakes.forEach(intake => {
+        intakeSelect.add(new Option(intake.batch, intake.intake_id));
+      });
+    })
+    .catch(() => {
+      intakeSelect.innerHTML = '<option value="">All Intakes</option>';
+    });
 });
 
 resetSpecializationFilter();

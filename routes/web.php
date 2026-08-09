@@ -186,6 +186,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/students/view', [StudentViewController::class, 'index'])->name('student_management.view');
         Route::post('/students/filter', [StudentViewController::class, 'filter'])->name('student_management.filter');
         Route::get('/students/courses', [StudentViewController::class, 'getStudentCourses'])->name('student_management.courses');
+        Route::get('/students/intakes', [StudentViewController::class, 'getCourseIntakes'])->name('student_management.intakes');
     });
 
     // Student Profile
