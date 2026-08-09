@@ -92,9 +92,6 @@ class StudentRegistrationRequest extends FormRequest
             ],
             'institute_location' => 'required|in:Welisara,Moratuwa,Peradeniya',
             
-            // Academic Information
-            'foundationComplete' => 'nullable|boolean',
-            'btecCompleted' => 'nullable|boolean',
             'specialNeeds' => 'nullable|string|max:500',
             'extraCurricular' => 'nullable|string|max:500',
             'futurePotential' => 'nullable|string|max:500',
@@ -284,8 +281,6 @@ class StudentRegistrationRequest extends FormRequest
             'whatsappPhone' => 'WhatsApp phone',
             'birthday' => 'date of birth',
             'institute_location' => 'institute location',
-            'foundationComplete' => 'foundation program completion',
-            'btecCompleted' => 'BTEC completion',
             'specialNeeds' => 'special needs',
             'extraCurricular' => 'extracurricular activities',
             'futurePotential' => 'future potential',

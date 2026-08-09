@@ -86,18 +86,11 @@ class StudentRegistraionController extends Controller
                 'Vavuniya'
             ];
 
-            $btecCourses = [
-                ['id' => 1, 'course_name' => 'BTEC Level 3 Extended Diploma in Business'],
-                ['id' => 2, 'course_name' => 'BTEC Level 3 Extended Diploma in Computing'],
-                ['id' => 3, 'course_name' => 'BTEC Level 3 Extended Diploma in Engineering'],
-                ['id' => 4, 'course_name' => 'BTEC Level 3 Extended Diploma in Health and Social Care'],
-                ['id' => 5, 'course_name' => 'BTEC Level 3 Extended Diploma in Travel and Tourism']
-            ];
 
             // Get exam types from StudentExam model
             $examTypes = StudentExam::getExamTypes();
 
-            return view('student_management..student_registration', compact('titles', 'genders', 'idTypes', 'campuses', 'districts', 'btecCourses', 'examTypes'));
+            return view('student_management..student_registration', compact('titles', 'genders', 'idTypes', 'campuses', 'districts', 'examTypes'));
         } else {
             return redirect()->route('login')->with('error', 'You are not authorized to access this page.');
         }
@@ -193,8 +186,6 @@ class StudentRegistraionController extends Controller
             $student->whatsapp_phone = $request->whatsappPhone;
             $student->birthday = $request->birthday;
             $student->institute_location = $request->institute_location;
-            $student->foundation_program = $request->foundationComplete;
-            $student->btec_completed = $request->btecCompleted;
             $student->special_needs = $request->specialNeeds ?? null;
             $student->extracurricular_activities = $request->extraCurricular ?? null;
             $student->future_potentials = $request->futurePotential ?? null;
@@ -270,11 +261,29 @@ class StudentRegistraionController extends Controller
     $studentExam->save();
 }
  
-            return redirect()->route('student_management.registration')->with('success', 'Student registered successfully!');
+            $message = 'Student registered successfully!';
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'student_id' => $student->student_id,
+                ]);
+            }
+
+            return redirect()->route('student_management.registration')->with('success', $message);
 
         } catch (QueryException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Database error occurred. Please try again.'], 500);
+            }
+
             return redirect()->back()->withErrors(['Database error occurred. Please try again.'])->withInput();
         } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'An error occurred. Please try again.'], 500);
+            }
+
             return redirect()->back()->withErrors(['An error occurred. Please try again.'])->withInput();
         }
     }

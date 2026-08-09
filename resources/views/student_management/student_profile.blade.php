@@ -217,12 +217,6 @@
                 </div>
               </div>
               <div class="mb-3 row align-items-center mx-3">
-                <label for="studentFoundation" class="col-sm-3 col-form-label fw-bold">Foundation Program</label>
-                <div class="col-sm-9">
-                  <input type="text" class="form-control" id="studentFoundation" value="{{ $student->foundation_program ?? '' }}" readonly>
-                </div>
-              </div>
-              <div class="mb-3 row align-items-center mx-3">
                 <label for="studentSpecialNeeds" class="col-sm-3 col-form-label fw-bold">Special Needs</label>
                 <div class="col-sm-9">
                   <textarea class="form-control" id="studentSpecialNeeds" rows="2" readonly>{{ $student->special_needs ?? '' }}</textarea>
@@ -1464,7 +1458,6 @@ $(function(){
     $('#studentHomePhone').val(student.home_phone || '');
     $('#studentEmergencyContact').val(student.emergency_contact_number || '');
     $('#studentAddress').val(student.address || '');
-    $('#studentFoundation').val(student.foundation_program || '');
     $('#studentSpecialNeeds').val(student.special_needs || '');
     $('#studentExtraCurricular').val(student.extracurricular_activities || '');
     $('#studentFuturePotentials').val(student.future_potentials || '');
@@ -1808,7 +1801,6 @@ $(function(){
       home_phone:$('#studentHomePhone').val(),
       emergency_contact_number:$('#studentEmergencyContact').val(),
       address:$('#studentAddress').val(),
-      foundation_program:$('#studentFoundation').val(),
       special_needs:$('#studentSpecialNeeds').val(),
       extracurricular_activities:$('#studentExtraCurricular').val(),
       future_potentials:$('#studentFuturePotentials').val(),

@@ -893,7 +893,6 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/api/student-counselor/location-data', [StudentCounselorDashboardController::class, 'getRegistrationsByLocation'])->name('api.student.counselor.location.data');
         Route::get('/api/student-counselor/course-data', [StudentCounselorDashboardController::class, 'getRegistrationsByCourse'])->name('api.student.counselor.course.data');
         Route::get('/api/student-counselor/slt-employee-data', [StudentCounselorDashboardController::class, 'getSltEmployeeData'])->name('api.student.counselor.slt.employee.data');
-        Route::get('/api/student-counselor/foundation-data', [StudentCounselorDashboardController::class, 'getFoundationProgramData'])->name('api.student.counselor.foundation.data');
         Route::get('/api/student-counselor/counselor-performance', [StudentCounselorDashboardController::class, 'getCounselorPerformanceData'])->name('api.student.counselor.counselor.performance');
     });
 

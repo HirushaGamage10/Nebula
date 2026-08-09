@@ -48,7 +48,6 @@ class Student extends Model
         'whatsapp_phone',
         'birthday',
         'institute_location',
-        'foundation_program',
         'special_needs',
         'extracurricular_activities',
         'future_potentials',
@@ -58,7 +57,6 @@ class Student extends Model
         // NOTE: existing "status" is marital status in your DB
         'status',
 
-        'btec_completed',
         'marketing_survey',
         'blacklisted',
         'user_photo',
@@ -74,8 +72,6 @@ class Student extends Model
     ];
 
     protected $casts = [
-        'foundation_program' => 'boolean',
-        'btec_completed'     => 'boolean',
         'blacklisted'        => 'boolean',
         'birthday'           => 'date',
 

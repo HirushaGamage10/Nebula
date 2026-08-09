@@ -270,18 +270,6 @@ class StudentCounselorDashboardController extends Controller
         ]);
     }
 
-    // Get foundation program enrollment
-    public function getFoundationProgramData()
-    {
-        $withFoundation = Student::where('foundation_program', 1)->count();
-        $withoutFoundation = Student::where('foundation_program', 0)->count();
-
-        return response()->json([
-            'with_foundation' => $withFoundation,
-            'without_foundation' => $withoutFoundation
-        ]);
-    }
-
     // Get counselor performance data
     public function getCounselorPerformanceData(Request $request)
     {

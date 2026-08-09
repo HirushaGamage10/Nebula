@@ -401,45 +401,6 @@
                         </div>
                     </div>
 
-                    <div class="row mb-3">
-                        <label class="col-sm-2 col-form-label">Foundation program (CAIT)<span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="foundationComplete" id="foundationYes" value="1" required>
-                                <label class="form-check-label" for="foundationYes">Completed</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="foundationComplete" id="foundationNo" value="0" checked required>
-                                <label class="form-check-label" for="foundationNo">Not Completed</label>
-                            </div>
-                        </div>
-                    </div>
-
-                     <div class="row mb-3">
-                        <label class="col-sm-2 col-form-label">BTEC Level 3<span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="btecCompleted" id="btecCompleted" value="1" required>
-                                <label class="form-check-label" for="btecCompleted">Completed</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="btecCompleted" id="btecNotCompleted" value="0" checked required>
-                                <label class="form-check-label" for="btecNotCompleted">Not Completed</label>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div id="courseSelectionSection" style="display: none;" class="row mb-3">
-                        <label for="btec_course" class="col-sm-2 col-form-label">BTEC Course<span class="text-danger">*</span></label>
-                        <div class="col-sm-10">
-                            <select class="form-select" id="btec_course" name="btec_course">
-                                <option selected disabled>Select the BTEC Course</option>
-                                @foreach($btecCourses as $course)
-                                <option value="{{ $course['id'] }}">{{ $course['course_name'] }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
                 </div>
 
                 <hr class="my-4">
@@ -607,22 +568,6 @@ function showToast(message, type) {
 
 document.addEventListener('DOMContentLoaded', function() {
     // BTEC Course Selection Toggle
-    const btecCompletedRadio = document.getElementById('btecCompleted');
-    const btecNotCompletedRadio = document.getElementById('btecNotCompleted');
-    const courseSelectionSection = document.getElementById('courseSelectionSection');
-
-    function toggleBtecCourse() {
-        if (btecCompletedRadio.checked) {
-            courseSelectionSection.style.display = 'block';
-            document.getElementById('btec_course').required = true;
-        } else {
-            courseSelectionSection.style.display = 'none';
-            document.getElementById('btec_course').required = false;
-        }
-    }
-    btecCompletedRadio.addEventListener('change', toggleBtecCourse);
-    btecNotCompletedRadio.addEventListener('change', toggleBtecCourse);
-
     // Marketing Survey - Handle "Other" option visibility
     const marketingSurveySelect = document.getElementById('marketing_survey');
     const marketingSurveyOther = document.getElementById('marketing_survey_other');
@@ -1324,13 +1269,14 @@ setupPhoneValidator('emergencyContactNo', 'emergencyContactNoError');
             data: formData,
             processData: false,
             contentType: false,
+            headers: { 'Accept': 'application/json' },
             
             success: function(response) {
                 // clear summary on success
                 const summary = document.getElementById('formErrorSummary');
                 summary.classList.add('d-none');
                 summary.innerHTML = '';
-                showToast('Student has been registered successfully!', 'success');
+                showToast(response.message || 'Student registered successfully!', 'success');
                 setTimeout(function() {
                     location.reload();
                 }, 1500);

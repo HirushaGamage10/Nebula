@@ -73,7 +73,6 @@ class StudentProfileController extends Controller
             'home_phone',
             'emergency_contact_number',
             'address',
-            'foundation_program',
             'special_needs',
             'extracurricular_activities',
             'future_potentials',
@@ -170,7 +169,6 @@ class StudentProfileController extends Controller
             'address' => 'required|string',
             // Optional fields
             'name_with_initials' => 'nullable|string|max:255',
-            'foundation_program' => 'nullable|boolean',
             'special_needs' => 'nullable|string',
             'extracurricular_activities' => 'nullable|string',
             'future_potentials' => 'nullable|string',
@@ -194,9 +192,6 @@ class StudentProfileController extends Controller
         }
         if (isset($validatedData['home_phone'])) {
             $student->home_phone = $validatedData['home_phone'];
-        }
-        if (isset($validatedData['foundation_program'])) {
-            $student->foundation_program = $validatedData['foundation_program'];
         }
         if (isset($validatedData['special_needs'])) {
             $student->special_needs = $validatedData['special_needs'];
