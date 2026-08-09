@@ -303,12 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ? allStudents
       : allStudents.filter(s=>s.status===currentStatus);
 
-    list.sort((a, b) => (a.course_registration_id || '').localeCompare(b.course_registration_id || ''));
-
-    tbody.innerHTML='';
-    list.forEach((s, idx)=>{
-      const isTerminated = s.status === 'terminated';
-      const trClass = isTerminated ? 'table-danger' : '';
+    list.sort((a, b) => (a.course_registration_id || '').localeCompare(b.course_registration_id || '', undefined, { numeric: true, sensitivity: 'base' }));
       const specialization = s.specialization || s.course_registration_specialization || s.course_registration?.specialization || '-';
       tbody.insertAdjacentHTML('beforeend', `
         <tr class="${trClass}">

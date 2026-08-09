@@ -8,6 +8,7 @@ use App\Models\Module;
 use App\Models\Student;
 use App\Models\ExamResult;
 use App\Models\CourseRegistration;
+use App\Support\SpecializationStudentScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Database\QueryException;
@@ -45,8 +46,8 @@ class ExamResultController extends Controller
             if ($course) {
                 // Assuming 'duration' is in years and 'no_of_semesters' is the total.
                 // The range of years will be from 1 up to the course duration.
-                $years = range(1, (int)$course->duration); 
-                
+                $years = range(1, (int)$course->duration);
+
                 // Get actual created semesters for this course
                 $semesters = \App\Models\Semester::where('course_id', $courseID)
                     ->whereIn('status', ['active', 'upcoming'])
@@ -66,7 +67,7 @@ class ExamResultController extends Controller
             return response()->json(['error' => 'An internal server error occurred.'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
-    
+
     /**
      * Get student name by ID.
      */
@@ -92,12 +93,12 @@ class ExamResultController extends Controller
     {
         try {
             \Log::info('storeResult called with data:', $request->all());
-            
+
             // Check if this is a certificate course
             $isCertificate = $request->course_type === 'certificate';
             $certificateSemesterValue = $this->getCertificateSemesterStorageValue();
             $certificateModuleId = null;
-            
+
             if ($isCertificate) {
                 $validatedData = $request->validate([
                     'course_id' => 'required|exists:courses,course_id',
@@ -106,7 +107,7 @@ class ExamResultController extends Controller
                     'course_type' => 'required|string',
                     'results' => 'required|array|min:1',
                     'results.*.student_id' => 'required|exists:students,student_id',
-                    'results.*.marks' => 'nullable|integer|min:0|max:100',
+                    'results.*.marks' => 'nullable|numeric|min:0|max:100',
                     'results.*.grade' => 'nullable|string|max:5',
                     'results.*.remarks' => 'nullable|string|max:255',
                 ]);
@@ -117,20 +118,21 @@ class ExamResultController extends Controller
                     'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
                     'semester' => 'required',
                     'module_id' => 'required|exists:modules,module_id',
+                    'specialization' => 'nullable|string|max:255',
                     'results' => 'required|array|min:1',
                     'results.*.student_id' => 'required|exists:students,student_id',
-                    'results.*.marks' => 'nullable|integer|min:0|max:100',
+                    'results.*.marks' => 'nullable|numeric|min:0|max:100',
                     'results.*.grade' => 'nullable|string|max:5',
                     'results.*.remarks' => 'nullable|string|max:255',
                 ]);
             }
-            
+
             // Additional validation: ensure at least one of marks, grade, or remarks is provided for each result
             foreach ($validatedData['results'] as $index => $result) {
                 $hasMarks = isset($result['marks']) && $result['marks'] !== null;
                 $hasGrade = isset($result['grade']) && !empty($result['grade']);
                 $hasRemarks = isset($result['remarks']) && !empty($result['remarks']);
-                
+
                 if (!$hasMarks && !$hasGrade && !$hasRemarks) {
                     return response()->json([
                         'success' => false,
@@ -138,7 +140,7 @@ class ExamResultController extends Controller
                     ], 422);
                 }
             }
-            
+
             \Log::info('Validation passed, validated data:', $validatedData);
 
             $course = Course::find($validatedData['course_id']);
@@ -149,14 +151,17 @@ class ExamResultController extends Controller
                 ], 404);
             }
 
-            if ($isCertificate) {
-                $certificateModuleId = $this->resolveCertificateModuleId(
-                    (int) $validatedData['course_id'],
-                    (int) $validatedData['intake_id']
-                );
+            $specialization = null;
+            if (!$isCertificate) {
+                $specialization = $this->normalizeSpecializationValue($request->input('specialization'));
+                if ($this->courseHasSpecializations($course) && !$specialization) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Specialization is required for this course.'
+                    ], 422);
+                }
             }
 
-            // Resolve the semester value that should be stored in exam_results.
             $semesterName = null;
             $semesterLookupValues = [];
             if (!$isCertificate) {
@@ -184,23 +189,23 @@ class ExamResultController extends Controller
 
             $createdCount = 0;
             $updatedCount = 0;
-            
+
             foreach ($validatedData['results'] as $index => $result) {
                 \Log::info("Processing result {$index}:", $result);
-                
+
                 // Build query for existing result
                 $existingQuery = ExamResult::where('student_id', $result['student_id'])
                     ->where('course_id', $validatedData['course_id'])
                     ->where('intake_id', $validatedData['intake_id'])
                     ->where('location', $validatedData['location']);
-                
+
                 if ($isCertificate) {
                     $this->applyCertificateExamResultScope($existingQuery, $certificateModuleId);
                 } else {
                     $existingQuery->whereIn('semester', $semesterLookupValues)
                                   ->where('module_id', $validatedData['module_id']);
                 }
-                
+
                 $existingResult = $existingQuery->first();
 
                 if ($existingResult) {
@@ -224,7 +229,7 @@ class ExamResultController extends Controller
                         'grade' => $result['grade'] ?? null,
                         'remarks' => $result['remarks'] ?? null,
                     ];
-                    
+
                     if ($isCertificate) {
                         $resultData['semester'] = $certificateSemesterValue;
                         $resultData['module_id'] = $certificateModuleId;
@@ -232,7 +237,7 @@ class ExamResultController extends Controller
                         $resultData['semester'] = $semesterName;
                         $resultData['module_id'] = $validatedData['module_id'];
                     }
-                    
+
                     ExamResult::create($resultData);
                     $createdCount++;
                 }
@@ -243,7 +248,7 @@ class ExamResultController extends Controller
 
             $totalCount = $createdCount + $updatedCount;
             return response()->json([
-                'success' => true, 
+                'success' => true,
                 'message' => "Exam results stored successfully for {$totalCount} student(s)."
             ], Response::HTTP_CREATED);
 
@@ -253,13 +258,13 @@ class ExamResultController extends Controller
                 'request_data' => $request->all()
             ]);
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Database error: ' . $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
-                'success' => false, 
-                'message' => 'Validation failed.', 
+                'success' => false,
+                'message' => 'Validation failed.',
                 'errors' => $e->errors()
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (\Exception $e) {
@@ -269,7 +274,7 @@ class ExamResultController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'An error occurred while storing the results.'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -310,7 +315,7 @@ class ExamResultController extends Controller
         $courseId = $request->input('course_id');
         $intakeId = $request->input('intake_id');
         $semesterId = $request->input('semester');
-        
+
         // Check if this is a certificate course
         $course = \App\Models\Course::find($courseId);
         if (!$course) {
@@ -323,7 +328,7 @@ class ExamResultController extends Controller
             'semester_id' => $semesterId,
             'course_type' => $course->course_type
         ]);
-        
+
         // Certificate courses use intake modules, not semester modules
         if ($course->course_type === 'certificate') {
             $modules = \App\Models\Module::join('intake_modules', 'modules.module_id', '=', 'intake_modules.module_id')
@@ -357,20 +362,20 @@ class ExamResultController extends Controller
     {
         $location = $request->query('location');
         $courseType = $request->query('course_type');
-        
+
         if (!$location) {
             return response()->json(['success' => false, 'message' => 'Location is required.']);
         }
-        
+
         try {
             $query = Course::select('course_id', 'course_name')
                 ->where('location', $location);
-            
+
             // Filter by course type if provided
             if ($courseType) {
                 $query->where('course_type', $courseType);
             }
-            
+
             $courses = $query->orderBy('course_name', 'asc')->get();
 
             if ($courses->isEmpty()) {
@@ -428,7 +433,7 @@ class ExamResultController extends Controller
             'semesters_found' => $semesters->count(),
             'semesters_data' => $semesters->toArray()
         ]);
-        
+
         return response()->json(['semesters' => $semesters, 'is_certificate' => false]);
     }
 
@@ -756,7 +761,7 @@ class ExamResultController extends Controller
                         ->where('intake_id', $intakeId)
                         ->where('location', $location)
                         ->first();
-                    
+
                     $studentData = [
                         'registration_id' => $courseReg ? $courseReg->course_registration_id : '',
                         'student_id' => $reg->student->student_id,
@@ -789,7 +794,9 @@ class ExamResultController extends Controller
                     }
 
                     return $studentData;
-                });
+                })
+                ->sortBy('registration_id')
+                ->values();
         } else {
             // For elective modules: Get students registered for the specific module
             $students = \App\Models\ModuleManagement::where('module_id', $moduleId)
@@ -816,7 +823,7 @@ class ExamResultController extends Controller
                         ->where('intake_id', $intakeId)
                         ->where('location', $location)
                         ->first();
-                    
+
                     $studentData = [
                         'registration_id' => $courseReg ? $courseReg->course_registration_id : '',
                         'student_id' => $reg->student->student_id,
@@ -849,7 +856,9 @@ class ExamResultController extends Controller
                     }
 
                     return $studentData;
-                });
+                })
+                ->sortBy('registration_id')
+                ->values();
         }
 
         return response()->json([
@@ -919,40 +928,8 @@ class ExamResultController extends Controller
                 ], 404);
             }
 
-            $specializedStudentIds = null;
-            if ($specialization !== null) {
-                $isCoreModule = \DB::table('semester_module')
-                    ->where('semester_id', $validatedDegree['semester'])
-                    ->where('module_id', $validatedDegree['module_id'])
-                    ->exists();
-
-                if ($isCoreModule) {
-                    $specializedStudentIds = \App\Models\SemesterRegistration::where('semester_id', $validatedDegree['semester'])
-                        ->where('course_id', $validatedBase['course_id'])
-                        ->where('intake_id', $validatedBase['intake_id'])
-                        ->where('location', $validatedBase['location'])
-                        ->where('status', 'registered')
-                        ->where('specialization', $specialization)
-                        ->pluck('student_id')
-                        ->all();
-                } else {
-                    $specializedStudentIds = \App\Models\ModuleManagement::where('module_id', $validatedDegree['module_id'])
-                        ->where('course_id', $validatedBase['course_id'])
-                        ->where('intake_id', $validatedBase['intake_id'])
-                        ->where('location', $validatedBase['location'])
-                        ->where('semester', $semester->name)
-                        ->where('specialization', $specialization)
-                        ->pluck('student_id')
-                        ->all();
-                }
-            }
-
             $resultsQuery->whereIn('semester', $this->getSemesterLookupValues($course, $semester))
                 ->where('module_id', $validatedDegree['module_id']);
-
-            if (is_array($specializedStudentIds)) {
-                $resultsQuery->whereIn('student_id', $specializedStudentIds);
-            }
         }
 
         $results = $resultsQuery
@@ -963,7 +940,7 @@ class ExamResultController extends Controller
                     ->where('course_id', $result->course_id)
                     ->where('intake_id', $result->intake_id)
                     ->first();
-                
+
                 return [
                     'id' => $result->id,
                     'student_id' => $result->student_id,
@@ -975,7 +952,9 @@ class ExamResultController extends Controller
                     'created_at' => $result->created_at->format('Y-m-d H:i:s'),
                     'updated_at' => $result->updated_at->format('Y-m-d H:i:s'),
                 ];
-            });
+            })
+            ->sortBy('registration_id')
+            ->values();
 
         return response()->json([
             'success' => true,
@@ -997,7 +976,7 @@ class ExamResultController extends Controller
                 'course_type' => 'nullable|string',
                 'results' => 'required|array|min:1',
                 'results.*.id' => 'required|exists:exam_results,id',
-                'results.*.marks' => 'nullable|integer|min:0|max:100',
+                'results.*.marks' => 'nullable|numeric|min:0|max:100',
                 'results.*.grade' => 'nullable|string|max:5',
                 'results.*.remarks' => 'nullable|string|max:255',
             ];
@@ -1026,7 +1005,7 @@ class ExamResultController extends Controller
                 $hasMarks = isset($result['marks']) && $result['marks'] !== null;
                 $hasGrade = isset($result['grade']) && !empty($result['grade']);
                 $hasRemarks = isset($result['remarks']) && !empty($result['remarks']);
-                
+
                 if (!$hasMarks && !$hasGrade && !$hasRemarks) {
                     return response()->json([
                         'success' => false,
@@ -1063,7 +1042,7 @@ class ExamResultController extends Controller
             DB::commit();
 
             return response()->json([
-                'success' => true, 
+                'success' => true,
                 'message' => "Successfully updated {$updatedCount} exam result(s)."
             ], Response::HTTP_OK);
 
@@ -1073,13 +1052,13 @@ class ExamResultController extends Controller
                 'request_data' => $request->all()
             ]);
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Database error: ' . $e->getMessage()
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
-                'success' => false, 
-                'message' => 'Validation failed.', 
+                'success' => false,
+                'message' => 'Validation failed.',
                 'errors' => $e->errors()
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (\Exception $e) {
@@ -1089,7 +1068,7 @@ class ExamResultController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'An error occurred while updating the results.'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -1278,11 +1257,11 @@ class ExamResultController extends Controller
 
             // Create CSV content
             $csvContent = [];
-            
+
             // Add headers
             if ($students->count() > 0) {
                 $csvContent[] = implode(',', array_keys($students->first()));
-                
+
                 // Add student data rows
                 foreach ($students as $student) {
                     $row = [];
@@ -1305,9 +1284,9 @@ class ExamResultController extends Controller
             $csv = implode("\n", $csvContent);
 
             // Create response with CSV content
-            $filename = 'exam_results_template_' . 
-                       str_replace(' ', '_', $course->course_name) . '_' . 
-                       str_replace(' ', '_', $module->module_name) . '_' . 
+            $filename = 'exam_results_template_' .
+                       str_replace(' ', '_', $course->course_name) . '_' .
+                       str_replace(' ', '_', $module->module_name) . '_' .
                        $intake->intake_no . '.csv';
 
             return response($csv, 200, [

@@ -123,8 +123,7 @@ class StudentListController extends Controller
                         ELSE "pending"
                     END as status
                 ')
-            ])
-            ->orderBy('s.name_with_initials')
+            ])            ->orderBy('cr.course_registration_id')            ->orderBy('s.name_with_initials')
             ->get();
 
         $students = $this->fillDisplayedSpecializations($students, $course_id, $intake_id, $location);
@@ -186,8 +185,7 @@ class StudentListController extends Controller
                         ELSE "pending"
                     END as status
                 ')
-            ])
-            ->orderBy('s.name_with_initials')
+            ])            ->orderBy('cr.course_registration_id')            ->orderBy('s.name_with_initials')
             ->get();
 
         $students = $this->fillDisplayedSpecializations($students, $course_id, $intake_id, $location);
@@ -260,6 +258,7 @@ class StudentListController extends Controller
                     END as status
                 ')
             ])
+            ->orderBy('cr.course_registration_id')
             ->orderBy('s.name_with_initials')
             ->get();
 

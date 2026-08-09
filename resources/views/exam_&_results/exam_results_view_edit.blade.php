@@ -96,11 +96,11 @@
                     <!-- Degree Results Table -->
                     <div class="mt-4" id="degreeResultsTableSection" style="display:none;">
                         <h4 id="degreeResultsTableHeader" class="text-center mb-3" style="display: none;"></h4>
-                        
+
                         <!-- Results Status Alert -->
                         <div id="degreeResultsStatusAlert" class="alert alert-info mb-3" style="display: none;">
                             <i class="ti ti-info-circle"></i>
-                            <strong>Exam Results Status:</strong> 
+                            <strong>Exam Results Status:</strong>
                             <span id="degreeResultsStatusText"></span>
                         </div>
 
@@ -139,7 +139,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="table-responsive">
                             <table class="table table-bordered" id="degreeResultsTable">
                                 <thead class="table-light">
@@ -209,11 +209,11 @@
                     <!-- Certificate Results Table -->
                     <div class="mt-4" id="certResultsTableSection" style="display:none;">
                         <h4 id="certResultsTableHeader" class="text-center mb-3" style="display: none;"></h4>
-                        
+
                         <!-- Results Status Alert -->
                         <div id="certResultsStatusAlert" class="alert alert-info mb-3" style="display: none;">
                             <i class="ti ti-info-circle"></i>
-                            <strong>Exam Results Status:</strong> 
+                            <strong>Exam Results Status:</strong>
                             <span id="certResultsStatusText"></span>
                         </div>
 
@@ -252,7 +252,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="table-responsive">
                             <table class="table table-bordered" id="certResultsTable">
                                 <thead class="table-light">
@@ -293,7 +293,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let degreeResults = [];
     let certResults = [];
     let degreeSpecializationsLoaded = false;
-    
+
     // Degree Tab Elements
     const degreeLocation = document.getElementById('degree_location');
     const degreeCourseType = document.getElementById('degree_course_type');
@@ -304,51 +304,51 @@ document.addEventListener('DOMContentLoaded', function() {
     const degreeSemester = document.getElementById('degree_semester');
     const degreeModule = document.getElementById('degree_module');
     const degreeFieldsContainer = document.getElementById('degree-fields-container');
-    
+
     // Certificate Tab Elements
     const certLocation = document.getElementById('cert_location');
     const certCourse = document.getElementById('cert_course');
     const certIntake = document.getElementById('cert_intake');
     const certFieldsContainer = document.getElementById('cert-fields-container');
-    
+
     // Degree-specific elements
     const degreeUpdateAllBtn = document.getElementById('degreeUpdateAllBtn');
     const degreeResultsTableBody = document.getElementById('degreeResultsTableBody');
     const degreeResultsTableHeader = document.getElementById('degreeResultsTableHeader');
     const degreeStatisticsCards = document.getElementById('degreeStatisticsCards');
-    
+
     // Certificate-specific elements
     const certUpdateAllBtn = document.getElementById('certUpdateAllBtn');
     const certResultsTableBody = document.getElementById('certResultsTableBody');
     const certResultsTableHeader = document.getElementById('certResultsTableHeader');
     const certStatisticsCards = document.getElementById('certStatisticsCards');
-    
+
     // Tab event listeners to ensure proper section visibility
     const degreeTabBtn = document.getElementById('degree-tab');
     const certTabBtn = document.getElementById('certificate-tab');
-    
+
     degreeTabBtn.addEventListener('shown.bs.tab', function() {
         // When switching to degree tab, hide cert sections if they're visible
         document.getElementById('certResultsTableSection').style.display = 'none';
         document.getElementById('certUpdateAllBtnSection').style.display = 'none';
     });
-    
+
     certTabBtn.addEventListener('shown.bs.tab', function() {
         // When switching to cert tab, hide degree sections if they're visible
         document.getElementById('degreeResultsTableSection').style.display = 'none';
         document.getElementById('degreeUpdateAllBtnSection').style.display = 'none';
     });
-    
+
     // Helper functions
     function getActiveTab() {
         const degreePanel = document.getElementById('degree-panel');
         return degreePanel.classList.contains('active') && degreePanel.classList.contains('show') ? 'degree' : 'certificate';
     }
-    
+
     function getCurrentResults() {
         return getActiveTab() === 'degree' ? degreeResults : certResults;
     }
-    
+
     function setCurrentResults(results) {
         if (getActiveTab() === 'degree') {
             degreeResults = results;
@@ -356,7 +356,7 @@ document.addEventListener('DOMContentLoaded', function() {
             certResults = results;
         }
     }
-    
+
     // Helper to reset and disable dropdowns
     function resetAndDisable(select, placeholder) {
         if (!select) return;
@@ -510,7 +510,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Validation functions
     function allDegreeFilled() {
-        return degreeLocation.value && degreeCourseType.value && degreeCourse.value && 
+        return degreeLocation.value && degreeCourseType.value && degreeCourse.value &&
                degreeIntake.value && hasDegreeSpecializationSelection() && degreeSemester.value && degreeModule.value;
     }
 
@@ -551,11 +551,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const marksInput = row.querySelector('input[name="marks"]');
             const gradeInput = row.querySelector('input[name="grade"]');
             const remarksInput = row.querySelector('input[name="remarks"]');
-            
+
             if (resultId && marksInput && gradeInput) {
                 updatedResults.push({
                     id: parseInt(resultId),
-                    marks: parseInt(marksInput.value) || 0,
+                    marks: parseFloat(marksInput.value) || 0,
                     grade: gradeInput.value.trim(),
                     remarks: remarksInput ? remarksInput.value.trim() : ''
                 });
@@ -568,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const payload = { ...filterData, results: updatedResults };
-        
+
         showSpinner(true);
         fetch('{{ route("update.result") }}', {
             method: 'POST',
@@ -593,7 +593,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(() => showToast('Error', 'An error occurred while updating results.', 'bg-danger'))
         .finally(() => showSpinner(false));
     }
-    
+
     function getFilterData() {
         const activeTab = getActiveTab();
         if (activeTab === 'degree') {
@@ -621,7 +621,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return Object.values(data).filter(v => v !== null).some(v => !v) ? null : data;
         }
     }
-    
+
     function renderTable() {
         const activeTab = getActiveTab();
         const resultsTableBody = activeTab === 'degree' ? degreeResultsTableBody : certResultsTableBody;
@@ -631,7 +631,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const row = `<tr data-result-id="${result.id}">
                 <td>${result.registration_id}</td>
                 <td>${result.student_name}</td>
-                <td><input type="number" class="form-control" name="marks" min="0" max="100" value="${result.marks || ''}" onchange="updateResultMark(${index}, this.value)"></td>
+                <td><input type="number" class="form-control" name="marks" min="0" max="100" step="0.01" value="${result.marks || ''}" onchange="updateResultMark(${index}, this.value)"></td>
                 <td><input type="text" class="form-control" name="grade" maxlength="5" value="${result.grade || ''}" onchange="updateResultGrade(${index}, this.value)"></td>
                 <td><input type="text" class="form-control" name="remarks" maxlength="255" value="${result.remarks || ''}" onchange="updateResultRemarks(${index}, this.value)" placeholder="Enter remarks"></td>
                 <td>${result.updated_at}</td>
@@ -733,17 +733,17 @@ document.addEventListener('DOMContentLoaded', function() {
     window.updateResultMark = function(index, value) {
         const results = getCurrentResults();
         if (results[index]) {
-            results[index].marks = value;
+            results[index].marks = value === '' ? '' : parseFloat(value);
         }
     }
-    
+
     window.updateResultGrade = function(index, value) {
         const results = getCurrentResults();
         if (results[index]) {
             results[index].grade = value;
         }
     }
-    
+
     window.updateResultRemarks = function(index, value) {
         const results = getCurrentResults();
         if (results[index]) {
@@ -862,7 +862,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function fetchExistingExamResults() {
         const activeTab = getActiveTab();
         let data;
-        
+
         if (activeTab === 'degree') {
             data = {
                 location: degreeLocation.value,
@@ -883,7 +883,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 module_id: null
             };
         }
-        
+
         showSpinner(true);
         fetch('{{ route("get.existing.exam.results") }}', {
             method: 'POST',
@@ -903,7 +903,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const resultsTableBody = activeTab === 'degree' ? degreeResultsTableBody : certResultsTableBody;
             const resultsTableSection = activeTab === 'degree' ? 'degreeResultsTableSection' : 'certResultsTableSection';
             const updateAllBtnSection = activeTab === 'degree' ? 'degreeUpdateAllBtnSection' : 'certUpdateAllBtnSection';
-            
+
             if (data.success && data.results && data.results.length > 0) {
                 // Show results status
                 statusText.textContent = `Found ${data.results.length} existing result(s)`;
@@ -911,7 +911,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Update statistics
                 updateStatistics(activeTab, data.results);
-                
+
                 statisticsCards.style.display = 'flex';
 
                 setCurrentResults(data.results);
@@ -924,7 +924,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById(resultsTableSection).style.display = '';
                 document.getElementById(updateAllBtnSection).style.display = 'none';
                 statisticsCards.style.display = 'none';
-                
+
                     // Log filter data for debugging
                     console.log('No results found for filters:', {
                         location: activeTab === 'degree' ? degreeLocation.value : certLocation.value,
@@ -990,4 +990,4 @@ document.addEventListener('DOMContentLoaded', function() {
         box-shadow: 0 0 0 2px #e0e7ff;
     }
 </style>
-@endsection 
+@endsection

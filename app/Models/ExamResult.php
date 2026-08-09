@@ -34,13 +34,13 @@ class ExamResult extends Model
         'course_id' => 'int',
         'module_id' => 'int',
         'intake_id' => 'int',
-        'marks' => 'integer',
+        'marks' => 'float',
     ];
 
     protected static function boot()
     {
         parent::boot();
-        
+
         static::updating(function ($examResult) {
             // Log when exam results are being updated
             \Log::info('ExamResult being updated', [
@@ -158,7 +158,7 @@ class ExamResult extends Model
             'D' => 'danger',
             'F' => 'dark'
         ];
-        
+
         return $colors[$this->grade] ?? 'secondary';
     }
 
@@ -169,7 +169,7 @@ class ExamResult extends Model
             'Moratuwa' => 'Moratuwa',
             'Peradeniya' => 'Peradeniya'
         ];
-        
+
         return $locations[$this->location] ?? $this->location;
     }
 
@@ -199,32 +199,32 @@ class ExamResult extends Model
     public static function getAverageMarks($courseId, $moduleId = null, $intakeId = null)
     {
         $query = self::where('course_id', $courseId);
-        
+
         if ($moduleId) {
             $query->where('module_id', $moduleId);
         }
-        
+
         if ($intakeId) {
             $query->where('intake_id', $intakeId);
         }
-        
+
         return $query->avg('marks') ?? 0;
     }
 
     public static function getPassRate($courseId, $moduleId = null, $intakeId = null)
     {
         $query = self::where('course_id', $courseId);
-        
+
         if ($moduleId) {
             $query->where('module_id', $moduleId);
         }
-        
+
         if ($intakeId) {
             $query->where('intake_id', $intakeId);
         }
-        
+
         $total = $query->count();
-        
+
         // Count students who passed based on grades OR marks
         $passed = $query->where(function($q) {
             $q->whereIn('grade', ['A', 'B', 'C', 'D','1','2','3','4','5','6','7','8','9'])
@@ -234,7 +234,7 @@ class ExamResult extends Model
                        ->where('marks', '>=', 50); // 50% passing threshold
               });
         })->count();
-        
+
         return $total > 0 ? round(($passed / $total) * 100, 2) : 0;
     }
 
@@ -244,9 +244,9 @@ class ExamResult extends Model
         if ($marks === null || $marks === '') {
             return null;
         }
-        
+
         $marksNum = (int) $marks;
-        
+
         if ($marksNum >= 80) return 'A';
         if ($marksNum >= 70) return 'B';
         if ($marksNum >= 60) return 'C';
@@ -263,18 +263,18 @@ class ExamResult extends Model
                          $q->whereNull('grade')
                            ->orWhere('grade', '');
                      });
-        
+
         if ($moduleId) {
             $query->where('module_id', $moduleId);
         }
-        
+
         if ($intakeId) {
             $query->where('intake_id', $intakeId);
         }
-        
+
         $results = $query->get();
         $updatedCount = 0;
-        
+
         foreach ($results as $result) {
             $grade = self::calculateGradeFromMarks($result->marks);
             if ($grade) {
@@ -282,22 +282,22 @@ class ExamResult extends Model
                 $updatedCount++;
             }
         }
-        
+
         return $updatedCount;
     }
 
     public static function getGradeDistribution($courseId, $moduleId = null, $intakeId = null)
     {
         $query = self::where('course_id', $courseId);
-        
+
         if ($moduleId) {
             $query->where('module_id', $moduleId);
         }
-        
+
         if ($intakeId) {
             $query->where('intake_id', $intakeId);
         }
-        
+
         return $query->selectRaw('grade, COUNT(*) as count')
                     ->groupBy('grade')
                     ->orderBy('grade')
