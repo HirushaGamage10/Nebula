@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return Array.isArray(specs) ? specs.filter(spec => spec && String(spec).trim() !== '') : [];
   }
 
-  async function loadStudents() {
+  async function loadStudents(preserveMessage = false) {
     clearStudentTable();
 
     if (!location.value || !course.value || !intake.value || !specialization.value) {
@@ -177,7 +177,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       count.textContent = `${students.length} eligible students`;
       studentArea.classList.remove('d-none');
-      showMessage('', '');
+      if (!preserveMessage) {
+        showMessage('', '');
+      }
     } catch (error) {
       showMessage('danger', error.message);
     }
@@ -265,8 +267,8 @@ document.addEventListener('DOMContentLoaded', () => {
         student_ids: studentIds
       });
 
+      await loadStudents(true);
       showMessage('success', data.message || 'Saved successfully.');
-      await loadStudents();
     } catch (error) {
       showMessage('danger', error.message);
     }
