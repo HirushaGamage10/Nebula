@@ -102,7 +102,7 @@
                                 <table class="table table-striped table-hover">
                                     <thead class="table-light">
                                         <tr>
-                                            <th>Student ID</th>
+                                            <th>Course Registration ID</th>
                                             <th>Name</th>
                                             <th>Specialization</th>
                                             <th>Email</th>
@@ -550,8 +550,9 @@ $(document).ready(function() {
                     console.log('Students found:', response.students.length);
                     let rows = '';
                     response.students.forEach(student => {
+                        const courseRegistrationId = student.course_registration_id || '-';
                         rows += `<tr>
-                            <td>${student.student_id}</td>
+                            <td>${courseRegistrationId}</td>
                             <td>${student.name}</td>
                             <td>${student.specialization || ''}</td>
                             <td>${student.email}</td>

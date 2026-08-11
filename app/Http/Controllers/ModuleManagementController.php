@@ -545,10 +545,28 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
                 'registrations' => $students->toArray()
             ]);
             
-            $mappedStudents = $students->map(function($reg) {
+            $studentIds = $students->pluck('student_id')->filter()->unique()->values();
+
+            $courseRegistrationByStudent = CourseRegistration::where('course_id', $request->course_id)
+                ->where('intake_id', $request->intake_id)
+                ->where('location', $request->location)
+                ->whereIn('student_id', $studentIds)
+                ->orderByDesc('id')
+                ->get()
+                ->groupBy('student_id')
+                ->map(function ($registrations) {
+                    return $registrations->first();
+                });
+
+            $mappedStudents = $students->map(function($reg) use ($courseRegistrationByStudent) {
+                $studentId = $reg->student->student_id;
+                $courseRegistration = $courseRegistrationByStudent->get($studentId);
+
                 return [
-                    'student_id' => $reg->student->student_id,
+                    'student_id' => $studentId,
+                    'course_registration_id' => optional($courseRegistration)->course_registration_id,
                     'name' => $reg->student->name_with_initials,
+                    'specialization' => $reg->specialization,
                     'email' => $reg->student->email,
                     'nic' => $reg->student->id_value,
                 ];

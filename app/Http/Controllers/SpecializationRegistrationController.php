@@ -7,6 +7,7 @@ use App\Models\CourseRegistration;
 use App\Models\Intake;
 use App\Models\SpecializationRegistration;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class SpecializationRegistrationController extends Controller
 {
@@ -51,26 +52,45 @@ class SpecializationRegistrationController extends Controller
             'location' => 'required|string',
         ]);
 
-        $students = CourseRegistration::query()
+        $registrations = CourseRegistration::query()
             ->where($data)
             ->where(fn ($query) => $query->where('status', 'Registered')->orWhere('approval_status', 'Approved by DGM'))
             ->with('student')
-            ->get()
-            ->map(function ($registration) {
-                $assignment = SpecializationRegistration::where('student_id', $registration->student_id)
-                    ->where('course_id', $registration->course_id)
-                    ->where('intake_id', $registration->intake_id)
-                    ->first();
+            ->get();
+
+        $assignmentsByStudentId = collect();
+        if (Schema::hasTable('specialization_registrations')) {
+            $assignmentsByStudentId = SpecializationRegistration::query()
+                ->where('course_id', $data['course_id'])
+                ->where('intake_id', $data['intake_id'])
+                ->where('location', $data['location'])
+                ->where('status', 'registered')
+                ->whereIn('student_id', $registrations->pluck('student_id')->all())
+                ->get()
+                ->keyBy('student_id');
+        }
+
+        $students = $registrations->map(function ($registration) use ($assignmentsByStudentId) {
+                $student = $registration->student;
+                if (!$student) {
+                    return null;
+                }
+
+                $assignment = $assignmentsByStudentId->get($registration->student_id);
 
                 return [
                     'student_id' => $registration->student_id,
-                    'name' => $registration->student->name_with_initials,
-                    'email' => $registration->student->email,
+                    'course_registration_id' => $registration->course_registration_id,
+                    'name' => $student->name_with_initials,
+                    'email' => $student->email,
+                    'nic' => $student->id_value ?? $student->nic ?? null,
                     'specialization' => $assignment?->status === 'registered' ? $assignment->specialization : null,
                 ];
-            });
+            })
+            ->filter()
+            ->values();
 
-        return response()->json(['students' => $students]);
+        return response()->json(['success' => true, 'students' => $students]);
     }
 
     public function store(Request $request)
@@ -87,6 +107,7 @@ class SpecializationRegistrationController extends Controller
         $course = Course::findOrFail($data['course_id']);
         abort_unless(in_array($course->course_type, ['degree', 'diploma'], true), 422, 'Specialization registration is only for degree and diploma courses.');
         abort_unless(in_array($data['specialization'], $this->courseSpecializations($course), true), 422, 'Invalid specialization for this course.');
+        abort_if(!Schema::hasTable('specialization_registrations'), 422, 'Specialization assignments table is missing. Please run pending migrations.');
 
         $eligibleIds = CourseRegistration::where('course_id', $data['course_id'])->where('intake_id', $data['intake_id'])
             ->where('location', $data['location'])->whereIn('student_id', $data['student_ids'])
