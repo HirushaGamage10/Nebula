@@ -159,7 +159,7 @@
                 <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
                         <h6 class="fw-bold mb-0">📚 Ongoing Courses</h6>
-                        <small class="text-muted">Current month collected amount from active registrations</small>
+                        <small class="text-muted">Selected-month paid local course-fee records</small>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <a
@@ -170,15 +170,15 @@
                         >
                             <i class="bi bi-file-earmark-pdf"></i> Export audit
                         </a>
-                        <span class="badge bg-success">{{ number_format($ongoingCoursesCount ?? 0) }} active</span>
+                        <span class="badge bg-success">{{ number_format($ongoingCoursesCount ?? 0) }} regs</span>
                     </div>
                 </div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start gap-3 mb-4 analytics-kpi-header">
                         <div>
-                            <div class="text-muted small mb-1">Selected month collected</div>
+                            <div class="text-muted small mb-1">Selected month paid local course fees</div>
                             <div class="display-6 fw-bold text-success mb-1 analytics-kpi-amount">LKR {{ number_format($ongoingCoursesAmount ?? 0, 2) }}</div>
-                            <div class="text-muted small">{{ number_format($ongoingCoursesCount ?? 0) }} ongoing registrations</div>
+                            <div class="text-muted small">{{ number_format($ongoingCoursesCount ?? 0) }} registrations with paid local course fees in {{ $startOfMonth->format('F Y') }}</div>
                         </div>
                         <div class="bg-success bg-opacity-10 text-success rounded-3 p-3">
                             <i class="bi bi-cash-coin fs-3"></i>
@@ -193,7 +193,7 @@
                         @endforeach
                     </select>
                     <div class="d-flex justify-content-between align-items-center gap-2 mt-2 analytics-filter-actions">
-                        <small class="text-muted">Select one course to recalculate the selected month collected payment total.</small>
+                        <small class="text-muted">Select one course to recalculate its local course-fee total for the selected month.</small>
                         <button type="submit" form="analyticsFiltersForm" class="btn btn-sm btn-outline-success text-nowrap">Apply</button>
                     </div>
                 </div>

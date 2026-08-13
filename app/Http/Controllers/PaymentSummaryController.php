@@ -372,27 +372,29 @@ class PaymentSummaryController extends Controller
         $newRegistrationsAmount = (float) (clone $newRegistrationsCurrentMonthQuery)
             ->sum(DB::raw("COALESCE({$paymentTable}.total_fee, {$paymentTable}.amount, 0)"));
 
-        $ongoingCoursesQuery = CourseRegistration::query()
-            ->where('status', 'Registered')
+        // Ongoing Courses represents local course-fee collections only.  Use
+        // the same effective-payment-date month window as New Registrations.
+        $ongoingCoursesCurrentMonthQuery = PaymentDetail::query()
+            ->whereNotNull('course_registration_id')
+            ->where('status', 'paid')
             ->when($selectedOngoingCourseId, function ($query) use ($selectedOngoingCourseId) {
-                $query->where('course_id', $selectedOngoingCourseId);
-            })
-            ->whereIn('id', PaymentDetail::query()
-                ->select('course_registration_id')
-                ->where('status', 'paid')
-                ->whereBetween('created_at', [$startOfMonth, $endOfMonth]));
+                $query->whereHas('registration', function ($registrationQuery) use ($selectedOngoingCourseId) {
+                    $registrationQuery->where('course_id', $selectedOngoingCourseId);
+                });
+            });
 
-        $ongoingCoursesCount = (clone $ongoingCoursesQuery)->count();
+        $this->applyLocalCourseFeeTypeFilter($ongoingCoursesCurrentMonthQuery, $paymentTable);
 
-        $ongoingCoursesAmount = (float) PaymentDetail::join('course_registration', 'payment_details.course_registration_id', '=', 'course_registration.id')
-            ->where('course_registration.status', 'Registered')
-            ->when($selectedOngoingCourseId, function ($query) use ($selectedOngoingCourseId) {
-                $query->where('course_registration.course_id', $selectedOngoingCourseId);
-            })
-            ->where('payment_details.status', 'paid')
-            ->whereDate('payment_details.created_at', '>=', $startOfMonth->toDateString())
-            ->whereDate('payment_details.created_at', '<=', $endOfMonth->toDateString())
-            ->sum('payment_details.amount');
+        $ongoingCoursesCurrentMonthQuery
+            ->whereRaw("DATE({$paidDateExpr}) >= ?", [$startOfMonth->toDateString()])
+            ->whereRaw("DATE({$paidDateExpr}) <= ?", [$endOfMonth->toDateString()]);
+
+        $ongoingCoursesCount = (clone $ongoingCoursesCurrentMonthQuery)
+            ->distinct()
+            ->count('course_registration_id');
+
+        $ongoingCoursesAmount = (float) (clone $ongoingCoursesCurrentMonthQuery)
+            ->sum(DB::raw("COALESCE({$paymentTable}.total_fee, {$paymentTable}.amount, 0)"));
 
         return view('payments.analytics', compact(
             'revenueByDay', 'pendingSltLoanRecoveries', 'totalRevenue',
@@ -453,26 +455,33 @@ class PaymentSummaryController extends Controller
             $title = 'Registration Fee Payments Audit';
             $amountLabel = 'Registration Fee Paid';
         } else {
-            $records = PaymentDetail::with(['student', 'registration.course', 'registration.intake'])
+            $paymentTable = $this->getPaymentDetailsTable();
+            $paidDateExpr = $this->getPaidDateSqlExpression($paymentTable);
+
+            $recordsQuery = PaymentDetail::with(['student', 'registration.course', 'registration.intake'])
+                ->whereNotNull('course_registration_id')
                 ->where('status', 'paid')
-                ->whereHas('registration', function ($query) use ($courseId) {
-                    $query->where('status', 'Registered')
-                        ->when($courseId, fn ($registrationQuery) => $registrationQuery->where('course_id', $courseId));
+                ->when($courseId, function ($query) use ($courseId) {
+                    $query->whereHas('registration', fn ($registrationQuery) => $registrationQuery->where('course_id', $courseId));
                 })
-                ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
-                ->orderBy('created_at')
-                ->get();
+                ->whereRaw("DATE({$paidDateExpr}) >= ?", [$startOfMonth->toDateString()])
+                ->whereRaw("DATE({$paidDateExpr}) <= ?", [$endOfMonth->toDateString()])
+                ->orderByRaw("DATE({$paidDateExpr})");
+
+            $this->applyLocalCourseFeeTypeFilter($recordsQuery, $paymentTable);
+
+            $records = $recordsQuery->get();
             $rows = $records->map(fn ($record) => [
                 'student_name' => optional($record->student)->full_name ?? 'N/A',
                 'nic' => optional($record->student)->id_value ?? 'N/A',
                 'course' => optional(optional($record->registration)->course)->course_name ?? 'N/A',
                 'intake' => optional(optional($record->registration)->intake)->batch ?? 'N/A',
                 'reference' => $record->transaction_id ?? ('Payment #' . $record->id),
-                'date' => optional($record->created_at)->format('Y-m-d') ?? 'N/A',
-                'amount' => (float) ($record->amount ?? 0),
+                'date' => $this->resolveEffectivePaidDateForExport($record),
+                'amount' => (float) ($record->total_fee ?? $record->amount ?? 0),
             ]);
-            $title = 'Ongoing Courses Collection Audit';
-            $amountLabel = 'Paid Amount';
+            $title = 'Local Course Fee Payments Audit';
+            $amountLabel = 'Local Course Fee Paid';
         }
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payments.analytics_kpi_export_pdf', [
@@ -1218,19 +1227,42 @@ class PaymentSummaryController extends Controller
         $query->whereRaw('1 = 0');
     }
 
-    private function getPaidDateSqlExpression(string $table): string
+    private function applyLocalCourseFeeTypeFilter($query, string $table): void
     {
-        $dateColumns = [];
+        $hasInstallmentType = $this->hasPaymentDetailColumn('installment_type');
+        $hasPaymentType = $this->hasPaymentDetailColumn('payment_type');
 
-        foreach (['payment_effective_date', 'payment_date'] as $column) {
-            if ($this->hasPaymentDetailColumn($column)) {
-                $dateColumns[] = "{$table}.{$column}";
-            }
+        if ($hasInstallmentType && $hasPaymentType) {
+            $query->where(function ($typeQuery) use ($table) {
+                $typeQuery->where($table . '.installment_type', 'course_fee')
+                    ->orWhere($table . '.payment_type', 'course_fee');
+            });
+            return;
         }
 
-        $dateColumns[] = "{$table}.created_at";
+        if ($hasInstallmentType) {
+            $query->where($table . '.installment_type', 'course_fee');
+            return;
+        }
 
-        return 'COALESCE(' . implode(', ', $dateColumns) . ')';
+        if ($hasPaymentType) {
+            $query->where($table . '.payment_type', 'course_fee');
+            return;
+        }
+
+        $query->whereRaw('1 = 0');
+    }
+
+    private function getPaidDateSqlExpression(string $table): string
+    {
+        // Analytics month filters must be based on the actual effective date,
+        // not the date the row happened to be created.  Retain created_at only
+        // for older installations that do not yet have this column.
+        if ($this->hasPaymentDetailColumn('payment_effective_date')) {
+            return "{$table}.payment_effective_date";
+        }
+
+        return "{$table}.created_at";
     }
 
     private function fetchPendingSltLoanRecoveries(Carbon $startOfMonth, Carbon $endOfMonth)
