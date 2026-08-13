@@ -19,6 +19,7 @@ class Timetable extends Model
         'course_id',
         'intake_id',
         'semester',
+        'specialization',
         'date',
         'time',
         'end_time',

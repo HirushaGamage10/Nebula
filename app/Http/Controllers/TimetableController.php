@@ -944,8 +944,15 @@ class TimetableController extends Controller
             $query->where('timetable.semester', '=', $semesterValue);
         }
 
-        if (!empty($validatedData['specialization'])) {
-            $query->where('timetable.specialization', '=', $validatedData['specialization']);
+        if (!empty($validatedData['specialization']) && Schema::hasColumn('timetable', 'specialization')) {
+            // Timetables created before specialization support have a NULL value.
+            // Include those legacy rows, while new rows are saved with the selected
+            // specialization and therefore remain correctly scoped.
+            $query->where(function ($specializationQuery) use ($validatedData) {
+                $specializationQuery
+                    ->where('timetable.specialization', '=', $validatedData['specialization'])
+                    ->orWhereNull('timetable.specialization');
+            });
         }
 
         if (!empty($validatedData['start_date'])) {
@@ -1123,6 +1130,7 @@ class TimetableController extends Controller
             'course_id' => 'required|exists:courses,course_id',
             'intake_id' => 'required|exists:intakes,intake_id',
             'semester' => 'required|string',
+            'specialization' => 'nullable|string',
             'classrooms' => 'nullable|array',
             'classrooms.*' => 'nullable|string',
             'lecturers' => 'nullable|array',
@@ -1216,6 +1224,7 @@ class TimetableController extends Controller
                 $assignment->course_id = $validated['course_id'];
                 $assignment->intake_id = $validated['intake_id'];
                 $assignment->semester = $semesterValue;         // use normalized semester value
+                $assignment->specialization = $validated['specialization'] ?? null;
                 $assignment->duration = $validated['durations'][$index];
                 $assignment->time = $start->format('H:i');
                 $assignment->end_time = $end->format('H:i');
@@ -1262,7 +1271,8 @@ class TimetableController extends Controller
             'location' => 'nullable|string',
             'course_id' => 'nullable|integer',
             'intake_id' => 'nullable|integer',
-            'semester' => 'nullable' // can be semester id or label
+            'semester' => 'nullable', // can be semester id or label
+            'specialization' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -1328,6 +1338,7 @@ class TimetableController extends Controller
                     'course_id'  => $request->input('course_id'),
                     'intake_id'  => $request->input('intake_id'),
                     'semester'   => $semesterValue,
+                    'specialization' => $request->input('specialization') ?: null,
                     'date'       => $date,
                     'time'       => $start,
                     'end_time'   => $end,
