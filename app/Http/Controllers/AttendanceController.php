@@ -432,8 +432,10 @@ class AttendanceController extends Controller
 
         // Check if this is a core module (assigned to semester) or elective module
         $isCoreModule = DB::table('semester_module')
-            ->where('semester_id', $semesterId)
-            ->where('module_id', $moduleId)
+            ->join('modules', 'modules.module_id', '=', 'semester_module.module_id')
+            ->where('semester_module.semester_id', $semesterId)
+            ->where('semester_module.module_id', $moduleId)
+            ->whereIn('modules.module_type', ['core', 'special_unit_compulsory'])
             ->exists();
 
         Log::info('Module type check:', ['is_core_module' => $isCoreModule]);
@@ -1007,8 +1009,10 @@ class AttendanceController extends Controller
 
         // Check if this is a core module (assigned to semester) or elective module
         $isCoreModule = DB::table('semester_module')
-            ->where('semester_id', $semesterId)
-            ->where('module_id', $moduleId)
+            ->join('modules', 'modules.module_id', '=', 'semester_module.module_id')
+            ->where('semester_module.semester_id', $semesterId)
+            ->where('semester_module.module_id', $moduleId)
+            ->whereIn('modules.module_type', ['core', 'special_unit_compulsory'])
             ->exists();
 
         // Get all attendance sessions for this filter (by module)
@@ -1238,8 +1242,10 @@ class AttendanceController extends Controller
 
         // Check if this is a core module (assigned to semester) or elective module
         $isCoreModule = DB::table('semester_module')
-            ->where('semester_id', $semesterId)
-            ->where('module_id', $moduleId)
+            ->join('modules', 'modules.module_id', '=', 'semester_module.module_id')
+            ->where('semester_module.semester_id', $semesterId)
+            ->where('semester_module.module_id', $moduleId)
+            ->whereIn('modules.module_type', ['core', 'special_unit_compulsory'])
             ->exists();
 
         // Get all attendance sessions for this filter (by module)

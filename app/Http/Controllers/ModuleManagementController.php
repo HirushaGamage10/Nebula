@@ -13,9 +13,13 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Models\Semester;
+use App\Support\SemesterModuleSpecializationHelper;
+use App\Support\SpecializationStudentScope;
 
 class ModuleManagementController extends Controller
 {
+    private const COMMON_SPECIALIZATION = 'Common';
+
     private function normalizeSpecializationValue($value)
     {
         if (!is_string($value)) {
@@ -479,8 +483,8 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
                                     $electiveModules = \DB::table('modules')
                                         ->join('semester_module', 'modules.module_id', '=', 'semester_module.module_id')
                                         ->where('semester_module.semester_id', $semester->id)
-                                        ->where('modules.module_type', 'Elective') // Only elective modules
-                                        ->select('modules.module_id', 'modules.module_name', 'modules.module_type', 'modules.credits')
+                                        ->whereRaw('LOWER(modules.module_type) = ?', ['elective'])
+                                        ->select('modules.module_id', 'modules.module_name', 'modules.module_type', 'modules.credits', 'semester_module.specialization', 'semester_module.specializations')
                                         ->orderBy('modules.module_name')
                                         ->get();
 
@@ -518,11 +522,12 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
             'course_id' => 'required|exists:courses,course_id',
             'intake_id' => 'required|exists:intakes,intake_id',
             'semester_id' => 'required|exists:semesters,id',
-            'location' => 'required|in:Welisara,Moratuwa,Peradeniya'
+            'location' => 'required|in:Welisara,Moratuwa,Peradeniya',
+            'specialization' => 'nullable|string|max:255',
         ]);
 
         try {
-            // Debug: Log the request parameters
+            $specialization = $this->normalizeSpecializationValue($request->specialization);
             \Log::info('getElectiveStudents called with:', [
                 'course_id' => $request->course_id,
                 'intake_id' => $request->intake_id,
@@ -537,7 +542,20 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
                 ->where('location', $request->location)
                 ->where('status', 'registered')
                 ->with('student')
-                ->get();
+                ;
+
+            if ($specialization && $specialization !== self::COMMON_SPECIALIZATION) {
+                SpecializationStudentScope::applyToQuery(
+                    $students,
+                    'student_id',
+                    (int) $request->course_id,
+                    (int) $request->intake_id,
+                    $request->location,
+                    $specialization
+                );
+            }
+
+            $students = $students->get();
             
             // Debug: Log the query results
             \Log::info('SemesterRegistration query results:', [
@@ -596,22 +614,41 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
 
         $request->validate([
             'semester_id' => 'required|exists:semesters,id',
-            'course_id' => 'required|exists:courses,course_id'
+            'course_id' => 'required|exists:courses,course_id',
+            'specialization' => 'nullable|string|max:255'
         ]);
 
         try {
-            // Get modules assigned to this specific semester from semester_module table
-            $electiveModules = \DB::table('modules')
+            $selectedSpecialization = $this->normalizeSpecializationValue($request->specialization);
+            $allElectiveModules = \DB::table('modules')
                 ->join('semester_module', 'modules.module_id', '=', 'semester_module.module_id')
                 ->where('semester_module.semester_id', $request->semester_id)
-                ->where('modules.module_type', 'Elective') // Only elective modules
-                ->select('modules.module_id', 'modules.module_name', 'modules.module_type', 'modules.credits')
+                ->whereRaw('LOWER(modules.module_type) = ?', ['elective'])
+                ->select('modules.module_id', 'modules.module_name', 'modules.module_type', 'modules.credits', 'semester_module.specialization', 'semester_module.specializations')
                 ->orderBy('modules.module_name')
                 ->get();
 
+            $moduleScopes = $allElectiveModules->map(function ($module) {
+                $module->scope_specializations = SemesterModuleSpecializationHelper::decodeList(
+                    $module->specializations,
+                    $module->specialization
+                );
+                return $module;
+            });
+
+            $availableSpecializations = $moduleScopes->flatMap(fn ($module) => $module->scope_specializations ?? [])->unique()->values();
+            $commonAvailable = $moduleScopes->contains(fn ($module) => $module->scope_specializations === null);
+            $electiveModules = $moduleScopes->filter(function ($module) use ($selectedSpecialization) {
+                if (!$selectedSpecialization) return true;
+                if ($selectedSpecialization === self::COMMON_SPECIALIZATION) return $module->scope_specializations === null;
+                return in_array($selectedSpecialization, $module->scope_specializations ?? [], true);
+            })->values();
+
             return response()->json([
                 'success' => true,
-                'data' => $electiveModules
+                'data' => $electiveModules,
+                'available_specializations' => $availableSpecializations,
+                'common_available' => $commonAvailable,
             ]);
         } catch (\Exception $e) {
             Log::error('Error fetching elective modules: ' . $e->getMessage());
@@ -651,10 +688,39 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
             $semester = Semester::find($request->semester_id);
             if (!$semester) {
                 \Log::error('Semester not found:', ['semester_id' => $request->semester_id]);
+                DB::rollBack();
                 return response()->json([
                     'success' => false, 
                     'message' => '❌ Invalid semester selected. Please try again.'
                 ], 400);
+            }
+
+            $moduleScope = DB::table('modules')
+                ->join('semester_module', 'modules.module_id', '=', 'semester_module.module_id')
+                ->where('semester_module.semester_id', $semester->id)
+                ->where('modules.module_id', $request->module_id)
+                ->whereRaw('LOWER(modules.module_type) = ?', ['elective'])
+                ->select('semester_module.specialization', 'semester_module.specializations')
+                ->first();
+
+            if (!$moduleScope) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'The selected module is not an elective assigned to this semester.'], 422);
+            }
+
+            $selectedSpecialization = $this->normalizeSpecializationValue($request->specialization);
+            $moduleSpecializations = SemesterModuleSpecializationHelper::decodeList(
+                $moduleScope->specializations,
+                $moduleScope->specialization
+            );
+
+            $selectionMatchesModule = $moduleSpecializations === null
+                ? $selectedSpecialization === self::COMMON_SPECIALIZATION
+                : $selectedSpecialization && in_array($selectedSpecialization, $moduleSpecializations, true);
+
+            if (!$selectionMatchesModule) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'Select the specialization that matches the elective module.'], 422);
             }
 
             \Log::info('Found semester:', ['semester' => $semester->toArray()]);
@@ -678,7 +744,7 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
                         'intake_id' => $request->intake_id,
                         'course_id' => $request->course_id,
                         'location' => $request->location,
-                        'specialization' => $request->specialization,
+                        'specialization' => $selectedSpecialization === self::COMMON_SPECIALIZATION ? null : $selectedSpecialization,
                         'semester' => $semester->name,
                         'created_at' => now(),
                         'updated_at' => now()

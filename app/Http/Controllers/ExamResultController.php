@@ -723,8 +723,10 @@ class ExamResultController extends Controller
 
         // Check if this is a core module (assigned to semester) or elective module
         $isCoreModule = \DB::table('semester_module')
-            ->where('semester_id', $semesterId)
-            ->where('module_id', $moduleId)
+            ->join('modules', 'modules.module_id', '=', 'semester_module.module_id')
+            ->where('semester_module.semester_id', $semesterId)
+            ->where('semester_module.module_id', $moduleId)
+            ->whereIn('modules.module_type', ['core', 'special_unit_compulsory'])
             ->exists();
 
         // Check if exam results already exist for this module
@@ -1167,8 +1169,11 @@ class ExamResultController extends Controller
 
             $students = collect();
 
-            // First, try to get students from semester registrations
-            $semesterRegistrations = \App\Models\SemesterRegistration::where('semester_id', $semesterId)
+            $isElectiveModule = strtolower((string) $module->module_type) === 'elective';
+
+            // Core and special-unit modules apply to semester-registered students.
+            // Elective modules use only the registrations recorded in module_management.
+            $semesterRegistrations = $isElectiveModule ? collect() : \App\Models\SemesterRegistration::where('semester_id', $semesterId)
                 ->where('course_id', $courseId)
                 ->where('intake_id', $intakeId)
                 ->where('location', $location)
@@ -1223,7 +1228,7 @@ class ExamResultController extends Controller
                             'Remarks' => ''
                         ];
                     });
-                } else {
+                } elseif (!$isElectiveModule) {
                     // Final fallback: Get all students registered for this course and intake
                     $courseRegistrations = \App\Models\CourseRegistration::where('course_id', $courseId)
                         ->where('intake_id', $intakeId)

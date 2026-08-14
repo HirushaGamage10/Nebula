@@ -29,7 +29,7 @@
 
                               
                                @foreach($degreeCourses as $course)
-                             <option value="{{ $course->course_id }}">
+                             <option value="{{ $course->course_id }}" data-location="{{ $course->location }}">
                                degree - {{ $course->course_name }}
                               </option>
                              @endforeach
@@ -37,7 +37,7 @@
 
                                
                               @foreach($diplomaCourses as $course)
-                              <option value="{{ $course->course_id }}">
+                              <option value="{{ $course->course_id }}" data-location="{{ $course->location }}">
                               diploma - {{ $course->course_name }}
                                </option>
                                @endforeach
@@ -61,19 +61,19 @@
                         </select>
                     </div>
                 </div>
-                <div class="mb-3 row mx-3">
-                    <label for="elective_module" class="col-sm-2 col-form-label fw-bold">Module<span class="text-danger">*</span></label>
-                    <div class="col-sm-10">
-                        <select class="form-select cursor-pointer bg-white" id="elective_module" name="elective_module" disabled>
-                            <option selected disabled value="">Select a module</option>
-                        </select>
-                    </div>
-                </div>
                 <div class="mb-3 row mx-3" id="elective_specialization_row" style="display:none;">
                     <label for="elective_specialization" class="col-sm-2 col-form-label fw-bold">Specialization</label>
                     <div class="col-sm-10">
                         <select class="form-select cursor-pointer bg-white" id="elective_specialization" name="elective_specialization">
                             <option selected disabled value="">Select Specialization</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3 row mx-3">
+                    <label for="elective_module" class="col-sm-2 col-form-label fw-bold">Module<span class="text-danger">*</span></label>
+                    <div class="col-sm-10">
+                        <select class="form-select cursor-pointer bg-white" id="elective_module" name="elective_module" disabled>
+                            <option selected disabled value="">Select a module</option>
                         </select>
                     </div>
                 </div>
@@ -360,9 +360,11 @@ $(document).ready(function() {
     });
     
     $('#elective_location').on('change', function() {
-        if ($('#elective_location').val() && $('#elective_course').val()) {
-            loadElectiveIntakes();
-        }
+        const location = $(this).val();
+        $('#elective_course option[data-location]').each(function() {
+            $(this).toggle(!location || $(this).data('location') === location);
+        });
+        $('#elective_course').val('');
     });
     
     $('#elective_intake').on('change', function() {
@@ -376,8 +378,10 @@ $(document).ready(function() {
     
     $('#elective_semester').on('change', function() {
         if ($(this).val()) {
-            // Enable module dropdown and load elective modules for this semester
-            $('#elective_module').prop('disabled', false);
+            $('#elective_specialization').empty().append('<option selected disabled value="">Select Specialization</option>');
+            $('#elective_specialization_hidden').val('');
+            $('#elective_specialization_row').hide();
+            $('#elective_module').prop('disabled', true);
             loadElectiveModulesForSemester();
         } else {
             $('#elective_module').prop('disabled', true);
@@ -409,8 +413,8 @@ $(document).ready(function() {
     // Add event listener for specialization dropdown
     $('#elective_specialization').on('change', function() {
         $('#elective_specialization_hidden').val($(this).val());
-        // Trigger module change to check if all fields are now selected
-        $('#elective_module').trigger('change');
+        $('#elective_module').val('').prop('disabled', true);
+        loadElectiveModulesForSemester();
     });
 
     function loadElectiveIntakes() {
@@ -478,10 +482,27 @@ $(document).ready(function() {
             data: {
                 semester_id: $('#elective_semester').val(),
                 course_id: $('#elective_course').val(),
+                specialization: $('#elective_specialization').val(),
                 _token: '{{ csrf_token() }}'
             },
             success: function(response) {
                 if (response.success) {
+                    const $specialization = $('#elective_specialization');
+                    if (!$specialization.val()) {
+                        let options = '<option selected disabled value="">Select Specialization</option>';
+                        if (response.common_available) options += '<option value="Common">Common</option>';
+                        (response.available_specializations || []).forEach(function(spec) {
+                            options += `<option value="${spec}">${spec}</option>`;
+                        });
+                        $specialization.html(options);
+                        if (response.common_available || (response.available_specializations || []).length) {
+                            $('#elective_specialization_row').show();
+                            if (response.common_available && !(response.available_specializations || []).length) {
+                                $specialization.val('Common').trigger('change');
+                            }
+                            return;
+                        }
+                    }
                     $('#elective_module').empty().append('<option selected disabled value="">Select a module</option>');
                     response.data.forEach(function(module) {
                         $('#elective_module').append(`<option value="${module.module_id}">${module.module_name}</option>`);
