@@ -268,11 +268,13 @@ class AttendanceController extends Controller
             'intake_id' => 'required|integer|exists:intakes,intake_id',
             'semester' => 'nullable|integer',
             'location' => 'required|string',
+            'specialization' => 'nullable|string|max:255',
         ]);
 
         $courseId = $request->input('course_id');
         $intakeId = $request->input('intake_id');
         $semesterId = $request->input('semester');
+        $selectedSpecialization = $this->normalizeSpecializationValue($request->input('specialization'));
 
         // Check if this is a certificate course
         $course = Course::find($courseId);
@@ -302,8 +304,18 @@ class AttendanceController extends Controller
         // Filter modules by semester using the semester_module table
         $modules = \App\Models\Module::join('semester_module', 'modules.module_id', '=', 'semester_module.module_id')
             ->where('semester_module.semester_id', $semester->id)
-            ->select('modules.module_id', 'modules.module_name')
+            ->select('modules.module_id', 'modules.module_name', 'semester_module.specialization', 'semester_module.specializations')
             ->get();
+
+        if ($selectedSpecialization !== null && trim((string) $selectedSpecialization) !== '') {
+            $modules = $modules->filter(function ($module) use ($selectedSpecialization) {
+                return \App\Support\SemesterModuleSpecializationHelper::matchesSelection(
+                    $module->specializations,
+                    $module->specialization,
+                    $selectedSpecialization
+                );
+            })->values();
+        }
 
         return response()->json(['modules' => $modules]);
     }
@@ -338,12 +350,24 @@ class AttendanceController extends Controller
         $specialization = $this->normalizeSpecializationValue($request->input('specialization'));
         $specializedStudentIds = null;
 
+        $moduleScope = null;
+        if (!$isCertificate && $request->filled('semester') && $request->filled('module_id')) {
+            $moduleScope = DB::table('semester_module')
+                ->where('semester_id', $request->semester)
+                ->where('module_id', $request->module_id)
+                ->select('specialization', 'specializations')
+                ->first();
+        }
+
         if ($specialization !== null) {
             $specializedStudentIds = SpecializationStudentScope::resolveStudentIds(
                 $courseId,
                 $intakeId,
                 $location,
-                $specialization
+                $specialization,
+                $moduleScope?->specializations,
+                $moduleScope?->specialization,
+                $course ? $this->getCourseSpecializations($course) : null
             );
 
             if (empty($specializedStudentIds)) {

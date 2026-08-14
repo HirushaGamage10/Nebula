@@ -754,7 +754,8 @@ document.addEventListener('DOMContentLoaded', function() {
             location: degreeLocation.value,
             course_id: degreeCourse.value,
             intake_id: degreeIntake.value,
-            semester: degreeSemester.value
+            semester: degreeSemester.value,
+            specialization: degreeSpecialization.value || ''
         };
         showSpinner(true);
         fetch('{{ route("exam.results.get.filtered.modules") }}', {

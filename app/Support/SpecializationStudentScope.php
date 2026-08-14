@@ -7,6 +7,58 @@ use Illuminate\Support\Facades\Schema;
 
 class SpecializationStudentScope
 {
+    public static function resolveCourseCommonSpecializations(?int $courseId, ?int $intakeId = null, ?array $courseSpecializations = null): array
+    {
+        if ($courseId === null) {
+            return [];
+        }
+
+        $courseSpecializations = is_array($courseSpecializations)
+            ? array_values(array_filter(array_map(function ($spec) {
+                if (!is_string($spec)) {
+                    return null;
+                }
+
+                $trimmed = trim($spec);
+                return $trimmed === '' ? null : $trimmed;
+            }, $courseSpecializations)))
+            : [];
+
+        $semesterModuleRows = DB::table('semester_module as sm')
+            ->join('semesters as s', 's.id', '=', 'sm.semester_id')
+            ->where('s.course_id', $courseId)
+            ->when($intakeId !== null, fn ($query) => $query->where('s.intake_id', $intakeId))
+            ->select('sm.specialization', 'sm.specializations')
+            ->get();
+
+        $commonSpecializations = [];
+
+        foreach ($semesterModuleRows as $row) {
+            $decoded = SemesterModuleSpecializationHelper::decodeList($row->specializations ?? null, $row->specialization ?? null);
+
+            if (is_array($decoded) && !empty($decoded)) {
+                foreach ($decoded as $spec) {
+                    $trimmed = trim((string) $spec);
+                    if ($trimmed !== '') {
+                        $commonSpecializations[$trimmed] = true;
+                    }
+                }
+                continue;
+            }
+
+            foreach ($courseSpecializations as $spec) {
+                $commonSpecializations[$spec] = true;
+            }
+        }
+
+        if (empty($commonSpecializations)) {
+            return $courseSpecializations;
+        }
+
+        return array_values(array_filter(array_map(function ($spec) use ($commonSpecializations) {
+            return isset($commonSpecializations[$spec]) ? $spec : null;
+        }, $courseSpecializations), fn ($spec) => $spec !== null));
+    }
     public static function normalize($specialization): ?string
     {
         if (!is_string($specialization)) {
@@ -18,11 +70,64 @@ class SpecializationStudentScope
         return $specialization === '' ? null : $specialization;
     }
 
-    public static function resolveStudentIds(?int $courseId, ?int $intakeId, ?string $location, ?string $specialization): array
+    public static function resolveSelectionSpecializations(?string $specialization, ?string $moduleSpecializationsJson = null, ?string $moduleLegacySpecialization = null, ?array $courseSpecializations = null): array
     {
         $specialization = self::normalize($specialization);
 
-        if ($specialization === null || $courseId === null) {
+        if ($specialization === null) {
+            return [];
+        }
+
+        if (strcasecmp($specialization, 'Common') !== 0) {
+            return [$specialization];
+        }
+
+        $moduleSpecializations = SemesterModuleSpecializationHelper::decodeList(
+            $moduleSpecializationsJson,
+            $moduleLegacySpecialization
+        );
+
+        if (is_array($moduleSpecializations) && !empty($moduleSpecializations)) {
+            return array_values(array_unique(array_filter(array_map(function ($value) {
+                if (!is_string($value)) {
+                    return null;
+                }
+
+                $trimmed = trim($value);
+                return $trimmed === '' ? null : $trimmed;
+            }, $moduleSpecializations))));
+        }
+
+        if (is_array($courseSpecializations) && !empty($courseSpecializations)) {
+            return array_values(array_unique(array_filter(array_map(function ($value) {
+                if (!is_string($value)) {
+                    return null;
+                }
+
+                $trimmed = trim($value);
+                return $trimmed === '' ? null : $trimmed;
+            }, $courseSpecializations))));
+        }
+
+        return [];
+    }
+
+    public static function resolveStudentIds(?int $courseId, ?int $intakeId, ?string $location, ?string $specialization, ?string $moduleSpecializationsJson = null, ?string $moduleLegacySpecialization = null, ?array $courseSpecializations = null): array
+    {
+        $specialization = self::normalize($specialization);
+
+        if ($courseId === null || $specialization === null) {
+            return [];
+        }
+
+        $selectedSpecializations = self::resolveSelectionSpecializations(
+            $specialization,
+            $moduleSpecializationsJson,
+            $moduleLegacySpecialization,
+            $courseSpecializations
+        );
+
+        if (empty($selectedSpecializations)) {
             return [];
         }
 
@@ -31,7 +136,7 @@ class SpecializationStudentScope
         }
 
         return self::baseQuery('specialization_registrations', $courseId, $intakeId, $location)
-            ->where('specialization', $specialization)
+            ->whereIn('specialization', $selectedSpecializations)
             ->where('status', 'registered')
             ->pluck('student_id')
             ->unique()
@@ -39,9 +144,17 @@ class SpecializationStudentScope
             ->all();
     }
 
-    public static function applyToQuery($query, string $studentColumn, ?int $courseId, ?int $intakeId, ?string $location, ?string $specialization)
+    public static function applyToQuery($query, string $studentColumn, ?int $courseId, ?int $intakeId, ?string $location, ?string $specialization, ?string $moduleSpecializationsJson = null, ?string $moduleLegacySpecialization = null, ?array $courseSpecializations = null)
     {
-        $studentIds = self::resolveStudentIds($courseId, $intakeId, $location, $specialization);
+        $studentIds = self::resolveStudentIds(
+            $courseId,
+            $intakeId,
+            $location,
+            $specialization,
+            $moduleSpecializationsJson,
+            $moduleLegacySpecialization,
+            $courseSpecializations
+        );
 
         if (empty($studentIds)) {
             return $query->whereRaw('1 = 0');

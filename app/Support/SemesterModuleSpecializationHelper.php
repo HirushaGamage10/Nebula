@@ -68,6 +68,33 @@ class SemesterModuleSpecializationHelper
         return in_array($studentSpecialization, $specs, true);
     }
 
+    public static function matchesSelection(?string $specializationsJson, ?string $legacySpecialization = null, ?string $selectedSpecialization = null): bool
+    {
+        $selectedSpecialization = trim((string) ($selectedSpecialization ?? ''));
+
+        if ($selectedSpecialization === '') {
+            return true;
+        }
+
+        if (strcasecmp($selectedSpecialization, 'Common') === 0) {
+            $specs = self::decodeList($specializationsJson, $legacySpecialization);
+
+            if ($specs === null) {
+                return true;
+            }
+
+            return count($specs) > 1;
+        }
+
+        $specs = self::decodeList($specializationsJson, $legacySpecialization);
+
+        if ($specs === null) {
+            return false;
+        }
+
+        return in_array($selectedSpecialization, $specs, true);
+    }
+
     public static function displayLabel(?string $specializationsJson, ?string $legacySpecialization = null): string
     {
         $specs = self::decodeList($specializationsJson, $legacySpecialization);

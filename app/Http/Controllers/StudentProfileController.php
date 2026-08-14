@@ -313,6 +313,7 @@ class StudentProfileController extends Controller
         if (!$course) {
             return response()->json(['success' => false, 'message' => 'Course not found.'], 404);
         }
+
         $specializations = [];
         if ($course->specializations) {
             if (is_string($course->specializations)) {
@@ -325,9 +326,28 @@ class StudentProfileController extends Controller
                 $specializations = $course->specializations;
             }
         }
-        // Remove empty/null values
-        $specializations = array_filter($specializations, function($s){ return $s && trim($s) !== ''; });
-        return response()->json(['success' => true, 'specializations' => array_values($specializations)]);
+
+        $specializations = array_filter($specializations, function ($s) {
+            return $s && trim((string) $s) !== '';
+        });
+
+        $specializations = array_values(array_map('strval', $specializations));
+
+        $hasCommonModule = \DB::table('semester_module')
+            ->join('semesters', 'semesters.id', '=', 'semester_module.semester_id')
+            ->where('semesters.course_id', $course->course_id)
+            ->where(function ($query) {
+                $query->whereNull('semester_module.specializations')
+                    ->orWhere('semester_module.specializations', '[]')
+                    ->orWhere('semester_module.specializations', 'null');
+            })
+            ->exists();
+
+        if ($hasCommonModule) {
+            $specializations = array_values(array_unique(array_merge(['Common'], $specializations)));
+        }
+
+        return response()->json(['success' => true, 'specializations' => $specializations]);
     }
 
     // API: Update course registration grade and specialization

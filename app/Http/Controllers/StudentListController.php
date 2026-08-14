@@ -44,7 +44,46 @@ class StudentListController extends Controller
             return $query;
         }
 
-        return SpecializationStudentScope::applyToQuery($query, 'cr.student_id', $courseId, $intakeId, $location, $specialization);
+        $course = Course::find($courseId);
+        $courseSpecializations = [];
+
+        if ($course && !empty($course->specializations)) {
+            $decoded = is_array($course->specializations)
+                ? $course->specializations
+                : json_decode($course->specializations, true);
+
+            $courseSpecializations = is_array($decoded)
+                ? array_values(array_filter(array_map(function ($value) {
+                    if (!is_string($value)) {
+                        return null;
+                    }
+                    $trimmed = trim($value);
+                    return $trimmed === '' ? null : $trimmed;
+                }, $decoded)))
+                : [];
+        }
+
+        $commonSpecializations = SpecializationStudentScope::resolveCourseCommonSpecializations(
+            $courseId,
+            $intakeId,
+            $courseSpecializations
+        );
+
+        $effectiveCourseSpecializations = strtolower($specialization ?? '') === 'common'
+            ? $commonSpecializations
+            : $courseSpecializations;
+
+        return SpecializationStudentScope::applyToQuery(
+            $query,
+            'cr.student_id',
+            $courseId,
+            $intakeId,
+            $location,
+            $specialization,
+            null,
+            null,
+            $effectiveCourseSpecializations
+        );
     }
 
     private function fillDisplayedSpecializations($students, int $courseId, int $intakeId, string $location)

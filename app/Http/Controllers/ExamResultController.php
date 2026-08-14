@@ -310,11 +310,13 @@ class ExamResultController extends Controller
             'intake_id' => 'required|integer|exists:intakes,intake_id',
             'semester' => 'nullable|string',
             'location' => 'required|string',
+            'specialization' => 'nullable|string|max:255',
         ]);
 
         $courseId = $request->input('course_id');
         $intakeId = $request->input('intake_id');
         $semesterId = $request->input('semester');
+        $selectedSpecialization = $this->normalizeSpecializationValue($request->input('specialization'));
 
         // Check if this is a certificate course
         $course = \App\Models\Course::find($courseId);
@@ -352,8 +354,18 @@ class ExamResultController extends Controller
         // Filter modules by semester using the semester_module table
         $modules = \App\Models\Module::join('semester_module', 'modules.module_id', '=', 'semester_module.module_id')
             ->where('semester_module.semester_id', $semester->id)
-            ->select('modules.module_id', 'modules.module_name')
+            ->select('modules.module_id', 'modules.module_name', 'semester_module.specialization', 'semester_module.specializations')
             ->get();
+
+        if ($selectedSpecialization !== null && trim((string) $selectedSpecialization) !== '') {
+            $modules = $modules->filter(function ($module) use ($selectedSpecialization) {
+                return \App\Support\SemesterModuleSpecializationHelper::matchesSelection(
+                    $module->specializations,
+                    $module->specialization,
+                    $selectedSpecialization
+                );
+            })->values();
+        }
 
         return response()->json(['modules' => $modules]);
     }
@@ -737,6 +749,12 @@ class ExamResultController extends Controller
             ->where('module_id', $moduleId)
             ->exists();
 
+        $moduleScope = DB::table('semester_module')
+            ->where('semester_id', $semesterId)
+            ->where('module_id', $moduleId)
+            ->select('specialization', 'specializations')
+            ->first();
+
         if ($isCoreModule) {
             // For core modules: Get students registered for the semester
             $students = \App\Models\SemesterRegistration::where('semester_id', $semesterId)
@@ -744,14 +762,17 @@ class ExamResultController extends Controller
                 ->where('intake_id', $intakeId)
                 ->where('location', $location)
                 ->where('status', 'registered')
-                ->when($specialization !== null, function ($query) use ($specialization, $courseId, $intakeId, $location) {
+                ->when($specialization !== null, function ($query) use ($specialization, $courseId, $intakeId, $location, $moduleScope, $course) {
                     return \App\Support\SpecializationStudentScope::applyToQuery(
                         $query,
                         'student_id',
                         (int) $courseId,
                         (int) $intakeId,
                         $location,
-                        $specialization
+                        $specialization,
+                        $moduleScope?->specializations,
+                        $moduleScope?->specialization,
+                        $this->getCourseSpecializations($course)
                     );
                 })
                 ->with('student')
@@ -806,14 +827,17 @@ class ExamResultController extends Controller
                 ->where('intake_id', $intakeId)
                 ->where('location', $location)
                 ->where('semester', $semester->name)
-                ->when($specialization !== null, function ($query) use ($specialization, $courseId, $intakeId, $location) {
+                ->when($specialization !== null, function ($query) use ($specialization, $courseId, $intakeId, $location, $moduleScope, $course) {
                     return \App\Support\SpecializationStudentScope::applyToQuery(
                         $query,
                         'student_id',
                         (int) $courseId,
                         (int) $intakeId,
                         $location,
-                        $specialization
+                        $specialization,
+                        $moduleScope?->specializations,
+                        $moduleScope?->specialization,
+                        $this->getCourseSpecializations($course)
                     );
                 })
                 ->with('student')

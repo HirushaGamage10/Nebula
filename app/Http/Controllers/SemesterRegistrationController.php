@@ -99,6 +99,35 @@ class SemesterRegistrationController extends Controller
                 ], 400);
             }
 
+            $requestedSpecialization = trim((string) $request->input('specialization')) ?: null;
+            if ($requestedSpecialization !== null && trim((string) $requestedSpecialization) !== '') {
+                $allowedStudentIds = $this->getAllowedStudentIdsForSelection(
+                    (int) $request->course_id,
+                    (int) $request->intake_id,
+                    $request->location,
+                    $requestedSpecialization,
+                    (int) $request->semester_id
+                );
+
+                if (!empty($allowedStudentIds)) {
+                    $notEligible = array_values(array_diff($studentIds, $allowedStudentIds));
+                    if (!empty($notEligible)) {
+                        Log::warning('Selected students are out of the specialization scope.', [
+                            'course_id' => $request->course_id,
+                            'intake_id' => $request->intake_id,
+                            'semester_id' => $request->semester_id,
+                            'specialization' => $requestedSpecialization,
+                            'students' => $notEligible,
+                        ]);
+
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Selected students are outside the allowed specialization scope for this semester.'
+                        ], 422);
+                    }
+                }
+            }
+
             // SA maps
             $saReasons = $request->input('sa_reasons', []);
             $saFiles   = $request->file('sa_files', []);
@@ -298,6 +327,103 @@ class SemesterRegistrationController extends Controller
         return response()->json(['success' => true, 'semesters' => $semesters]);
     }
 
+    private function decodeCourseSpecializations(?Course $course): array
+    {
+        if (!$course || empty($course->specializations)) {
+            return [];
+        }
+
+        $decoded = is_array($course->specializations)
+            ? $course->specializations
+            : json_decode((string) $course->specializations, true);
+
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(array_map(function ($value) {
+            if (!is_string($value)) {
+                return null;
+            }
+
+            $trimmed = trim($value);
+            return $trimmed === '' ? null : $trimmed;
+        }, $decoded), fn ($value) => $value !== null)));
+    }
+
+    private function getSemesterCommonSpecializations(int $courseId, int $intakeId, ?int $semesterId, array $courseSpecializations = []): array
+    {
+        if ($semesterId === null) {
+            return $courseSpecializations;
+        }
+
+        $rows = DB::table('semester_module as sm')
+            ->join('semesters as s', 's.id', '=', 'sm.semester_id')
+            ->where('s.course_id', $courseId)
+            ->where('s.intake_id', $intakeId)
+            ->where('sm.semester_id', $semesterId)
+            ->select('sm.specialization', 'sm.specializations')
+            ->get();
+
+        $common = [];
+
+        foreach ($rows as $row) {
+            $decoded = SemesterModuleSpecializationHelper::decodeList($row->specializations ?? null, $row->specialization ?? null);
+
+            if (is_array($decoded) && !empty($decoded)) {
+                foreach ($decoded as $spec) {
+                    $trimmed = trim((string) $spec);
+                    if ($trimmed !== '') {
+                        $common[$trimmed] = true;
+                    }
+                }
+                continue;
+            }
+
+            foreach ($courseSpecializations as $spec) {
+                $trimmed = trim((string) $spec);
+                if ($trimmed !== '') {
+                    $common[$trimmed] = true;
+                }
+            }
+        }
+
+        if (empty($common)) {
+            return $courseSpecializations;
+        }
+
+        return array_values(array_unique(array_filter(array_map(function ($spec) {
+            $trimmed = trim((string) $spec);
+            return $trimmed === '' ? null : $trimmed;
+        }, array_keys($common)), fn ($spec) => $spec !== null)));
+    }
+
+    private function getAllowedStudentIdsForSelection(int $courseId, int $intakeId, ?string $location, ?string $specialization, ?int $semesterId): array
+    {
+        if ($specialization === null || trim((string) $specialization) === '') {
+            return [];
+        }
+
+        $course = Course::find($courseId);
+        $courseSpecializations = $this->decodeCourseSpecializations($course);
+        $normalizedSpecialization = trim((string) $specialization);
+        $selection = strtolower($normalizedSpecialization) === 'common' ? 'Common' : $normalizedSpecialization;
+
+        $effectiveCourseSpecializations = $selection === 'Common'
+            ? $this->getSemesterCommonSpecializations($courseId, $intakeId, $semesterId, $courseSpecializations)
+            : $courseSpecializations;
+
+        return SpecializationStudentScope::resolveStudentIds(
+            $courseId,
+            $intakeId,
+            $location,
+            $selection,
+            null,
+            null,
+            $effectiveCourseSpecializations
+        );
+    }
+
     // 4. Get eligible students for a course/intake (registered from eligibility page)
     public function getEligibleStudents(Request $request)
     {
@@ -307,6 +433,12 @@ class SemesterRegistrationController extends Controller
         $location = $request->input('location');
         $specialization = trim((string) $request->input('specialization')) ?: null;
 
+        $course = Course::find($courseId);
+        $courseSpecializations = $this->decodeCourseSpecializations($course);
+        $effectiveCourseSpecializations = $specialization && strtolower($specialization) === 'common'
+            ? $this->getSemesterCommonSpecializations((int) $courseId, (int) $intakeId, $semesterId ? (int) $semesterId : null, $courseSpecializations)
+            : $courseSpecializations;
+
         $students = CourseRegistration::where('course_id', $courseId)
             ->where('intake_id', $intakeId)
             ->when($location, fn ($query) => $query->where('location', $location))
@@ -314,8 +446,18 @@ class SemesterRegistrationController extends Controller
                 $query->where('status', 'Registered')
                     ->orWhere('approval_status', 'Approved by DGM');
             })
-            ->when($specialization, function ($query) use ($courseId, $intakeId, $location, $specialization) {
-                return SpecializationStudentScope::applyToQuery($query, 'student_id', (int) $courseId, (int) $intakeId, $location, $specialization);
+            ->when($specialization, function ($query) use ($courseId, $intakeId, $location, $specialization, $effectiveCourseSpecializations) {
+                return SpecializationStudentScope::applyToQuery(
+                    $query,
+                    'student_id',
+                    (int) $courseId,
+                    (int) $intakeId,
+                    $location,
+                    $specialization,
+                    null,
+                    null,
+                    $effectiveCourseSpecializations
+                );
             })
             ->with('student')
             ->get()
