@@ -10,35 +10,10 @@ use App\Models\Library;
 use App\Models\PaymentClearance;
 use App\Models\Project;
 use App\Models\Student;
-use App\Support\SpecializationStudentScope;
 use Illuminate\Http\Request;
 
 class AllClearanceController extends Controller
 {
-    private function normalizeSpecializationValue($value)
-    {
-        if (!is_string($value)) {
-            return null;
-        }
-
-        $value = trim($value);
-
-        return $value === '' ? null : $value;
-    }
-
-    private function courseHasSpecializations($course): bool
-    {
-        if (!$course || empty($course->specializations)) {
-            return false;
-        }
-
-        $specializations = is_array($course->specializations)
-            ? $course->specializations
-            : json_decode($course->specializations, true);
-
-        return is_array($specializations) && count(array_filter($specializations)) > 0;
-    }
-
     public function showAllClearance(Request $request)
     {
         $student = null;
@@ -53,7 +28,7 @@ class AllClearanceController extends Controller
         });
 
         $groupedRequests = $filteredRequests->groupBy(function ($item) {
-            return $item->intake_id . '-' . $item->course_id . '-' . ($item->specialization ?: 'all') . '-' . $item->location . '-' . $item->clearance_type;
+            return $item->intake_id . '-' . $item->course_id . '-' . $item->location . '-' . $item->clearance_type;
         });
 
         $intakeRequests = collect();
@@ -67,7 +42,6 @@ class AllClearanceController extends Controller
             $intakeRequests->push((object) [
                 'intake' => $firstRequest->intake,
                 'course' => $firstRequest->course,
-                'specialization' => $firstRequest->specialization,
                 'location' => $firstRequest->location,
                 'clearance_type' => $firstRequest->clearance_type,
                 'total_students' => $totalStudents,
@@ -148,21 +122,10 @@ class AllClearanceController extends Controller
             'location' => 'required|string',
             'course_id' => 'required|exists:courses,course_id',
             'intake_id' => 'required|exists:intakes,intake_id',
-            'specialization' => 'nullable|string',
             'student_id' => 'nullable|exists:students,student_id',
         ]);
 
         try {
-            $course = Course::find($request->course_id);
-            $specialization = $this->normalizeSpecializationValue($request->specialization);
-
-            if ($this->courseHasSpecializations($course) && !$specialization) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Please select a specialization for this course.'
-                ], 422);
-            }
-
             $regQuery = CourseRegistration::where('course_id', $request->course_id)
                 ->where('intake_id', $request->intake_id)
                 ->where('location', $request->location)
@@ -170,17 +133,6 @@ class AllClearanceController extends Controller
                     $query->where('status', 'Registered')
                         ->orWhere('approval_status', 'Approved by DGM');
                 });
-
-            if ($specialization) {
-                SpecializationStudentScope::applyToQuery(
-                    $regQuery,
-                    'student_id',
-                    (int) $request->course_id,
-                    (int) $request->intake_id,
-                    $request->location,
-                    $specialization
-                );
-            }
 
             if ($request->filled('student_id')) {
                 $regQuery->where('student_id', $request->student_id);
@@ -194,9 +146,6 @@ class AllClearanceController extends Controller
                     ->where('clearance_type', $request->type)
                     ->where('course_id', $request->course_id)
                     ->where('intake_id', $request->intake_id)
-                    ->when($specialization, function ($query) use ($specialization) {
-                        $query->where('specialization', $specialization);
-                    })
                     ->where('status', ClearanceRequest::STATUS_PENDING)
                     ->first();
 
@@ -206,7 +155,6 @@ class AllClearanceController extends Controller
                         'location' => $request->location,
                         'course_id' => $request->course_id,
                         'intake_id' => $request->intake_id,
-                        'specialization' => $specialization,
                         'student_id' => $registration->student_id,
                         'status' => ClearanceRequest::STATUS_PENDING,
                         'requested_at' => now(),
@@ -278,8 +226,6 @@ class AllClearanceController extends Controller
             $intakeId = $request->input('intake_id');
             $courseId = $request->input('course_id');
             $location = $request->input('location');
-            $specialization = $this->normalizeSpecializationValue($request->input('specialization'));
-
             $query = CourseRegistration::where('intake_id', $intakeId)
                 ->whereHas('student', function ($q) {
                     $q->where('academic_status', 'active');
@@ -288,22 +234,11 @@ class AllClearanceController extends Controller
                 ->when($location, fn($q) => $q->where('location', $location))
                 ->with('student');
 
-            if ($specialization && $courseId) {
-                SpecializationStudentScope::applyToQuery(
-                    $query,
-                    'student_id',
-                    (int) $courseId,
-                    (int) $intakeId,
-                    $location,
-                    $specialization
-                );
-            }
-
             $registrations = $query->get();
 
             $students = $registrations
                 ->unique('student_id')
-                ->map(function ($registration) use ($intakeId, $courseId, $location, $specialization) {
+                ->map(function ($registration) use ($intakeId, $courseId, $location) {
                     $student = $registration->student;
                     if (!$student) {
                         return null;
@@ -312,8 +247,7 @@ class AllClearanceController extends Controller
                     $latestRequestQuery = ClearanceRequest::where('student_id', $student->student_id)
                         ->where('intake_id', $intakeId)
                         ->when($courseId, fn($q) => $q->where('course_id', $courseId))
-                        ->when($location, fn($q) => $q->where('location', $location))
-                        ->when($specialization, fn($q) => $q->where('specialization', $specialization));
+                        ->when($location, fn($q) => $q->where('location', $location));
 
                     $latest = $latestRequestQuery->orderByDesc('requested_at')->first();
                     $statusText = $latest->status_text ?? ($latest->status ?? 'No Request');
@@ -321,7 +255,6 @@ class AllClearanceController extends Controller
                     return [
                         'student_id' => $student->student_id,
                         'name' => $student->name_with_initials ?? $student->name ?? ($student->full_name ?? ''),
-                        'specialization' => $specialization,
                         'clearance_status' => $statusText,
                     ];
                 })
@@ -342,17 +275,13 @@ class AllClearanceController extends Controller
             'course_id' => 'required|exists:courses,course_id',
             'location' => 'required|string',
             'clearance_type' => 'required|string',
-            'specialization' => 'nullable|string',
         ]);
 
         try {
-            $specialization = $this->normalizeSpecializationValue($request->specialization);
-
             $clearanceRequests = ClearanceRequest::where('intake_id', $request->intake_id)
                 ->where('course_id', $request->course_id)
                 ->where('location', $request->location)
                 ->where('clearance_type', $request->clearance_type)
-                ->when($specialization, fn($query) => $query->where('specialization', $specialization))
                 ->with(['student', 'course', 'intake', 'approvedBy'])
                 ->orderBy('requested_at', 'desc')
                 ->get();
@@ -378,7 +307,6 @@ class AllClearanceController extends Controller
                     'processed_by' => $item->approvedBy->name ?? null,
                     'processed_date' => $item->approved_at ? $item->approved_at->format('d/m/Y H:i') : null,
                     'remarks' => $item->remarks,
-                    'specialization' => $item->specialization,
                 ];
             });
 
@@ -386,7 +314,6 @@ class AllClearanceController extends Controller
                 'success' => true,
                 'intake_name' => $intakeName,
                 'course_name' => $courseName,
-                'specialization' => $specialization,
                 'location' => $request->location,
                 'students' => $students
             ]);

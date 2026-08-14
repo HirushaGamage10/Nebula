@@ -13,29 +13,16 @@ use App\Models\Courses;
 use App\Models\Semester;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use App\Support\ClearanceRequestFilters;
 
 class ProjectClearanceController extends Controller
 {
+    use ClearanceRequestFilters;
 
     public function showProjectClearanceFormManagement(Request $request)
     {   
         if (Auth::check() && Auth::user()->status) {
-            // Get pending project clearance requests
-            $pendingRequests = ClearanceRequest::where('clearance_type', ClearanceRequest::TYPE_PROJECT)
-                ->where('status', ClearanceRequest::STATUS_PENDING)
-                ->with(['student', 'course', 'intake'])
-                ->orderBy('requested_at', 'desc')
-                ->get();
-
-            // Get approved/rejected requests for history
-            $processedRequests = ClearanceRequest::where('clearance_type', ClearanceRequest::TYPE_PROJECT)
-                ->whereIn('status', [ClearanceRequest::STATUS_APPROVED, ClearanceRequest::STATUS_REJECTED])
-                ->with(['student', 'course', 'intake', 'approvedBy'])
-                ->orderBy('approved_at', 'desc')
-                ->limit(50)
-                ->get();
-
-            return view('clearance.project_clearance', compact('pendingRequests', 'processedRequests'));
+            return view('clearance.project_clearance', $this->clearancePageData($request, ClearanceRequest::TYPE_PROJECT));
         } 
         else {
         // Log unauthorized access attempt

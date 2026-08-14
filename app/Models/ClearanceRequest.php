@@ -63,6 +63,24 @@ class ClearanceRequest extends Model
         return $this->belongsTo(User::class, 'approved_by', 'user_id');
     }
 
+    public function courseRegistrations()
+    {
+        return $this->hasMany(CourseRegistration::class, 'student_id', 'student_id');
+    }
+
+    public function getCourseRegistrationIdentifierAttribute(): ?string
+    {
+        $registrations = $this->relationLoaded('courseRegistrations')
+            ? $this->courseRegistrations
+            : $this->courseRegistrations()->get();
+
+        return optional($registrations->first(function ($registration) {
+            return (int) $registration->course_id === (int) $this->course_id
+                && (int) $registration->intake_id === (int) $this->intake_id
+                && strtolower((string) $registration->location) === strtolower((string) $this->location);
+        }))->course_registration_id;
+    }
+
     // Scopes
     public function scopeByType($query, $type)
     {

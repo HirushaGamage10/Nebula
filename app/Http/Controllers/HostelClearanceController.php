@@ -7,10 +7,13 @@ use App\Models\Students;
 use App\Models\ClearanceRequest;
 use App\Models\Course;
 use App\Models\Intake;
+use App\Support\ClearanceRequestFilters;
 use Illuminate\Http\Request;
 
 class HostelClearanceController extends Controller
 {
+    use ClearanceRequestFilters;
+
     public function index()
     {
         return view('hostel_clearance');
@@ -18,28 +21,7 @@ class HostelClearanceController extends Controller
 
     public function showHostelClearanceFormManagement(Request $request)
     {
-        // pending hostel clearance requests
-        $pendingRequests = ClearanceRequest::where('clearance_type', ClearanceRequest::TYPE_HOSTEL)
-            ->where('status', ClearanceRequest::STATUS_PENDING)
-            ->with(['student', 'course', 'intake'])
-            ->orderBy('requested_at', 'desc')
-            ->get();
-
-        // approved/rejected history (limit to latest 50)
-        $processedRequests = ClearanceRequest::where('clearance_type', ClearanceRequest::TYPE_HOSTEL)
-            ->whereIn('status', [
-                ClearanceRequest::STATUS_APPROVED,
-                ClearanceRequest::STATUS_REJECTED,
-            ])
-            ->with(['student', 'course', 'intake', 'approvedBy'])
-            ->orderBy('approved_at', 'desc')
-            ->limit(50)
-            ->get();
-
-        return view('clearance.hostel_clearance', compact(
-            'pendingRequests',
-            'processedRequests'
-        ));
+        return view('clearance.hostel_clearance', $this->clearancePageData($request, ClearanceRequest::TYPE_HOSTEL));
     }
 
     public function store(Request $request)

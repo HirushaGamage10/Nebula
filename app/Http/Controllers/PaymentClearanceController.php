@@ -6,27 +6,15 @@ use Illuminate\Http\Request;
 use App\Models\ClearanceRequest;
 use App\Models\Course;
 use App\Models\Intake;
+use App\Support\ClearanceRequestFilters;
 
 class PaymentClearanceController extends Controller
 {
-    public function index()
+    use ClearanceRequestFilters;
+
+    public function index(Request $request)
     {
-        // Get pending payment clearance requests
-        $pendingRequests = ClearanceRequest::where('clearance_type', ClearanceRequest::TYPE_PAYMENT)
-            ->where('status', ClearanceRequest::STATUS_PENDING)
-            ->with(['student', 'course', 'intake'])
-            ->orderBy('requested_at', 'desc')
-            ->get();
-
-        // Get approved/rejected requests for history
-        $processedRequests = ClearanceRequest::where('clearance_type', ClearanceRequest::TYPE_PAYMENT)
-            ->whereIn('status', [ClearanceRequest::STATUS_APPROVED, ClearanceRequest::STATUS_REJECTED])
-            ->with(['student', 'course', 'intake', 'approvedBy'])
-            ->orderBy('approved_at', 'desc')
-            ->limit(50)
-            ->get();
-
-        return view('clearance.payment_clearance', compact('pendingRequests', 'processedRequests'));
+        return view('clearance.payment_clearance', $this->clearancePageData($request, ClearanceRequest::TYPE_PAYMENT));
     }
 
     /**
@@ -96,4 +84,4 @@ class PaymentClearanceController extends Controller
             ], 500);
         }
     }
-} 
+}

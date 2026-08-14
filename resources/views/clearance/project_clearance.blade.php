@@ -10,14 +10,12 @@
                     <h2 class="text-center mb-4">Project Clearance Management</h2>
                     <hr style="margin-bottom: 30px;">
 
-                    <div class="mb-4">
-                        <select class="form-select" style="width: auto;" id="locationFilter">
-                            <option value="">All Locations</option>
-                            <option value="welisara">Welisara</option>
-                            <option value="moratuwa">Moratuwa</option>
-                            <option value="peradeniya">Peradeniya</option>
-                        </select>
-                    </div>
+                    <form method="GET" class="row g-3 align-items-end mb-4">
+                        <div class="col-md-4"><label for="locationFilter" class="form-label">Location</label><select class="form-select" id="locationFilter" name="location"><option value="">All Locations</option>@foreach(['Welisara', 'Moratuwa', 'Peradeniya'] as $location)<option value="{{ $location }}" @selected(($filters['location'] ?? '') === $location)>{{ $location }}</option>@endforeach</select></div>
+                        <div class="col-md-4"><label for="courseFilter" class="form-label">Course</label><select class="form-select" id="courseFilter" name="course_id"><option value="">All Courses</option>@foreach($courses as $course)<option value="{{ $course->course_id }}" data-location="{{ $course->location }}" @selected((string) ($filters['course_id'] ?? '') === (string) $course->course_id)>{{ $course->course_name }}</option>@endforeach</select></div>
+                        <div class="col-md-3"><label for="intakeFilter" class="form-label">Intake</label><select class="form-select" id="intakeFilter" name="intake_id"><option value="">All Intakes</option>@foreach($intakes as $intake)<option value="{{ $intake->intake_id }}" data-course-id="{{ $intake->course_id }}" data-location="{{ $intake->location }}" @selected((string) ($filters['intake_id'] ?? '') === (string) $intake->intake_id)>{{ $intake->batch }}</option>@endforeach</select></div>
+                        <div class="col-md-1 d-grid"><button class="btn btn-primary" type="submit">Filter</button></div>
+                    </form>
                     <!-- Pending Requests Section -->
                     <div class="card mb-4">
                         <div class="card-header bg-warning text-white">
@@ -25,11 +23,11 @@
                         </div>
                         <div class="card-body">
                             @if($pendingRequests->count() > 0)
-                                <div class="table-responsive">
-                                    <table class="table table-hover" id="pendingTable">
-                                        <thead class="table-light">
+                                <div class="table-responsive" style="max-height: 500px; overflow-y: auto; overflow-x: auto; width: 100%;">
+                                    <table class="table table-hover" id="pendingTable" style="table-layout: fixed; width: max-content; min-width: 1100px;">
+                                        <thead class="table-light" style="position: sticky; top: 0; background: #fff; z-index: 2;">
                                             <tr>
-                                                <th>Student ID</th>
+                                                <th>Course Registration ID</th>
                                                 <th>Student Name</th>
                                                 <th>Course</th>
                                                 <th>Intake</th>
@@ -41,7 +39,7 @@
                                         <tbody>
                                             @foreach($pendingRequests as $request)
                                                 <tr>
-                                                    <td>{{ $request->student->student_id }}</td>
+                                                    <td>{{ $request->course_registration_identifier ?? '—' }}</td>
                                                     <td>{{ $request->student->name_with_initials }}</td>
                                                     <td>{{ $request->course->course_name }}</td>
                                                     <td>{{ $request->intake->batch }}</td>
@@ -81,11 +79,11 @@
                         </div>
                         <div class="card-body">
                             @if($processedRequests->count() > 0)
-                                <div class="table-responsive">
-                                    <table class="table table-hover" id="processedTable">
-                                        <thead class="table-light">
+                                <div class="table-responsive" style="max-height: 500px; overflow-y: auto; overflow-x: auto; width: 100%;">
+                                    <table class="table table-hover" id="processedTable" style="table-layout: fixed; width: max-content; min-width: 1100px;">
+                                        <thead class="table-light" style="position: sticky; top: 0; background: #fff; z-index: 2;">
                                             <tr>
-                                                <th>Student ID</th>
+                                                <th>Course Registration ID</th>
                                                 <th>Student Name</th>
                                                 <th>Course</th>
                                                 <th>Intake</th>
@@ -98,7 +96,7 @@
                                         <tbody>
                                             @foreach($processedRequests as $request)
                                                 <tr>
-                                                    <td>{{ $request->student->student_id }}</td>
+                                                    <td>{{ $request->course_registration_identifier ?? '—' }}</td>
                                                     <td>{{ $request->student->name_with_initials }}</td>
                                                     <td>{{ $request->course->course_name }}</td>
                                                     <td>{{ $request->intake->batch }}</td>
@@ -269,4 +267,21 @@
             });
         });
     </script>
+@endpush
+
+@push('scripts')
+<script nonce="{{ $cspNonce }}">
+$(function () {
+    const $location = $('#locationFilter'), $course = $('#courseFilter'), $intake = $('#intakeFilter');
+    function updateOptions(resetCourse) {
+        const location = $location.val(); if (resetCourse) $course.val('');
+        $course.find('option[data-location]').each(function () { $(this).toggle(!location || $(this).data('location') === location); });
+        const courseId = $course.val();
+        $intake.find('option[data-course-id]').each(function () { $(this).toggle((!location || $(this).data('location') === location) && (!courseId || String($(this).data('course-id')) === String(courseId))); });
+        if (!$intake.find('option:selected').is(':visible')) $intake.val('');
+    }
+    $location.on('change', function () { $intake.val(''); updateOptions(true); });
+    $course.on('change', function () { $intake.val(''); updateOptions(false); }); updateOptions(false);
+});
+</script>
 @endpush
