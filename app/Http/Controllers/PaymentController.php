@@ -2492,13 +2492,13 @@ public function makePayment(Request $request)
                 if ($plan) {
                     \App\Models\PaymentInstallment::where('payment_plan_id', $plan->id)
                         ->where('installment_number', $payment->installment_number)
-                        ->update([
+                        ->update(array_merge([
                             'status'    => 'paid',
                             // Use the submitted payment_date (the actual payment date) not
                             // the system clock, so late-fee history is accurate even when
                             // staff enter payments retrospectively.
                             'paid_date' => $request->payment_date ?? now(),
-                        ]);
+                        ], \App\Support\UserTrackingData::forUpdate()));
                 }
             }
         }

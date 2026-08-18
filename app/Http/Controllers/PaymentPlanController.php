@@ -427,10 +427,10 @@ private function normalizeTemplateInstallments($installments): array
             if (Schema::hasColumn('course_registration', 'payment_plan_id')) {
                 DB::table('course_registration')
                     ->where('id', $registration->id)
-                    ->update([
+                    ->update(array_merge([
                         'payment_plan_id' => $studentPlan->id,
                         'updated_at' => now(),
-                    ]);
+                    ], \App\Support\UserTrackingData::forUpdate()));
             }
         }
 

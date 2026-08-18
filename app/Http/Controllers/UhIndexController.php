@@ -169,6 +169,7 @@ class UhIndexController extends Controller
                     'desired_status'  => null,
                     'approval_status' => 'none',
                     'updated_at'      => now(),
+                    ...\App\Support\UserTrackingData::forUpdate(),
                 ]);
 
             // DO NOT write an invalid enum to course_registration.status

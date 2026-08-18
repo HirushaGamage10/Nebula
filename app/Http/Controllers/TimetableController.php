@@ -120,6 +120,10 @@ class TimetableController extends Controller
             }
 
             if (!empty($timetableEntries)) {
+                foreach ($timetableEntries as &$timetableEntry) {
+                    $timetableEntry = array_merge($timetableEntry, \App\Support\UserTrackingData::forCreate());
+                }
+                unset($timetableEntry);
                 \DB::table('timetable')->insert($timetableEntries);
             }
 

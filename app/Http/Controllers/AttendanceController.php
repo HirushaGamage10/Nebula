@@ -258,7 +258,10 @@ class AttendanceController extends Controller
         Attendance::query()
             ->where($baseConditions)
             ->whereIn('semester', $legacyValues)
-            ->update(['semester' => $canonicalSemester, 'updated_at' => now()]);
+            ->update(array_merge(
+                ['semester' => $canonicalSemester, 'updated_at' => now()],
+                \App\Support\UserTrackingData::forUpdate()
+            ));
     }
 
     public function getFilteredModules(Request $request)
@@ -643,6 +646,10 @@ class AttendanceController extends Controller
                     ], 400);
                 }
 
+                foreach ($attendanceRecords as &$attendanceRecord) {
+                    $attendanceRecord = array_merge($attendanceRecord, \App\Support\UserTrackingData::forCreate());
+                }
+                unset($attendanceRecord);
                 Attendance::insert($attendanceRecords);
 
                 DB::commit();
@@ -719,6 +726,10 @@ class AttendanceController extends Controller
                 ], 400);
             }
 
+            foreach ($attendanceRecords as &$attendanceRecord) {
+                $attendanceRecord = array_merge($attendanceRecord, \App\Support\UserTrackingData::forCreate());
+            }
+            unset($attendanceRecord);
             Attendance::insert($attendanceRecords);
 
             DB::commit();
@@ -1740,6 +1751,10 @@ class AttendanceController extends Controller
 
             $deleteQuery->delete();
 
+            foreach ($attendanceRecords as &$attendanceRecord) {
+                $attendanceRecord = array_merge($attendanceRecord, \App\Support\UserTrackingData::forCreate());
+            }
+            unset($attendanceRecord);
             Attendance::insert($attendanceRecords);
 
             DB::commit();

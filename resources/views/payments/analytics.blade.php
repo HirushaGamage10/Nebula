@@ -828,7 +828,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         document.getElementById('analyticsPayPaymentId').value = paymentId;
         document.getElementById('analyticsPayAmount').value = amount.toFixed(2);
-        document.getElementById('analyticsPayDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('analyticsPayDate').value = window.toLocalDateString(new Date());
         document.getElementById('analyticsPayRemarks').value = '';
         document.getElementById('analyticsPaySlip').value = '';
 

@@ -4031,7 +4031,7 @@ function openPayModal(paymentId, remaining) {
   payAmountInput.max = Number(remaining).toFixed(2);
   payAmountInput.step = '0.01';
   payAmountInput.readOnly = true;
-  document.getElementById('pay-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('pay-date').value = window.toLocalDateString(new Date());
 
   const modal = new bootstrap.Modal(document.getElementById('payModal'));
   modal.show();

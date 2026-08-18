@@ -641,6 +641,10 @@ private function buildPaymentHistoryPreview($paymentDetails): array
                 $payload['updated_at'] = now();
             }
 
+            if (Schema::hasColumn($table, 'updated_by')) {
+                $payload['updated_by'] = auth()->id();
+            }
+
             if (empty($payload)) {
                 continue;
             }
@@ -734,10 +738,10 @@ private function buildPaymentHistoryPreview($paymentDetails): array
 
         // Update payment installments
         $installmentsUpdated = PaymentInstallment::where('payment_plan_id', $oldPaymentPlan->id)
-            ->update([
+            ->update(array_merge([
                 'status' => 'archived',
                 'updated_at' => now()
-            ]);
+            ], \App\Support\UserTrackingData::forUpdate()));
 
         Log::info('Updated ' . $installmentsUpdated . ' payment installments');
 
@@ -759,7 +763,8 @@ private function buildPaymentHistoryPreview($paymentDetails): array
                 'total_paid_amount' => $result['total_paid_amount'],
                 'remarks' => 'Payment records cancelled due to course change',
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
+                ...\App\Support\UserTrackingData::forCreate(),
             ]);
         } else {
             Log::warning('course_change_payments table is missing; skipping payment audit insert.');

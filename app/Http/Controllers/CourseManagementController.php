@@ -250,7 +250,10 @@ class CourseManagementController extends Controller
             // so legacy name-based lookups continue to work after a rename.
             if ($course->wasChanged('course_name')) {
                 \App\Models\Intake::where('course_id', $course->course_id)
-                    ->update(['course_name' => $course->course_name]);
+                    ->update(array_merge(
+                        ['course_name' => $course->course_name],
+                        \App\Support\UserTrackingData::forUpdate()
+                    ));
             }
 
             DB::commit();

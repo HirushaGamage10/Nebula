@@ -5,11 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\UserTracking;
+use App\Traits\CastsDateOnly;
 use Carbon\Carbon;
 
 class Timetable extends Model
 {
-    use HasFactory, UserTracking;
+    use HasFactory, UserTracking, CastsDateOnly;
 
     protected $table = 'timetable';
     protected $primaryKey = 'id';

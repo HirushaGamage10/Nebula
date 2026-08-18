@@ -448,13 +448,19 @@ public function updateSemesterRegistration(Request $request)
 
             // Archive all related installments under this plan
             \App\Models\PaymentInstallment::where('payment_plan_id', $plan->id)
-                ->update(['status' => 'archived']);
+                ->update(array_merge(
+                    ['status' => 'archived'],
+                    \App\Support\UserTrackingData::forUpdate()
+                ));
         }
 
         // Also update corresponding course_registration rows for this student + course
         \App\Models\CourseRegistration::where('student_id', $registration->student_id)
             ->where('course_id', $validated['course_id'])
-            ->update(['intake_id' => $validated['intake_id']]);
+            ->update(array_merge(
+                ['intake_id' => $validated['intake_id']],
+                \App\Support\UserTrackingData::forUpdate()
+            ));
 
         // Fetch a representative course registration for this student+course to return to frontend
         $updatedCourseReg = \App\Models\CourseRegistration::where('student_id', $registration->student_id)

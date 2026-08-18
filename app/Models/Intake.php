@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\UserTracking;
+use App\Traits\CastsDateOnly;
 
 class Intake extends Model
 {
-    use HasFactory, UserTracking;
+    use HasFactory, UserTracking, CastsDateOnly;
     protected $table = 'intakes';
     protected $primaryKey = 'intake_id';
 

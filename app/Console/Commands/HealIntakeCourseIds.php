@@ -45,7 +45,10 @@ class HealIntakeCourseIds extends Command
             DB::table('intakes')
                 ->where('intake_id', $row->intake_id)
                 ->whereNull('course_id')
-                ->update(['course_id' => $row->course_id]);
+                ->update(array_merge(
+                    ['course_id' => $row->course_id],
+                    \App\Support\UserTrackingData::forUpdate()
+                ));
             $updated++;
         }
 

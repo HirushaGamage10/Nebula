@@ -375,10 +375,10 @@ class StudentProfileController extends Controller
             // Update only the full_grade column on the course_registration table using query builder
             \Illuminate\Support\Facades\DB::table('course_registration')
                 ->where('id', $registration->id)
-                ->update([
+                ->update(array_merge([
                     'full_grade' => $validated['full_grade'] ?? null,
                     'updated_at' => now()
-                ]);
+                ], \App\Support\UserTrackingData::forUpdate()));
 
             // Update or create the corresponding semester_registration so specialization is persisted
             $semesterReg = \App\Models\SemesterRegistration::where('student_id', $registration->student_id)
@@ -409,7 +409,10 @@ class StudentProfileController extends Controller
                             if (\Illuminate\Support\Facades\Schema::hasColumn('course_registration', 'specialization')) {
                                 \Illuminate\Support\Facades\DB::table('course_registration')
                                     ->where('id', $registration->id)
-                                    ->update(['specialization' => $newSpec, 'updated_at' => now()]);
+                                    ->update(array_merge(
+                                        ['specialization' => $newSpec, 'updated_at' => now()],
+                                        \App\Support\UserTrackingData::forUpdate()
+                                    ));
                                 // Read authoritative value from DB
                                 $finalSpec = \Illuminate\Support\Facades\DB::table('course_registration')->where('id', $registration->id)->value('specialization');
                             } else {

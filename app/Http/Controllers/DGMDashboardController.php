@@ -1017,7 +1017,7 @@ class DGMDashboardController extends Controller
                 if (!$year || !$location || !is_numeric($count))
                     continue;
 
-                \DB::table('bulk_student_uploads')->insert([
+                \DB::table('bulk_student_uploads')->insert(array_merge([
                     'year' => (int) $year,
                     'month' => $row[1] ?? null,
                     'day' => $row[2] ?? null,
@@ -1026,7 +1026,7 @@ class DGMDashboardController extends Controller
                     'student_count' => (int) $count,
                     'created_at' => now(),
                     'updated_at' => now(),
-                ]);
+                ], \App\Support\UserTrackingData::forCreate()));
                 $inserted++;
             }
         } catch (\Throwable $e) {
@@ -1084,7 +1084,7 @@ class DGMDashboardController extends Controller
                 if (!$year || !$location || !is_numeric($revenue))
                     continue;
 
-                \DB::table('bulk_revenue_uploads')->insert([
+                \DB::table('bulk_revenue_uploads')->insert(array_merge([
                     'year' => (int) $year,
                     'month' => $row[1] ?? null,
                     'day' => $row[2] ?? null,
@@ -1093,7 +1093,7 @@ class DGMDashboardController extends Controller
                     'revenue' => floatval($revenue),
                     'created_at' => now(),
                     'updated_at' => now(),
-                ]);
+                ], \App\Support\UserTrackingData::forCreate()));
                 $inserted++;
             }
         } catch (\Throwable $e) {

@@ -1397,14 +1397,14 @@ $(document).ready(function() {
         if (!dateStr) return '';
         const d = new Date(dateStr);
         if (isNaN(d)) return dateStr;
-        return d.toISOString().slice(0, 10);
+        return window.toLocalDateString(d);
     }
 
     function formatDateForInput(dateValue) {
         if (!dateValue) return '';
         const dateObj = new Date(dateValue);
         if (isNaN(dateObj)) return '';
-        return dateObj.toISOString().split('T')[0];
+        return window.toLocalDateString(dateObj);
     }
 });
 

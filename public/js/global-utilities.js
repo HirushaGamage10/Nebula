@@ -51,6 +51,25 @@
         }, 3600000); // Refresh every 1 hour (3600000 ms)
     }
 
+    // ==================== Timezone-safe Date Formatting ====================
+
+    /**
+     * Formats a Date/date-string/datetime-string as 'YYYY-MM-DD' using LOCAL
+     * date components (not toISOString, which converts to UTC and can shift
+     * the calendar day by one for non-UTC timezones like Asia/Colombo).
+     */
+    window.toLocalDateString = function(value) {
+        if (!value) return '';
+        const d = (value instanceof Date) ? value : new Date(value);
+        if (isNaN(d.getTime())) {
+            return typeof value === 'string' ? value.split('T')[0] : '';
+        }
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     // ==================== Global Error Handlers ====================
 
     /**

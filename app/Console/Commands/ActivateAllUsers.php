@@ -26,7 +26,10 @@ class ActivateAllUsers extends Command
      */
     public function handle()
     {
-        $count = User::query()->update(['status' => '1']);
+        $count = User::query()->update(array_merge(
+            ['status' => '1'],
+            \App\Support\UserTrackingData::forUpdate()
+        ));
         $this->info("Activated $count users.");
         return 0;
     }

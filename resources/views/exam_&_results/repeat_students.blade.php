@@ -191,7 +191,7 @@ function formatDate(dateStr) {
     if (!dateStr) return '';
     const d = new Date(dateStr);
     if (isNaN(d)) return dateStr.split('T')[0];
-    return d.toISOString().slice(0, 10);
+    return window.toLocalDateString(d);
 }
 
 // Fill student profile info
@@ -286,7 +286,7 @@ function formatCurrency(amount) {
 function formatDateForInput(dateStr) {
     if (!dateStr || dateStr === '-') return '';
     const date = new Date(dateStr);
-    return date.toISOString().split('T')[0];
+    return window.toLocalDateString(date);
 }
 
 // Function to populate intakes based on course

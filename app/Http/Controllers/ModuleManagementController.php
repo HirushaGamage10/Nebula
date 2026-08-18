@@ -307,7 +307,8 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
                     'semester' => $request->semester,
                     'specialization' => $specialization,
                     'created_at' => now(),
-                    'updated_at' => now()
+                    'updated_at' => now(),
+                    ...\App\Support\UserTrackingData::forCreate(),
                 ];
             }
 
@@ -747,7 +748,8 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
                         'specialization' => $selectedSpecialization === self::COMMON_SPECIALIZATION ? null : $selectedSpecialization,
                         'semester' => $semester->name,
                         'created_at' => now(),
-                        'updated_at' => now()
+                        'updated_at' => now(),
+                        ...\App\Support\UserTrackingData::forCreate(),
                     ];
                 } else {
                     $alreadyRegistered++;

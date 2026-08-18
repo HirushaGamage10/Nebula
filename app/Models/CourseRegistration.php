@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\UserTracking;
+use App\Traits\CastsDateOnly;
 
 class CourseRegistration extends Model
 {
-    use HasFactory, UserTracking;
+    use HasFactory, UserTracking, CastsDateOnly;
     protected $table = 'course_registration';
     protected $primaryKey = 'id';
 

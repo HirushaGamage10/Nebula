@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens; // Add this line
+use App\Traits\UserTracking;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasApiTokens; // Add HasApiTokens here
+    use HasFactory, Notifiable, HasApiTokens, UserTracking; // Add HasApiTokens here
 
     protected $table = 'users'; // Set the table name
 

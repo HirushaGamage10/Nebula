@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\AsArrayObject;
 use App\Traits\UserTracking;
+use App\Traits\CastsDateOnly;
 
 class Phase extends Model
 {
-    use HasFactory, UserTracking;
+    use HasFactory, UserTracking, CastsDateOnly;
     protected $fillable = [
         'phase_id',
         'phase_name',

@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\CastsDateOnly;
+use App\Traits\UserTracking;
 
 class SltLoanReceivableRecord extends Model
 {
-    use HasFactory;
+    use HasFactory, CastsDateOnly, UserTracking;
 
     protected $fillable = [
         'student_payment_plan_id',

@@ -326,7 +326,10 @@ class SemesterCreationController extends Controller
             $status = $request->status;
 
             // Update semesters
-            Semester::whereIn('id', $semesterIds)->update(['status' => $status]);
+            Semester::whereIn('id', $semesterIds)->update(array_merge(
+                ['status' => $status],
+                \App\Support\UserTrackingData::forUpdate()
+            ));
 
             $updatedCount = count($semesterIds);
             
@@ -412,6 +415,7 @@ class SemesterCreationController extends Controller
                     'module_id' => $module->module_id,
                     'specialization' => $module->specialization,
                     'specializations' => $module->specializations ?? null,
+                    ...\App\Support\UserTrackingData::forCreate(),
                 ]);
             }
 
@@ -453,6 +457,7 @@ class SemesterCreationController extends Controller
                 [
                     'specializations' => $normalized['specializations'],
                     'specialization' => $normalized['specialization'],
+                    ...\App\Support\UserTrackingData::forUpdate(),
                 ]
             );
         }

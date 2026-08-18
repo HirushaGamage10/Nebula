@@ -1469,7 +1469,7 @@ $(function(){
     
     if (student.birthday) {
       const dob = new Date(student.birthday);
-      const formatted = dob.toISOString().split('T')[0];
+      const formatted = window.toLocalDateString(dob);
       $('#studentDOB').val(formatted);
     } else {
       $('#studentDOB').val('');

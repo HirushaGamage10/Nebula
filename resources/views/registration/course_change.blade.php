@@ -994,7 +994,7 @@ async function showChangeModal(regId, courseId, intakeId, startDate) {
         const warningDiv = document.getElementById('yearWarning');
         const warningText = document.getElementById('yearWarningText');
         
-        warningText.textContent = `Course start date is ${referenceDate.toISOString().split('T')[0]}. Course changes are only allowed within 1 year from the start date.`;
+        warningText.textContent = `Course start date is ${window.toLocalDateString(referenceDate)}. Course changes are only allowed within 1 year from the start date.`;
         warningDiv.classList.remove('d-none');
         
         // Disable modal buttons

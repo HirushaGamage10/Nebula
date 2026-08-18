@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\UserTracking;
+use App\Traits\CastsDateOnly;
 
 class CustomPayment extends Model
 {
-    use HasFactory, UserTracking;
+    use HasFactory, UserTracking, CastsDateOnly;
     protected $fillable = [
         'student_id',
         'course_id',

@@ -18,9 +18,10 @@ use App\Models\ModuleManagement;
 use App\Models\Attendance;
 use App\Models\ExamResult;
 use App\Models\PaymentDetail;
+use App\Traits\CastsDateOnly;
 class Student extends Model
 {
-    use HasFactory, UserTracking;
+    use HasFactory, UserTracking, CastsDateOnly;
 
     protected $primaryKey = 'student_id';
     protected $table = 'students';
