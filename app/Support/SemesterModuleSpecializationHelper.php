@@ -77,13 +77,16 @@ class SemesterModuleSpecializationHelper
         }
 
         if (strcasecmp($selectedSpecialization, 'Common') === 0) {
+            // "Common" modules are those with:
+            //  - NO specialization assigned (null specs) → common to all students, OR
+            //  - Assigned to MULTIPLE specializations → shared across a few specializations
             $specs = self::decodeList($specializationsJson, $legacySpecialization);
 
             if ($specs === null) {
-                return true;
+                return true; // No specialization = applies to everyone
             }
 
-            return count($specs) > 1;
+            return count($specs) > 1; // Multiple specializations = shared/common module
         }
 
         $specs = self::decodeList($specializationsJson, $legacySpecialization);

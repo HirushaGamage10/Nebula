@@ -82,12 +82,15 @@ class SpecializationStudentScope
             return [$specialization];
         }
 
+        // For 'Common': check what specializations the module is tied to.
         $moduleSpecializations = SemesterModuleSpecializationHelper::decodeList(
             $moduleSpecializationsJson,
             $moduleLegacySpecialization
         );
 
         if (is_array($moduleSpecializations) && !empty($moduleSpecializations)) {
+            // Module is assigned to specific specializations (e.g. ["SE","AI"]).
+            // Show students from exactly those specializations.
             return array_values(array_unique(array_filter(array_map(function ($value) {
                 if (!is_string($value)) {
                     return null;
@@ -98,6 +101,9 @@ class SpecializationStudentScope
             }, $moduleSpecializations))));
         }
 
+        // Module has null specs — it truly applies to ALL students regardless of
+        // specialization. Return all course specializations so that the student-ID
+        // resolver fetches students across every specialization.
         if (is_array($courseSpecializations) && !empty($courseSpecializations)) {
             return array_values(array_unique(array_filter(array_map(function ($value) {
                 if (!is_string($value)) {

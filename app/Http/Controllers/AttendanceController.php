@@ -373,11 +373,44 @@ class AttendanceController extends Controller
                 $course ? $this->getCourseSpecializations($course) : null
             );
 
-            if (empty($specializedStudentIds)) {
+            // When 'Common' is selected, determine how to filter students based on
+            // what specializations the selected module is tied to in semester_module.
+            $isCommon = strcasecmp((string) $specialization, 'Common') === 0;
+            $moduleTargetSpecs = \App\Support\SemesterModuleSpecializationHelper::decodeList(
+                $moduleScope?->specializations,
+                $moduleScope?->specialization
+            );
+
+            if ($isCommon && $moduleTargetSpecs !== null) {
+                // Module is assigned to specific specializations (e.g. ["SE","AI"]).
+                // Enforce the filter strictly — do NOT fall back to showing all students.
+                // An empty result here means no students are registered for those specializations.
+                if (empty($specializedStudentIds)) {
+                    Log::warning('Common specialization: no students found for module target specializations.', [
+                        'course_id'    => $courseId,
+                        'intake_id'    => $intakeId,
+                        'location'     => $location,
+                        'module_specs' => $moduleTargetSpecs,
+                    ]);
+                    $specializedStudentIds = []; // Keep empty — correct result
+                }
+            } elseif ($isCommon && $moduleTargetSpecs === null) {
+                // Module has null specs = common to ALL students regardless of specialization.
+                // If we got student IDs (from all course specializations), use them.
+                // If empty (no students in specialization_registrations at all), show all.
+                if (empty($specializedStudentIds)) {
+                    Log::info('Common specialization with null-spec module: no students in specialization_registrations; showing all registered students.', [
+                        'course_id' => $courseId,
+                        'intake_id' => $intakeId,
+                        'location'  => $location,
+                    ]);
+                    $specializedStudentIds = null; // null = no filter = show all
+                }
+            } elseif (empty($specializedStudentIds)) {
                 Log::warning('Unable to resolve specialization student IDs for attendance student list; skipping specialization filter.', [
-                    'course_id' => $courseId,
-                    'intake_id' => $intakeId,
-                    'location' => $location,
+                    'course_id'      => $courseId,
+                    'intake_id'      => $intakeId,
+                    'location'       => $location,
                     'specialization' => $specialization,
                 ]);
                 $specializedStudentIds = null;

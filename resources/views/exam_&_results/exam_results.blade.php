@@ -643,11 +643,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     degreeSpecialization.addEventListener('change', function() {
+        // Re-fetch modules filtered by the newly selected specialization
+        resetAndDisable(degreeModule, 'Select a Module');
+        if (degreeSemester.value && degreeIntake.value && degreeCourse.value && degreeLocation.value) {
+            degreeModule.disabled = false;
+            handleDegreeModuleFetch();
+        }
         ensureTwoColumns();
         if (degreeSaveAllBtnSection) degreeSaveAllBtnSection.style.display = 'none';
-        if (allDegreeFilled()) {
-            fetchDegreeStudentsForResultEntry();
-        }
         updateDegreeResultsHeader();
     });
 
