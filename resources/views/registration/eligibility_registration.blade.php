@@ -189,6 +189,7 @@
                                 <label class="col-sm-4 col-form-label">Intake</label>
                                 <div class="col-sm-8">
                                     <input type="text" class="form-control" id="intake" name="intake" readonly>
+                                    <input type="hidden" id="inlineIntakeId" name="intake_id">
                                 </div>
                             </div>
                             <div class="row mb-3">
@@ -489,20 +490,28 @@
                         location = window.userLocation;
                     }
                     const intakeInput = document.getElementById('intake');
-                    if (courseId && location) {
+                    const intakeIdInput = document.getElementById('inlineIntakeId');
+                    if (window.lastEligibleStudent && window.lastEligibleStudent.intake_id) {
+                        intakeIdInput.value = window.lastEligibleStudent.intake_id;
+                        intakeInput.value = window.lastEligibleStudent.intake_batch || '';
+                        intakeInput.readOnly = true;
+                    } else if (courseId && location) {
                         fetch(`/get-intakes/${courseId}/${location}`)
                             .then(response => response.json())
                             .then(data => {
                                 if (data.intakes && data.intakes.length > 0) {
-                                    intakeInput.value = data.intakes[0].batch; // Assuming the first intake is the default
+                                    intakeInput.value = data.intakes[0].batch;
+                                    intakeIdInput.value = data.intakes[0].intake_id;
                                     intakeInput.readOnly = true;
                                 } else {
                                     intakeInput.value = '';
+                                    intakeIdInput.value = '';
                                     intakeInput.readOnly = true;
                                 }
                             });
                     } else {
                         intakeInput.value = '';
+                        intakeIdInput.value = '';
                         intakeInput.readOnly = true;
                     }
                 });
@@ -511,6 +520,12 @@
                     e.preventDefault();
                     const nic = document.getElementById('inlineStudentNIC').value;
                     const courseId = document.getElementById('course').value;
+                    const intakeId = document.getElementById('inlineIntakeId').value;
+
+                    if (!intakeId) {
+                        showToast('Please ensure an intake is selected before registering.', 'danger');
+                        return;
+                    }
 
                     // Show loading spinner or disable button
                     const submitBtn = this.querySelector('button[type="submit"]');
@@ -520,7 +535,7 @@
                     fetch('/register-eligible-student', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                        body: JSON.stringify({ nic: nic, course_id: courseId })
+                        body: JSON.stringify({ nic: nic, course_id: courseId, intake_id: intakeId })
                     })
                         .then(response => response.json())
                         .then(data => {
@@ -585,10 +600,16 @@
                     document.getElementById('inlineStudentRegNo').value = student.student_id || '';
                     // Set intake field to intake batch and make it readonly
                     const intakeInput = document.getElementById('intake');
+                    const intakeIdInput = document.getElementById('inlineIntakeId');
                     if (student.intake_batch) {
                         intakeInput.value = student.intake_batch;
                     } else {
                         intakeInput.value = '';
+                    }
+                    if (student.intake_id) {
+                        intakeIdInput.value = student.intake_id;
+                    } else {
+                        intakeIdInput.value = '';
                     }
                     intakeInput.readOnly = true;
                     // Set course registration id field (fetch next available from backend)
