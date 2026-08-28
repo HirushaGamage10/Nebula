@@ -709,4 +709,14 @@ public function updateSemesterRegistration(Request $request)
         return $rawName !== '' ? $rawName : (string) $fallbackNumber;
     }
 
+    public function getSemesters(Request $request)
+    {
+        $courseId = $request->query('course_id') ?? $request->query('courseId');
+        $query = Semester::query();
+        if ($courseId) {
+            $query->where('course_id', $courseId);
+        }
+        $semesters = $query->orderBy('name')->get();
+        return response()->json(['success' => true, 'semesters' => $semesters, 'data' => $semesters]);
+    }
 } 

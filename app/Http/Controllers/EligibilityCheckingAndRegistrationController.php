@@ -644,4 +644,48 @@ class EligibilityCheckingAndRegistrationController extends Controller
             'dgm_comment' => $registration->dgm_comment
         ]);
     }
+
+    public function getStudentData(Request $request)
+    {
+        $nic = $request->input('nic') ?? $request->input('id_value') ?? $request->input('student_id');
+        $student = Student::where('id_value', $nic)
+            ->orWhere('student_id', $nic)
+            ->first();
+
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'student' => $student,
+            'data' => $student
+        ]);
+    }
+
+    public function checkApproval(Request $request)
+    {
+        $nic = $request->input('nic') ?? $request->input('student_id');
+        $courseId = $request->input('course_id');
+
+        $student = Student::where('id_value', $nic)
+            ->orWhere('student_id', $nic)
+            ->first();
+
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+        }
+
+        $registration = CourseRegistration::where('student_id', $student->student_id)
+            ->when($courseId, fn($q) => $q->where('course_id', $courseId))
+            ->orderByDesc('id')
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'approved' => $registration && in_array($registration->approval_status, ['Approved by manager', 'Approved by DGM', 'approved']),
+            'status' => $registration->approval_status ?? 'No request',
+            'registration' => $registration
+        ]);
+    }
 }

@@ -788,4 +788,19 @@ class CourseRegistraionController extends Controller
             ], 500);
         }
     }
+
+    public function findStudent(Request $request)
+    {
+        $nic = $request->input('nic') ?? $request->input('student_id') ?? $request->input('query');
+        $student = Student::where('id_value', $nic)
+            ->orWhere('student_id', $nic)
+            ->orWhere('registration_id', $nic)
+            ->first();
+
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+        }
+
+        return response()->json(['success' => true, 'student' => $student]);
+    }
 }
