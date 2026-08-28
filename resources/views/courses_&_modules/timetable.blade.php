@@ -567,7 +567,7 @@
                 var location = $(this).val();
                 if (location) {
                     $.ajax({
-                        url: '/get-courses-by-location',
+                        url: '/timetable/get-courses-by-location',
                         type: 'GET',
                         data: { location: location, course_type: 'Degree' },
                         success: function (data) {
@@ -600,7 +600,7 @@
                 var location = $(this).val();
                 if (location) {
                     $.ajax({
-                        url: '/get-courses-by-location',
+                        url: '/timetable/get-courses-by-location',
                         type: 'GET',
                         data: { location: location, course_type: 'Certificate' },
                         success: function (data) {
@@ -632,7 +632,7 @@
 
                 if (courseId && location) {
                     $.ajax({
-                        url: '/get-intakes/' + courseId + '/' + location,
+                        url: '/timetable/get-intakes/' + courseId + '/' + location,
                         type: 'GET',
                         success: function (data) {
                             console.log("Intakes data received:", data); // Debug log for intakes
@@ -665,7 +665,7 @@
                 $('#certificate_end_date').val('');
                 if (courseId && location) {
                     $.ajax({
-                        url: '/get-intakes/' + courseId + '/' + location,
+                        url: '/timetable/get-intakes/' + courseId + '/' + location,
                         type: 'GET',
                         success: function (data) {
                             $('#certificate_intake').empty();
