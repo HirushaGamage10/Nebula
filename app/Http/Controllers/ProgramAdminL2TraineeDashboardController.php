@@ -26,10 +26,12 @@ class ProgramAdminL2TraineeDashboardController extends Controller
     // Get overview metrics
     public function getOverviewMetrics()
     {
-        $totalStudents = Student::where('academic_status', 'active')->count();
-        $activeIntakes = Intake::where('status', 'active')->count();
+        $totalStudents = Student::count();
+        $activeIntakes = Intake::count();
         $todayAttendance = Attendance::whereDate('date', Carbon::today())->count();
-        $pendingResults = ExamResult::where('status', 'pending')->count();
+        $pendingResults = ExamResult::where(function($q) {
+            $q->whereNull('marks')->orWhereNull('grade');
+        })->count();
 
         return response()->json([
             'total_students' => $totalStudents,
@@ -43,8 +45,7 @@ class ProgramAdminL2TraineeDashboardController extends Controller
     public function getActiveSemesters()
     {
         $activeSemesters = DB::table('semesters')
-            ->where('status', 'open')
-            ->select('semester_id', 'semester_name', 'course_id', 'start_date', 'end_date')
+            ->select('id as semester_id', 'id', 'name as semester_name', 'name', 'course_id', 'start_date', 'end_date')
             ->get();
 
         return response()->json($activeSemesters);
@@ -55,7 +56,7 @@ class ProgramAdminL2TraineeDashboardController extends Controller
     {
         $attendanceData = Attendance::selectRaw('DATE(date) as date, COUNT(*) as count')
             ->whereMonth('date', Carbon::now()->month)
-            ->groupBy('date')
+            ->groupBy(DB::raw('DATE(date)'))
             ->orderBy('date', 'asc')
             ->get();
 
@@ -65,7 +66,8 @@ class ProgramAdminL2TraineeDashboardController extends Controller
     // Get academic performance
     public function getAcademicPerformance()
     {
-        $performanceData = ExamResult::selectRaw('grade, COUNT(*) as count')
+        $performanceData = ExamResult::selectRaw('COALESCE(grade, "Unknown") as grade, COUNT(*) as count')
+            ->whereNotNull('grade')
             ->groupBy('grade')
             ->get();
 
@@ -75,8 +77,6 @@ class ProgramAdminL2TraineeDashboardController extends Controller
     // Get recent activities
     public function getRecentActivities()
     {
-        $activities = [];
-
         // Recent attendance entries
         $recentAttendance = Attendance::with(['student', 'module'])
             ->latest()
@@ -85,8 +85,8 @@ class ProgramAdminL2TraineeDashboardController extends Controller
             ->map(function($attendance) {
                 return [
                     'type' => 'attendance',
-                    'description' => 'Attendance marked for ' . $attendance->student->full_name,
-                    'time' => $attendance->created_at->diffForHumans()
+                    'description' => 'Attendance marked for ' . ($attendance->student->full_name ?? 'Student #' . $attendance->student_id),
+                    'time' => optional($attendance->created_at)->diffForHumans() ?? 'Recently'
                 ];
             });
 
@@ -98,12 +98,12 @@ class ProgramAdminL2TraineeDashboardController extends Controller
             ->map(function($result) {
                 return [
                     'type' => 'result',
-                    'description' => 'Result added for ' . $result->student->full_name,
-                    'time' => $result->created_at->diffForHumans()
+                    'description' => 'Result added for ' . ($result->student->full_name ?? 'Student #' . $result->student_id),
+                    'time' => optional($result->created_at)->diffForHumans() ?? 'Recently'
                 ];
             });
 
-        $activities = $recentAttendance->concat($recentResults)->sortByDesc('time')->take(10);
+        $activities = $recentAttendance->concat($recentResults)->sortByDesc('time')->take(10)->values();
 
         return response()->json($activities);
     }
