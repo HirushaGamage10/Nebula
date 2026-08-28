@@ -189,7 +189,7 @@ class DashboardController extends Controller
     public function getDropdownOptions()
     {
         $courses = Course::select('course_id', 'course_name')->get();
-        $intakes = Intake::select('intake_id', 'intake_name')->get();
+        $intakes = Intake::select('intake_id', 'batch as intake_name', 'batch')->get();
         $locations = ['Welisara', 'Moratuwa', 'Peradeniya'];
         
         return response()->json([

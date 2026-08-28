@@ -259,7 +259,7 @@ class HostelManagerDashboardController extends Controller
                     $q2->where('course_name', 'like', "%{$search}%");
                 })
                 ->orWhereHas('intake', function($q2) use ($search) {
-                    $q2->where('intake_name', 'like', "%{$search}%");
+                    $q2->where('batch', 'like', "%{$search}%");
                 });
             });
         }
