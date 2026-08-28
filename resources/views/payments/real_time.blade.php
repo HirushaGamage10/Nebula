@@ -73,7 +73,14 @@ function fetchLivePayments() {
 
 function updateLiveFeed(payments) {
     const feed = document.getElementById('livePaymentFeed');
+    if (!feed) return;
     
+    // Remove "waiting" message if exists
+    const waitingMsg = feed.querySelector('.text-muted');
+    if (waitingMsg) {
+        waitingMsg.remove();
+    }
+
     payments.forEach(payment => {
         const item = createPaymentItem(payment);
         feed.insertBefore(item, feed.firstChild);
@@ -83,12 +90,6 @@ function updateLiveFeed(payments) {
             feed.removeChild(feed.lastChild);
         }
     });
-    
-    // Remove "waiting" message if exists
-    const waitingMsg = feed.querySelector('.text-muted');
-    if (waitingMsg) {
-        waitingMsg.parentElement.remove();
-    }
 }
 
 function createPaymentItem(payment) {
