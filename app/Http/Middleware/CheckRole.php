@@ -21,6 +21,9 @@ class CheckRole
     {
         // Check if user is authenticated
         if (!Auth::check()) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
             return redirect()->route('login');
         }
 
@@ -29,6 +32,9 @@ class CheckRole
         // Check if user is active
         if ($user->status != "1") {
             Auth::logout();
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json(['message' => 'Your account is not active.'], 401);
+            }
             return redirect()->route('login')->with('error', 'Your account is not active.');
         }
 
@@ -43,8 +49,8 @@ class CheckRole
         }
 
         // User doesn't have required role
-        if ($request->expectsJson()) {
-            return response()->json(['error' => 'You do not have permission to access this resource.'], 403);
+        if ($request->expectsJson() || $request->is('api/*')) {
+            return response()->json(['error' => 'You do not have permission to access this resource.', 'message' => 'Forbidden.'], 403);
         }
 
         return redirect()->route('dashboard')->with('error', 'You do not have permission to access this page.');
