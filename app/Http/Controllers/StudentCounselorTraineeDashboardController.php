@@ -28,7 +28,7 @@ class StudentCounselorTraineeDashboardController extends Controller
             ->whereYear('registration_date', Carbon::now()->year)
             ->count();
         $todayRegistrations = CourseRegistration::whereDate('registration_date', Carbon::today())->count();
-        $activeStudents = Student::where('status', 'active')->count();
+        $activeStudents = Student::count();
 
         // Calculate growth
         $lastMonthRegistrations = CourseRegistration::whereMonth('registration_date', Carbon::now()->subMonth()->month)
@@ -60,9 +60,9 @@ class StudentCounselorTraineeDashboardController extends Controller
                 return [
                     'student_name' => $reg->student->full_name ?? 'N/A',
                     'course_name' => $reg->course->course_name ?? 'N/A',
-                    'intake' => $reg->intake->batch ?? 'N/A',
-                    'registration_date' => $reg->registration_date,
-                    'status' => $reg->status
+                    'intake' => $reg->intake->batch ?? ($reg->intake->intake_name ?? 'N/A'),
+                    'registration_date' => optional($reg->registration_date)->format('Y-m-d') ?: ($reg->registration_date ?? 'N/A'),
+                    'status' => $reg->status ?? 'Registered'
                 ];
             });
 
@@ -72,18 +72,32 @@ class StudentCounselorTraineeDashboardController extends Controller
     // Get marketing survey data
     public function getMarketingSurveyData()
     {
-        $surveyData = CourseRegistration::selectRaw('marketing_channel, COUNT(*) as count')
-            ->whereNotNull('marketing_channel')
-            ->groupBy('marketing_channel')
-            ->get()
-            ->map(function($item) {
-                return [
-                    'channel' => $item->marketing_channel,
-                    'count' => $item->count
-                ];
-            });
+        $surveyData = DB::table('students')
+            ->select('marketing_survey', DB::raw('COUNT(*) as count'))
+            ->whereNotNull('marketing_survey')
+            ->where('marketing_survey', '!=', '')
+            ->groupBy('marketing_survey')
+            ->get();
 
-        return response()->json($surveyData);
+        $channels = [];
+        foreach ($surveyData as $item) {
+            $sources = array_map('trim', explode(',', $item->marketing_survey));
+            foreach ($sources as $source) {
+                if (!empty($source)) {
+                    $channels[$source] = ($channels[$source] ?? 0) + $item->count;
+                }
+            }
+        }
+
+        $result = [];
+        foreach ($channels as $channel => $count) {
+            $result[] = [
+                'channel' => $channel,
+                'count' => $count
+            ];
+        }
+
+        return response()->json($result);
     }
 
     // Get daily registration trend
@@ -91,7 +105,7 @@ class StudentCounselorTraineeDashboardController extends Controller
     {
         $trendData = CourseRegistration::selectRaw('DATE(registration_date) as date, COUNT(*) as count')
             ->whereMonth('registration_date', Carbon::now()->month)
-            ->groupBy('date')
+            ->groupBy(DB::raw('DATE(registration_date)'))
             ->orderBy('date', 'asc')
             ->get();
 
@@ -101,9 +115,9 @@ class StudentCounselorTraineeDashboardController extends Controller
     // Get registrations by location
     public function getRegistrationsByLocation()
     {
-        $locationData = CourseRegistration::join('intakes', 'course_registrations.intake_id', '=', 'intakes.intake_id')
-            ->selectRaw('intakes.location, COUNT(*) as count')
-            ->groupBy('intakes.location')
+        $locationData = CourseRegistration::leftJoin('intakes', 'course_registration.intake_id', '=', 'intakes.intake_id')
+            ->selectRaw('COALESCE(course_registration.location, intakes.location, "Unknown") as location, COUNT(*) as count')
+            ->groupBy(DB::raw('COALESCE(course_registration.location, intakes.location, "Unknown")'))
             ->get();
 
         return response()->json($locationData);

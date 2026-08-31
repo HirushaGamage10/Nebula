@@ -567,7 +567,7 @@
                 var location = $(this).val();
                 if (location) {
                     $.ajax({
-                        url: '/get-courses-by-location',
+                        url: '/timetable/get-courses-by-location',
                         type: 'GET',
                         data: { location: location, course_type: 'Degree' },
                         success: function (data) {
@@ -600,7 +600,7 @@
                 var location = $(this).val();
                 if (location) {
                     $.ajax({
-                        url: '/get-courses-by-location',
+                        url: '/timetable/get-courses-by-location',
                         type: 'GET',
                         data: { location: location, course_type: 'Certificate' },
                         success: function (data) {
@@ -621,33 +621,47 @@
                 }
             });
 
-            // Fetch intakes based on course and location
-            $('#degree_course').change(function () {
+            // Fetch intakes, reset downstream, sync pdf_course, and load specializations — single unified handler
+            $('#degree_course').on('change', function () {
                 var courseId = $(this).val();
                 var location = $('#degree_location').val();
+
+                // Reset all downstream controls
+                $('#degree_semester').val('').empty()
+                    .append('<option selected disabled value="">Select Semester</option>')
+                    .prop('disabled', true);
+                $('#degree_specialization').val('');
+                $('#degree_specialization_row').hide();
                 $('#degree_start_date').val('');
                 $('#degree_end_date').val('');
                 $('#degree_download_buttons').hide();
                 $('#degreeTimetableSection').hide();
 
+                // Sync pdf_course options
+                $('#pdf_course').empty().append('<option value="">All</option>');
+                $(this).find('option').each(function () {
+                    var v = $(this).attr('value'), t = $(this).text();
+                    if (v) $('#pdf_course').append('<option value="' + v + '">' + t + '</option>');
+                });
+                if (courseId) $('#pdf_course').val(courseId);
+
+                // Load intakes
                 if (courseId && location) {
                     $.ajax({
-                        url: '/get-intakes/' + courseId + '/' + location,
+                        url: '/timetable/get-intakes/' + courseId + '/' + location,
                         type: 'GET',
                         success: function (data) {
-                            console.log("Intakes data received:", data); // Debug log for intakes
-
-                            $('#degree_intake').empty();
-                            $('#degree_intake').append('<option selected disabled value="">Select Intake</option>');
-
+                            console.log('Intakes data received:', data);
+                            $('#degree_intake').empty()
+                                .append('<option selected disabled value="">Select Intake</option>');
                             if (data.intakes && data.intakes.length > 0) {
                                 $.each(data.intakes, function (index, intake) {
                                     $('#degree_intake').append('<option value="' + intake.intake_id + '" data-start="' + (intake.start_date || '') + '" data-end="' + (intake.end_date || '') + '">' + intake.batch + '</option>');
                                 });
                                 $('#degree_intake').prop('disabled', false);
                             } else {
-                                $('#degree_intake').append('<option disabled>No intakes found</option>');
-                                $('#degree_intake').prop('disabled', true);
+                                $('#degree_intake').append('<option disabled>No intakes found</option>')
+                                    .prop('disabled', true);
                             }
                         },
                         error: function (xhr, status, error) {
@@ -655,6 +669,9 @@
                         }
                     });
                 }
+
+                // Load specializations
+                loadDegreeSpecializations();
             });
 
             // Certificate: Fetch intakes when certificate course changes
@@ -665,7 +682,7 @@
                 $('#certificate_end_date').val('');
                 if (courseId && location) {
                     $.ajax({
-                        url: '/get-intakes/' + courseId + '/' + location,
+                        url: '/timetable/get-intakes/' + courseId + '/' + location,
                         type: 'GET',
                         success: function (data) {
                             $('#certificate_intake').empty();
@@ -750,67 +767,71 @@
                     $('#certificate_showTimetableBtn').trigger('click', [{ autoOpenIfEmpty: true }]);
                 }
 
-                loadCertificateSubjects();
+                // Note: subject list is populated on modal open (openNewTimetablePopup), not eagerly here,
+                // to avoid writing certificate modules into #degree_subject_0 while on the degree tab.
             });
 
-            // Auto-fill semester start/end date when semester selected (uses data attributes above)
-            $(document).on('change', '#degree_semester', function () {
-                var selected = $(this).find('option:selected');
-                var start = selected.data('start') || '';
-                var end = selected.data('end') || '';
-                // normalize to yyyy-mm-dd if moment can parse it
-                if (start && moment(start).isValid()) start = moment(start).format('YYYY-MM-DD');
-                if (end && moment(end).isValid()) end = moment(end).format('YYYY-MM-DD');
-                $('#degree_start_date').val(start);
-                $('#degree_end_date').val(end);
-                // show degree download buttons when semester chosen
-                if ($(this).val()) {
-                    $('#degree_download_buttons').show();
-                } else {
-                    $('#degree_download_buttons').hide();
-                }
+            // Removed: the delegated $(document).on('change','#degree_semester') handler that duplicated
+            // the direct handler below. Logic is now consolidated into the single direct handler.
 
-                if ($('#degree_location').val() && $('#degree_course').val() && $('#degree_intake').val() && start && end) {
-                    $('#showTimetableBtn').trigger('click', [{ autoOpenIfEmpty: true }]);
-                }
-            });
+            // XHR abort handles — cancels stale in-flight requests on rapid selection changes
+            var _degreeSubjectXhr      = null;
+            var _certificateSubjectXhr = null;
 
-            // Fetch available subjects based on semester
+            // Fetch available subjects based on semester (Fix 4: aborts stale XHR)
             function loadDegreeSubjects() {
                 var semesterId = $('#degree_semester').val();
-                var courseId = $('#degree_course').val();
+                var courseId   = $('#degree_course').val();
                 var specialization = $('#degree_specialization').val();
                 if (semesterId && courseId) {
-                    $.ajax({
+                    if (_degreeSubjectXhr) { _degreeSubjectXhr.abort(); _degreeSubjectXhr = null; }
+                    _degreeSubjectXhr = $.ajax({
                         url: '/get-modules-by-semester',
                         type: 'GET',
                         data: { semester_id: semesterId, course_id: courseId, specialization: specialization },
                         success: function (data) {
-                            console.log("Modules data received:", data); // Debug log for modules
-
+                            _degreeSubjectXhr = null;
+                            console.log('Modules data received:', data);
                             if (data.modules && data.modules.length > 0) {
-                                $('#degree_subject_0').empty();
-                                $('#degree_subject_0').append('<option selected disabled value="">Select Subject</option>');
+                                $('#degree_subject_0').empty()
+                                    .append('<option selected disabled value="">Select Subject</option>');
                                 $.each(data.modules, function (index, module) {
-                                    console.log("Appending subject:", module); // Debug log for each module being added
                                     $('#degree_subject_0').append('<option value="' + module.module_id + '">' + module.module_name + ' (' + module.module_code + ')</option>');
                                 });
                                 $('#degree_subject_0').prop('disabled', false);
                             } else {
-                                $('#degree_subject_0').empty();
-                                $('#degree_subject_0').append('<option value="" disabled>No subjects found</option>');
-                                $('#degree_subject_0').prop('disabled', true);
+                                $('#degree_subject_0').empty()
+                                    .append('<option value="" disabled>No subjects found</option>')
+                                    .prop('disabled', true);
                             }
                         },
-                        error: function (xhr, status, error) {
-                            console.error('Error fetching subjects:', error);
+                        error: function (xhr, status) {
+                            if (status !== 'abort') console.error('Error fetching degree subjects:', status);
+                            _degreeSubjectXhr = null;
                         }
                     });
                 }
             }
 
-            $('#degree_semester').change(function () {
+            // Single consolidated #degree_semester handler — auto-fills dates, manages buttons,
+            // loads subjects, and auto-triggers timetable display.
+            $('#degree_semester').on('change', function () {
+                var selected = $(this).find('option:selected');
+                var start = selected.data('start') || '';
+                var end   = selected.data('end')   || '';
+                if (start && moment(start).isValid()) start = moment(start).format('YYYY-MM-DD');
+                if (end   && moment(end).isValid())   end   = moment(end).format('YYYY-MM-DD');
+                $('#degree_start_date').val(start);
+                $('#degree_end_date').val(end);
+                if ($(this).val()) {
+                    $('#degree_download_buttons').show();
+                } else {
+                    $('#degree_download_buttons').hide();
+                }
                 loadDegreeSubjects();
+                if ($('#degree_location').val() && $('#degree_course').val() && $('#degree_intake').val() && start && end) {
+                    $('#showTimetableBtn').trigger('click', [{ autoOpenIfEmpty: true }]);
+                }
             });
 
             function loadDegreeSpecializations() {
@@ -850,45 +871,49 @@
                 });
             }
 
-            $('#degree_course').on('change', function () {
-                $('#degree_semester').val('');
-                $('#degree_specialization').val('');
-                $('#degree_specialization_row').hide();
-                loadDegreeSpecializations();
-            });
+            // Removed: duplicate #degree_course handler (specialization reset + loadDegreeSpecializations).
+            // This logic is now part of the single unified #degree_course handler above.
 
             $('#degree_specialization').on('change', function () {
                 loadDegreeSubjects();
             });
 
+            // Fix 3 + Fix 4: certificate subject loader — aborts stale XHR, populates the shared
+            // #degree_subject_0 only when called from the modal-open path (openNewTimetablePopup).
+            // It is no longer called eagerly on intake change, preventing cross-tab pollution.
             function loadCertificateSubjects() {
                 var courseId = $('#certificate_course').val();
                 var intakeId = $('#certificate_intake').val();
+                if (!courseId || !intakeId) return;
 
-                if (courseId && intakeId) {
-                    $.ajax({
-                        url: '/timetable/get-intake-modules',
-                        type: 'GET',
-                        data: { course_id: courseId, intake_id: intakeId },
-                        success: function (data) {
-                            if (data.modules && data.modules.length > 0) {
-                                $('#degree_subject_0').empty();
-                                $('#degree_subject_0').append('<option selected disabled value="">Select Subject</option>');
-                                $.each(data.modules, function (index, module) {
-                                    $('#degree_subject_0').append('<option value="' + module.module_id + '">' + module.module_name + ' (' + module.module_code + ')</option>');
-                                });
-                                $('#degree_subject_0').prop('disabled', false);
-                            } else {
-                                $('#degree_subject_0').empty();
-                                $('#degree_subject_0').append('<option value="" disabled>No subjects found</option>');
-                                $('#degree_subject_0').prop('disabled', true);
-                            }
-                        },
-                        error: function (xhr, status, error) {
-                            console.error('Error fetching certificate subjects:', error);
+                if (_certificateSubjectXhr) { _certificateSubjectXhr.abort(); _certificateSubjectXhr = null; }
+                _certificateSubjectXhr = $.ajax({
+                    url: '/timetable/get-intake-modules',
+                    type: 'GET',
+                    data: { course_id: courseId, intake_id: intakeId },
+                    success: function (data) {
+                        _certificateSubjectXhr = null;
+                        // Guard: only update the subject dropdown when the modal is currently
+                        // in certificate mode (prevents a late response from clobbering degree options).
+                        if ($('#selectedTimetableMode').val() !== 'certificate') return;
+                        if (data.modules && data.modules.length > 0) {
+                            $('#degree_subject_0').empty()
+                                .append('<option selected disabled value="">Select Subject</option>');
+                            $.each(data.modules, function (index, module) {
+                                $('#degree_subject_0').append('<option value="' + module.module_id + '">' + module.module_name + ' (' + module.module_code + ')</option>');
+                            });
+                            $('#degree_subject_0').prop('disabled', false);
+                        } else {
+                            $('#degree_subject_0').empty()
+                                .append('<option value="" disabled>No subjects found</option>')
+                                .prop('disabled', true);
                         }
-                    });
-                }
+                    },
+                    error: function (xhr, status) {
+                        if (status !== 'abort') console.error('Error fetching certificate subjects:', status);
+                        _certificateSubjectXhr = null;
+                    }
+                });
             }
 
             // Initialize FullCalendar v5
@@ -986,19 +1011,8 @@
                 calendarInstance.gotoDate(startMoment.format('YYYY-MM-DD'));
             }
 
-            // Populate PDF modal course select when course list loads (reuse degree_course change)
-            $('#degree_course').on('change', function () {
-                // also update pdf_course options
-                var courseId = $(this).val();
-                // copy current options
-                $('#pdf_course').empty().append('<option value="">All</option>');
-                $('#degree_course option').each(function () {
-                    var val = $(this).attr('value');
-                    var txt = $(this).text();
-                    if (val) $('#pdf_course').append('<option value="' + val + '">' + txt + '</option>');
-                });
-                if (courseId) $('#pdf_course').val(courseId);
-            });
+            // Removed: duplicate #degree_course handler (pdf_course sync).
+            // pdf_course syncing is now part of the single unified #degree_course handler above.
 
             function openNewTimetablePopup(mode) {
                 var isCertificate = mode === 'certificate';

@@ -312,6 +312,42 @@ class StudentRegistraionController extends Controller
             return response()->json(['error' => 'An error occurred while fetching courses.'], 500);
         }
     }
+
+    public function getSubjectsByExamType($examTypeId)
+    {
+        $subjects = [
+            'Local' => ['Sinhala', 'History', 'Religion', 'English', 'Maths', 'Science', 'Other'],
+            'London Cambridge' => ['English Language', 'Mathematics', 'Biology', 'Chemistry', 'Physics', 'Accounting', 'Business Studies', 'Economics', 'Computer Science', 'Other'],
+            'London Edexcel' => ['English Language', 'Mathematics', 'Biology', 'Chemistry', 'Physics', 'Accounting', 'Business Studies', 'Economics', 'Computer Science', 'Other'],
+            'Other' => ['Other'],
+        ];
+
+        $list = $subjects[$examTypeId] ?? $subjects['Local'];
+
+        return response()->json([
+            'success' => true,
+            'data' => $list,
+            'subjects' => $list
+        ]);
+    }
+
+    public function getStreamsByExamType($examTypeId)
+    {
+        $streams = [
+            'Local' => ['Physical Science', 'Bio Science', 'Arts', 'Commerce', 'Technology', 'Other'],
+            'London Cambridge' => ['Sciences', 'Mathematics', 'Arts & Humanities', 'Business & Economics', 'Technology', 'Other'],
+            'London Edexcel' => ['Sciences', 'Mathematics', 'Arts & Humanities', 'Business & Economics', 'Technology', 'Other'],
+            'Other' => ['Other'],
+        ];
+
+        $list = $streams[$examTypeId] ?? $streams['Local'];
+
+        return response()->json([
+            'success' => true,
+            'data' => $list,
+            'streams' => $list
+        ]);
+    }
 }
 
     

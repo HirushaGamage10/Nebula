@@ -442,10 +442,7 @@ class SemesterRegistrationController extends Controller
         $students = CourseRegistration::where('course_id', $courseId)
             ->where('intake_id', $intakeId)
             ->when($location, fn ($query) => $query->where('location', $location))
-            ->where(function ($query) {
-                $query->where('status', 'Registered')
-                    ->orWhere('approval_status', 'Approved by DGM');
-            })
+            ->eligible()
             ->when($specialization, function ($query) use ($courseId, $intakeId, $location, $specialization, $effectiveCourseSpecializations) {
                 return SpecializationStudentScope::applyToQuery(
                     $query,

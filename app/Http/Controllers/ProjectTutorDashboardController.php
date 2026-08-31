@@ -72,4 +72,74 @@ class ProjectTutorDashboardController extends Controller
         'recent'
     ));
 }
+
+    public function getPendingClearances(Request $request)
+    {
+        $location = $request->query('location');
+        $query = ClearanceRequest::with(['student', 'course', 'intake'])
+            ->where('clearance_type', 'project')
+            ->where('status', 'pending');
+
+        if ($location && $location !== 'all') {
+            $this->applyLocationScope($query, $this->normalizeLocation($location));
+        }
+
+        $list = $query->orderBy('requested_at', 'asc')->get();
+        return response()->json(['success' => true, 'data' => $list]);
+    }
+
+    public function getRecentUpdates(Request $request)
+    {
+        $location = $request->query('location');
+        $query = ClearanceRequest::with(['student', 'course', 'intake'])
+            ->where('clearance_type', 'project');
+
+        if ($location && $location !== 'all') {
+            $this->applyLocationScope($query, $this->normalizeLocation($location));
+        }
+
+        $list = $query->orderBy('updated_at', 'desc')->limit(10)->get();
+        return response()->json(['success' => true, 'data' => $list]);
+    }
+
+    public function getSummary(Request $request)
+    {
+        $location = $request->query('location');
+        $query = ClearanceRequest::where('clearance_type', 'project');
+
+        if ($location && $location !== 'all') {
+            $this->applyLocationScope($query, $this->normalizeLocation($location));
+        }
+
+        $pendingCount = (clone $query)->where('status', 'pending')->count();
+        $approvedCount = (clone $query)->where('status', 'approved')
+            ->whereMonth('approved_at', now()->month)
+            ->whereYear('approved_at', now()->year)
+            ->count();
+        $rejectedCount = (clone $query)->where('status', 'rejected')
+            ->whereMonth('updated_at', now()->month)
+            ->whereYear('updated_at', now()->year)
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'pending_count' => $pendingCount,
+            'approved_count' => $approvedCount,
+            'rejected_count' => $rejectedCount,
+        ]);
+    }
+
+    public function approveProject($id, Request $request)
+    {
+        $clearanceRequest = ClearanceRequest::findOrFail($id);
+        $clearanceRequest->approve(auth()->id(), $request->input('remarks'));
+        return response()->json(['success' => true, 'message' => 'Project clearance approved.']);
+    }
+
+    public function rejectProject($id, Request $request)
+    {
+        $clearanceRequest = ClearanceRequest::findOrFail($id);
+        $clearanceRequest->reject(auth()->id(), $request->input('remarks'));
+        return response()->json(['success' => true, 'message' => 'Project clearance rejected.']);
+    }
 }

@@ -146,20 +146,21 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
                                                        ->when($specialization, function ($query) use ($specialization) {
                                                            $query->where('specialization', $specialization);
                                                        })
-                                                       ->with(['student:id,student_id,first_name,last_name,nic'])
+                                                       ->with(['student:student_id,full_name,id_value,email'])
                                                        ->get();
             
-            // Debug: Log the query results
-            \Log::info('SemesterRegistration query results for getStudents:', [
+            // Debug: Log the query count
+            \Log::info('SemesterRegistration query count for getStudents:', [
                 'count' => $students->count(),
-                'registrations' => $students->toArray()
             ]);
             
             $mappedStudents = $students->map(function ($registration) {
                 return [
-                    'student_id' => $registration->student->student_id,
-                    'name' => $registration->student->first_name . ' ' . $registration->student->last_name,
-                    'nic' => $registration->student->nic,
+                    'student_id' => $registration->student->student_id ?? null,
+                    'name' => $registration->student->full_name ?? '',
+                    'full_name' => $registration->student->full_name ?? '',
+                    'nic' => $registration->student->id_value ?? '',
+                    'id_value' => $registration->student->id_value ?? '',
                     'email' => $registration->student->email ?? '',
                     'specialization' => $registration->specialization ?? ''
                 ];
@@ -239,15 +240,16 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
                                          ->when($specialization, function ($query) use ($specialization) {
                                              $query->where('specialization', $specialization);
                                          })
-                                         ->with(['student:id,student_id,first_name,last_name', 'module:id,module_id,module_name'])
+                                         ->with(['student:student_id,full_name', 'module:module_id,module_name'])
                                          ->get()
                                          ->map(function ($assignment) {
                                              return [
                                                  'id' => $assignment->id,
-                                                 'student_id' => $assignment->student->student_id,
-                                                 'student_name' => $assignment->student->first_name . ' ' . $assignment->student->last_name,
-                                                 'module_id' => $assignment->module->module_id,
-                                                 'module_name' => $assignment->module->module_name,
+                                                 'student_id' => $assignment->student->student_id ?? null,
+                                                 'student_name' => $assignment->student->full_name ?? '',
+                                                 'full_name' => $assignment->student->full_name ?? '',
+                                                 'module_id' => $assignment->module->module_id ?? null,
+                                                 'module_name' => $assignment->module->module_name ?? '',
                                                  'specialization' => $assignment->specialization ?? ''
                                              ];
                                          });
@@ -372,15 +374,16 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
                                                      ->where('is_core', false);
                                                });
                                            })
-                                           ->with(['student:id,student_id,first_name,last_name', 'module:id,module_id,module_name'])
+                                           ->with(['student:student_id,full_name', 'module:module_id,module_name'])
                                            ->get()
                                            ->map(function ($registration) {
                                                return [
                                                    'id' => $registration->id,
-                                                   'student_id' => $registration->student->student_id,
-                                                   'student_name' => $registration->student->first_name . ' ' . $registration->student->last_name,
-                                                   'module_id' => $registration->module->module_id,
-                                                   'module_name' => $registration->module->module_name,
+                                                   'student_id' => $registration->student->student_id ?? null,
+                                                   'student_name' => $registration->student->full_name ?? '',
+                                                   'full_name' => $registration->student->full_name ?? '',
+                                                   'module_id' => $registration->module->module_id ?? null,
+                                                   'module_name' => $registration->module->module_name ?? '',
                                                    'specialization' => $registration->specialization,
                                                ];
                                            });
@@ -566,10 +569,9 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
 
             $students = $students->get();
             
-            // Debug: Log the query results
-            \Log::info('SemesterRegistration query results:', [
+            // Debug: Log the query results count
+            \Log::info('SemesterRegistration query count for getElectiveStudents:', [
                 'count' => $students->count(),
-                'registrations' => $students->toArray()
             ]);
             
             $studentIds = $students->pluck('student_id')->filter()->unique()->values();

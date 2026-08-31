@@ -48,7 +48,7 @@ class LateFeeApprovalController extends Controller
         ->first();
 
     if (!$plan) {
-        return view('late_fee.approval', [
+        return view('approvals.late_fee_approval', [
             'student'      => $student,
             'courses'      => $courses,
             'studentNic'   => $studentNic,
@@ -71,7 +71,7 @@ class LateFeeApprovalController extends Controller
     });
 
     // 5️⃣ Send everything to Blade
-    return view('late_fee.approval', [
+    return view('approvals.late_fee_approval', [
         'student'      => $student,
         'courses'      => $courses,
         'installments' => $installments,

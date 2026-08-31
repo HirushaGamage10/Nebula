@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Models\User;
 use App\Models\Course;
 use App\Models\Student;
@@ -189,7 +190,7 @@ class DashboardController extends Controller
     public function getDropdownOptions()
     {
         $courses = Course::select('course_id', 'course_name')->get();
-        $intakes = Intake::select('intake_id', 'intake_name')->get();
+        $intakes = Intake::select('intake_id', 'batch as intake_name', 'batch')->get();
         $locations = ['Welisara', 'Moratuwa', 'Peradeniya'];
         
         return response()->json([
@@ -213,5 +214,127 @@ class DashboardController extends Controller
     {
         $courses = Course::select('course_id', 'course_name')->get();
         return response()->json($courses);
+    }
+
+    public function getYearlyRevenue(Request $request)
+    {
+        $year = (int) ($request->input('year', date('Y')));
+        $years = range($year - 4, $year);
+
+        $yearlyData = [];
+        foreach ($years as $y) {
+            $bulkRevenue = 0;
+            if (Schema::hasTable('bulk_revenue_uploads')) {
+                $bulkRevenue = (float) DB::table('bulk_revenue_uploads')->where('year', $y)->sum('revenue');
+            }
+            $paymentRevenue = 0;
+            if (Schema::hasTable('payment_details')) {
+                $paymentRevenue = (float) DB::table('payment_details')->whereYear('created_at', $y)->sum('amount');
+            }
+
+            $yearlyData[] = [
+                'year' => $y,
+                'revenue' => round($bulkRevenue + $paymentRevenue, 2)
+            ];
+        }
+
+        return response()->json($yearlyData);
+    }
+
+    public function getMonthlyEarnings(Request $request)
+    {
+        $year = (int) ($request->input('year', date('Y')));
+        $monthlyData = [];
+
+        for ($month = 1; $month <= 12; $month++) {
+            $bulkRevenue = 0;
+            if (Schema::hasTable('bulk_revenue_uploads')) {
+                $bulkRevenue = (float) DB::table('bulk_revenue_uploads')
+                    ->where('year', $year)
+                    ->where('month', $month)
+                    ->sum('revenue');
+            }
+            $paymentRevenue = 0;
+            if (Schema::hasTable('payment_details')) {
+                $paymentRevenue = (float) DB::table('payment_details')
+                    ->whereYear('created_at', $year)
+                    ->whereMonth('created_at', $month)
+                    ->sum('amount');
+            }
+
+            $monthlyData[] = [
+                'month' => $month,
+                'month_name' => Carbon::create($year, $month, 1)->format('M'),
+                'earnings' => round($bulkRevenue + $paymentRevenue, 2),
+                'revenue' => round($bulkRevenue + $paymentRevenue, 2),
+            ];
+        }
+
+        return response()->json($monthlyData);
+    }
+
+    public function getRevenueByCourse($courseId, Request $request = null)
+    {
+        $course = Course::find($courseId);
+        $courseName = $course?->course_name ?? 'Unknown';
+
+        $totalRevenue = 0;
+        if (Schema::hasTable('payment_details')) {
+            $totalRevenue = (float) DB::table('payment_details')
+                ->join('course_registration', 'payment_details.registration_id', '=', 'course_registration.id')
+                ->where('course_registration.course_id', $courseId)
+                ->sum('payment_details.amount');
+        }
+
+        if ($totalRevenue == 0 && Schema::hasTable('bulk_revenue_uploads')) {
+            $totalRevenue = (float) DB::table('bulk_revenue_uploads')
+                ->where(function ($q) use ($courseId, $courseName) {
+                    $q->where('course', $courseId)
+                      ->orWhere('course', $courseName);
+                })
+                ->sum('revenue');
+        }
+
+        return response()->json([
+            'course_id' => $courseId,
+            'course_name' => $courseName,
+            'revenue' => round($totalRevenue, 2),
+        ]);
+    }
+
+    public function getRevenueData(Request $request)
+    {
+        $year = (int) ($request->input('year', date('Y')));
+        $courses = Course::select('course_id', 'course_name')->get();
+
+        $data = [];
+        foreach ($courses as $course) {
+            $revenue = 0;
+            if (Schema::hasTable('payment_details')) {
+                $revenue = (float) DB::table('payment_details')
+                    ->join('course_registration', 'payment_details.registration_id', '=', 'course_registration.id')
+                    ->where('course_registration.course_id', $course->course_id)
+                    ->whereYear('payment_details.created_at', $year)
+                    ->sum('payment_details.amount');
+            }
+
+            if ($revenue == 0 && Schema::hasTable('bulk_revenue_uploads')) {
+                $revenue = (float) DB::table('bulk_revenue_uploads')
+                    ->where('year', $year)
+                    ->where(function ($q) use ($course) {
+                        $q->where('course', $course->course_id)
+                          ->orWhere('course', $course->course_name);
+                    })
+                    ->sum('revenue');
+            }
+
+            $data[] = [
+                'course_id' => $course->course_id,
+                'course_name' => $course->course_name,
+                'revenue' => round($revenue, 2),
+            ];
+        }
+
+        return response()->json($data);
     }
 }

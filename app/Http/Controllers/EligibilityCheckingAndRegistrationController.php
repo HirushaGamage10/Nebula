@@ -367,57 +367,76 @@ class EligibilityCheckingAndRegistrationController extends Controller
         $request->validate([
             'nic' => 'required',
             'course_id' => 'required|exists:courses,course_id',
+            'intake_id' => 'required|exists:intakes,intake_id',
         ]);
+
         $student = Student::where('id_value', $request->nic)->first();
         if (!$student) {
-            return response()->json(['success' => false, 'message' => 'Student not found.']);
+            return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
         }
+
         $course = Course::find($request->course_id);
         if (!$course) {
-            return response()->json(['success' => false, 'message' => 'Course not found.']);
+            return response()->json(['success' => false, 'message' => 'Course not found.'], 404);
         }
-        // Find or create registration
-        $registration = CourseRegistration::firstOrNew([
-            'student_id' => $student->student_id,
-            'course_id' => $course->course_id,
-        ]);
-        // Assign intake_id from existing registration or from request (if available)
-        $intake_id = $registration->intake_id ?? $request->input('intake_id');
-        if (!$intake_id) {
-            // Try to get intake from latest registration for this course
-            $latestReg = CourseRegistration::where('course_id', $course->course_id)
-                ->orderByDesc('id')->first();
-            $intake_id = $latestReg ? $latestReg->intake_id : null;
+
+        // Validate that intake_id belongs to the selected course and location
+        $intake = \App\Models\Intake::forCourse($course)->where('intake_id', $request->intake_id)->first();
+        if (!$intake) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Selected intake does not belong to the selected course.'
+            ], 422);
         }
-        $registration->intake_id = $intake_id;
-        // Assign course_registration_id using intake pattern
-        if ($intake_id) {
-            $intake = \App\Models\Intake::find($intake_id);
-            if ($intake && $intake->course_registration_id_pattern) {
-                $pattern = $intake->course_registration_id_pattern;
-                if (preg_match('/^(.*?)(\d+)$/', $pattern, $matches)) {
-                    $prefix = $matches[1];
-                    $numberLength = strlen($matches[2]);
-                    $latest = CourseRegistration::where('intake_id', $intake_id)
-                        ->where('course_registration_id', 'like', $prefix . '%')
-                        ->orderByDesc('course_registration_id')
-                        ->first();
-                    if ($latest && preg_match('/^(.*?)(\d+)$/', $latest->course_registration_id, $latestMatches)) {
-                        $nextNumber = str_pad(((int)$latestMatches[2]) + 1, $numberLength, '0', STR_PAD_LEFT);
-                    } else {
-                        $nextNumber = $matches[2];
-                    }
-                    $registration->course_registration_id = $prefix . $nextNumber;
+
+        if ($course->location && $intake->location && $course->location !== $intake->location) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Selected intake does not match the course location.'
+            ], 422);
+        }
+
+        // Find or create registration strictly for this student and course (no cross-student fallback)
+        $registration = CourseRegistration::where('student_id', $student->student_id)
+            ->where('course_id', $course->course_id)
+            ->first();
+
+        if (!$registration) {
+            $registration = new CourseRegistration([
+                'student_id' => $student->student_id,
+                'course_id' => $course->course_id,
+            ]);
+        }
+
+        $registration->intake_id = $intake->intake_id;
+
+        // Assign course_registration_id using intake pattern if not already assigned
+        if (!$registration->course_registration_id && $intake->course_registration_id_pattern) {
+            $pattern = $intake->course_registration_id_pattern;
+            if (preg_match('/^(.*?)(\d+)$/', $pattern, $matches)) {
+                $prefix = $matches[1];
+                $numberLength = strlen($matches[2]);
+                $latest = CourseRegistration::where('intake_id', $intake->intake_id)
+                    ->where('course_registration_id', 'like', $prefix . '%')
+                    ->orderByDesc('course_registration_id')
+                    ->first();
+                if ($latest && preg_match('/^(.*?)(\d+)$/', $latest->course_registration_id, $latestMatches)) {
+                    $nextNumber = str_pad(((int)$latestMatches[2]) + 1, $numberLength, '0', STR_PAD_LEFT);
+                } else {
+                    $nextNumber = $matches[2];
                 }
+                $registration->course_registration_id = $prefix . $nextNumber;
             }
         }
+
         $registration->status = 'Registered';
         $registration->approval_status = 'Approved by manager';
         $registration->registration_date = now();
-        $registration->location = $course->location;
+        $registration->location = $intake->location ?? $course->location;
         $registration->registration_fee = $course->registration_fee ?? 0;
         $registration->remarks = 'Registered via eligibility page';
         $registration->save();
+
         return response()->json([
             'success' => true,
             'message' => 'Student registered successfully.',
@@ -642,6 +661,50 @@ class EligibilityCheckingAndRegistrationController extends Controller
             'success' => true,
             'message' => 'DGM comment updated successfully.',
             'dgm_comment' => $registration->dgm_comment
+        ]);
+    }
+
+    public function getStudentData(Request $request)
+    {
+        $nic = $request->input('nic') ?? $request->input('id_value') ?? $request->input('student_id');
+        $student = Student::where('id_value', $nic)
+            ->orWhere('student_id', $nic)
+            ->first();
+
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'student' => $student,
+            'data' => $student
+        ]);
+    }
+
+    public function checkApproval(Request $request)
+    {
+        $nic = $request->input('nic') ?? $request->input('student_id');
+        $courseId = $request->input('course_id');
+
+        $student = Student::where('id_value', $nic)
+            ->orWhere('student_id', $nic)
+            ->first();
+
+        if (!$student) {
+            return response()->json(['success' => false, 'message' => 'Student not found.'], 404);
+        }
+
+        $registration = CourseRegistration::where('student_id', $student->student_id)
+            ->when($courseId, fn($q) => $q->where('course_id', $courseId))
+            ->orderByDesc('id')
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'approved' => $registration && in_array($registration->approval_status, ['Approved by manager', 'Approved by DGM', 'approved']),
+            'status' => $registration->approval_status ?? 'No request',
+            'registration' => $registration
         ]);
     }
 }

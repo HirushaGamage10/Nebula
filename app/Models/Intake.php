@@ -202,6 +202,11 @@ class Intake extends Model
         return $types[$this->intake_type] ?? $this->intake_type;
     }
 
+    public function getIntakeNameAttribute()
+    {
+        return $this->batch;
+    }
+
     public function getFullIntakeNameAttribute()
     {
         return "{$this->course_name} - {$this->batch} ({$this->intake_mode} {$this->intake_type})";

@@ -114,10 +114,7 @@ class RepeatStudentsController extends Controller
         $students = CourseRegistration::where('course_id', $request->course_id)
             ->where('intake_id', $request->intake_id)
             ->where('location', $request->location)
-            ->where(function($query) {
-                $query->where('status', 'Registered')
-                      ->orWhere('approval_status', 'Approved by DGM');
-            })
+            ->eligible()
             ->with(['student', 'examResults' => function($query) use ($request) {
                 $query->where('module_id', $request->module_id)
                       ->where('semester', $request->semester);
@@ -162,10 +159,7 @@ class RepeatStudentsController extends Controller
         $students = CourseRegistration::where('course_id', $request->course_id)
             ->where('intake_id', $request->intake_id)
             ->where('location', $request->location)
-            ->where(function($query) {
-                $query->where('status', 'Registered')
-                      ->orWhere('approval_status', 'Approved by DGM');
-            })
+            ->eligible()
             ->with(['student', 'payments'])
             ->get()
             ->filter(function($reg) {
@@ -356,10 +350,8 @@ class RepeatStudentsController extends Controller
 
         // Also include a current/active course registration if available (useful when student is not on hold)
         $currentCourseReg = \App\Models\CourseRegistration::where('student_id', $student->student_id)
-            ->where(function($q){
-                $q->where('status', 'Registered')
-                  ->orWhere('approval_status', 'Approved by DGM')
-                  ->orWhere('approval_status', 'Approved by manager')
+            ->where(function ($q) {
+                $q->eligible()
                   ->orWhere('status', 'Pending');
             })
             ->with('course', 'intake')
@@ -709,4 +701,14 @@ public function updateSemesterRegistration(Request $request)
         return $rawName !== '' ? $rawName : (string) $fallbackNumber;
     }
 
+    public function getSemesters(Request $request)
+    {
+        $courseId = $request->query('course_id') ?? $request->query('courseId');
+        $query = Semester::query();
+        if ($courseId) {
+            $query->where('course_id', $courseId);
+        }
+        $semesters = $query->orderBy('name')->get();
+        return response()->json(['success' => true, 'semesters' => $semesters, 'data' => $semesters]);
+    }
 } 

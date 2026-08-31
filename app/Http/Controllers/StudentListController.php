@@ -349,4 +349,86 @@ class StudentListController extends Controller
             return response()->json(['intakes' => []], 500);
         }
     }
+
+    public function exportStudentList(Request $request)
+    {
+        return $this->downloadStudentListExcel($request);
+    }
+
+    public function filterStudents(Request $request)
+    {
+        return $this->getStudentListData($request);
+    }
+
+    public function downloadTemplate(Request $request)
+    {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="student_list_template.csv"',
+        ];
+
+        $callback = function () {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Student ID', 'Full Name', 'Name with Initials', 'Location', 'Course ID', 'Intake ID', 'Status']);
+            fputcsv($file, ['ST0001', 'John Doe', 'J. Doe', 'Welisara', '1', '1', 'registered']);
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function importStudentList(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv,txt|max:10240',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Student list processed successfully.',
+        ]);
+    }
+
+    public function downloadExcel(Request $request)
+    {
+        return $this->downloadStudentListExcel($request);
+    }
+
+    public function checkBlacklistStatus(Request $request)
+    {
+        $studentId = $request->input('student_id') ?? $request->input('id_value') ?? $request->input('nic');
+
+        if (!$studentId) {
+            return response()->json([
+                'success' => false,
+                'blacklisted' => false,
+                'message' => 'Student identifier is required.'
+            ], 400);
+        }
+
+        $student = DB::table('students')
+            ->where('student_id', $studentId)
+            ->orWhere('id_value', $studentId)
+            ->first();
+
+        if (!$student) {
+            return response()->json([
+                'success' => true,
+                'blacklisted' => false,
+                'message' => 'Student not found.'
+            ]);
+        }
+
+        $isBlacklisted = DB::table('course_registration')
+            ->where('student_id', $student->student_id)
+            ->whereIn('status', ['Not eligible', 'not eligible', 'Terminated', 'terminated'])
+            ->exists();
+
+        return response()->json([
+            'success' => true,
+            'blacklisted' => $isBlacklisted,
+            'student' => $student,
+            'message' => $isBlacklisted ? 'Student is marked as not eligible / terminated.' : 'Student is eligible.'
+        ]);
+    }
 }

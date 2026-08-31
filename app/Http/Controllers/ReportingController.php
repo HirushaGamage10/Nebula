@@ -11,6 +11,7 @@ use App\Models\ExamResult;
 use App\Models\Intake;
 use App\Models\Module;
 use App\Models\ModuleManagement;
+use App\Models\PaymentDetail;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +28,15 @@ class ReportingController extends Controller
             return redirect()->route('login')->with('error', 'Unauthorized access.');
         }
 
-        return view('reporting.dashboard');
+        if (view()->exists('reporting.dashboard')) {
+            return view('reporting.dashboard');
+        }
+
+        if (view()->exists('dashboards.dgm_dashboard')) {
+            return view('dashboards.dgm_dashboard');
+        }
+
+        return redirect()->route('dashboard');
     }
 
     /**
@@ -53,7 +62,7 @@ class ReportingController extends Controller
                 'end_date' => 'nullable|date|after_or_equal:start_date',
                 'location' => 'nullable|string|in:Welisara,Moratuwa,Peradeniya',
                 'course_id' => 'nullable|exists:courses,course_id',
-                'format' => 'nullable|string|in:json,pdf,excel'
+                'format' => 'nullable|string|in:json,pdf,excel,csv'
             ]);
 
             $query = Student::query();
@@ -68,56 +77,59 @@ class ReportingController extends Controller
             if ($request->filled('location')) {
                 $query->where('institute_location', $request->location);
             }
+            if ($request->filled('course_id')) {
+                $query->whereHas('courseRegistrations', function ($q) use ($request) {
+                    $q->where('course_id', $request->course_id);
+                });
+            }
 
             $students = $query->with(['courseRegistrations.course', 'courseRegistrations.intake'])
                             ->get();
 
+            // Check if file export requested
+            $format = strtolower($request->input('format', 'json'));
+            if (in_array($format, ['csv', 'excel', 'pdf'])) {
+                return $this->exportEnrollmentCsv($students, "enrollment_report_" . now()->format('Ymd_His') . ".csv");
+            }
+
             // Group by location
-            $locationStats = $students->groupBy('institute_location')
-                                    ->map(function ($group) {
-                                        return [
-                                            'count' => $group->count(),
-                                            'male' => $group->where('gender', 'Male')->count(),
-                                            'female' => $group->where('gender', 'Female')->count(),
-                                            'students' => $group->map(function ($student) {
-                                                return [
-                                                    'student_id' => $student->student_id,
-                                                    'name' => $student->full_name,
-                                                    'email' => $student->email,
-                                                    'location' => $student->institute_location,
-                                                    'registration_date' => $student->created_at->format('Y-m-d'),
-                                                    'courses' => $student->courseRegistrations->map(function ($reg) {
-                                                        return [
-                                                            'course_name' => $reg->course->course_name ?? 'N/A',
-                                                            'intake_name' => $reg->intake->intake_name ?? 'N/A',
-                                                            'registration_date' => $reg->created_at->format('Y-m-d')
-                                                        ];
-                                                    })
-                                                ];
-                                            })
-                                        ];
-                                    });
+            $locationStats = $students->groupBy(function ($s) {
+                return $s->institute_location ?: 'Unknown';
+            })->map(function ($group, $loc) {
+                return [
+                    'count' => $group->count(),
+                    'male' => $group->filter(fn($s) => strtolower($s->gender ?? '') === 'male')->count(),
+                    'female' => $group->filter(fn($s) => strtolower($s->gender ?? '') === 'female')->count(),
+                    'students' => $group->map(function ($student) {
+                        return [
+                            'student_id' => $student->student_id,
+                            'name' => $student->full_name,
+                            'email' => $student->email,
+                            'location' => $student->institute_location,
+                            'registration_date' => optional($student->created_at)->format('Y-m-d'),
+                            'courses' => $student->courseRegistrations->map(function ($reg) {
+                                return [
+                                    'course_name' => $reg->course->course_name ?? 'N/A',
+                                    'intake_name' => $reg->intake->batch ?? ($reg->intake->intake_name ?? 'N/A'),
+                                    'registration_date' => optional($reg->created_at)->format('Y-m-d')
+                                ];
+                            })
+                        ];
+                    })
+                ];
+            });
 
             $report = [
                 'total_students' => $students->count(),
-                'male_students' => $students->where('gender', 'Male')->count(),
-                'female_students' => $students->where('gender', 'Female')->count(),
+                'male_students' => $students->filter(fn($s) => strtolower($s->gender ?? '') === 'male')->count(),
+                'female_students' => $students->filter(fn($s) => strtolower($s->gender ?? '') === 'female')->count(),
                 'location_stats' => $locationStats,
                 'generated_at' => now()->format('Y-m-d H:i:s'),
                 'filters_applied' => $request->only(['start_date', 'end_date', 'location', 'course_id'])
             ];
 
-            if ($request->input('format') === 'json') {
-                return response()->json([
-                    'success' => true,
-                    'data' => $report
-                ]);
-            }
-
-            // For PDF/Excel, you would implement export logic here
             return response()->json([
                 'success' => true,
-                'message' => 'Report generated successfully.',
                 'data' => $report
             ]);
 
@@ -129,7 +141,7 @@ class ReportingController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate report.'
+                'message' => 'Failed to generate report: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -147,8 +159,8 @@ class ReportingController extends Controller
             $request->validate([
                 'course_id' => 'nullable|exists:courses,course_id',
                 'location' => 'nullable|string|in:Welisara,Moratuwa,Peradeniya',
-                'semester' => 'nullable|string|in:1,2,3,4,5,6',
-                'format' => 'nullable|string|in:json,pdf,excel'
+                'semester' => 'nullable|string|max:50',
+                'format' => 'nullable|string|in:json,pdf,excel,csv'
             ]);
 
             $query = CourseRegistration::with(['student', 'course', 'intake']);
@@ -162,29 +174,38 @@ class ReportingController extends Controller
             }
 
             $registrations = $query->get();
+            $semesterFilter = $request->input('semester');
 
             // Calculate performance metrics
             $courseStats = $registrations->groupBy('course_id')
-                                       ->map(function ($group) {
+                                       ->map(function ($group) use ($semesterFilter) {
                                            $course = $group->first()->course;
                                            $totalStudents = $group->count();
+                                           $studentIds = $group->pluck('student_id')->filter();
                                            
-                                           // Get attendance data
-                                           $attendanceData = Attendance::whereIn('student_id', $group->pluck('student_id'))
-                                                                      ->where('course_id', $course->course_id)
-                                                                      ->get();
+                                           // Get attendance data (status is boolean: 1=Present, 0=Absent)
+                                           $attendanceQuery = Attendance::whereIn('student_id', $studentIds)
+                                                                      ->where('course_id', $course->course_id);
+                                           if ($semesterFilter) {
+                                               $attendanceQuery->where('semester', $semesterFilter);
+                                           }
+                                           $attendanceData = $attendanceQuery->get();
                                            
+                                           $presentCount = $attendanceData->filter(fn($a) => (bool)$a->status)->count();
                                            $avgAttendance = $attendanceData->count() > 0 
-                                               ? round(($attendanceData->where('status', 'Present')->count() / $attendanceData->count()) * 100, 2)
+                                               ? round(($presentCount / $attendanceData->count()) * 100, 2)
                                                : 0;
 
-                                           // Get exam results
-                                           $examData = ExamResult::whereIn('student_id', $group->pluck('student_id'))
-                                                                ->where('course_id', $course->course_id)
-                                                                ->get();
+                                           // Get exam results using marks column
+                                           $examQuery = ExamResult::whereIn('student_id', $studentIds)
+                                                                ->where('course_id', $course->course_id);
+                                           if ($semesterFilter) {
+                                               $examQuery->where('semester', $semesterFilter);
+                                           }
+                                           $examData = $examQuery->get();
 
                                            $avgScore = $examData->count() > 0 
-                                               ? round($examData->avg('score'), 2)
+                                               ? round((float)$examData->avg(fn($e) => $e->marks ?? $e->score ?? 0), 2)
                                                : 0;
 
                                            return [
@@ -196,9 +217,10 @@ class ReportingController extends Controller
                                                'completion_rate' => $this->calculateCompletionRate($group),
                                                'students' => $group->map(function ($reg) {
                                                    return [
-                                                       'student_id' => $reg->student->student_id,
-                                                       'student_name' => $reg->student->full_name,
-                                                       'registration_date' => $reg->created_at->format('Y-m-d'),
+                                                       'student_id' => $reg->student->student_id ?? $reg->student_id,
+                                                       'student_name' => $reg->student->full_name ?? 'N/A',
+                                                       'intake_name' => $reg->intake->batch ?? ($reg->intake->intake_name ?? 'N/A'),
+                                                       'registration_date' => optional($reg->created_at)->format('Y-m-d'),
                                                        'status' => $reg->status ?? 'Active'
                                                    ];
                                                })
@@ -213,6 +235,11 @@ class ReportingController extends Controller
                 'filters_applied' => $request->only(['course_id', 'location', 'semester'])
             ];
 
+            $format = strtolower($request->input('format', 'json'));
+            if (in_array($format, ['csv', 'excel', 'pdf'])) {
+                return $this->exportPerformanceCsv($courseStats, "course_performance_" . now()->format('Ymd_His') . ".csv");
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => $report
@@ -226,7 +253,7 @@ class ReportingController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate report.'
+                'message' => 'Failed to generate report: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -246,7 +273,8 @@ class ReportingController extends Controller
                 'end_date' => 'nullable|date|after_or_equal:start_date',
                 'course_id' => 'nullable|exists:courses,course_id',
                 'location' => 'nullable|string|in:Welisara,Moratuwa,Peradeniya',
-                'format' => 'nullable|string|in:json,pdf,excel'
+                'semester' => 'nullable|string|max:50',
+                'format' => 'nullable|string|in:json,pdf,excel,csv'
             ]);
 
             $query = Attendance::with(['student', 'course']);
@@ -264,14 +292,17 @@ class ReportingController extends Controller
             if ($request->filled('location')) {
                 $query->where('location', $request->location);
             }
+            if ($request->filled('semester')) {
+                $query->where('semester', $request->semester);
+            }
 
             $attendance = $query->get();
 
-            // Calculate attendance statistics
+            // Calculate attendance statistics based on live boolean status (1/true=Present, 0/false=Absent)
             $totalSessions = $attendance->count();
-            $presentSessions = $attendance->where('status', 'Present')->count();
-            $absentSessions = $attendance->where('status', 'Absent')->count();
-            $lateSessions = $attendance->where('status', 'Late')->count();
+            $presentSessions = $attendance->filter(fn($a) => (bool)$a->status)->count();
+            $absentSessions = $attendance->filter(fn($a) => !(bool)$a->status)->count();
+            $lateSessions = 0;
 
             $attendanceRate = $totalSessions > 0 ? round(($presentSessions / $totalSessions) * 100, 2) : 0;
 
@@ -280,17 +311,16 @@ class ReportingController extends Controller
                                     ->map(function ($group) {
                                         $course = $group->first()->course;
                                         $total = $group->count();
-                                        $present = $group->where('status', 'Present')->count();
-                                        $absent = $group->where('status', 'Absent')->count();
-                                        $late = $group->where('status', 'Late')->count();
+                                        $present = $group->filter(fn($a) => (bool)$a->status)->count();
+                                        $absent = $group->filter(fn($a) => !(bool)$a->status)->count();
 
                                         return [
-                                            'course_id' => $course->course_id,
-                                            'course_name' => $course->course_name,
+                                            'course_id' => $course->course_id ?? 'N/A',
+                                            'course_name' => $course->course_name ?? 'N/A',
                                             'total_sessions' => $total,
                                             'present' => $present,
                                             'absent' => $absent,
-                                            'late' => $late,
+                                            'late' => 0,
                                             'attendance_rate' => $total > 0 ? round(($present / $total) * 100, 2) : 0
                                         ];
                                     });
@@ -300,17 +330,16 @@ class ReportingController extends Controller
                                      ->map(function ($group) {
                                          $student = $group->first()->student;
                                          $total = $group->count();
-                                         $present = $group->where('status', 'Present')->count();
-                                         $absent = $group->where('status', 'Absent')->count();
-                                         $late = $group->where('status', 'Late')->count();
+                                         $present = $group->filter(fn($a) => (bool)$a->status)->count();
+                                         $absent = $group->filter(fn($a) => !(bool)$a->status)->count();
 
                                          return [
-                                             'student_id' => $student->student_id,
-                                             'student_name' => $student->full_name,
+                                             'student_id' => $student->student_id ?? 'N/A',
+                                             'student_name' => $student->full_name ?? 'N/A',
                                              'total_sessions' => $total,
                                              'present' => $present,
                                              'absent' => $absent,
-                                             'late' => $late,
+                                             'late' => 0,
                                              'attendance_rate' => $total > 0 ? round(($present / $total) * 100, 2) : 0
                                          ];
                                      });
@@ -324,8 +353,13 @@ class ReportingController extends Controller
                 'course_statistics' => $courseStats,
                 'student_statistics' => $studentStats,
                 'generated_at' => now()->format('Y-m-d H:i:s'),
-                'filters_applied' => $request->only(['start_date', 'end_date', 'course_id', 'location'])
+                'filters_applied' => $request->only(['start_date', 'end_date', 'course_id', 'location', 'semester'])
             ];
+
+            $format = strtolower($request->input('format', 'json'));
+            if (in_array($format, ['csv', 'excel', 'pdf'])) {
+                return $this->exportAttendanceCsv($attendance, "attendance_report_" . now()->format('Ymd_His') . ".csv");
+            }
 
             return response()->json([
                 'success' => true,
@@ -340,7 +374,7 @@ class ReportingController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate report.'
+                'message' => 'Failed to generate report: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -359,11 +393,12 @@ class ReportingController extends Controller
                 'start_date' => 'nullable|date',
                 'end_date' => 'nullable|date|after_or_equal:start_date',
                 'location' => 'nullable|string|in:Welisara,Moratuwa,Peradeniya',
-                'format' => 'nullable|string|in:json,pdf,excel'
+                'course_id' => 'nullable|exists:courses,course_id',
+                'format' => 'nullable|string|in:json,pdf,excel,csv'
             ]);
 
-            // Get course registrations with payment information
-            $query = CourseRegistration::with(['student', 'course', 'intake']);
+            // Query CourseRegistration with related payments
+            $query = CourseRegistration::with(['student', 'course', 'intake', 'payments']);
 
             if ($request->filled('start_date')) {
                 $query->whereDate('created_at', '>=', $request->start_date);
@@ -374,51 +409,68 @@ class ReportingController extends Controller
             if ($request->filled('location')) {
                 $query->where('location', $request->location);
             }
+            if ($request->filled('course_id')) {
+                $query->where('course_id', $request->course_id);
+            }
 
             $registrations = $query->get();
 
-            // Calculate financial metrics
-            $totalRevenue = $registrations->sum('payment_amount');
+            // Calculate revenue per registration from PaymentDetail records or fallback to registration_fee
+            $registrationRevenues = $registrations->map(function ($reg) {
+                $paymentAmount = (float) $reg->payments->sum('amount');
+                $registrationFee = (float) ($reg->registration_fee ?? 0);
+                $revenue = $paymentAmount > 0 ? $paymentAmount : $registrationFee;
+
+                return [
+                    'registration' => $reg,
+                    'revenue' => $revenue,
+                ];
+            });
+
+            // Financial metrics
+            $totalRevenue = $registrationRevenues->sum('revenue');
             $totalStudents = $registrations->count();
             $averagePayment = $totalStudents > 0 ? round($totalRevenue / $totalStudents, 2) : 0;
 
             // Group by course
-            $courseRevenue = $registrations->groupBy('course_id')
-                                         ->map(function ($group) {
-                                             $course = $group->first()->course;
-                                             $revenue = $group->sum('payment_amount');
-                                             $students = $group->count();
+            $courseRevenue = $registrationRevenues->groupBy(function ($item) {
+                return $item['registration']->course_id;
+            })->map(function ($group) {
+                $course = $group->first()['registration']->course;
+                $revenue = $group->sum('revenue');
+                $students = $group->count();
 
-                                             return [
-                                                 'course_id' => $course->course_id,
-                                                 'course_name' => $course->course_name,
-                                                 'total_revenue' => $revenue,
-                                                 'student_count' => $students,
-                                                 'average_payment' => $students > 0 ? round($revenue / $students, 2) : 0
-                                             ];
-                                         });
+                return [
+                    'course_id' => $course->course_id ?? 'N/A',
+                    'course_name' => $course->course_name ?? 'N/A',
+                    'total_revenue' => $revenue,
+                    'student_count' => $students,
+                    'average_payment' => $students > 0 ? round($revenue / $students, 2) : 0
+                ];
+            });
 
             // Group by location
-            $locationRevenue = $registrations->groupBy('location')
-                                           ->map(function ($group) {
-                                               $revenue = $group->sum('payment_amount');
-                                               $students = $group->count();
+            $locationRevenue = $registrationRevenues->groupBy(function ($item) {
+                return $item['registration']->location ?? 'Unknown';
+            })->map(function ($group, $loc) {
+                $revenue = $group->sum('revenue');
+                $students = $group->count();
 
-                                               return [
-                                                   'location' => $group->first()->location,
-                                                   'total_revenue' => $revenue,
-                                                   'student_count' => $students,
-                                                   'average_payment' => $students > 0 ? round($revenue / $students, 2) : 0
-                                               ];
-                                           });
+                return [
+                    'location' => $loc,
+                    'total_revenue' => $revenue,
+                    'student_count' => $students,
+                    'average_payment' => $students > 0 ? round($revenue / $students, 2) : 0
+                ];
+            });
 
             // Monthly revenue breakdown
-            $monthlyRevenue = $registrations->groupBy(function ($reg) {
-                return $reg->created_at->format('Y-m');
-            })->map(function ($group) {
+            $monthlyRevenue = $registrationRevenues->groupBy(function ($item) {
+                return optional($item['registration']->created_at)->format('Y-m') ?? 'Unknown';
+            })->map(function ($group, $month) {
                 return [
-                    'month' => $group->first()->created_at->format('Y-m'),
-                    'revenue' => $group->sum('payment_amount'),
+                    'month' => $month,
+                    'revenue' => $group->sum('revenue'),
                     'students' => $group->count()
                 ];
             });
@@ -431,8 +483,13 @@ class ReportingController extends Controller
                 'location_revenue' => $locationRevenue,
                 'monthly_revenue' => $monthlyRevenue,
                 'generated_at' => now()->format('Y-m-d H:i:s'),
-                'filters_applied' => $request->only(['start_date', 'end_date', 'location'])
+                'filters_applied' => $request->only(['start_date', 'end_date', 'location', 'course_id'])
             ];
+
+            $format = strtolower($request->input('format', 'json'));
+            if (in_array($format, ['csv', 'excel', 'pdf'])) {
+                return $this->exportFinancialCsv($registrationRevenues, "financial_report_" . now()->format('Ymd_His') . ".csv");
+            }
 
             return response()->json([
                 'success' => true,
@@ -447,7 +504,7 @@ class ReportingController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate report.'
+                'message' => 'Failed to generate report: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -466,7 +523,7 @@ class ReportingController extends Controller
                 'course_id' => 'nullable|exists:courses,course_id',
                 'location' => 'nullable|string|in:Welisara,Moratuwa,Peradeniya',
                 'semester' => 'nullable|string|in:1,2,3,4,5,6',
-                'format' => 'nullable|string|in:json,pdf,excel'
+                'format' => 'nullable|string|in:json,pdf,excel,csv'
             ]);
 
             $query = ModuleManagement::with(['student', 'course', 'module', 'intake']);
@@ -491,14 +548,14 @@ class ReportingController extends Controller
                                          $course = $group->first()->course;
 
                                          return [
-                                             'module_id' => $module->module_id,
-                                             'module_name' => $module->module_name,
-                                             'course_name' => $course->course_name,
+                                             'module_id' => $module->module_id ?? $group->first()->module_id,
+                                             'module_name' => $module->module_name ?? 'N/A',
+                                             'course_name' => $course->course_name ?? 'N/A',
                                              'student_count' => $group->count(),
                                              'students' => $group->map(function ($assignment) {
                                                  return [
-                                                     'student_id' => $assignment->student->student_id,
-                                                     'student_name' => $assignment->student->full_name,
+                                                     'student_id' => $assignment->student->student_id ?? $assignment->student_id,
+                                                     'student_name' => $assignment->student->full_name ?? 'N/A',
                                                      'semester' => $assignment->semester
                                                  ];
                                              })
@@ -526,6 +583,11 @@ class ReportingController extends Controller
                 'filters_applied' => $request->only(['course_id', 'location', 'semester'])
             ];
 
+            $format = strtolower($request->input('format', 'json'));
+            if (in_array($format, ['csv', 'excel', 'pdf'])) {
+                return $this->exportModuleCsv($assignments, "module_report_" . now()->format('Ymd_His') . ".csv");
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => $report
@@ -539,13 +601,13 @@ class ReportingController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate report.'
+                'message' => 'Failed to generate report: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Export report to different formats
+     * Export report to actual CSV file with proper MIME type
      */
     public function exportReport(Request $request)
     {
@@ -556,52 +618,34 @@ class ReportingController extends Controller
         try {
             $request->validate([
                 'report_type' => 'required|string|in:enrollment,performance,attendance,financial,module',
-                'format' => 'required|string|in:pdf,excel,csv',
+                'format' => 'nullable|string|in:pdf,excel,csv',
                 'filters' => 'nullable|array'
             ]);
 
             $reportType = $request->input('report_type');
-            $format = $request->input('format');
+            $format = $request->input('format', 'csv');
             $filters = $request->input('filters', []);
+            $filters['format'] = $format;
 
-            // Generate report based on type
+            $subRequest = new Request($filters);
+
             switch ($reportType) {
                 case 'enrollment':
-                    $data = $this->generateStudentEnrollmentReport(new Request($filters));
-                    break;
+                    return $this->generateStudentEnrollmentReport($subRequest);
                 case 'performance':
-                    $data = $this->generateCoursePerformanceReport(new Request($filters));
-                    break;
+                    return $this->generateCoursePerformanceReport($subRequest);
                 case 'attendance':
-                    $data = $this->generateAttendanceReport(new Request($filters));
-                    break;
+                    return $this->generateAttendanceReport($subRequest);
                 case 'financial':
-                    $data = $this->generateFinancialReport(new Request($filters));
-                    break;
+                    return $this->generateFinancialReport($subRequest);
                 case 'module':
-                    $data = $this->generateModuleAssignmentReport(new Request($filters));
-                    break;
+                    return $this->generateModuleAssignmentReport($subRequest);
                 default:
                     return response()->json([
                         'success' => false,
                         'message' => 'Invalid report type.'
                     ], 400);
             }
-
-            if (!$data->getData()->success) {
-                return $data;
-            }
-
-            $reportData = $data->getData()->data;
-
-            // For now, return JSON. In a real implementation, you would generate PDF/Excel/CSV
-            return response()->json([
-                'success' => true,
-                'message' => 'Report exported successfully.',
-                'data' => $reportData,
-                'format' => $format,
-                'filename' => "{$reportType}_report_" . now()->format('Y-m-d_H-i-s') . ".{$format}"
-            ]);
 
         } catch (\Exception $e) {
             Log::error('Report export failed', [
@@ -611,9 +655,142 @@ class ReportingController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to export report.'
+                'message' => 'Failed to export report: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * CSV Stream Helpers
+     */
+    private function exportEnrollmentCsv($students, string $filename)
+    {
+        $callback = function () use ($students) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Student ID', 'Full Name', 'Email', 'Gender', 'Location', 'Registered Date', 'Course', 'Intake']);
+            foreach ($students as $student) {
+                $courses = $student->courseRegistrations->map(fn($r) => $r->course->course_name ?? 'N/A')->join('; ');
+                $intakes = $student->courseRegistrations->map(fn($r) => $r->intake->batch ?? ($r->intake->intake_name ?? 'N/A'))->join('; ');
+                fputcsv($out, [
+                    $student->student_id,
+                    $student->full_name,
+                    $student->email,
+                    $student->gender,
+                    $student->institute_location,
+                    optional($student->created_at)->format('Y-m-d'),
+                    $courses ?: 'N/A',
+                    $intakes ?: 'N/A'
+                ]);
+            }
+            fclose($out);
+        };
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
+    }
+
+    private function exportPerformanceCsv($courseStats, string $filename)
+    {
+        $callback = function () use ($courseStats) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Course ID', 'Course Name', 'Total Students', 'Avg Attendance (%)', 'Avg Exam Score', 'Completion Rate (%)']);
+            foreach ($courseStats as $stat) {
+                fputcsv($out, [
+                    $stat['course_id'],
+                    $stat['course_name'],
+                    $stat['total_students'],
+                    $stat['average_attendance'],
+                    $stat['average_exam_score'],
+                    $stat['completion_rate']
+                ]);
+            }
+            fclose($out);
+        };
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
+    }
+
+    private function exportAttendanceCsv($attendance, string $filename)
+    {
+        $callback = function () use ($attendance) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Date', 'Student ID', 'Student Name', 'Course', 'Location', 'Semester', 'Status']);
+            foreach ($attendance as $record) {
+                fputcsv($out, [
+                    optional($record->date)->format('Y-m-d') ?: ($record->date ?? 'N/A'),
+                    $record->student->student_id ?? $record->student_id,
+                    $record->student->full_name ?? 'N/A',
+                    $record->course->course_name ?? 'N/A',
+                    $record->location ?? 'N/A',
+                    $record->semester ?? 'N/A',
+                    (bool)$record->status ? 'Present' : 'Absent'
+                ]);
+            }
+            fclose($out);
+        };
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
+    }
+
+    private function exportFinancialCsv($registrationRevenues, string $filename)
+    {
+        $callback = function () use ($registrationRevenues) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Registration ID', 'Student ID', 'Student Name', 'Course', 'Intake', 'Location', 'Registered Date', 'Revenue (LKR)']);
+            foreach ($registrationRevenues as $item) {
+                $reg = $item['registration'];
+                fputcsv($out, [
+                    $reg->course_registration_id ?? $reg->id,
+                    $reg->student->student_id ?? $reg->student_id,
+                    $reg->student->full_name ?? 'N/A',
+                    $reg->course->course_name ?? 'N/A',
+                    $reg->intake->batch ?? ($reg->intake->intake_name ?? 'N/A'),
+                    $reg->location ?? 'N/A',
+                    optional($reg->created_at)->format('Y-m-d'),
+                    number_format($item['revenue'], 2, '.', '')
+                ]);
+            }
+            fclose($out);
+        };
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
+    }
+
+    private function exportModuleCsv($assignments, string $filename)
+    {
+        $callback = function () use ($assignments) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Assignment ID', 'Student ID', 'Student Name', 'Course', 'Module ID', 'Module Name', 'Semester', 'Location']);
+            foreach ($assignments as $assignment) {
+                fputcsv($out, [
+                    $assignment->id,
+                    $assignment->student->student_id ?? $assignment->student_id,
+                    $assignment->student->full_name ?? 'N/A',
+                    $assignment->course->course_name ?? 'N/A',
+                    $assignment->module->module_id ?? $assignment->module_id,
+                    $assignment->module->module_name ?? 'N/A',
+                    $assignment->semester,
+                    $assignment->location ?? 'N/A'
+                ]);
+            }
+            fclose($out);
+        };
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
     }
 
     /**
@@ -622,7 +799,7 @@ class ReportingController extends Controller
     private function calculateCompletionRate($registrations)
     {
         $total = $registrations->count();
-        $completed = $registrations->where('status', 'Completed')->count();
+        $completed = $registrations->filter(fn($r) => in_array(strtolower($r->status ?? ''), ['completed', 'graduated']))->count();
         
         return $total > 0 ? round(($completed / $total) * 100, 2) : 0;
     }
