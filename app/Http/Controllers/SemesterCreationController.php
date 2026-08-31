@@ -226,35 +226,89 @@ class SemesterCreationController extends Controller
     public function getFilteredModules(Request $request)
     {
         $request->validate([
-            'course_id' => 'required|exists:courses,course_id',
-            'location' => 'required|string',
-            'intake_id' => 'required|exists:intakes,intake_id',
-            'semester' => 'required|integer',
+            'course_id'  => 'required|exists:courses,course_id',
+            'location'   => 'required|string',
+            'intake_id'  => 'required|exists:intakes,intake_id',
+            'semester'   => 'required|integer|exists:semesters,id',
         ]);
 
+        $courseId  = (int) $request->course_id;
+        $intakeId  = (int) $request->intake_id;
+        $semesterId = (int) $request->semester;
+
         try {
-            // Fetch all modules with module_code included
+            // Validate that the requested semester belongs to the given course and intake,
+            // preventing cross-cohort module leakage.
+            $semester = \DB::table('semesters')
+                ->where('id', $semesterId)
+                ->where('course_id', $courseId)
+                ->where('intake_id', $intakeId)
+                ->first();
+
+            if (!$semester) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The selected semester does not belong to the specified course and intake.',
+                    'modules' => [],
+                ], 422);
+            }
+
+            // Primary path: retrieve modules assigned to this specific semester via semester_module.
+            // This is the authoritative source for cohort-specific module lists.
             $modules = \DB::table('modules')
-                ->select('module_id', 'module_name', 'module_code', 'module_type', 'credits')
-                ->orderBy('module_name')
+                ->join('semester_module', 'modules.module_id', '=', 'semester_module.module_id')
+                ->where('semester_module.semester_id', $semesterId)
+                ->select(
+                    'modules.module_id',
+                    'modules.module_name',
+                    'modules.module_code',
+                    'modules.module_type',
+                    'modules.credits'
+                )
+                ->orderBy('modules.module_name')
+                ->distinct()
                 ->get()
-                ->map(function ($module) {
-                    return [
-                        'module_id'   => $module->module_id,
-                        'module_name' => $module->module_name,
-                        'module_code' => $module->module_code, // ✅ ensure module_code is included
-                        'module_type' => $module->module_type,
-                        'credits'     => $module->credits,
-                    ];
-                });
+                ->map(fn ($m) => [
+                    'module_id'   => $m->module_id,
+                    'module_name' => $m->module_name,
+                    'module_code' => $m->module_code,
+                    'module_type' => $m->module_type,
+                    'credits'     => $m->credits,
+                ]);
+
+            // Fallback: if no semester_module rows exist yet for this semester, fall back to
+            // course_modules filtered by course_id (and semester number when populated).
+            if ($modules->isEmpty()) {
+                $modules = \DB::table('modules')
+                    ->join('course_modules', 'modules.module_id', '=', 'course_modules.module_id')
+                    ->where('course_modules.course_id', $courseId)
+                    ->select(
+                        'modules.module_id',
+                        'modules.module_name',
+                        'modules.module_code',
+                        'modules.module_type',
+                        'modules.credits'
+                    )
+                    ->orderBy('modules.module_name')
+                    ->distinct()
+                    ->get()
+                    ->map(fn ($m) => [
+                        'module_id'   => $m->module_id,
+                        'module_name' => $m->module_name,
+                        'module_code' => $m->module_code,
+                        'module_type' => $m->module_type,
+                        'credits'     => $m->credits,
+                    ]);
+            }
 
             return response()->json(['modules' => $modules]);
 
         } catch (\Exception $e) {
-            \Log::error('Error fetching modules: ' . $e->getMessage());
+            \Log::error('Error fetching filtered modules: ' . $e->getMessage());
             return response()->json(['modules' => []]);
         }
     }
+
 
 
     public function getCoursesByLocation(Request $request)
