@@ -72,19 +72,20 @@ class StudentViewController extends Controller
         }
 
         if ($request->filled('student_id')) {
-            $query->where('student_id', $request->student_id)
+            $query->where(function ($q) use ($request) {
+                $q->where('student_id', $request->student_id)
                   ->orWhere('id_value', $request->student_id);
-        }
-
-        if ($request->filled('course_id')) {
-            $query->whereHas('courseRegistrations', function($q) use ($request) {
-                $q->where('course_id', $request->course_id);
             });
         }
 
-        if ($request->filled('intake_id')) {
-            $query->whereHas('courseRegistrations', function($q) use ($request) {
-                $q->where('intake_id', $request->intake_id);
+        if ($request->filled('course_id') || $request->filled('intake_id')) {
+            $query->whereHas('courseRegistrations', function ($q) use ($request) {
+                if ($request->filled('course_id')) {
+                    $q->where('course_id', $request->course_id);
+                }
+                if ($request->filled('intake_id')) {
+                    $q->where('intake_id', $request->intake_id);
+                }
             });
         }
 
