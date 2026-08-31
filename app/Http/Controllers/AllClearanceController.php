@@ -64,9 +64,11 @@ class AllClearanceController extends Controller
         $approvedRequests = $allClearanceRequests->where('status', ClearanceRequest::STATUS_APPROVED);
         $rejectedRequests = $allClearanceRequests->where('status', ClearanceRequest::STATUS_REJECTED);
 
-        if ($request->has('student_id')) {
-            $student = Student::where('student_id', $request->student_id)
-                ->orWhere('nic', $request->student_id)
+        $student = null;
+        if ($request->filled('student_id')) {
+            $identifier = $request->input('student_id');
+            $student = Student::where('student_id', $identifier)
+                ->orWhere('id_value', $identifier)
                 ->first();
         }
 
@@ -178,8 +180,10 @@ class AllClearanceController extends Controller
 
     public function getRegisteredCourses(Request $request)
     {
-        $nic     = $request->query('nic');
-        $student = \App\Models\Student::where('id_value', $nic)->first();
+        $identifier = $request->query('nic') ?? $request->query('id_value') ?? $request->query('student_id');
+        $student = \App\Models\Student::where('id_value', $identifier)
+            ->orWhere('student_id', $identifier)
+            ->first();
         if (!$student) {
             return response()->json(['success' => false, 'courses' => [], 'message' => 'Student not found']);
         }
@@ -200,10 +204,12 @@ class AllClearanceController extends Controller
 
     public function getStudentCourseDetails(Request $request)
     {
-        $nic      = $request->query('nic');
-        $courseId = $request->query('course_id');
-        $student  = \App\Models\Student::where('id_value', $nic)->first();
-        $course   = \App\Models\Course::find($courseId);
+        $identifier = $request->query('nic') ?? $request->query('id_value') ?? $request->query('student_id');
+        $courseId   = $request->query('course_id');
+        $student    = \App\Models\Student::where('id_value', $identifier)
+            ->orWhere('student_id', $identifier)
+            ->first();
+        $course     = \App\Models\Course::find($courseId);
 
         if (!$student || !$course) {
             return response()->json(['success' => false, 'message' => 'Student or course not found']);
