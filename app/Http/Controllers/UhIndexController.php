@@ -49,19 +49,32 @@ class UhIndexController extends Controller
     public function getStudentsByIntake(Request $request)
     {
         try {
-            $intakeId = (int) $request->input('intake_id');
+            $request->validate([
+                'intake_id' => 'required|integer',
+                'course_id' => 'nullable|integer',
+            ]);
 
-            // Only students who are registered in SR for this intake
-            $rows = \DB::table('semester_registrations as sr')
+            $intakeId = (int) $request->input('intake_id');
+            $courseId = $request->filled('course_id') ? (int) $request->input('course_id') : null;
+
+            // Only students who are registered in SR for this intake and course
+            $query = \DB::table('semester_registrations as sr')
                 ->join('students as s', 's.student_id', '=', 'sr.student_id')
-                // IMPORTANT: table name is singular in your DB: course_registration
-                ->leftJoin('course_registration as cr', function ($j) use ($intakeId) {
+                ->leftJoin('course_registration as cr', function ($j) use ($intakeId, $courseId) {
                     $j->on('cr.student_id', '=', 'sr.student_id')
                         ->where('cr.intake_id', '=', $intakeId);
+                    if ($courseId) {
+                        $j->where('cr.course_id', '=', $courseId);
+                    }
                 })
                 ->where('sr.intake_id', $intakeId)
-                ->where('sr.status', 'registered') // matches your enum value
-                ->select([
+                ->where('sr.status', 'registered');
+
+            if ($courseId) {
+                $query->where('sr.course_id', $courseId);
+            }
+
+            $rows = $query->select([
                     'sr.student_id',
                     'sr.intake_id',
                     's.full_name as name',
@@ -70,7 +83,7 @@ class UhIndexController extends Controller
                 ->distinct()
                 ->get();
 
-            \Log::info('UH students fetched', ['intake_id' => $intakeId, 'count' => $rows->count()]);
+            \Log::info('UH students fetched', ['intake_id' => $intakeId, 'course_id' => $courseId, 'count' => $rows->count()]);
 
             return response()->json(['students' => $rows]);
         } catch (\Throwable $e) {
@@ -84,35 +97,53 @@ class UhIndexController extends Controller
     {
         try {
             $request->validate([
-                'students'                 => 'required|array',
-                'students.*.student_id'    => 'required|string',
+                'course_id'                  => 'required|integer|exists:courses,course_id',
+                'intake_id'                  => 'required|integer|exists:intakes,intake_id',
+                'students'                   => 'required|array',
+                'students.*.student_id'      => 'required',
                 'students.*.uh_index_number' => 'nullable|string|max:255',
             ]);
+
+            $courseId = (int) $request->input('course_id');
+            $intakeId = (int) $request->input('intake_id');
 
             DB::beginTransaction();
 
             $updated = 0;
             $errors = [];
             foreach ($request->input('students') as $row) {
-                $reg = CourseRegistration::where('student_id', $row['student_id'])->first();
-                if ($reg) {
-                    $reg->update(['uh_index_number' => $row['uh_index_number'] ?? '']);
+                $studentId = $row['student_id'];
+                $uhIndexNumber = $row['uh_index_number'] ?? '';
+
+                // Strictly scope to the selected course and intake for this student
+                $regs = CourseRegistration::where('student_id', $studentId)
+                    ->where('course_id', $courseId)
+                    ->where('intake_id', $intakeId)
+                    ->get();
+
+                if ($regs->count() === 1) {
+                    $regs->first()->update([
+                        'uh_index_number' => $uhIndexNumber,
+                    ]);
                     $updated++;
+                } elseif ($regs->count() > 1) {
+                    $errors[] = "Multiple course registrations found for student {$studentId} in this course and intake. Update rejected to prevent ambiguity.";
                 } else {
-                    $errors[] = "No course registration for student {$row['student_id']}";
+                    $errors[] = "No course registration found for student {$studentId} in the selected course and intake.";
                 }
             }
 
-            DB::commit();
-
-            if ($errors) {
+            if (!empty($errors)) {
+                DB::rollBack();
                 return response()->json([
                     'success' => false,
                     'message' => 'Some updates failed: ' . implode(', ', $errors),
-                    'updated_count' => $updated,
+                    'updated_count' => 0,
                     'errors' => $errors
-                ]);
+                ], 422);
             }
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,

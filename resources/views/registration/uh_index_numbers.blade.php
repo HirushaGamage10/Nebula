@@ -124,10 +124,11 @@ $(function () {
   // 4) students for intake (ONLY Registered) + add Terminate button
   $('#intakeSelect').on('change', function(){
     const intake_id=$(this).val();
+    const course_id=$('#courseSelect').val();
     $('#studentsSection').hide();
     if(!intake_id) return;
 
-    $.post("{{ route('uh.index.students') }}",{intake_id,_token:'{{ csrf_token() }}'},function(res){
+    $.post("{{ route('uh.index.students') }}",{intake_id,course_id,_token:'{{ csrf_token() }}'},function(res){
       const $tb=$('#studentsTableBody').empty();
       if(res.students && res.students.length){
         res.students.forEach(st=>{
@@ -180,6 +181,14 @@ $(function () {
   // 5) save IDs
   $('#uh-index-save-form').on('submit', function(e){
     e.preventDefault();
+    const course_id=$('#courseSelect').val();
+    const intake_id=$('#intakeSelect').val();
+
+    if(!course_id || !intake_id){
+      showErrorMessage('Please select both Course and Intake before saving.');
+      return;
+    }
+
     const students=[];
     $('#studentsTableBody tr').each(function(){
       const student_id=$(this).data('student-id');
@@ -187,7 +196,7 @@ $(function () {
       if(student_id) students.push({student_id, uh_index_number});
     });
 
-    $.post("{{ route('uh.index.save') }}",{students,_token:'{{ csrf_token() }}'},function(res){
+    $.post("{{ route('uh.index.save') }}",{course_id,intake_id,students,_token:'{{ csrf_token() }}'},function(res){
       if(res.success) showSuccessMessage(res.message || 'Saved.');
       else showErrorMessage(res.message || 'Failed to save.');
     }).fail((xhr)=>{
