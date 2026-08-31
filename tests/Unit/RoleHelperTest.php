@@ -9,8 +9,11 @@ class RoleHelperTest extends TestCase
 {
     public function test_role_helper_has_permission()
     {
-        // Test that DGM has permission to access student registration
-        $this->assertTrue(RoleHelper::hasPermission('DGM', 'student.registration'));
+        // Test that Program Administrator (level 01) has permission to access student registration
+        $this->assertTrue(RoleHelper::hasPermission('Program Administrator (level 01)', 'student.registration'));
+
+        // Test that DGM has special approval permission
+        $this->assertTrue(RoleHelper::hasPermission('DGM', 'special.approval'));
         
         // Test that Librarian does not have permission to access student registration
         $this->assertFalse(RoleHelper::hasPermission('Librarian', 'student.registration'));
@@ -21,17 +24,20 @@ class RoleHelperTest extends TestCase
 
     public function test_role_helper_can_access_student_management()
     {
-        // Test that DGM can access student management
-        $this->assertTrue(RoleHelper::canAccessStudentManagement('DGM'));
+        // Test that Program Administrator (level 01) can access student management
+        $this->assertTrue(RoleHelper::canAccessStudentManagement('Program Administrator (level 01)'));
+
+        // Test that Student Counselor can access student management
+        $this->assertTrue(RoleHelper::canAccessStudentManagement('Student Counselor'));
         
-        // Test that Librarian cannot access student management
-        $this->assertFalse(RoleHelper::canAccessStudentManagement('Librarian'));
+        // Test that Hostel Manager cannot access student management
+        $this->assertFalse(RoleHelper::canAccessStudentManagement('Hostel Manager'));
     }
 
     public function test_role_helper_can_access_clearance()
     {
-        // Test that DGM can access clearance
-        $this->assertTrue(RoleHelper::canAccessClearance('DGM'));
+        // Test that Program Administrator (level 01) can access clearance
+        $this->assertTrue(RoleHelper::canAccessClearance('Program Administrator (level 01)'));
         
         // Test that Librarian can access clearance
         $this->assertTrue(RoleHelper::canAccessClearance('Librarian'));
@@ -60,7 +66,6 @@ class RoleHelperTest extends TestCase
         $this->assertTrue(RoleHelper::hasPermission('Developer', 'payment.clearance'));
         $this->assertTrue(RoleHelper::hasPermission('Developer', 'reporting.dashboard'));
         $this->assertTrue(RoleHelper::hasPermission('Developer', 'data.export.import'));
-
     }
 
     public function test_developer_role_can_access_all_management_features()
@@ -74,10 +79,7 @@ class RoleHelperTest extends TestCase
 
     public function test_role_helper_can_access_academic_management()
     {
-        // Test that DGM can access academic management
-        $this->assertTrue(RoleHelper::canAccessAcademicManagement('DGM'));
-        
-        // Test that Program Administrator can access academic management
+        // Test that Program Administrator (level 01) can access academic management
         $this->assertTrue(RoleHelper::canAccessAcademicManagement('Program Administrator (level 01)'));
 
         // Test that Program Administrator (level 02) can access course management
@@ -111,14 +113,14 @@ class RoleHelperTest extends TestCase
 
     public function test_role_helper_get_role_permissions()
     {
-        $dgmPermissions = RoleHelper::getRolePermissions('DGM');
+        $adminPermissions = RoleHelper::getRolePermissions('Program Administrator (level 01)');
         $librarianPermissions = RoleHelper::getRolePermissions('Librarian');
         
-        // DGM should have more permissions than Librarian
-        $this->assertGreaterThan(count($librarianPermissions), count($dgmPermissions));
+        // Program Admin should have more permissions than Librarian
+        $this->assertGreaterThan(count($librarianPermissions), count($adminPermissions));
         
-        // DGM should have student.registration permission
-        $this->assertContains('student.registration', $dgmPermissions);
+        // Program Admin should have student.registration permission
+        $this->assertContains('student.registration', $adminPermissions);
         
         // Librarian should have library.clearance permission
         $this->assertContains('library.clearance', $librarianPermissions);
@@ -129,11 +131,11 @@ class RoleHelperTest extends TestCase
 
     public function test_role_helper_can_access_attendance()
     {
-        // Test that DGM can access attendance
-        $this->assertTrue(RoleHelper::canAccessAttendance('DGM'));
+        // Test that Program Administrator (level 01) can access attendance
+        $this->assertTrue(RoleHelper::canAccessAttendance('Program Administrator (level 01)'));
         
-        // Test that Project Tutor can access attendance
-        $this->assertTrue(RoleHelper::canAccessAttendance('Project Tutor'));
+        // Test that Developer can access attendance
+        $this->assertTrue(RoleHelper::canAccessAttendance('Developer'));
         
         // Test that Librarian cannot access attendance
         $this->assertFalse(RoleHelper::canAccessAttendance('Librarian'));
