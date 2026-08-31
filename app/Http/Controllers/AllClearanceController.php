@@ -33,26 +33,26 @@ class AllClearanceController extends Controller
 
         $intakeRequests = collect();
         foreach ($groupedRequests as $group) {
-            $firstRequest = $group->first();
+            $firstRequest  = $group->first();
             $totalStudents = $group->count();
             $approvedCount = $group->where('status', ClearanceRequest::STATUS_APPROVED)->count();
             $rejectedCount = $group->where('status', ClearanceRequest::STATUS_REJECTED)->count();
-            $pendingCount = $group->where('status', ClearanceRequest::STATUS_PENDING)->count();
+            $pendingCount  = $group->where('status', ClearanceRequest::STATUS_PENDING)->count();
 
             $intakeRequests->push((object) [
-                'intake' => $firstRequest->intake,
-                'course' => $firstRequest->course,
-                'location' => $firstRequest->location,
+                'intake'         => $firstRequest->intake,
+                'course'         => $firstRequest->course,
+                'location'       => $firstRequest->location,
                 'clearance_type' => $firstRequest->clearance_type,
                 'total_students' => $totalStudents,
                 'approved_count' => $approvedCount,
                 'rejected_count' => $rejectedCount,
-                'pending_count' => $pendingCount,
+                'pending_count'  => $pendingCount,
                 'received_count' => $approvedCount + $rejectedCount,
-                'requested_at' => $group->min('requested_at'),
-                'latest_status' => $group->sortByDesc('requested_at')->first()->status,
-                'status_color' => $group->sortByDesc('requested_at')->first()->status_color,
-                'status_text' => $group->sortByDesc('requested_at')->first()->status_text,
+                'requested_at'   => $group->min('requested_at'),
+                'latest_status'  => $group->sortByDesc('requested_at')->first()->status,
+                'status_color'   => $group->sortByDesc('requested_at')->first()->status_color,
+                'status_text'    => $group->sortByDesc('requested_at')->first()->status_text,
             ]);
         }
 
@@ -60,7 +60,7 @@ class AllClearanceController extends Controller
             return $item->is_individual_request;
         });
 
-        $pendingRequests = $allClearanceRequests->where('status', ClearanceRequest::STATUS_PENDING);
+        $pendingRequests  = $allClearanceRequests->where('status', ClearanceRequest::STATUS_PENDING);
         $approvedRequests = $allClearanceRequests->where('status', ClearanceRequest::STATUS_APPROVED);
         $rejectedRequests = $allClearanceRequests->where('status', ClearanceRequest::STATUS_REJECTED);
 
@@ -85,28 +85,28 @@ class AllClearanceController extends Controller
     public function librarysearch(Request $request)
     {
         $studentIdLibrary = $request->get('student_id');
-        $libraryRecords = Library::where('student_id', $studentIdLibrary)->get();
+        $libraryRecords   = Library::where('student_id', $studentIdLibrary)->get();
         return view('all_clearance', compact('libraryRecords', 'studentIdLibrary'));
     }
 
     public function paymentsearch(Request $request)
     {
         $studentIdPayment = $request->get('student_id');
-        $paymentRecords = PaymentClearance::where('student_id', $studentIdPayment)->get();
+        $paymentRecords   = PaymentClearance::where('student_id', $studentIdPayment)->get();
         return view('all_clearance', compact('paymentRecords', 'studentIdPayment'));
     }
 
     public function hostelsearch(Request $request)
     {
         $studentId = $request->get('student_id');
-        $records = Hostel::where('student_id', $studentId)->get();
+        $records   = Hostel::where('student_id', $studentId)->get();
         return view('all_clearance', compact('records', 'studentId'));
     }
 
     public function projectsearch(Request $request)
     {
         $studentIdProject = $request->get('student_id');
-        $projectRecords = Project::where('student_id', $studentIdProject)->get();
+        $projectRecords   = Project::where('student_id', $studentIdProject)->get();
         return view('all_clearance', compact('projectRecords', 'studentIdProject'));
     }
 
@@ -118,10 +118,10 @@ class AllClearanceController extends Controller
     public function sendClearanceRequest(Request $request)
     {
         $request->validate([
-            'type' => 'required|in:library,hostel,payment,project',
-            'location' => 'required|string',
-            'course_id' => 'required|exists:courses,course_id',
-            'intake_id' => 'required|exists:intakes,intake_id',
+            'type'       => 'required|in:library,hostel,payment,project',
+            'location'   => 'required|string',
+            'course_id'  => 'required|exists:courses,course_id',
+            'intake_id'  => 'required|exists:intakes,intake_id',
             'student_id' => 'nullable|exists:students,student_id',
         ]);
 
@@ -129,10 +129,7 @@ class AllClearanceController extends Controller
             $regQuery = CourseRegistration::where('course_id', $request->course_id)
                 ->where('intake_id', $request->intake_id)
                 ->where('location', $request->location)
-                ->where(function ($query) {
-                    $query->where('status', 'Registered')
-                        ->orWhere('approval_status', 'Approved by DGM');
-                });
+                ->eligible();
 
             if ($request->filled('student_id')) {
                 $regQuery->where('student_id', $request->student_id);
@@ -151,37 +148,37 @@ class AllClearanceController extends Controller
 
                 if (!$existingPendingRequest) {
                     ClearanceRequest::create([
-                        'clearance_type' => $request->type,
-                        'location' => $request->location,
-                        'course_id' => $request->course_id,
-                        'intake_id' => $request->intake_id,
-                        'student_id' => $registration->student_id,
-                        'status' => ClearanceRequest::STATUS_PENDING,
-                        'requested_at' => now(),
+                        'clearance_type'        => $request->type,
+                        'location'              => $request->location,
+                        'course_id'             => $request->course_id,
+                        'intake_id'             => $request->intake_id,
+                        'student_id'            => $registration->student_id,
+                        'status'                => ClearanceRequest::STATUS_PENDING,
+                        'requested_at'          => now(),
                         'is_individual_request' => $request->filled('student_id'),
                     ]);
                     $createdCount++;
                 }
             }
 
-            $totalCount = $students->count();
+            $totalCount   = $students->count();
             $skippedCount = $totalCount - $createdCount;
 
             return response()->json([
                 'success' => true,
-                'message' => "Clearance request(s) processed. Sent: {$createdCount}. Skipped (already pending): {$skippedCount}."
+                'message' => "Clearance request(s) processed. Sent: {$createdCount}. Skipped (already pending): {$skippedCount}.",
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send clearance requests: ' . $e->getMessage()
+                'message' => 'Failed to send clearance requests: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     public function getRegisteredCourses(Request $request)
     {
-        $nic = $request->query('nic');
+        $nic     = $request->query('nic');
         $student = \App\Models\Student::where('id_value', $nic)->first();
         if (!$student) {
             return response()->json(['success' => false, 'courses' => [], 'message' => 'Student not found']);
@@ -192,8 +189,8 @@ class AllClearanceController extends Controller
         foreach ($registrations as $reg) {
             if ($reg->course) {
                 $courses[] = [
-                    'id' => $reg->course->course_id,
-                    'name' => $reg->course->course_name
+                    'id'   => $reg->course->course_id,
+                    'name' => $reg->course->course_name,
                 ];
             }
         }
@@ -203,10 +200,10 @@ class AllClearanceController extends Controller
 
     public function getStudentCourseDetails(Request $request)
     {
-        $nic = $request->query('nic');
+        $nic      = $request->query('nic');
         $courseId = $request->query('course_id');
-        $student = \App\Models\Student::where('id_value', $nic)->first();
-        $course = \App\Models\Course::find($courseId);
+        $student  = \App\Models\Student::where('id_value', $nic)->first();
+        $course   = \App\Models\Course::find($courseId);
 
         if (!$student || !$course) {
             return response()->json(['success' => false, 'message' => 'Student or course not found']);
@@ -214,9 +211,9 @@ class AllClearanceController extends Controller
 
         return response()->json([
             'success' => true,
-            'name' => $student->name_with_initials,
-            'nic' => $student->id_value,
-            'course' => $course->course_name
+            'name'    => $student->name_with_initials,
+            'nic'     => $student->id_value,
+            'course'  => $course->course_name,
         ]);
     }
 
@@ -226,12 +223,12 @@ class AllClearanceController extends Controller
             $intakeId = $request->input('intake_id');
             $courseId = $request->input('course_id');
             $location = $request->input('location');
-            $query = CourseRegistration::where('intake_id', $intakeId)
+            $query    = CourseRegistration::where('intake_id', $intakeId)
                 ->whereHas('student', function ($q) {
                     $q->where('academic_status', 'active');
                 })
-                ->when($courseId, fn($q) => $q->where('course_id', $courseId))
-                ->when($location, fn($q) => $q->where('location', $location))
+                ->when($courseId, fn ($q) => $q->where('course_id', $courseId))
+                ->when($location, fn ($q) => $q->where('location', $location))
                 ->with('student');
 
             $registrations = $query->get();
@@ -246,15 +243,15 @@ class AllClearanceController extends Controller
 
                     $latestRequestQuery = ClearanceRequest::where('student_id', $student->student_id)
                         ->where('intake_id', $intakeId)
-                        ->when($courseId, fn($q) => $q->where('course_id', $courseId))
-                        ->when($location, fn($q) => $q->where('location', $location));
+                        ->when($courseId, fn ($q) => $q->where('course_id', $courseId))
+                        ->when($location, fn ($q) => $q->where('location', $location));
 
-                    $latest = $latestRequestQuery->orderByDesc('requested_at')->first();
+                    $latest     = $latestRequestQuery->orderByDesc('requested_at')->first();
                     $statusText = $latest->status_text ?? ($latest->status ?? 'No Request');
 
                     return [
-                        'student_id' => $student->student_id,
-                        'name' => $student->name_with_initials ?? $student->name ?? ($student->full_name ?? ''),
+                        'student_id'       => $student->student_id,
+                        'name'             => $student->name_with_initials ?? $student->name ?? ($student->full_name ?? ''),
                         'clearance_status' => $statusText,
                     ];
                 })
@@ -271,9 +268,9 @@ class AllClearanceController extends Controller
     public function getIntakeDetails(Request $request)
     {
         $request->validate([
-            'intake_id' => 'required|exists:intakes,intake_id',
-            'course_id' => 'required|exists:courses,course_id',
-            'location' => 'required|string',
+            'intake_id'     => 'required|exists:intakes,intake_id',
+            'course_id'     => 'required|exists:courses,course_id',
+            'location'      => 'required|string',
             'clearance_type' => 'required|string',
         ]);
 
@@ -289,38 +286,38 @@ class AllClearanceController extends Controller
             if ($clearanceRequests->isEmpty()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No clearance requests found for the specified criteria.'
+                    'message' => 'No clearance requests found for the specified criteria.',
                 ]);
             }
 
             $firstRequest = $clearanceRequests->first();
-            $intakeName = $firstRequest->intake->batch;
-            $courseName = $firstRequest->course->course_name;
+            $intakeName   = $firstRequest->intake->batch;
+            $courseName   = $firstRequest->course->course_name;
 
             $students = $clearanceRequests->map(function ($item) {
                 return [
-                    'student_id' => $item->student->student_id,
-                    'student_name' => $item->student->name_with_initials,
-                    'status' => $item->status,
-                    'status_text' => $item->status_text,
-                    'status_color' => $item->status_color,
-                    'processed_by' => $item->approvedBy->name ?? null,
+                    'student_id'     => $item->student->student_id,
+                    'student_name'   => $item->student->name_with_initials,
+                    'status'         => $item->status,
+                    'status_text'    => $item->status_text,
+                    'status_color'   => $item->status_color,
+                    'processed_by'   => $item->approvedBy->name ?? null,
                     'processed_date' => $item->approved_at ? $item->approved_at->format('d/m/Y H:i') : null,
-                    'remarks' => $item->remarks,
+                    'remarks'        => $item->remarks,
                 ];
             });
 
             return response()->json([
-                'success' => true,
+                'success'     => true,
                 'intake_name' => $intakeName,
                 'course_name' => $courseName,
-                'location' => $request->location,
-                'students' => $students
+                'location'    => $request->location,
+                'students'    => $students,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load intake details: ' . $e->getMessage()
+                'message' => 'Failed to load intake details: ' . $e->getMessage(),
             ], 500);
         }
     }

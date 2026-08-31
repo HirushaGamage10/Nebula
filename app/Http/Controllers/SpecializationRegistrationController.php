@@ -54,7 +54,7 @@ class SpecializationRegistrationController extends Controller
 
         $registrations = CourseRegistration::query()
             ->where($data)
-            ->where(fn ($query) => $query->where('status', 'Registered')->orWhere('approval_status', 'Approved by DGM'))
+            ->eligible()
             ->with('student')
             ->get();
 
@@ -111,7 +111,7 @@ class SpecializationRegistrationController extends Controller
 
         $eligibleIds = CourseRegistration::where('course_id', $data['course_id'])->where('intake_id', $data['intake_id'])
             ->where('location', $data['location'])->whereIn('student_id', $data['student_ids'])
-            ->where(fn ($query) => $query->where('status', 'Registered')->orWhere('approval_status', 'Approved by DGM'))
+            ->eligible()
             ->pluck('student_id')->all();
 
         foreach ($eligibleIds as $studentId) {

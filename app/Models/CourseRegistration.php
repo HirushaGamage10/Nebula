@@ -80,6 +80,20 @@ class CourseRegistration extends Model
     }
 
     // Scopes
+
+    /**
+     * Eligible registrations: fully registered rows, or rows approved by manager
+     * (the only approval_status values that exist in the live database are
+     * "Approved by manager" and "Pending"; "Approved by DGM" is never stored).
+     */
+    public function scopeEligible($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('status', 'Registered')
+              ->orWhere('approval_status', 'Approved by manager');
+        });
+    }
+
     public function scopeByStatus($query, $status)
     {
         return $query->where('status', $status);
