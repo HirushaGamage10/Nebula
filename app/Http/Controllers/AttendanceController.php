@@ -1232,6 +1232,7 @@ class AttendanceController extends Controller
         $semesterId = $request->semester;
         $moduleId = $request->module_id;
         $specialization = $this->normalizeSpecializationValue($request->input('specialization'));
+        $specializedStudentIds = null;
 
         // Get course and intake details
         $course = Course::find($courseId);
@@ -1241,6 +1242,27 @@ class AttendanceController extends Controller
             return response()->json([
                 'error' => 'Specialization is required for this course.'
             ], 422);
+        }
+
+        if ($specialization !== null) {
+            $specializedStudentIds = SpecializationStudentScope::resolveStudentIds(
+                $courseId,
+                $intakeId,
+                $location,
+                $specialization
+            );
+
+            if (empty($specializedStudentIds)) {
+                Log::warning('Unable to resolve specialization student IDs for attendance export; skipping specialization filter.', [
+                    'course_id' => $courseId,
+                    'intake_id' => $intakeId,
+                    'location' => $location,
+                    'specialization' => $specialization,
+                    'semester_id' => $semesterId,
+                    'module_id' => $moduleId,
+                ]);
+                $specializedStudentIds = null;
+            }
         }
 
         if ($isCertificate) {
@@ -1407,6 +1429,9 @@ class AttendanceController extends Controller
         $specialization = $this->normalizeSpecializationValue($request->query('specialization'));
 
         $course = $courseId ? Course::find($courseId) : null;
+        $specializedStudentIds = null;
+        $isCertificate = empty($semesterId) && empty($moduleId);
+
         if ($course && !$isCertificate && $this->courseHasSpecializations($course) && !$specialization) {
             return response()->json([
                 'error' => 'Specialization is required for this course.'
@@ -1616,7 +1641,13 @@ class AttendanceController extends Controller
         try {
             if (in_array($ext, ['xlsx', 'xls'])) {
                 // use maatwebsite/excel to get as array
-                $array = Excel::toArray([], $file);
+                $import = new class implements \Maatwebsite\Excel\Concerns\ToArray {
+                    public function array(array $array)
+                    {
+                        return $array;
+                    }
+                };
+                $array = Excel::toArray($import, $file);
                 if (is_array($array) && isset($array[0]) && count($array[0]) > 0) {
                     $sheet = $array[0];
                     $header = array_map('trim', $sheet[0]);

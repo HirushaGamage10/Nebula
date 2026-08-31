@@ -163,7 +163,9 @@ class SpecializationStudentScope
         );
 
         if (empty($studentIds)) {
-            return $query->whereRaw('1 = 0');
+            // If no student IDs can be resolved for this specialization, preserve the existing
+            // query instead of forcing an empty result set.
+            return $query;
         }
 
         return $query->whereIn($studentColumn, $studentIds);

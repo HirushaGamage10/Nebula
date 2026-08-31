@@ -192,8 +192,16 @@ return view('registration.module_management', compact('degreeCourses', 'diplomaC
         ]);
 
         try {
-            // Return all modules since modules table doesn't have course_id column
-            $modules = Module::orderBy('module_name')->get();
+            $course = Course::find($request->course_id);
+            if (!$course) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Course not found.'
+                ], 404);
+            }
+
+            // Get modules belonging to the course using the canonical course-module relation
+            $modules = $course->modules()->orderBy('module_name')->get();
 
             return response()->json([
                 'success' => true,

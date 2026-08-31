@@ -106,7 +106,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // DASHBOARD
     // ========================================================================
     Route::get('/dashboard', [DashboardController::class, 'showDashboard'])->name('dashboard');
-    
+
     // Dashboard API Routes
     Route::get('/yearly-revenue', [DashboardController::class, 'getYearlyRevenue']);
     Route::get('/monthly-earnings', [DashboardController::class, 'getMonthlyEarnings']);
@@ -149,7 +149,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     // STUDENT MANAGEMENT
     // ========================================================================
-    
+
     // Student Registration
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Student Counselor,Bursar,Marketing Manager,Developer'])->group(function () {
         Route::get('/student/register', [StudentRegistraionController::class, 'showStudentRegistration'])->name('student_management.registration');
@@ -263,34 +263,34 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
             // Course Change Interface
             Route::get('/', [CourseChangeController::class, 'index'])
                  ->name('course.change.index');
-            
+
             // Student Search
             Route::post('/find-student', [CourseChangeController::class, 'findStudent'])
                  ->name('course.change.find.student');
-            
+
             // Course & Intake Selection
             Route::get('/courses', [CourseChangeController::class, 'getCourses'])
                  ->name('course.change.courses');
-            
+
             Route::post('/new-intakes', [CourseChangeController::class, 'getNewIntakes'])
                  ->name('course.change.new.intakes');
-            
+
             // ID Generation
             Route::post('/generate-id', [CourseChangeController::class, 'generateNewCourseRegId'])
                  ->name('course.change.generateId');
-            
+
             // Payment Check
             Route::post('/check-payment', [CourseChangeController::class, 'checkPaymentStatus'])
                  ->name('course.change.check.payment');
-            
+
             // Submit Change
             Route::post('/submit', [CourseChangeController::class, 'submitChange'])
                  ->name('course.change.submit');
-            
+
             // Payment Summary
             Route::get('/payment-summary/{studentId}/{courseId}', [CourseChangeController::class, 'getPaymentSummary'])
                  ->name('course.change.payment.summary');
-            
+
             // Course Change Logs
             Route::get('/change-logs/{studentId}', [CourseChangeController::class, 'getChangeLogs'])
                  ->name('course.change.logs');
@@ -490,13 +490,13 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     // CLEARANCE MANAGEMENT
     // ========================================================================
-    
+
     // Library Clearance
     Route::middleware(['role:Librarian,DGM,Program Administrator (level 01),Developer'])->group(function () {
         Route::get('/student-clearance-form-management', [StudentClearanceFormManagementController::class, 'showStudentClearanceFormManagement'])->name('student.clearance.form.management');
         Route::post('/student-clearance-form-management', [StudentClearanceFormManagementController::class, 'store'])->name('library.store');
-        Route::get('/student-clearance/search', [StudentClearanceFormManagementController::class, 'search'])->name('library.search');
-        Route::get('/get-student-details', [StudentClearanceFormManagementController::class, 'getStudentDetails'])->name('getStudentDetails');
+        Route::get('/student-clearance/search', [StudentClearanceFormManagementController::class, 'search'])->name('student.clearance.search');
+        Route::get('/student-clearance/get-student-details', [StudentClearanceFormManagementController::class, 'getStudentDetails'])->name('student.clearance.getStudentDetails');
         Route::post('/library/update-received-date', [StudentClearanceFormManagementController::class, 'updateReceivedDate'])->name('library.updateReceivedDate');
         Route::get('/library-clearance', [LibraryClearanceController::class, 'index'])->name('library.clearance');
         Route::get('/library-clearance/{id}/details', [LibraryClearanceController::class, 'details'])->name('library.clearance.details');
@@ -509,8 +509,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/hostel-clearance', [HostelClearanceController::class, 'showHostelClearanceFormManagement'])->name('hostel.clearance.form.management');
         Route::post('/hostel-clearance', [HostelClearanceController::class, 'store'])->name('hostel.store');
         Route::post('/hostel/update-clearance', [HostelClearanceController::class, 'updateClearance'])->name('hostel.update');
-        Route::get('/search/hostel-clearance', [HostelClearanceController::class, 'search'])->name('hostel.search');
-        Route::get('/get-student-details', [HostelClearanceController::class, 'getStudentDetails'])->name('getStudentDetails');
+        Route::get('/search/hostel-clearance', [HostelClearanceController::class, 'search'])->name('hostel.clearance.search');
+        Route::get('/hostel/get-student-details', [HostelClearanceController::class, 'getStudentDetails'])->name('hostel.clearance.getStudentDetails');
         Route::post('/hostel/approve-clearance', [HostelClearanceController::class, 'approveClearance'])->name('hostel.approve.clearance');
         Route::post('/hostel/reject-clearance', [HostelClearanceController::class, 'rejectClearance'])->name('hostel.reject.clearance');
     });
@@ -520,8 +520,8 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/project-clearance-form-management', [ProjectClearanceController::class, 'showProjectClearanceFormManagement'])->name('project.clearance.management');
         Route::post('/project-clearance-form-management', [ProjectClearanceController::class, 'store'])->name('project.store');
         Route::post('/project/update-clearance', [ProjectClearanceController::class, 'updateClearance'])->name('project.update');
-        Route::get('/search/project-clearance', [ProjectClearanceController::class, 'search'])->name('project.search');
-        Route::get('/get-student-details', [ProjectClearanceController::class, 'getStudentDetails'])->name('getStudentDetails');
+        Route::get('/search/project-clearance', [ProjectClearanceController::class, 'search'])->name('project.clearance.search');
+        Route::get('/project/get-student-details', [ProjectClearanceController::class, 'getStudentDetails'])->name('project.clearance.getStudentDetails');
         Route::post('/project/approve-clearance', [ProjectClearanceController::class, 'approveClearance'])->name('project.approve.clearance');
         Route::post('/project/reject-clearance', [ProjectClearanceController::class, 'rejectClearance'])->name('project.reject.clearance');
     });
@@ -537,9 +537,9 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Developer'])->group(function () {
         Route::get('/clearance/search', [AllClearanceController::class, 'showAllClearance'])->name('clearance.search');
         Route::get('/all-clearance', [AllClearanceController::class, 'showAllClearance'])->name('all.clearance.management');
-        Route::get('/library-clearance/search', [AllClearanceController::class, 'librarysearch'])->name('library.search');
-        Route::get('/hostel-clearance/search', [AllClearanceController::class, 'hostelsearch'])->name('hostel.search');
-        Route::get('/project-clearance/search', [AllClearanceController::class, 'projectsearch'])->name('project.search');
+        Route::get('/library-clearance/search', [AllClearanceController::class, 'librarysearch'])->name('clearance.library.search');
+        Route::get('/hostel-clearance/search', [AllClearanceController::class, 'hostelsearch'])->name('clearance.hostel.search');
+        Route::get('/project-clearance/search', [AllClearanceController::class, 'projectsearch'])->name('clearance.project.search');
         Route::post('/clearance/send-request', [AllClearanceController::class, 'sendClearanceRequest'])->name('clearance.sendRequest');
         Route::post('/clearance/get-students-for-intake', [AllClearanceController::class, 'getStudentsForIntake'])->name('clearance.getStudentsForIntake');
         Route::post('/clearance/get-intake-details', [AllClearanceController::class, 'getIntakeDetails'])->name('clearance.getIntakeDetails');
@@ -628,7 +628,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     // SPECIAL APPROVAL
     // ========================================================================
-    
+
     // Special Approval List
     Route::middleware(['auth', 'role:DGM,Developer,Student Counselor,Program Administrator (level 01)'])->group(function () {
         Route::get('/special-approval-list', function () {
@@ -766,7 +766,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     // PAYMENT MANAGEMENT
     // ========================================================================
-    
+
     // Main Payment Routes
     Route::middleware(['auth', 'role:Bursar,Developer,Student Counselor'])->group(function () {
         Route::get('/payment', [PaymentController::class, 'index'])->name('payment.index');
@@ -774,13 +774,13 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::post('/payment/get-student-courses', [PaymentController::class, 'getStudentCourses'])->name('payment.get.student.courses');
         Route::post('/payment/create-payment-plan', [PaymentController::class, 'createPaymentPlan'])->name('payment.create.payment.plan');
         Route::get('/payment/get-discounts', [PaymentController::class, 'getDiscounts'])->name('payment.get.discounts');
-        
+
         // TEST ROUTE - Adding logging
         Route::post('/payment/get-installments', function(Request $request) {
             \Log::info('TEST ROUTE HIT - /payment/get-installments');
             return app(PaymentController::class)->getPaymentPlanInstallments($request);
         })->name('payment.get.installments');
-        
+
         Route::post('/payment/get-payment-details', [PaymentController::class, 'getPaymentDetails'])->name('payment.get.payment.details');
         Route::post('/payment/save-plans', [PaymentController::class, 'savePaymentPlans'])->name('payment.save.plans');
         Route::delete('/payment/delete-plan/{id}', [PaymentController::class, 'deletePaymentPlan'])->name('payment.delete.plan');
@@ -829,7 +829,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     // Team Nebula IT Page - Accessible to all authenticated users
     Route::get('/team-phase', [TeamPhaseController::class, 'index'])->name('team.phase.index');
-    
+
     // Team Phase Management Routes - Developer only
     Route::middleware(['auth', 'role:Developer'])->group(function () {
         Route::post('/phase/create', [TeamPhaseController::class, 'createPhase'])->name('phase.create');
@@ -861,7 +861,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // ========================================================================
     // DASHBOARDS
     // ========================================================================
-    
+
     // DGM Dashboard
     Route::middleware(['role:DGM,Developer,Program Administrator (level 01)'])->group(function () {
         Route::get('/dgmdashboard', [DGMDashboardController::class, 'showDashboard'])->name('dgmdashboard');

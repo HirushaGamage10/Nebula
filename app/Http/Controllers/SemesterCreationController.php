@@ -233,22 +233,56 @@ class SemesterCreationController extends Controller
         ]);
 
         try {
-            // Fetch all modules with module_code included
-            $modules = \DB::table('modules')
-                ->select('module_id', 'module_name', 'module_code', 'module_type', 'credits')
-                ->orderBy('module_name')
-                ->get()
-                ->map(function ($module) {
-                    return [
-                        'module_id'   => $module->module_id,
-                        'module_name' => $module->module_name,
-                        'module_code' => $module->module_code, // ✅ ensure module_code is included
-                        'module_type' => $module->module_type,
-                        'credits'     => $module->credits,
-                    ];
-                });
+            $course = Course::find($request->course_id);
+            $intake = Intake::find($request->intake_id);
 
-            return response()->json(['modules' => $modules]);
+            if (!$course || !$intake) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Course or Intake not found.',
+                    'modules' => []
+                ], 422);
+            }
+
+            // Validate that the selected intake belongs to the course/location
+            $belongsToCourse = ($intake->course_id == $course->course_id) || (is_null($intake->course_id) && $intake->course_name === $course->course_name);
+            if (!$belongsToCourse || $intake->location !== $request->location) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The selected intake does not belong to the chosen course or location.',
+                    'modules' => []
+                ], 422);
+            }
+
+            // Retrieve modules through course/intake/semester assignment tables
+            if ($course->course_type === 'certificate') {
+                $modules = \DB::table('modules')
+                    ->join('intake_modules', 'modules.module_id', '=', 'intake_modules.module_id')
+                    ->where('intake_modules.intake_id', $intake->intake_id)
+                    ->select('modules.module_id', 'modules.module_name', 'modules.module_code', 'modules.module_type', 'modules.credits')
+                    ->orderBy('modules.module_name')
+                    ->get();
+            } else {
+                $modules = \DB::table('modules')
+                    ->join('course_modules', 'modules.module_id', '=', 'course_modules.module_id')
+                    ->where('course_modules.course_id', $course->course_id)
+                    ->where('course_modules.semester', $request->semester)
+                    ->select('modules.module_id', 'modules.module_name', 'modules.module_code', 'modules.module_type', 'modules.credits')
+                    ->orderBy('modules.module_name')
+                    ->get();
+            }
+
+            $formattedModules = $modules->map(function ($module) {
+                return [
+                    'module_id'   => $module->module_id,
+                    'module_name' => $module->module_name,
+                    'module_code' => $module->module_code,
+                    'module_type' => $module->module_type,
+                    'credits'     => $module->credits,
+                ];
+            });
+
+            return response()->json(['modules' => $formattedModules]);
 
         } catch (\Exception $e) {
             \Log::error('Error fetching modules: ' . $e->getMessage());

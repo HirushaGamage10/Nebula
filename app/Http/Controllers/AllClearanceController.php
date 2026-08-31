@@ -5,11 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\ClearanceRequest;
 use App\Models\Course;
 use App\Models\CourseRegistration;
-use App\Models\Hostel;
-use App\Models\Library;
-use App\Models\PaymentClearance;
-use App\Models\Project;
 use App\Models\Student;
+<<<<<<< Updated upstream
+=======
+use App\Models\StudentClearance;
+use App\Support\SpecializationStudentScope;
+>>>>>>> Stashed changes
 use Illuminate\Http\Request;
 
 class AllClearanceController extends Controller
@@ -85,29 +86,41 @@ class AllClearanceController extends Controller
     public function librarysearch(Request $request)
     {
         $studentIdLibrary = $request->get('student_id');
-        $libraryRecords = Library::where('student_id', $studentIdLibrary)->get();
-        return view('all_clearance', compact('libraryRecords', 'studentIdLibrary'));
+        $libraryRecords = StudentClearance::where('student_id', $studentIdLibrary)
+            ->where('clearance_type', StudentClearance::TYPE_LIBRARY)
+            ->get();
+
+        return view('clearance.all_clearance', compact('libraryRecords', 'studentIdLibrary'));
     }
 
     public function paymentsearch(Request $request)
     {
         $studentIdPayment = $request->get('student_id');
-        $paymentRecords = PaymentClearance::where('student_id', $studentIdPayment)->get();
-        return view('all_clearance', compact('paymentRecords', 'studentIdPayment'));
+        $paymentRecords = StudentClearance::where('student_id', $studentIdPayment)
+            ->where('clearance_type', StudentClearance::TYPE_PAYMENT)
+            ->get();
+
+        return view('clearance.all_clearance', compact('paymentRecords', 'studentIdPayment'));
     }
 
     public function hostelsearch(Request $request)
     {
         $studentId = $request->get('student_id');
-        $records = Hostel::where('student_id', $studentId)->get();
-        return view('all_clearance', compact('records', 'studentId'));
+        $records = StudentClearance::where('student_id', $studentId)
+            ->where('clearance_type', StudentClearance::TYPE_HOSTEL)
+            ->get();
+
+        return view('clearance.all_clearance', compact('records', 'studentId'));
     }
 
     public function projectsearch(Request $request)
     {
         $studentIdProject = $request->get('student_id');
-        $projectRecords = Project::where('student_id', $studentIdProject)->get();
-        return view('all_clearance', compact('projectRecords', 'studentIdProject'));
+        $projectRecords = StudentClearance::where('student_id', $studentIdProject)
+            ->where('clearance_type', StudentClearance::TYPE_PROJECT)
+            ->get();
+
+        return view('clearance.all_clearance', compact('projectRecords', 'studentIdProject'));
     }
 
     public function sendClearance($type, $student_id)
