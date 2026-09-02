@@ -1,24 +1,84 @@
-name: Nebula Production Deploy
+name: CI/CD
 
 on:
   push:
     branches:
       - main
+      - master
+  pull_request:
 
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Deploy to production server
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, curl, sqlite3, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install PHP dependencies
+        uses: ramsey/composer-install@v3
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.GITHUB_TOKEN }}"}}'
+        with:
+          composer-options: "--prefer-source --no-progress"
+
+      - name: Prepare environment file
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Install Node dependencies
+        run: npm install
+
+      - name: Run Laravel tests
+        env:
+          APP_ENV: testing
+          CACHE_STORE: array
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ":memory:"
+          QUEUE_CONNECTION: sync
+          SESSION_DRIVER: array
+        run: php artisan test
+
+      - name: Build frontend assets
+        run: npm run build
+
+  deploy:
+    name: Deploy to production
+    needs: test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: nebulastudentportal.slt.lk
-          username: cpo_admin
-          port: 2002
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ secrets.SERVER_HOST }}
+          port: ${{ secrets.SERVER_PORT }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd /var/www/html/nebula
-            ./deploy.sh
+            git pull origin main
+            composer install --no-dev --prefer-dist --no-interaction --no-progress
+            npm install
+            npm run build
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            php artisan queue:restart
