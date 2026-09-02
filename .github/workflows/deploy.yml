@@ -72,7 +72,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           envs: COMMIT_SHA,COMMIT_AUTHOR,COMMIT_MESSAGE
           script: |
-            cd /var/www/html/Team
+            cd /var/www/html/nebula
             git pull origin main
             composer install --no-dev --prefer-dist --no-interaction --no-progress
             npm install
