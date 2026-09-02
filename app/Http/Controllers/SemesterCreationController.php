@@ -237,10 +237,8 @@ class SemesterCreationController extends Controller
         $semesterId = (int) $request->semester;
 
         try {
-<<<<<<< HEAD
             $course = Course::find($request->course_id);
             $intake = Intake::find($request->intake_id);
-=======
             // Validate that the requested semester belongs to the given course and intake,
             // preventing cross-cohort module leakage.
             $semester = \DB::table('semesters')
@@ -304,7 +302,7 @@ class SemesterCreationController extends Controller
                         'credits'     => $m->credits,
                     ]);
             }
->>>>>>> b343af1de3186ae1c793d003e14b57727d3855fd
+
 
             if (!$course || !$intake) {
                 return response()->json([
