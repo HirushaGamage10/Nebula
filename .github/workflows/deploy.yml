@@ -14,7 +14,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.4'
           extensions: mbstring, xml, curl, sqlite3, zip
           coverage: none
           tools: composer:v2
@@ -53,16 +53,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Prepare commit description
-        id: commit_info
-        run: |
-          {
-            echo "message<<EOF"
-            git log -1 --pretty=%B
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-          echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-          echo "author=$(git log -1 --pretty=%an)" >> "$GITHUB_OUTPUT"
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -70,7 +60,6 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: COMMIT_SHA,COMMIT_AUTHOR,COMMIT_MESSAGE
           script: |
             cd /var/www/html/nebula
             git pull origin main
@@ -82,8 +71,3 @@ jobs:
             php artisan route:cache
             php artisan view:cache
             php artisan queue:restart
-            echo "$(date '+%Y-%m-%d %H:%M:%S') | ${COMMIT_SHA} | ${COMMIT_AUTHOR} | ${COMMIT_MESSAGE}" >> /var/www/html/Team/storage/logs/deploy.log
-        env:
-          COMMIT_SHA: ${{ steps.commit_info.outputs.sha }}
-          COMMIT_AUTHOR: ${{ steps.commit_info.outputs.author }}
-          COMMIT_MESSAGE: ${{ steps.commit_info.outputs.message }}
