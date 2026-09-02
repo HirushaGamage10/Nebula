@@ -1,19 +1,16 @@
 name: CI/CD
-
 on:
   push:
     branches:
       - main
       - master
   pull_request:
-
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -21,27 +18,22 @@ jobs:
           extensions: mbstring, xml, curl, sqlite3, zip
           coverage: none
           tools: composer:v2
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
       - name: Install PHP dependencies
         uses: ramsey/composer-install@v3
         env:
           COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.GITHUB_TOKEN }}"}}'
         with:
           composer-options: "--prefer-source --no-progress"
-
       - name: Prepare environment file
         run: |
           cp .env.example .env
           php artisan key:generate
-
       - name: Install Node dependencies
         run: npm install
-
       - name: Run Laravel tests
         env:
           APP_ENV: testing
@@ -51,10 +43,8 @@ jobs:
           QUEUE_CONNECTION: sync
           SESSION_DRIVER: array
         run: php artisan test
-
       - name: Build frontend assets
         run: npm run build
-
   deploy:
     name: Deploy to production
     needs: test
@@ -63,7 +53,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+      - name: Prepare commit description
+        id: commit_info
+        run: |
+          {
+            echo "message<<EOF"
+            git log -1 --pretty=%B
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "author=$(git log -1 --pretty=%an)" >> "$GITHUB_OUTPUT"
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -71,8 +70,9 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: COMMIT_SHA,COMMIT_AUTHOR,COMMIT_MESSAGE
           script: |
-            cd /var/www/html/nebula
+            cd /var/www/html/Team
             git pull origin main
             composer install --no-dev --prefer-dist --no-interaction --no-progress
             npm install
@@ -82,3 +82,8 @@ jobs:
             php artisan route:cache
             php artisan view:cache
             php artisan queue:restart
+            echo "$(date '+%Y-%m-%d %H:%M:%S') | ${COMMIT_SHA} | ${COMMIT_AUTHOR} | ${COMMIT_MESSAGE}" >> /var/www/html/Team/storage/logs/deploy.log
+        env:
+          COMMIT_SHA: ${{ steps.commit_info.outputs.sha }}
+          COMMIT_AUTHOR: ${{ steps.commit_info.outputs.author }}
+          COMMIT_MESSAGE: ${{ steps.commit_info.outputs.message }}
