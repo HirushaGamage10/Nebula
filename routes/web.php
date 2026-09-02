@@ -494,13 +494,10 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     Route::middleware(['role:Librarian,DGM,Program Administrator (level 01),Developer'])->group(function () {
         Route::get('/student-clearance-form-management', [StudentClearanceFormManagementController::class, 'showStudentClearanceFormManagement'])->name('student.clearance.form.management');
         Route::post('/student-clearance-form-management', [StudentClearanceFormManagementController::class, 'store'])->name('library.store');
-<<<<<<< HEAD
         Route::get('/student-clearance/search', [StudentClearanceFormManagementController::class, 'search'])->name('student.clearance.search');
         Route::get('/student-clearance/get-student-details', [StudentClearanceFormManagementController::class, 'getStudentDetails'])->name('student.clearance.getStudentDetails');
-=======
         Route::get('/student-clearance/search', [StudentClearanceFormManagementController::class, 'search'])->name('library.student.clearance.search');
         Route::get('/library/get-student-details', [StudentClearanceFormManagementController::class, 'getStudentDetails'])->name('library.getStudentDetails');
->>>>>>> b343af1de3186ae1c793d003e14b57727d3855fd
         Route::post('/library/update-received-date', [StudentClearanceFormManagementController::class, 'updateReceivedDate'])->name('library.updateReceivedDate');
         Route::get('/library-clearance', [LibraryClearanceController::class, 'index'])->name('library.clearance');
         Route::get('/library-clearance/{id}/details', [LibraryClearanceController::class, 'details'])->name('library.clearance.details');
@@ -513,13 +510,10 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/hostel-clearance', [HostelClearanceController::class, 'showHostelClearanceFormManagement'])->name('hostel.clearance.form.management');
         Route::post('/hostel-clearance', [HostelClearanceController::class, 'store'])->name('hostel.store');
         Route::post('/hostel/update-clearance', [HostelClearanceController::class, 'updateClearance'])->name('hostel.update');
-<<<<<<< HEAD
         Route::get('/search/hostel-clearance', [HostelClearanceController::class, 'search'])->name('hostel.clearance.search');
         Route::get('/hostel/get-student-details', [HostelClearanceController::class, 'getStudentDetails'])->name('hostel.clearance.getStudentDetails');
-=======
         Route::get('/search/hostel-clearance', [HostelClearanceController::class, 'search'])->name('hostel.search');
         Route::get('/hostel/get-student-details', [HostelClearanceController::class, 'getStudentDetails'])->name('hostel.getStudentDetails');
->>>>>>> b343af1de3186ae1c793d003e14b57727d3855fd
         Route::post('/hostel/approve-clearance', [HostelClearanceController::class, 'approveClearance'])->name('hostel.approve.clearance');
         Route::post('/hostel/reject-clearance', [HostelClearanceController::class, 'rejectClearance'])->name('hostel.reject.clearance');
     });
@@ -529,13 +523,10 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/project-clearance-form-management', [ProjectClearanceController::class, 'showProjectClearanceFormManagement'])->name('project.clearance.management');
         Route::post('/project-clearance-form-management', [ProjectClearanceController::class, 'store'])->name('project.store');
         Route::post('/project/update-clearance', [ProjectClearanceController::class, 'updateClearance'])->name('project.update');
-<<<<<<< HEAD
         Route::get('/search/project-clearance', [ProjectClearanceController::class, 'search'])->name('project.clearance.search');
         Route::get('/project/get-student-details', [ProjectClearanceController::class, 'getStudentDetails'])->name('project.clearance.getStudentDetails');
-=======
         Route::get('/search/project-clearance', [ProjectClearanceController::class, 'search'])->name('project.search');
         Route::get('/project/get-student-details', [ProjectClearanceController::class, 'getStudentDetails'])->name('project.getStudentDetails');
->>>>>>> b343af1de3186ae1c793d003e14b57727d3855fd
         Route::post('/project/approve-clearance', [ProjectClearanceController::class, 'approveClearance'])->name('project.approve.clearance');
         Route::post('/project/reject-clearance', [ProjectClearanceController::class, 'rejectClearance'])->name('project.reject.clearance');
     });
@@ -551,15 +542,12 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     Route::middleware(['role:DGM,Program Administrator (level 01),Program Administrator (level 02),Developer'])->group(function () {
         Route::get('/clearance/search', [AllClearanceController::class, 'showAllClearance'])->name('clearance.search');
         Route::get('/all-clearance', [AllClearanceController::class, 'showAllClearance'])->name('all.clearance.management');
-<<<<<<< HEAD
         Route::get('/library-clearance/search', [AllClearanceController::class, 'librarysearch'])->name('clearance.library.search');
         Route::get('/hostel-clearance/search', [AllClearanceController::class, 'hostelsearch'])->name('clearance.hostel.search');
         Route::get('/project-clearance/search', [AllClearanceController::class, 'projectsearch'])->name('clearance.project.search');
-=======
         Route::get('/all-clearance/library-search', [AllClearanceController::class, 'librarysearch'])->name('all.clearance.library.search');
         Route::get('/all-clearance/hostel-search', [AllClearanceController::class, 'hostelsearch'])->name('all.clearance.hostel.search');
         Route::get('/all-clearance/project-search', [AllClearanceController::class, 'projectsearch'])->name('all.clearance.project.search');
->>>>>>> b343af1de3186ae1c793d003e14b57727d3855fd
         Route::post('/clearance/send-request', [AllClearanceController::class, 'sendClearanceRequest'])->name('clearance.sendRequest');
         Route::post('/clearance/get-students-for-intake', [AllClearanceController::class, 'getStudentsForIntake'])->name('clearance.getStudentsForIntake');
         Route::post('/clearance/get-intake-details', [AllClearanceController::class, 'getIntakeDetails'])->name('clearance.getIntakeDetails');
