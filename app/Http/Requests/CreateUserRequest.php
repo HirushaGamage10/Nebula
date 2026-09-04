@@ -32,6 +32,7 @@ class CreateUserRequest extends FormRequest
                 'email',
                 'max:255',
                 'unique:users,email',
+                'regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$/',
             ],
             'employee_id' => 'required|string|max:255|unique:users,employee_id',
             'user_roles' => [
@@ -125,6 +126,10 @@ class CreateUserRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        if ($this->has('user_name') && !$this->has('name')) {
+            $this->merge(['name' => $this->input('user_name')]);
+        }
+
         $roles = $this->input('user_roles');
 
         if (is_string($roles)) {
@@ -154,7 +159,12 @@ class CreateUserRequest extends FormRequest
      */
     protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
     {
-        throw new \Illuminate\Validation\ValidationException($validator);
+        $response = response()->json([
+            'message' => 'The given data was invalid.',
+            'errors' => $validator->errors(),
+        ], 422);
+
+        throw new \Illuminate\Validation\ValidationException($validator, $response);
     }
 
     /**

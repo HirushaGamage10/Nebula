@@ -9,31 +9,35 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement("
-            ALTER TABLE team_roles 
-            MODIFY role ENUM(
-                'Leader',
-                'Developer',
-                'BA',
-                'QA',
-                'DevOps',
-                'Mentor',
-                'Freelance'
-            )
-        ");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("
+                ALTER TABLE team_roles 
+                MODIFY role ENUM(
+                    'Leader',
+                    'Developer',
+                    'BA',
+                    'QA',
+                    'DevOps',
+                    'Mentor',
+                    'Freelance'
+                )
+            ");
+        }
     }
 
     public function down(): void
     {
-        DB::statement("
-            ALTER TABLE team_roles 
-            MODIFY role ENUM(
-                'Leader',
-                'Developer',
-                'BA',
-                'QA',
-                'DevOps'
-            )
-        ");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("
+                ALTER TABLE team_roles 
+                MODIFY role ENUM(
+                    'Leader',
+                    'Developer',
+                    'BA',
+                    'QA',
+                    'DevOps'
+                )
+            ");
+        }
     }
 };

@@ -9,15 +9,19 @@ return new class extends Migration
 {
     public function up()
     {
-        DB::statement("ALTER TABLE semester_registrations 
-            MODIFY status ENUM('registered', 'pending', 'cancelled', 'terminated', 'holding') 
-            DEFAULT 'registered'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE semester_registrations 
+                MODIFY status ENUM('registered', 'pending', 'cancelled', 'terminated', 'holding') 
+                DEFAULT 'registered'");
+        }
     }
 
     public function down()
     {
-        DB::statement("ALTER TABLE semester_registrations 
-            MODIFY status ENUM('registered', 'pending', 'cancelled', 'terminated') 
-            DEFAULT 'registered'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE semester_registrations 
+                MODIFY status ENUM('registered', 'pending', 'cancelled', 'terminated') 
+                DEFAULT 'registered'");
+        }
     }
 };

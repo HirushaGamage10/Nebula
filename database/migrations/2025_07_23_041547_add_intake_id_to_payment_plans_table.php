@@ -14,24 +14,11 @@ return new class extends Migration
      */
     public function up()
     {
-        try {
+        if (!Schema::hasColumn('payment_plans', 'intake_id')) {
             Schema::table('payment_plans', function (Blueprint $table) {
                 $table->unsignedBigInteger('intake_id')->after('course_id');
                 $table->foreign('intake_id')->references('intake_id')->on('intakes')->onDelete('cascade');
             });
-        } catch (\Exception $e) {
-            // If column already exists, just add the foreign key if it doesn't exist
-            if (strpos($e->getMessage(), 'Duplicate column name') !== false) {
-                try {
-                    Schema::table('payment_plans', function (Blueprint $table) {
-                        $table->foreign('intake_id')->references('intake_id')->on('intakes')->onDelete('cascade');
-                    });
-                } catch (\Exception $fkException) {
-                    // Foreign key might already exist, ignore
-                }
-            } else {
-                throw $e;
-            }
         }
     }
 

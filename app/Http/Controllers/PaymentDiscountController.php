@@ -27,8 +27,22 @@ class PaymentDiscountController extends Controller
     public function getCoursesByLocation(Request $request)
     {
         $location = $request->input('location');
+
+        if (!$location) {
+            return response()->json([
+                'success' => false,
+                'courses' => [],
+                'message' => 'Location is required.'
+            ]);
+        }
+
         $courses = Course::where('location', $location)->get(['course_id', 'course_name', 'local_fee', 'registration_fee']);
-        return response()->json(['courses' => $courses]);
+
+        return response()->json([
+            'success' => true,
+            'courses' => $courses,
+            'message' => $courses->isEmpty() ? 'No courses found.' : 'Courses loaded successfully.'
+        ]);
     }
 
     // Fetch intakes by course (AJAX)
@@ -224,7 +238,7 @@ class PaymentDiscountController extends Controller
         try {
             Log::info('Saving discount request:', $request->all());
             Log::info('Request headers:', $request->headers->all());
-            
+
             $request->validate([
                 'name' => 'required|string|max:255',
                 'type' => 'required|in:percentage,amount',
@@ -247,7 +261,7 @@ class PaymentDiscountController extends Controller
             Log::info('Discount saved successfully:', $discount->toArray());
 
             return response()->json([
-                'success' => true, 
+                'success' => true,
                 'message' => 'Discount saved successfully.',
                 'discount' => $discount
             ]);
@@ -256,7 +270,7 @@ class PaymentDiscountController extends Controller
             Log::error('Error saving discount: ' . $e->getMessage());
             Log::error('Error trace: ' . $e->getTraceAsString());
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Error saving discount: ' . $e->getMessage()
             ], 500);
         }
@@ -278,7 +292,7 @@ class PaymentDiscountController extends Controller
         } catch (\Exception $e) {
             Log::error('Error fetching discounts: ' . $e->getMessage());
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Error fetching discounts: ' . $e->getMessage()
             ], 500);
         }
@@ -290,7 +304,7 @@ class PaymentDiscountController extends Controller
         try {
             $category = $request->input('category');
             Log::info('Fetching discounts by category:', ['category' => $category]);
-            
+
             $discounts = Discount::where('status', 'active')
                 ->where('discount_category', $category)
                 ->orderBy('created_at', 'desc')
@@ -306,7 +320,7 @@ class PaymentDiscountController extends Controller
         } catch (\Exception $e) {
             Log::error('Error fetching discounts by category: ' . $e->getMessage());
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Error fetching discounts: ' . $e->getMessage()
             ], 500);
         }
@@ -335,7 +349,7 @@ class PaymentDiscountController extends Controller
             ]);
 
             return response()->json([
-                'success' => true, 
+                'success' => true,
                 'message' => 'Discount updated successfully.',
                 'discount' => $discount
             ]);
@@ -343,7 +357,7 @@ class PaymentDiscountController extends Controller
         } catch (\Exception $e) {
             Log::error('Error updating discount: ' . $e->getMessage());
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Error updating discount: ' . $e->getMessage()
             ], 500);
         }
@@ -361,16 +375,16 @@ class PaymentDiscountController extends Controller
             $discount->update(['status' => 'inactive']);
 
             return response()->json([
-                'success' => true, 
+                'success' => true,
                 'message' => 'Discount deleted successfully.'
             ]);
 
         } catch (\Exception $e) {
             Log::error('Error deleting discount: ' . $e->getMessage());
             return response()->json([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Error deleting discount: ' . $e->getMessage()
             ], 500);
         }
     }
-} 
+}

@@ -12,13 +12,17 @@ return new class extends Migration
      * @return void
      */
     public function up()
-{
-    DB::statement("ALTER TABLE payment_installments MODIFY COLUMN status ENUM('pending','paid','overdue','archived') DEFAULT 'pending'");
-}
+    {
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE payment_installments MODIFY COLUMN status ENUM('pending','paid','overdue','archived') DEFAULT 'pending'");
+        }
+    }
 
-public function down()
-{
-    DB::statement("ALTER TABLE payment_installments MODIFY COLUMN status ENUM('pending','paid','overdue') DEFAULT 'pending'");
-}
+    public function down()
+    {
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE payment_installments MODIFY COLUMN status ENUM('pending','paid','overdue') DEFAULT 'pending'");
+        }
+    }
 
 };

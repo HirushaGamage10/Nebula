@@ -33,12 +33,12 @@ class SemesterCreationController extends Controller
         $courses = Course::all();
         $intakes = Intake::all();
         $modules = Module::all();
-        
+
         // Get the semester's modules with specializations
         $semesterModules = \DB::table('semester_module')
             ->where('semester_id', $semester->id)
             ->get();
-        
+
         return view('courses_&_modules.semester_edit', compact('semester', 'courses', 'intakes', 'modules', 'semesterModules'));
     }
 
@@ -52,7 +52,7 @@ class SemesterCreationController extends Controller
                 $data = $request->json()->all();
                 $request->merge($data);
             }
-            
+
             // Map the form field 'semester' to 'name' for the database
             if ($request->has('semester')) {
                 $request->merge(['name' => $request->semester]);
@@ -87,7 +87,7 @@ class SemesterCreationController extends Controller
 
             // Update the semester
             $semester->update($semesterData);
-            
+
             \Log::info('Semester updated successfully:', ['semester_id' => $semester->id]);
 
             // Handle modules if present - update semester_module table
@@ -123,10 +123,10 @@ class SemesterCreationController extends Controller
         try {
             // Delete associated modules first
             \DB::table('semester_module')->where('semester_id', $semester->id)->delete();
-            
+
             // Delete the semester
             $semester->delete();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Semester deleted successfully.'
@@ -152,7 +152,7 @@ class SemesterCreationController extends Controller
                 $data = $request->json()->all();
                 $request->merge($data);
             }
-            
+
             // Map the form field 'semester' to 'name' for the database
             if ($request->has('semester')) {
                 $request->merge(['name' => $request->semester]);
@@ -192,7 +192,7 @@ class SemesterCreationController extends Controller
 
             // Create the semester
             $semester = Semester::create($semesterData);
-            
+
             \Log::info('Semester created successfully:', ['semester_id' => $semester->id]);
 
             // Handle modules if present - save to semester_module table
@@ -232,15 +232,32 @@ class SemesterCreationController extends Controller
             'semester'   => 'required|integer|exists:semesters,id',
         ]);
 
-        $courseId  = (int) $request->course_id;
-        $intakeId  = (int) $request->intake_id;
+        $courseId   = (int) $request->course_id;
+        $intakeId   = (int) $request->intake_id;
         $semesterId = (int) $request->semester;
 
         try {
-<<<<<<< HEAD
-            $course = Course::find($request->course_id);
-            $intake = Intake::find($request->intake_id);
-=======
+            $course = Course::find($courseId);
+            $intake = Intake::find($intakeId);
+
+            if (!$course || !$intake) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Course or Intake not found.',
+                    'modules' => []
+                ], 422);
+            }
+
+            // Validate that the selected intake belongs to the course/location
+            $belongsToCourse = ($intake->course_id == $course->course_id) || (is_null($intake->course_id) && $intake->course_name === $course->course_name);
+            if (!$belongsToCourse || $intake->location !== $request->location) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The selected intake does not belong to the chosen course or location.',
+                    'modules' => []
+                ], 422);
+            }
+
             // Validate that the requested semester belongs to the given course and intake,
             // preventing cross-cohort module leakage.
             $semester = \DB::table('semesters')
@@ -271,75 +288,34 @@ class SemesterCreationController extends Controller
                 )
                 ->orderBy('modules.module_name')
                 ->distinct()
-                ->get()
-                ->map(fn ($m) => [
-                    'module_id'   => $m->module_id,
-                    'module_name' => $m->module_name,
-                    'module_code' => $m->module_code,
-                    'module_type' => $m->module_type,
-                    'credits'     => $m->credits,
-                ]);
+                ->get();
 
             // Fallback: if no semester_module rows exist yet for this semester, fall back to
-            // course_modules filtered by course_id (and semester number when populated).
+            // course_modules or intake_modules
             if ($modules->isEmpty()) {
-                $modules = \DB::table('modules')
-                    ->join('course_modules', 'modules.module_id', '=', 'course_modules.module_id')
-                    ->where('course_modules.course_id', $courseId)
-                    ->select(
-                        'modules.module_id',
-                        'modules.module_name',
-                        'modules.module_code',
-                        'modules.module_type',
-                        'modules.credits'
-                    )
-                    ->orderBy('modules.module_name')
-                    ->distinct()
-                    ->get()
-                    ->map(fn ($m) => [
-                        'module_id'   => $m->module_id,
-                        'module_name' => $m->module_name,
-                        'module_code' => $m->module_code,
-                        'module_type' => $m->module_type,
-                        'credits'     => $m->credits,
-                    ]);
-            }
->>>>>>> b343af1de3186ae1c793d003e14b57727d3855fd
-
-            if (!$course || !$intake) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Course or Intake not found.',
-                    'modules' => []
-                ], 422);
-            }
-
-            // Validate that the selected intake belongs to the course/location
-            $belongsToCourse = ($intake->course_id == $course->course_id) || (is_null($intake->course_id) && $intake->course_name === $course->course_name);
-            if (!$belongsToCourse || $intake->location !== $request->location) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'The selected intake does not belong to the chosen course or location.',
-                    'modules' => []
-                ], 422);
-            }
-
-            // Retrieve modules through course/intake/semester assignment tables
-            if ($course->course_type === 'certificate') {
-                $modules = \DB::table('modules')
-                    ->join('intake_modules', 'modules.module_id', '=', 'intake_modules.module_id')
-                    ->where('intake_modules.intake_id', $intake->intake_id)
-                    ->select('modules.module_id', 'modules.module_name', 'modules.module_code', 'modules.module_type', 'modules.credits')
-                    ->orderBy('modules.module_name')
-                    ->get();
-            } else {
-                $modules = \DB::table('modules')
-                    ->join('course_modules', 'modules.module_id', '=', 'course_modules.module_id')
-                    ->where('course_modules.course_id', $course->course_id)
-                    ->where('course_modules.semester', $request->semester)
-                    ->select('modules.module_id', 'modules.module_name', 'modules.module_code', 'modules.module_type', 'modules.credits')
-                    ->orderBy('modules.module_name')
-                    ->get();
+                if ($course->course_type === 'certificate') {
+                    $modules = \DB::table('modules')
+                        ->join('intake_modules', 'modules.module_id', '=', 'intake_modules.module_id')
+                        ->where('intake_modules.intake_id', $intake->intake_id)
+                        ->select('modules.module_id', 'modules.module_name', 'modules.module_code', 'modules.module_type', 'modules.credits')
+                        ->orderBy('modules.module_name')
+                        ->distinct()
+                        ->get();
+                } else {
+                    $modules = \DB::table('modules')
+                        ->join('course_modules', 'modules.module_id', '=', 'course_modules.module_id')
+                        ->where('course_modules.course_id', $courseId)
+                        ->select(
+                            'modules.module_id',
+                            'modules.module_name',
+                            'modules.module_code',
+                            'modules.module_type',
+                            'modules.credits'
+                        )
+                        ->orderBy('modules.module_name')
+                        ->distinct()
+                        ->get();
+                }
             }
 
             $formattedModules = $modules->map(function ($module) {
@@ -365,12 +341,26 @@ class SemesterCreationController extends Controller
     public function getCoursesByLocation(Request $request)
     {
         $location = $request->query('location');
+
+        if (!$location) {
+            return response()->json([
+                'success' => false,
+                'courses' => [],
+                'message' => 'Location is required.'
+            ]);
+        }
+
         $courses = \App\Models\Course::select('course_id', 'course_name')
             ->where('location', $location)
             ->whereIn('course_type', ['degree', 'diploma'])
             ->orderBy('course_name', 'asc')
             ->get();
-        return response()->json(['success' => true, 'courses' => $courses]);
+
+        return response()->json([
+            'success' => true,
+            'courses' => $courses,
+            'message' => $courses->isEmpty() ? 'No courses found.' : 'Courses loaded successfully.'
+        ]);
     }
 
     public function getIntakesForCourseAndLocation($courseId, $location)
@@ -437,7 +427,7 @@ class SemesterCreationController extends Controller
             ));
 
             $updatedCount = count($semesterIds);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => "Successfully updated status for {$updatedCount} semester(s)."
@@ -463,12 +453,12 @@ class SemesterCreationController extends Controller
 
             // Delete associated modules first
             \DB::table('semester_module')->whereIn('semester_id', $semesterIds)->delete();
-            
+
             // Delete semesters
             Semester::whereIn('id', $semesterIds)->delete();
 
             $deletedCount = count($semesterIds);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => "Successfully deleted {$deletedCount} semester(s)."
@@ -496,7 +486,7 @@ class SemesterCreationController extends Controller
             $newSemester->name = $request->new_name;
             $newSemester->start_date = $request->start_date;
             $newSemester->end_date = $request->end_date;
-            
+
             // Determine status based on dates
             $today = now()->toDateString();
             if ($newSemester->start_date > $today) {
@@ -506,7 +496,7 @@ class SemesterCreationController extends Controller
             } else {
                 $newSemester->status = 'completed';
             }
-            
+
             $newSemester->save();
 
             // Copy modules

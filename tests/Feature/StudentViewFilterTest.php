@@ -34,25 +34,23 @@ class StudentViewFilterTest extends TestCase
             'name'          => 'Program Admin',
             'email'         => 'admin@nebula.lk',
             'password'      => Hash::make('password'),
-            'user_role'     => 'Program Admin L1',
+            'user_role'     => 'Program Administrator (level 01)',
             'status'        => '1',
             'user_location' => 'Welisara',
         ]);
     }
 
-    // -------------------------------------------------------------------------
-    // Helper to create a Student + optionally a CourseRegistration
-    // -------------------------------------------------------------------------
-
     private function makeStudent(string $idValue, array $studentAttrs = []): Student
     {
         return Student::forceCreate(array_merge([
+            'title'              => 'Mr',
             'name_with_initials' => 'Test Student',
             'full_name'          => 'Test Student Full',
             'id_type'            => 'NIC',
             'id_value'           => $idValue,
             'gender'             => 'Male',
             'email'              => $idValue . '@test.lk',
+            'status'             => 'Registered',
             'academic_status'    => 'active',
             'institute_location' => 'Welisara',
         ], $studentAttrs));
@@ -60,6 +58,41 @@ class StudentViewFilterTest extends TestCase
 
     private function makeRegistration(int $studentId, int $courseId, int $intakeId, string $location = 'Welisara'): CourseRegistration
     {
+        $course = Course::find($courseId);
+        if (!$course) {
+            $course = Course::forceCreate([
+                'course_id'           => $courseId,
+                'course_name'         => 'Course ' . $courseId,
+                'course_type'         => 'degree',
+                'duration'            => '3 years',
+                'no_of_semesters'     => 6,
+                'min_credits'         => 120,
+                'conducted_by'        => 1,
+                'course_medium'       => 'English',
+                'entry_qualification' => 'A/L',
+                'location'            => $location,
+            ]);
+        }
+
+        $intake = Intake::find($intakeId);
+        if (!$intake) {
+            $intake = Intake::forceCreate([
+                'intake_id'         => $intakeId,
+                'batch'             => 'Batch ' . $intakeId,
+                'course_id'         => $course->course_id,
+                'course_name'       => $course->course_name,
+                'batch_size'        => 50,
+                'intake_mode'       => 'Physical',
+                'intake_type'       => 'Fulltime',
+                'registration_fee'  => '1000',
+                'franchise_payment' => '0',
+                'course_fee'        => '50000',
+                'location'          => $location,
+                'start_date'        => now()->toDateString(),
+                'end_date'          => now()->addYear()->toDateString(),
+            ]);
+        }
+
         return CourseRegistration::forceCreate([
             'student_id'        => $studentId,
             'course_id'         => $courseId,
@@ -71,42 +104,36 @@ class StudentViewFilterTest extends TestCase
         ]);
     }
 
-    private function route(array $params = []): string
+    private function route(): string
     {
-        return '/student-view?' . http_build_query($params);
+        return '/students/filter';
     }
-
-    // =========================================================================
-    // Fix 1: student_id search must not bypass course/intake constraints
-    // =========================================================================
 
     public function test_student_id_search_without_course_filter_returns_student(): void
     {
         $student = $this->makeStudent('199012345678');
 
         $response = $this->actingAs($this->actor)
-            ->getJson($this->route(['student_id' => '199012345678']));
+            ->postJson($this->route(), ['student_id' => '199012345678']);
 
         $response->assertOk();
-        $ids = collect($response->json('students'))->pluck('student_id');
+        $ids = collect($response->json('data'))->pluck('student_id');
         $this->assertContains($student->student_id, $ids);
     }
 
     public function test_student_id_search_with_mismatched_course_does_not_return_student(): void
     {
-        // student is registered to course 1 only
         $student = $this->makeStudent('199099999999');
         $this->makeRegistration($student->student_id, 1, 1);
 
-        // search for that student but filter by course 2 — should return nothing
         $response = $this->actingAs($this->actor)
-            ->getJson($this->route([
+            ->postJson($this->route(), [
                 'student_id' => '199099999999',
                 'course_id'  => 2,
-            ]));
+            ]);
 
         $response->assertOk();
-        $ids = collect($response->json('students'))->pluck('student_id');
+        $ids = collect($response->json('data'))->pluck('student_id');
         $this->assertNotContains(
             $student->student_id,
             $ids,
@@ -114,28 +141,20 @@ class StudentViewFilterTest extends TestCase
         );
     }
 
-    // =========================================================================
-    // Fix 2: course AND intake must be satisfied by the SAME registration row
-    // =========================================================================
-
     public function test_student_with_course_a_intake_b_on_separate_registrations_is_excluded(): void
     {
-        // Student has two registrations:
-        //   reg 1: course=10, intake=100
-        //   reg 2: course=20, intake=200
-        // Filter: course=10 AND intake=200 — no single row satisfies both.
         $student = $this->makeStudent('200011112222');
         $this->makeRegistration($student->student_id, 10, 100);
         $this->makeRegistration($student->student_id, 20, 200);
 
         $response = $this->actingAs($this->actor)
-            ->getJson($this->route([
+            ->postJson($this->route(), [
                 'course_id'  => 10,
                 'intake_id'  => 200,
-            ]));
+            ]);
 
         $response->assertOk();
-        $ids = collect($response->json('students'))->pluck('student_id');
+        $ids = collect($response->json('data'))->pluck('student_id');
         $this->assertNotContains(
             $student->student_id,
             $ids,
@@ -149,13 +168,13 @@ class StudentViewFilterTest extends TestCase
         $this->makeRegistration($student->student_id, 10, 100);
 
         $response = $this->actingAs($this->actor)
-            ->getJson($this->route([
+            ->postJson($this->route(), [
                 'course_id'  => 10,
                 'intake_id'  => 100,
-            ]));
+            ]);
 
         $response->assertOk();
-        $ids = collect($response->json('students'))->pluck('student_id');
+        $ids = collect($response->json('data'))->pluck('student_id');
         $this->assertContains(
             $student->student_id,
             $ids,

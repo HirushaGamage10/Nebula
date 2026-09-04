@@ -9,6 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         // ✅ Step 1: Change ENUM definition
         DB::statement("
             ALTER TABLE courses 
@@ -24,6 +28,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         // Rollback to original enum definition
         DB::statement("
             ALTER TABLE courses 

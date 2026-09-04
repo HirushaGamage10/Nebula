@@ -52,12 +52,26 @@ class EligibilityCheckingAndRegistrationController extends Controller
     {
         $location = $request->query('location');
         $courseType = $request->query('course_type'); // e.g., 'degree'
+
+        if (!$location) {
+            return response()->json([
+                'success' => false,
+                'courses' => [],
+                'message' => 'Location is required.'
+            ]);
+        }
+
         $query = Course::where('location', $location);
         if ($courseType) {
             $query->where('course_type', $courseType);
         }
         $courses = $query->orderBy('course_name')->get(['course_id', 'course_name']);
-        return response()->json(['success' => true, 'courses' => $courses]);
+
+        return response()->json([
+            'success' => true,
+            'courses' => $courses,
+            'message' => $courses->isEmpty() ? 'No courses found.' : 'Courses loaded successfully.'
+        ]);
     }
 
     // Fetch intakes for a course and location

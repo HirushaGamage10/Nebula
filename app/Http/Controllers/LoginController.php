@@ -29,14 +29,14 @@ class LoginController extends Controller
             $validation = $this->authenticationService->validateCredentials($credentials);
 
             if (!$validation['valid']) {
-                return $this->failedLoginResponse($credentials, $validation['errors'], 422);
+                return $this->failedLoginResponse($request, $validation['errors'], 422);
             }
 
             $result = $this->authenticationService->attemptLogin($credentials);
 
             if (!($result['success'] ?? false)) {
                 return $this->failedLoginResponse(
-                    $credentials,
+                    $request,
                     ['email' => $result['message'] ?? 'Invalid username or password.'],
                     422
                 );
@@ -54,19 +54,25 @@ class LoginController extends Controller
             ]);
 
             return $this->failedLoginResponse(
-                $credentials ?? ['email' => $request->email],
+                $request,
                 ['email' => 'An error occurred during login. Please try again.'],
                 500
             );
         }
     }
 
-    private function failedLoginResponse(array $credentials, array $errors, int $status)
+    private function failedLoginResponse(Request $request, array $errors, int $status)
     {
-        return response()->view('login', [
-            'loginErrors' => $errors,
-            'submittedEmail' => $credentials['email'] ?? null,
-            'popup' => true,
-        ], $status);
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $errors,
+            ], $status);
+        }
+
+        return redirect()->route('login')
+            ->withErrors($errors)
+            ->withInput($request->except('password'))
+            ->with('popup', true);
     }
 }

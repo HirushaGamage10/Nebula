@@ -16,7 +16,9 @@ return new class extends Migration
         });
 
         // 2. Drop old primary key safely
-        DB::statement('ALTER TABLE semester_module DROP PRIMARY KEY');
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE semester_module DROP PRIMARY KEY');
+        }
 
         Schema::table('semester_module', function (Blueprint $table) {
             // 3. Make specialization nullable
@@ -38,7 +40,9 @@ return new class extends Migration
             $table->dropForeign(['module_id']);
         });
 
-        DB::statement('ALTER TABLE semester_module DROP PRIMARY KEY');
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE semester_module DROP PRIMARY KEY');
+        }
 
         Schema::table('semester_module', function (Blueprint $table) {
             $table->string('specialization', 255)->nullable(false)->change();

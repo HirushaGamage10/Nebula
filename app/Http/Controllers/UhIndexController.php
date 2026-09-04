@@ -21,12 +21,31 @@ class UhIndexController extends Controller
     public function getCoursesByLocation(Request $request)
     {
         try {
-            $courses = Course::where('location', $request->input('location'))
+            $location = $request->input('location');
+
+            if (!$location) {
+                return response()->json([
+                    'success' => false,
+                    'courses' => [],
+                    'message' => 'Location is required.'
+                ]);
+            }
+
+            $courses = Course::where('location', $location)
                 ->get(['course_id', 'course_name']);
-            return response()->json(['courses' => $courses]);
+
+            return response()->json([
+                'success' => true,
+                'courses' => $courses,
+                'message' => $courses->isEmpty() ? 'No courses found.' : 'Courses loaded successfully.'
+            ]);
         } catch (\Throwable $e) {
             Log::error('getCoursesByLocation: ' . $e->getMessage());
-            return response()->json(['courses' => [], 'error' => 'Failed to fetch courses']);
+            return response()->json([
+                'success' => false,
+                'courses' => [],
+                'message' => 'Failed to fetch courses'
+            ]);
         }
     }
 

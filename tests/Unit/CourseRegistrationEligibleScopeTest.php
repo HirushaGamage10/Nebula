@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\CourseRegistration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -17,12 +18,66 @@ class CourseRegistrationEligibleScopeTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** IDs of seed parent records shared across all test methods. */
+    private int $studentId;
+    private int $courseId;
+    private int $intakeId;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Insert minimal parent records so FK constraints are satisfied.
+        $this->studentId = DB::table('students')->insertGetId([
+            'title'              => 'Mr',
+            'name_with_initials' => 'T. Test',
+            'full_name'          => 'Test Student',
+            'gender'             => 'Male',
+            'id_type'            => 'National id',
+            'id_value'           => 'TEST-SCOPE-001',
+            'institute_location' => 'Welisara',
+            'status'             => 'Unmarried',
+            'created_at'         => now(),
+            'updated_at'         => now(),
+        ]);
+
+        $this->courseId = DB::table('courses')->insertGetId([
+            'location'            => 'Welisara',
+            'course_name'         => 'Test Course',
+            'course_type'         => 'degree',
+            'no_of_semesters'     => 4,
+            'duration'            => '2 years',
+            'min_credits'         => 60,
+            'entry_qualification' => 'A/L',
+            'conducted_by'        => 0,
+            'course_medium'       => 'English',
+            'created_at'          => now(),
+            'updated_at'          => now(),
+        ]);
+
+        $this->intakeId = DB::table('intakes')->insertGetId([
+            'location'        => 'Welisara',
+            'course_name'     => 'Test Course',
+            'batch'           => 'BATCH-001',
+            'batch_size'      => 30,
+            'intake_mode'     => 'Physical',
+            'intake_type'     => 'Fulltime',
+            'registration_fee'=> '5000',
+            'franchise_payment'=> '0',
+            'course_fee'      => '50000',
+            'start_date'      => now()->toDateString(),
+            'end_date'        => now()->addYears(2)->toDateString(),
+            'created_at'      => now(),
+            'updated_at'      => now(),
+        ]);
+    }
+
     private function makeReg(array $attrs): CourseRegistration
     {
         return CourseRegistration::forceCreate(array_merge([
-            'student_id'        => 1,
-            'course_id'         => 1,
-            'intake_id'         => 1,
+            'student_id'        => $this->studentId,
+            'course_id'         => $this->courseId,
+            'intake_id'         => $this->intakeId,
             'status'            => 'Pending',
             'approval_status'   => 'Pending',
             'location'          => 'Welisara',

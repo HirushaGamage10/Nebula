@@ -21,7 +21,7 @@ class EmailValidationTest extends TestCase
         $this->assertContains('email', $rules['email']);
         $this->assertContains('max:255', $rules['email']);
         $this->assertContains('unique:users,email', $rules['email']);
-        $this->assertContains('regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $rules['email']);
+        $this->assertContains('regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$/', $rules['email']);
     }
 
     public function test_email_validation_messages()
@@ -94,7 +94,7 @@ class EmailValidationTest extends TestCase
 
     public function test_email_regex_validation()
     {
-        $regex = '/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/';
+        $regex = '/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$/';
         
         $validEmails = [
             'test@nebula.com',

@@ -6,11 +6,8 @@ use App\Models\ClearanceRequest;
 use App\Models\Course;
 use App\Models\CourseRegistration;
 use App\Models\Student;
-<<<<<<< Updated upstream
-=======
 use App\Models\StudentClearance;
 use App\Support\SpecializationStudentScope;
->>>>>>> Stashed changes
 use Illuminate\Http\Request;
 
 class AllClearanceController extends Controller
@@ -86,29 +83,49 @@ class AllClearanceController extends Controller
     public function librarysearch(Request $request)
     {
         $studentIdLibrary = $request->get('student_id');
-        $libraryRecords = Library::where('student_id', $studentIdLibrary)->get();
-        return view('all_clearance', compact('libraryRecords', 'studentIdLibrary'));
+
+        $libraryRecords = ClearanceRequest::where('student_id', $studentIdLibrary)
+            ->where('clearance_type', ClearanceRequest::TYPE_LIBRARY)
+            ->orderBy('requested_at', 'desc')
+            ->get();
+
+        return view('clearance.all_clearance', compact('libraryRecords', 'studentIdLibrary'));
     }
 
     public function paymentsearch(Request $request)
     {
         $studentIdPayment = $request->get('student_id');
-        $paymentRecords = PaymentClearance::where('student_id', $studentIdPayment)->get();
-        return view('all_clearance', compact('paymentRecords', 'studentIdPayment'));
+
+        $paymentRecords = ClearanceRequest::where('student_id', $studentIdPayment)
+            ->where('clearance_type', ClearanceRequest::TYPE_PAYMENT)
+            ->orderBy('requested_at', 'desc')
+            ->get();
+
+        return view('clearance.all_clearance', compact('paymentRecords', 'studentIdPayment'));
     }
 
     public function hostelsearch(Request $request)
     {
         $studentId = $request->get('student_id');
-        $records = Hostel::where('student_id', $studentId)->get();
-        return view('all_clearance', compact('records', 'studentId'));
+
+        $records = ClearanceRequest::where('student_id', $studentId)
+            ->where('clearance_type', ClearanceRequest::TYPE_HOSTEL)
+            ->orderBy('requested_at', 'desc')
+            ->get();
+
+        return view('clearance.all_clearance', compact('records', 'studentId'));
     }
 
     public function projectsearch(Request $request)
     {
         $studentIdProject = $request->get('student_id');
-        $projectRecords = Project::where('student_id', $studentIdProject)->get();
-        return view('all_clearance', compact('projectRecords', 'studentIdProject'));
+
+        $projectRecords = ClearanceRequest::where('student_id', $studentIdProject)
+            ->where('clearance_type', ClearanceRequest::TYPE_PROJECT)
+            ->orderBy('requested_at', 'desc')
+            ->get();
+
+        return view('clearance.all_clearance', compact('projectRecords', 'studentIdProject'));
     }
 
     public function sendClearance($type, $student_id)

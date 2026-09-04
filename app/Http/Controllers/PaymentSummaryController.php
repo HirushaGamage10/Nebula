@@ -32,9 +32,9 @@ class PaymentSummaryController extends Controller
         $startDateInput = $request->input('start_date');
         $endDateInput = $request->input('end_date');
         $breakdownScope = $request->input('breakdown_scope', 'paid');
-        
+
         $startDate = $this->getDateFromRange($range);
-        
+
         return $this->generateAdvancedSummary(null, $startDate, [
             'payment_method' => $paymentMethod,
             'status' => $status,
@@ -95,7 +95,8 @@ class PaymentSummaryController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $courses,
+            'courses' => $courses,
+            'message' => $courses->isEmpty() ? 'No courses found.' : 'Courses loaded successfully.'
         ]);
     }
 
@@ -151,16 +152,16 @@ class PaymentSummaryController extends Controller
             : 0;
         $totalLateFee = $this->sumIfColumnExists($query, 'late_fee');
         $totalDiscount = $this->sumIfColumnExists($query, 'registration_fee_discount_applied');
-        
+
         // New Advanced Metrics
         $approvedLateFees = $this->sumIfColumnExists($query, 'approved_late_fee');
         $foreignCurrencyTotal = $this->sumIfColumnExists($query, 'foreign_currency_amount');
         $ssclTaxTotal = $this->sumIfColumnExists($query, 'sscl_tax_amount');
         $bankChargesTotal = $this->sumIfColumnExists($query, 'bank_charges');
-        
+
         // Payment Breakdown
         $paymentByMethod = (clone $query)
-            ->select('payment_method', 
+            ->select('payment_method',
                 DB::raw('SUM(total_fee) as total'),
                 DB::raw('COUNT(*) as count'))
             ->groupBy('payment_method')
@@ -229,7 +230,7 @@ class PaymentSummaryController extends Controller
         $student = Student::where('student_id', $studentId)->first();
 
         return view('payments.student_summary', compact(
-            'studentId', 'student', 'totalCollected', 'totalPending', 'totalLateFee', 
+            'studentId', 'student', 'totalCollected', 'totalPending', 'totalLateFee',
             'totalDiscount', 'approvedLateFees', 'foreignCurrencyTotal', 'ssclTaxTotal',
             'bankChargesTotal', 'paymentByMethod', 'paymentByType', 'paymentByStatus',
             'monthlyIncome', 'paymentRecords', 'methodComparison'
@@ -695,12 +696,12 @@ class PaymentSummaryController extends Controller
             ->where('status', 'paid')
             ->sum('total_fee');
 
-        $growthRate = $previousYearTotal > 0 
-            ? (($currentYearTotal - $previousYearTotal) / $previousYearTotal) * 100 
+        $growthRate = $previousYearTotal > 0
+            ? (($currentYearTotal - $previousYearTotal) / $previousYearTotal) * 100
             : 0;
 
         return view('payments.comparison', compact(
-            'currentYearData', 'previousYearData', 'currentYearTotal', 
+            'currentYearData', 'previousYearData', 'currentYearTotal',
             'previousYearTotal', 'growthRate', 'currentYear', 'previousYear'
         ));
     }
@@ -793,7 +794,7 @@ class PaymentSummaryController extends Controller
             : 0;
         $totalLateFee = $this->sumIfColumnExists($query, 'late_fee');
         $totalDiscount = $this->sumIfColumnExists($query, 'registration_fee_discount_applied');
-        
+
         // Advanced KPIs
         $totalTransactions = (clone $query)->count();
         $averageTransaction = $totalTransactions > 0 ? $totalCollected / $totalTransactions : 0;
@@ -807,7 +808,7 @@ class PaymentSummaryController extends Controller
         }
 
         $paymentByMethod = (clone $methodTypeQuery)
-            ->select($paymentTable . '.payment_method', 
+            ->select($paymentTable . '.payment_method',
                 DB::raw("SUM({$paymentTable}.total_fee) as total"),
                 DB::raw('COUNT(*) as count'))
             ->groupBy($paymentTable . '.payment_method')
@@ -1523,7 +1524,7 @@ class PaymentSummaryController extends Controller
         $query->orderBy("{$table}.created_at", 'desc');
 
         $transactions = $query->get();
-        
+
         $paidTotal    = $transactions->where('status', 'paid')->sum('total_fee');
         $pendingTotal = $transactions->where('status', 'pending')->sum('total_fee');
         $grandTotal   = $transactions->sum('total_fee');
@@ -1555,12 +1556,12 @@ class PaymentSummaryController extends Controller
     public function liveFeed(Request $request)
     {
         $lastId = $request->input('last_id', 0);
-        
+
         $payments = PaymentDetail::where('id', '>', $lastId)
             ->orderBy('created_at', 'desc')
             ->take(10)
             ->get();
-        
+
         return response()->json([
             'payments' => $payments,
             'last_id' => $payments->max('id') ?? $lastId,

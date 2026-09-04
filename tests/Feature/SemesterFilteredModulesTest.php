@@ -36,28 +36,42 @@ class SemesterFilteredModulesTest extends TestCase
             'name'          => 'Program Admin',
             'email'         => 'padmin@nebula.lk',
             'password'      => Hash::make('password'),
-            'user_role'     => 'Program Admin L1',
+            'user_role'     => 'Program Administrator (level 01)',
             'status'        => '1',
             'user_location' => 'Welisara',
         ]);
 
         // Course
         $this->courseId = DB::table('courses')->insertGetId([
-            'course_name'  => 'BSc CS',
-            'course_type'  => 'degree',
-            'location'     => 'Welisara',
-            'created_at'   => now(),
-            'updated_at'   => now(),
+            'course_name'         => 'BSc CS',
+            'course_type'         => 'degree',
+            'location'            => 'Welisara',
+            'no_of_semesters'     => 8,
+            'duration'            => '4 years',
+            'min_credits'         => 120,
+            'entry_qualification' => 'A/L Pass',
+            'conducted_by'        => 1,
+            'course_medium'       => 'English',
+            'created_at'          => now(),
+            'updated_at'          => now(),
         ]);
 
         // Intake
         $this->intakeId = DB::table('intakes')->insertGetId([
-            'course_id'  => $this->courseId,
-            'course_name'=> 'BSc CS',
-            'batch'      => '2024-01',
-            'location'   => 'Welisara',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'course_id'        => $this->courseId,
+            'course_name'      => 'BSc CS',
+            'batch'            => '2024-01',
+            'batch_size'       => 50,
+            'intake_mode'      => 'Physical',
+            'intake_type'      => 'Fulltime',
+            'registration_fee' => '1000',
+            'franchise_payment'=> '0',
+            'course_fee'       => '500000',
+            'start_date'       => now()->toDateString(),
+            'end_date'         => now()->addYears(3)->toDateString(),
+            'location'         => 'Welisara',
+            'created_at'       => now(),
+            'updated_at'       => now(),
         ]);
 
         // Semester
@@ -158,11 +172,17 @@ class SemesterFilteredModulesTest extends TestCase
     {
         // Create a second course — the semester belongs to courseId, not this one
         $otherCourseId = DB::table('courses')->insertGetId([
-            'course_name' => 'BBA',
-            'course_type' => 'degree',
-            'location'    => 'Welisara',
-            'created_at'  => now(),
-            'updated_at'  => now(),
+            'course_name'         => 'BBA',
+            'course_type'         => 'degree',
+            'location'            => 'Welisara',
+            'no_of_semesters'     => 8,
+            'duration'            => '4 years',
+            'min_credits'         => 120,
+            'entry_qualification' => 'A/L Pass',
+            'conducted_by'        => 1,
+            'course_medium'       => 'English',
+            'created_at'          => now(),
+            'updated_at'          => now(),
         ]);
 
         $response = $this->postFiltered(['course_id' => $otherCourseId]);
@@ -175,12 +195,20 @@ class SemesterFilteredModulesTest extends TestCase
     public function test_wrong_intake_is_rejected(): void
     {
         $otherIntakeId = DB::table('intakes')->insertGetId([
-            'course_id'  => $this->courseId,
-            'course_name'=> 'BSc CS',
-            'batch'      => '2025-01',
-            'location'   => 'Welisara',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'course_id'        => $this->courseId,
+            'course_name'      => 'BSc CS',
+            'batch'            => '2025-01',
+            'batch_size'       => 50,
+            'intake_mode'      => 'Physical',
+            'intake_type'      => 'Fulltime',
+            'registration_fee' => '1000',
+            'franchise_payment'=> '0',
+            'course_fee'       => '500000',
+            'start_date'       => now()->toDateString(),
+            'end_date'         => now()->addYears(3)->toDateString(),
+            'location'         => 'Welisara',
+            'created_at'       => now(),
+            'updated_at'       => now(),
         ]);
 
         $response = $this->postFiltered(['intake_id' => $otherIntakeId]);

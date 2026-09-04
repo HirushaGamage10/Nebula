@@ -39,42 +39,45 @@ class AttendanceController extends Controller
         $location = $request->query('location');
         $courseType = $request->query('course_type');
 
-        Log::info('getCoursesByLocation called', [
-            'location' => $location,
-            'course_type' => $courseType,
-            'all_params' => $request->all()
-        ]);
-
         if (!$location || !$courseType) {
-            return response()->json(['success' => false, 'message' => 'Location and Course Type are required.']);
+            return response()->json([
+                'success' => false,
+                'courses' => [],
+                'message' => 'Location and Course Type are required.'
+            ]);
         }
+
         try {
-            // First, let's see what's actually in the database for this location
-            $allCoursesAtLocation = Course::where('location', $location)
-                ->select('course_id', 'course_name', 'course_type')
-                ->get();
+            // Debug log to check what we're querying
+            \Log::info('getCoursesByLocation query params', [
+                'location' => $location,
+                'courseType' => $courseType,
+            ]);
 
-            Log::info('All courses at location:', $allCoursesAtLocation->toArray());
-
-            $query = Course::select('course_id', 'course_name', 'course_type')
+            $courses = Course::select('course_id', 'course_name')
                 ->where('location', $location)
                 ->where('course_type', $courseType)
-                ->orderBy('course_name', 'asc');
+                ->orderBy('course_name', 'asc')
+                ->get();
 
-            Log::info('SQL Query: ' . $query->toSql(), ['bindings' => $query->getBindings()]);
+            // Log the results
+            \Log::info('Courses found:', [
+                'count' => $courses->count(),
+                'courses' => $courses->toArray()
+            ]);
 
-            $courses = $query->get();
-
-            Log::info('Filtered courses found: ' . $courses->count(), $courses->toArray());
-
-            if ($courses->isEmpty()) {
-                return response()->json(['success' => false, 'message' => 'No courses found for this location and type.']);
-            }
-
-            return response()->json(['success' => true, 'courses' => $courses]);
+            return response()->json([
+                'success' => true,
+                'courses' => $courses,
+                'message' => $courses->isEmpty() ? 'No courses found for this location and type.' : 'Courses loaded successfully.'
+            ]);
         } catch (\Exception $e) {
             Log::error('Error fetching courses by location: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'An error occurred while fetching courses.'], 500);
+            return response()->json([
+                'success' => false,
+                'courses' => [],
+                'message' => 'An error occurred while fetching courses.'
+            ], 500);
         }
     }
 

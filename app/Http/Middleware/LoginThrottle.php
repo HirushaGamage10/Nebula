@@ -36,6 +36,7 @@ class LoginThrottle
             ]);
             
             return $this->failedLoginResponse(
+                $request,
                 $email,
                 'Too many login attempts. Please try again later.',
                 429
@@ -51,6 +52,7 @@ class LoginThrottle
             ]);
             
             return $this->failedLoginResponse(
+                $request,
                 $email,
                 'Too many login attempts for this account. Please try again later.',
                 429
@@ -148,12 +150,19 @@ class LoginThrottle
         return str_contains($emailError, 'invalid username or password');
     }
 
-    private function failedLoginResponse(?string $email, string $message, int $status)
+    private function failedLoginResponse(Request $request, ?string $email, string $message, int $status)
     {
-        return response()->view('login', [
-            'loginErrors' => ['email' => $message],
-            'submittedEmail' => $email,
-            'popup' => true,
-        ], $status);
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+                'errors' => ['email' => [$message]],
+            ], $status);
+        }
+
+        return back()
+            ->withErrors(['email' => $message])
+            ->withInput($request->except('password'))
+            ->with('popup', true);
     }
 } 

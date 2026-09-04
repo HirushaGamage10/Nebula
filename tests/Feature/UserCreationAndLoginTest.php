@@ -63,7 +63,7 @@ class UserCreationAndLoginTest extends TestCase
         $this->actingAs($librarianUser);
 
         // Test creating a new user (should fail)
-        $response = $this->post('/user/create', [
+        $response = $this->postJson('/user/create', [
             'user_name' => 'New User',
             'email' => 'newuser@nebula.com',
             'employee_id' => 'EMP002',

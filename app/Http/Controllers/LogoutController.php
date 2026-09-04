@@ -9,7 +9,11 @@ class LogoutController extends Controller
 {
     public function logout(Request $request)
     {
-        Auth::logout();
+        try {
+            Auth::guard('web')->logout();
+        } catch (\Throwable $e) {
+            // Guard does not support logout or session already cleared
+        }
         $request->session()->invalidate();
         $request->session()->regenerateToken(); // Regenerate session token for security
 

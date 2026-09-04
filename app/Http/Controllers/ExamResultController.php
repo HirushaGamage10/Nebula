@@ -376,28 +376,35 @@ class ExamResultController extends Controller
         $courseType = $request->query('course_type');
 
         if (!$location) {
-            return response()->json(['success' => false, 'message' => 'Location is required.']);
+            return response()->json([
+                'success' => false,
+                'courses' => [],
+                'message' => 'Location is required.'
+            ]);
         }
 
         try {
             $query = Course::select('course_id', 'course_name')
                 ->where('location', $location);
 
-            // Filter by course type if provided
             if ($courseType) {
                 $query->where('course_type', $courseType);
             }
 
             $courses = $query->orderBy('course_name', 'asc')->get();
 
-            if ($courses->isEmpty()) {
-                return response()->json(['success' => false, 'message' => 'No courses found for this location and type.']);
-            }
-
-            return response()->json(['success' => true, 'courses' => $courses]);
+            return response()->json([
+                'success' => true,
+                'courses' => $courses,
+                'message' => $courses->isEmpty() ? 'No courses found for this location and type.' : 'Courses loaded successfully.'
+            ]);
         } catch (\Exception $e) {
             Log::error('Error fetching courses by location: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'An error occurred while fetching courses.'], 500);
+            return response()->json([
+                'success' => false,
+                'courses' => [],
+                'message' => 'An error occurred while fetching courses.'
+            ], 500);
         }
     }
 

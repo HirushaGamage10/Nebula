@@ -313,7 +313,7 @@ class TimetableController extends Controller
         $readableTime = \Carbon\Carbon::createFromFormat('H:i:s', $st)->format('h:i A');
 
         // Only check for lecturer and classroom conflicts (removed class duplication check as requested)
-        
+
         // 1) lecturer + classroom combined check (preferred message)
         $combinedHandled = false;
         if (!empty($lecturer) && !empty($classroom)) {
@@ -443,30 +443,36 @@ class TimetableController extends Controller
     {
         $location = $request->input('location');
         $courseType = strtolower((string) $request->input('course_type'));
-        
+
         if (!$location || !$courseType) {
-            return response()->json(['success' => false, 'courses' => []]);
+            return response()->json([
+                'success' => false,
+                'courses' => [],
+                'message' => 'Location and course type are required.'
+            ]);
         }
 
         try {
             // For Degree tab, include both Degree and Diploma courses
             // For Certificate tab, only Certificate courses
             $query = Course::where('location', $location);
-            
+
             if ($courseType === 'degree') {
                 $query->whereIn(DB::raw('LOWER(course_type)'), ['degree', 'diploma']);
             } else {
                 $query->whereRaw('LOWER(course_type) = ?', [$courseType]);
             }
-            
+
             $courses = $query->orderBy('course_name')
                 ->get(['course_id', 'course_name']);
 
             return response()->json([
                 'success' => true,
-                'courses' => $courses
+                'courses' => $courses,
+                'message' => $courses->isEmpty() ? 'No courses found.' : 'Courses loaded successfully.'
             ]);
         } catch (\Exception $e) {
+            Log::error('Error fetching courses: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'courses' => [],

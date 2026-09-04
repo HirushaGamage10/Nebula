@@ -177,7 +177,7 @@ class UserCreationValidationTest extends TestCase
 
         foreach ($validEmails as $index => $email) {
             $response = $this->post('/user/create', [
-                'name' => 'Test User ' . $index,
+                'name' => 'Test User ' . chr(65 + $index),
                 'email' => $email,
                 'employee_id' => 'EMP' . str_pad($index + 1, 3, '0', STR_PAD_LEFT),
                 'user_role' => 'Librarian',
@@ -301,7 +301,7 @@ class UserCreationValidationTest extends TestCase
 
         $this->actingAs($regularUser);
 
-        $response = $this->post('/user/create', [
+        $response = $this->postJson('/user/create', [
             'name' => 'Test User',
             'email' => 'test@nebula.com',
             'employee_id' => 'EMP001',

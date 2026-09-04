@@ -9,6 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         // Get current ENUM values
         $currentEnum = DB::select("SHOW COLUMNS FROM course_registration WHERE Field = 'status'")[0]->Type;
 
@@ -29,6 +33,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         // Rollback - remove 'completed' if needed
         $currentEnum = DB::select("SHOW COLUMNS FROM course_registration WHERE Field = 'status'")[0]->Type;
         preg_match('/enum\((.*)\)/', $currentEnum, $matches);

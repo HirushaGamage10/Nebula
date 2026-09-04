@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         // Detect DB driver (works for MySQL)
-        if (Schema::hasColumn('student_payment_plans', 'status')) {
+        if (DB::getDriverName() === 'mysql' && Schema::hasColumn('student_payment_plans', 'status')) {
             DB::statement("ALTER TABLE student_payment_plans MODIFY COLUMN status ENUM('active', 'inactive', 'archived') DEFAULT 'active'");
         }
     }
@@ -24,7 +24,7 @@ return new class extends Migration
     public function down(): void
     {
         // Revert to original enum without 'archived'
-        if (Schema::hasColumn('student_payment_plans', 'status')) {
+        if (DB::getDriverName() === 'mysql' && Schema::hasColumn('student_payment_plans', 'status')) {
             DB::statement("ALTER TABLE student_payment_plans MODIFY COLUMN status ENUM('active', 'inactive') DEFAULT 'active'");
         }
     }

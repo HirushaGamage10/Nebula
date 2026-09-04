@@ -87,28 +87,41 @@ class CourseRegistraionController extends Controller
         ]);
     }
 
-    public function getCoursesByLocation($location)
+    public function getCoursesByLocation($location = null, Request $request = null)
     {
-        if (!$location) {
-            return response()->json(['error' => 'Location is required.'], 400);
+        if ($request instanceof Request) {
+            $location = $location ?? $request->query('location') ?? $request->input('location');
         }
+
+        if (!$location) {
+            return response()->json([
+                'success' => false,
+                'courses' => [],
+                'message' => 'Location is required.'
+            ], 400);
+        }
+
         try {
             $courses = Course::select('course_id', 'course_name')
                 ->where('location', $location)
                 ->orderBy('course_name', 'asc')
                 ->get();
 
-            if ($courses->isEmpty()) {
-                return response()->json(['error' => 'No courses found for this location.']);
-            }
-
             \Log::info('Requested location:', ['location' => $location]);
             \Log::info('Courses found:', ['courses' => $courses]);
 
-            return response()->json(['success' => true, 'courses' => $courses]);
+            return response()->json([
+                'success' => $courses->isNotEmpty(),
+                'courses' => $courses,
+                'message' => $courses->isEmpty() ? 'No courses found for this location.' : 'Courses loaded successfully.'
+            ]);
         } catch (\Exception $e) {
             \Log::error('Error fetching courses by location: ' . $e->getMessage());
-            return response()->json(['error' => 'An error occurred while fetching courses.'], 500);
+            return response()->json([
+                'success' => false,
+                'courses' => [],
+                'message' => 'An error occurred while fetching courses.'
+            ], 500);
         }
     }
 

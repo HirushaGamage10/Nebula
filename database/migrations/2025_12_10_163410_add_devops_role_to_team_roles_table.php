@@ -9,11 +9,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement("ALTER TABLE team_roles MODIFY COLUMN role ENUM('Leader', 'Developer', 'BA', 'QA', 'DevOps')");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE team_roles MODIFY COLUMN role ENUM('Leader', 'Developer', 'BA', 'QA', 'DevOps')");
+        }
     }
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE team_roles MODIFY COLUMN role ENUM('Leader', 'Developer', 'BA', 'QA')");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE team_roles MODIFY COLUMN role ENUM('Leader', 'Developer', 'BA', 'QA')");
+        }
     }
 };

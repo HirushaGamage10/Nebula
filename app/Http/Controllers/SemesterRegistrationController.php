@@ -262,10 +262,24 @@ class SemesterRegistrationController extends Controller
     public function getCoursesByLocation(Request $request)
     {
         $location = $request->input('location');
+
+        if (!$location) {
+            return response()->json([
+                'success' => false,
+                'courses' => [],
+                'message' => 'Location is required.'
+            ]);
+        }
+
         $courses = Course::where('location', $location)
              ->whereIn('course_type', ['degree', 'diploma'])
             ->get(['course_id', 'course_name', 'course_type']);
-        return response()->json(['success' => true, 'courses' => $courses]);
+
+        return response()->json([
+            'success' => true,
+            'courses' => $courses,
+            'message' => $courses->isEmpty() ? 'No courses found.' : 'Courses loaded successfully.'
+        ]);
     }
 
     // 2. Get ongoing intakes for a course/location

@@ -44,20 +44,21 @@ class PaymentPlanController extends Controller
 }
 
     public function getCoursesByLocation(Request $request)
-{
-    $request->validate([
-        'location' => 'required|string',
-    ]);
+    {
+        $request->validate([
+            'location' => 'required|string',
+        ]);
 
-    $courses = Course::where('location', $request->location)
-        ->orderBy('course_name')
-        ->get(['course_id','course_name']);
+        $courses = Course::where('location', $request->location)
+            ->orderBy('course_name')
+            ->get(['course_id','course_name']);
 
-    return response()->json([
-        'success' => true,
-        'data' => $courses
-    ]);
-}
+        return response()->json([
+            'success' => true,
+            'courses' => $courses,
+            'message' => $courses->isEmpty() ? 'No courses found.' : 'Courses loaded successfully.'
+        ]);
+    }
 
 
     // Your original page now lives here, unchanged logic:
@@ -198,8 +199,8 @@ class PaymentPlanController extends Controller
             ->get(['intake_id','batch']);
 
         // decode installments JSON (safe)
-        $installments = is_array($plan->installments) 
-            ? $plan->installments 
+        $installments = is_array($plan->installments)
+            ? $plan->installments
             : (json_decode($plan->installments, true) ?? []);
 
         $installments = collect($installments)
@@ -745,7 +746,7 @@ private function normalizeTemplateInstallments($installments): array
             // Create a custom validation exception with detailed messages
             $validator = validator([], []);
             $validator->errors()->add('installments', $errors);
-            
+
             throw new \Illuminate\Validation\ValidationException($validator);
         }
     }

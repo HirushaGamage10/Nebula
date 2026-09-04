@@ -17,13 +17,29 @@ class UsersTableSeeder extends Seeder
      */
     public function run()
     {
-        // Create admin user if it doesn't exist
+        User::firstOrCreate(
+            ['email' => 'developer@nebula.com'],
+            [
+                'name' => 'Developer User',
+                'employee_id' => 'DEV001',
+                'user_role' => 'Developer',
+                'user_roles' => json_encode(['Developer', 'DGM']),
+                'status' => '1',
+                'user_location' => 'Nebula Institute of Technology – Welisara',
+                'email_verified_at' => now(),
+                'password' => Hash::make('Dev@123'),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        );
+
         User::firstOrCreate(
             ['email' => 'admin@nebula.com'],
             [
                 'name' => 'Admin User',
                 'employee_id' => 'EMP001',
                 'user_role' => 'DGM',
+                'user_roles' => json_encode(['DGM']),
                 'status' => '1',
                 'user_location' => 'Nebula Institute of Technology – Welisara',
                 'email_verified_at' => now(),
@@ -33,13 +49,13 @@ class UsersTableSeeder extends Seeder
             ]
         );
 
-        // Create level 01 program admin if it doesn't exist
         User::firstOrCreate(
             ['email' => 'pa1@nebula.com'],
             [
                 'name' => 'Level 01 Program Admin',
                 'employee_id' => 'EMP002',
                 'user_role' => 'Program Administrator (level 01)',
+                'user_roles' => json_encode(['Program Administrator (level 01)']),
                 'status' => '1',
                 'user_location' => 'Nebula Institute of Technology – Welisara',
                 'email_verified_at' => now(),
@@ -50,6 +66,7 @@ class UsersTableSeeder extends Seeder
         );
 
         $this->command->info('Users seeded successfully!');
+        $this->command->info('Developer User: developer@nebula.com / Dev@123');
         $this->command->info('Admin User: admin@nebula.com / password123');
         $this->command->info('Program Admin: pa1@nebula.com / password123');
     }
