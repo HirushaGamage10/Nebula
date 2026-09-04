@@ -248,20 +248,7 @@ class SemesterCreationController extends Controller
                 ], 422);
             }
 
-            // Validate that the selected intake belongs to the course/location
-            $belongsToCourse = ($intake->course_id == $course->course_id) || (is_null($intake->course_id) && $intake->course_name === $course->course_name);
-            if (!$belongsToCourse || $intake->location !== $request->location) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'The selected intake does not belong to the chosen course or location.',
-                    'modules' => []
-                ], 422);
-            }
-
-            // Validate that the requested semester belongs to the given course and intake,
-            // preventing cross-cohort module leakage.
-            $semester = \DB::table('semesters')
-                ->where('id', $semesterId)
+            $semester = Semester::where('id', $semesterId)
                 ->where('course_id', $courseId)
                 ->where('intake_id', $intakeId)
                 ->first();
@@ -274,37 +261,51 @@ class SemesterCreationController extends Controller
                 ], 422);
             }
 
-            // Primary path: retrieve modules assigned to this specific semester via semester_module.
-            // This is the authoritative source for cohort-specific module lists.
-            $modules = \DB::table('modules')
-                ->join('semester_module', 'modules.module_id', '=', 'semester_module.module_id')
-                ->where('semester_module.semester_id', $semesterId)
-                ->select(
-                    'modules.module_id',
-                    'modules.module_name',
-                    'modules.module_code',
-                    'modules.module_type',
-                    'modules.credits'
-                )
-                ->orderBy('modules.module_name')
-                ->distinct()
-                ->get();
+            $belongsToCourse = ($intake->course_id == $course->course_id)
+                || (is_null($intake->course_id) && $intake->course_name === $course->course_name);
 
-            // Fallback: if no semester_module rows exist yet for this semester, fall back to
-            // course_modules or intake_modules
-            if ($modules->isEmpty()) {
-                if ($course->course_type === 'certificate') {
-                    $modules = \DB::table('modules')
-                        ->join('intake_modules', 'modules.module_id', '=', 'intake_modules.module_id')
-                        ->where('intake_modules.intake_id', $intake->intake_id)
-                        ->select('modules.module_id', 'modules.module_name', 'modules.module_code', 'modules.module_type', 'modules.credits')
-                        ->orderBy('modules.module_name')
-                        ->distinct()
-                        ->get();
-                } else {
-                    $modules = \DB::table('modules')
+            if (!$belongsToCourse || $intake->location !== $request->location) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The selected intake does not belong to the chosen course or location.',
+                    'modules' => []
+                ], 422);
+            }
+
+            if ($course->course_type === 'certificate') {
+                $modules = DB::table('modules')
+                    ->join('intake_modules', 'modules.module_id', '=', 'intake_modules.module_id')
+                    ->where('intake_modules.intake_id', $intake->intake_id)
+                    ->select(
+                        'modules.module_id',
+                        'modules.module_name',
+                        'modules.module_code',
+                        'modules.module_type',
+                        'modules.credits'
+                    )
+                    ->orderBy('modules.module_name')
+                    ->distinct()
+                    ->get();
+            } else {
+                $modules = DB::table('modules')
+                    ->join('semester_module', 'modules.module_id', '=', 'semester_module.module_id')
+                    ->where('semester_module.semester_id', $semesterId)
+                    ->select(
+                        'modules.module_id',
+                        'modules.module_name',
+                        'modules.module_code',
+                        'modules.module_type',
+                        'modules.credits'
+                    )
+                    ->orderBy('modules.module_name')
+                    ->distinct()
+                    ->get();
+
+                if ($modules->isEmpty()) {
+                    $modules = DB::table('modules')
                         ->join('course_modules', 'modules.module_id', '=', 'course_modules.module_id')
                         ->where('course_modules.course_id', $courseId)
+                        ->where('course_modules.semester', $semesterId)
                         ->select(
                             'modules.module_id',
                             'modules.module_name',
